@@ -1,60 +1,66 @@
 # Dynamic Island for Linux
 
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME). A frameless, transparent,
-always-on-top widget pinned top-center that morphs with spring physics (Framer Motion)
-and surfaces live activities: **media playback** and **interactive Claude Code approvals**.
+always-on-top widget pinned top-center that morphs with spring physics
+(Framer Motion), with squircle (continuous-corner) shapes and live activities:
+**media playback** and **interactive Claude Code approvals**.
 
 ## Run
 
 ```bash
 npm install
-DI_DEMO=1 npm run dev     # demo mode: fake now-playing + fake approval, for animation work
+DI_DEMO=1 npm run dev      # demo: media, then an auto-expanding approval card
+DI_DEMO=2 npm run dev      # demo: two activities (compact media + detached circle)
 npm run build && npm start # normal run
-npm test                   # unit tests (store, protocol, socket, media parser, hook)
+npm test                   # unit tests
 ```
 
-- At rest the island is a tiny pill top-center; **hover** morphs it open.
-- Real events (a Claude approval, a track change) **auto-expand** it, then it settles back.
-- The rest of the desktop stays clickable (the transparent window is click-through
-  except over the pill).
+At rest the island is a small pill top-center; **hovering** morphs it open; real
+events (a Claude approval, a track change) auto-expand it and it settles back.
+The rest of the desktop stays clickable.
+
+## Interactivity model (X11)
+
+Electron's `setIgnoreMouseEvents(..., { forward: true })` is **not implemented on
+Linux**, so hover/click can't be driven from the renderer. Instead the main
+process reads the **global cursor** via the `x11` package (`QueryPointer`) and
+toggles click-through when the cursor is over the island's reported rectangle.
+No `xdotool` or other system package is required.
 
 ## Providers
 
 ### Media
-Reads any **MPRIS** player over D-Bus (Spotify, browsers, etc.) — no `playerctl`
-needed. Shows title / artist / album art with play-pause / next / previous controls.
+Reads any **MPRIS** player over D-Bus (Spotify, browsers, …) — no `playerctl`
+needed. Compact view shows album art + an animated waveform; expanded adds
+title/artist and play-pause / next / previous.
 
 ### Claude Code approvals
-Approve or deny Claude's tool calls **from the island**. Install the `PreToolUse`
-hook (see [`hook/README.md`](hook/README.md)):
+Approve or deny Claude's tool calls **from the island**:
 
-```jsonc
-// ~/.claude/settings.json
-{
-  "hooks": {
-    "PreToolUse": [
-      { "matcher": "*", "hooks": [
-        { "type": "command",
-          "command": "node /home/shanks/Pictures/dynamic-island-linux/hook/claude-island-hook.cjs" }
-      ] }
-    ]
-  }
-}
+```bash
+node hook/install.cjs   # registers the hook in ~/.claude/settings.json (backs up first)
 ```
 
-The hook **fails open**: if the island isn't running or you don't respond within
-30 s, it returns `ask` and Claude's normal terminal prompt takes over. Override the
-socket path with `DYNAMIC_ISLAND_SOCK`.
+It uses the **`PermissionRequest`** hook, which fires **only when Claude actually
+needs permission** — so the island shows exactly the prompts Claude would show,
+with no per-tool spam. It **fails open**: if the island isn't running or you don't
+respond within 45s, it emits nothing and Claude's normal terminal prompt takes
+over. See [`hook/README.md`](hook/README.md).
 
 ## Architecture
 
-- **Electron main** — transparent always-on-top window, priority activity store,
-  and both providers (MPRIS over D-Bus, Claude approvals over a unix socket).
-- **Renderer** (React + Framer Motion) — the morphing island; sends approve/deny
-  and media commands back over IPC.
-- **Hook** (`hook/claude-island-hook.cjs`) — bridges Claude's `PreToolUse` hook to
-  the socket.
+- **Electron main** — transparent always-on-top window (`type:'dock'`,
+  `--enable-transparent-visuals`), global-cursor interactivity loop, a priority
+  activity store, and both providers (MPRIS over D-Bus, Claude approvals over a
+  unix socket).
+- **Renderer** (React + Framer Motion) — the morphing island with compact /
+  minimal / expanded presentations, squircle corners, and Apple spring values.
+- **Hook** (`hook/claude-island-hook.cjs`) — bridges Claude's `PermissionRequest`
+  hook to the socket.
 
-## Limitations
+## Limitations & roadmap
 
-- **X11 only** for now (Wayland support is a future item).
+- **X11 only** (Wayland's Mutter ignores the always-on-top/dock hints; a GNOME
+  Shell extension would be the robust Wayland path).
+- Gooey "metaball" merge for the two-activity split is not yet implemented
+  (deferred — the SVG goo filter traps pointer events and needs careful layering).

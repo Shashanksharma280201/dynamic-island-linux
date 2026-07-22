@@ -54,7 +54,13 @@ export function Island({ activities }: { activities: Activity[] }) {
   return (
     <div
       ref={outerRef}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 10,
+        // drop-shadow (not box-shadow) follows the squircle clip alpha.
+        filter: 'drop-shadow(0 10px 26px rgba(0,0,0,0.5))',
+      }}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
     >
