@@ -5,6 +5,7 @@ import { spring } from '../anim/spring'
 import { IdlePill } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
 import { ApprovalCard } from './states/ApprovalCard'
+import { squirclePath } from './squircle'
 
 export function Island({ activity }: { activity: Activity | null }) {
   const [hover, setHover] = useState(false)
@@ -32,6 +33,11 @@ export function Island({ activity }: { activity: Activity | null }) {
           width: b.width,
           height: b.height,
         })
+        // Squircle (continuous-corner) clip tracks the morphing size each frame.
+        if (b.width > 1 && b.height > 1) {
+          const r = Math.min(b.height / 2, 28)
+          el.style.clipPath = `path('${squirclePath(b.width, b.height, r, 0.7)}')`
+        }
       }
       raf = requestAnimationFrame(report)
     }
