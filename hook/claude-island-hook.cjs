@@ -1,9 +1,18 @@
 #!/usr/bin/env node
 const net = require('node:net')
+const fs = require('node:fs')
 
 const SOCK =
   process.env.DYNAMIC_ISLAND_SOCK ||
   `${process.env.XDG_RUNTIME_DIR || '/tmp'}/dynamic-island.sock`
+
+const DEBUG_LOG = process.env.DYNAMIC_ISLAND_DEBUG_LOG
+function debug(msg) {
+  if (!DEBUG_LOG) return
+  try {
+    fs.appendFileSync(DEBUG_LOG, `[${new Date().toISOString()}] ${msg}\n`)
+  } catch {}
+}
 
 function output(decision, reason) {
   process.stdout.write(
@@ -28,10 +37,12 @@ function summarize(input) {
 let raw = ''
 process.stdin.on('data', (d) => (raw += d))
 process.stdin.on('end', () => {
+  debug(`INVOKED sock=${SOCK} stdin=${raw.slice(0, 500)}`)
   let hook
   try {
     hook = JSON.parse(raw || '{}')
   } catch {
+    debug('bad input -> ask')
     return output('ask', 'bad input')
   }
 
@@ -58,12 +69,14 @@ process.stdin.on('end', () => {
       const m = JSON.parse(line)
       if (m.type === 'decision') {
         clearTimeout(timer)
+        debug(`decision from island: ${m.decision}`)
         output(m.decision, 'via dynamic island')
       }
     }
   })
-  client.on('error', () => {
+  client.on('error', (e) => {
     clearTimeout(timer)
+    debug(`island unreachable: ${e && e.message} -> ask`)
     output('ask', 'island unreachable')
   })
 })
