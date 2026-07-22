@@ -41,26 +41,37 @@ export class MediaProvider {
     )
     const dbusIface = proxy.getInterface('org.freedesktop.DBus')
     const names: string[] = await dbusIface.ListNames()
-    this.name = names.find((n) => n.startsWith(PREFIX)) ?? null
-    if (!this.name) {
-      this.cb?.(null)
-      return
+    const candidates = names.filter(
+      (n) => n.startsWith(PREFIX) && !n.includes('playerctld'),
+    )
+    for (const name of candidates) {
+      if (await this.tryBind(name)) {
+        this.name = name
+        return
+      }
     }
-    await this.bind(this.name)
+    // No usable player found.
+    this.cb?.(null)
   }
 
-  private async bind(name: string): Promise<void> {
-    const obj = await this.bus.getProxyObject(name, PATH)
-    this.player = obj.getInterface(PLAYER)
-    const props = obj.getInterface('org.freedesktop.DBus.Properties')
-    const emit = async () => {
-      const meta = (await props.Get(PLAYER, 'Metadata')).value
-      const status = (await props.Get(PLAYER, 'PlaybackStatus')).value
-      const canControl = (await props.Get(PLAYER, 'CanControl')).value
-      this.cb?.(parseMprisMetadata(meta, status, canControl))
+  private async tryBind(name: string): Promise<boolean> {
+    try {
+      const obj = await this.bus.getProxyObject(name, PATH)
+      this.player = obj.getInterface(PLAYER)
+      const props = obj.getInterface('org.freedesktop.DBus.Properties')
+      const emit = async () => {
+        const meta = (await props.Get(PLAYER, 'Metadata')).value
+        const status = (await props.Get(PLAYER, 'PlaybackStatus')).value
+        const canControl = (await props.Get(PLAYER, 'CanControl')).value
+        this.cb?.(parseMprisMetadata(meta, status, canControl))
+      }
+      props.on('PropertiesChanged', emit)
+      await emit()
+      return true
+    } catch {
+      this.player = null
+      return false
     }
-    props.on('PropertiesChanged', emit)
-    await emit()
   }
 
   async command(cmd: MediaCmd): Promise<void> {
