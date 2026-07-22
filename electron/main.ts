@@ -1,12 +1,16 @@
-import { app } from 'electron'
+import { app, ipcMain } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
 import { createIslandWindow } from './window'
+import { Interactivity } from './interactivity'
 import { pushState, wireIpc } from './ipc'
+import { IPC } from '@shared/types'
 import type { ToolRequest } from '@shared/types'
+
+app.commandLine.appendSwitch('enable-transparent-visuals')
 
 const here = dirname(fileURLToPath(import.meta.url))
 
@@ -26,6 +30,10 @@ async function main() {
   }
 
   store.onChange(() => pushState(win, store.list()))
+
+  const interactivity = new Interactivity(win)
+  interactivity.start()
+  ipcMain.on(IPC.REPORT_RECT, (_e, rect) => interactivity.setRect(rect))
 
   const claude = new ClaudeServer(SOCK)
   claude.onRequest((req: ToolRequest) => {
@@ -49,7 +57,9 @@ async function main() {
       store.remove(m.id)
     },
     onMediaCmd: (c) => media.command(c),
-    onHover: (b) => win.setIgnoreMouseEvents(!b, { forward: true }),
+    // Interactivity (click-through) is driven by the global-cursor loop, not
+    // the renderer hover state. onHover is kept only for renderer-side expand.
+    onHover: () => {},
   })
 
   if (DEMO) {

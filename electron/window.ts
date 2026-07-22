@@ -20,6 +20,7 @@ export function createIslandWindow(): BrowserWindow {
     focusable: false,
     hasShadow: false,
     alwaysOnTop: true,
+    type: 'dock',
     backgroundColor: '#00000000',
     webPreferences: {
       preload: resolve(here, '../preload/preload.mjs'),
@@ -30,7 +31,9 @@ export function createIslandWindow(): BrowserWindow {
   })
   win.setAlwaysOnTop(true, 'screen-saver')
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true })
-  win.setIgnoreMouseEvents(true, { forward: true })
-  win.setBounds({ x: Math.round((width - width) / 2), y: 0, width, height })
+  // Click-through is managed by the Interactivity cursor loop (main process),
+  // not the unimplemented-on-Linux `forward` flag.
+  win.setIgnoreMouseEvents(true)
+  win.setBounds({ x: 0, y: 0, width, height })
   return win
 }

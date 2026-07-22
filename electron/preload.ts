@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/types'
-import type { Activity, DecisionMsg, MediaCmd } from '@shared/types'
+import type { Activity, DecisionMsg, MediaCmd, Rect } from '@shared/types'
 
 contextBridge.exposeInMainWorld('island', {
   onState: (cb: (a: Activity[]) => void) =>
@@ -8,4 +8,5 @@ contextBridge.exposeInMainWorld('island', {
   sendDecision: (msg: DecisionMsg) => ipcRenderer.send(IPC.DECISION, msg),
   sendMediaCmd: (cmd: MediaCmd) => ipcRenderer.send(IPC.MEDIA_CMD, cmd),
   setHover: (b: boolean) => ipcRenderer.send(IPC.SET_HOVER, b),
+  reportRect: (rect: Rect | null) => ipcRenderer.send(IPC.REPORT_RECT, rect),
 })

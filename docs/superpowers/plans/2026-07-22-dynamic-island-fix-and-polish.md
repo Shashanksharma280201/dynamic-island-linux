@@ -12,7 +12,7 @@
 
 - **X11 only.** Do not add Wayland-only APIs. We rely on X11 window hints.
 - **Never use `setIgnoreMouseEvents(true, { forward: true })` for interactivity** — the `forward` flag is unimplemented on Linux (Electron #16777). Interactivity comes from main-process cursor hit-testing.
-- **Do not use `screen.getCursorScreenPoint()`** for the cursor read — it is broken on Electron v29+ Linux (#42519). Read the cursor via `xdotool getmouselocation --shell` (spawned once, parsed) with a graceful fallback.
+- **Do not use `screen.getCursorScreenPoint()`** for the cursor read — it is broken on Electron v29+ Linux (#42519). Read the global cursor via the pure-JS **`x11`** package (`QueryPointer` on the root window → `rootX`/`rootY`); no system dependency, no sudo. Graceful fallback to null if the X client can't connect.
 - Launch with `--enable-transparent-visuals` before `app.whenReady()` or alpha may fail.
 - Hook must **fail open as a true no-op**: on any error/timeout, exit 0 with **no JSON** (normal permission flow applies) — never emit `ask` (which would force prompts for allowlisted tools).
 - Hook matcher must be a valid regex (`.*` or a tool-name alternation), never `*`.
@@ -96,31 +96,28 @@ git add shared/hitbox.ts tests/hitbox.test.ts
 git commit -m "feat: pure point-in-rect hit-box helper"
 ```
 
-## Task A2: Cursor reader (xdotool) with pure parser
+## Task A2: Cursor reader via the `x11` package
 
 **Files:**
 - Create: `electron/cursor.ts`
 - Test: `tests/cursor.test.ts`
+- Dep: `x11` (already added to dependencies)
 
 **Interfaces:**
 - Produces:
-  - `parseXdotool(out: string): { x:number; y:number } | null` — parses
-    `X=..\nY=..\nSCREEN=..\nWINDOW=..` shell output. **Pure, exported.**
-  - `readCursor(): Promise<{ x:number; y:number } | null>` — spawns
-    `xdotool getmouselocation --shell`; resolves null if xdotool missing/errors.
+  - `pickPointer(reply: { rootX:number; rootY:number }): { x:number; y:number }`
+    — extracts `{x,y}` from an X `QueryPointer` reply. **Pure, exported.**
+  - `readCursor(): Promise<{ x:number; y:number } | null>` — connects a persistent
+    X client (lazy singleton), calls `QueryPointer` on the root window; resolves
+    null if the X client can't connect or the request errors.
 
 - [ ] **Step 1: Failing test** — `tests/cursor.test.ts`
 
 ```ts
-import { parseXdotool } from '../electron/cursor'
+import { pickPointer } from '../electron/cursor'
 
-test('parses xdotool --shell output', () => {
-  const out = 'X=734\nY=12\nSCREEN=0\nWINDOW=41943049\n'
-  expect(parseXdotool(out)).toEqual({ x: 734, y: 12 })
-})
-
-test('returns null on garbage', () => {
-  expect(parseXdotool('nope')).toBeNull()
+test('picks x/y from a QueryPointer reply', () => {
+  expect(pickPointer({ rootX: 734, rootY: 12 })).toEqual({ x: 734, y: 12 })
 })
 ```
 
@@ -132,49 +129,57 @@ Expected: FAIL — module not found.
 - [ ] **Step 3: Implement `electron/cursor.ts`**
 
 ```ts
-import { spawn } from 'node:child_process'
+// @ts-expect-error - x11 ships no types
+import x11 from 'x11'
 
-export function parseXdotool(out: string): { x: number; y: number } | null {
-  const x = /(^|\n)X=(-?\d+)/.exec(out)
-  const y = /(^|\n)Y=(-?\d+)/.exec(out)
-  if (!x || !y) return null
-  return { x: Number(x[2]), y: Number(y[2]) }
+export function pickPointer(reply: { rootX: number; rootY: number }): {
+  x: number
+  y: number
+} {
+  return { x: reply.rootX, y: reply.rootY }
 }
 
-export function readCursor(): Promise<{ x: number; y: number } | null> {
-  return new Promise((resolve) => {
-    let out = ''
-    let done = false
-    const finish = (v: { x: number; y: number } | null) => {
-      if (!done) { done = true; resolve(v) }
-    }
-    try {
-      const p = spawn('xdotool', ['getmouselocation', '--shell'])
-      p.stdout.on('data', (d) => (out += d))
-      p.on('error', () => finish(null))       // xdotool not installed
-      p.on('close', () => finish(parseXdotool(out)))
-    } catch {
-      finish(null)
-    }
-  })
+let clientP: Promise<{ X: any; root: number }> | null = null
+function getClient(): Promise<{ X: any; root: number }> {
+  if (!clientP) {
+    clientP = new Promise((resolve, reject) => {
+      x11.createClient((err: unknown, display: any) => {
+        if (err || !display) return reject(err ?? new Error('no display'))
+        resolve({ X: display.client, root: display.screen[0].root })
+      })
+    }).catch((e) => {
+      clientP = null // allow retry on next call
+      throw e
+    })
+  }
+  return clientP
+}
+
+export async function readCursor(): Promise<{ x: number; y: number } | null> {
+  try {
+    const { X, root } = await getClient()
+    return await new Promise((resolve) => {
+      X.QueryPointer(root, (err: unknown, p: any) => {
+        if (err || !p) return resolve(null)
+        resolve(pickPointer(p))
+      })
+    })
+  } catch {
+    return null
+  }
 }
 ```
 
 - [ ] **Step 4: Run — expect pass**
 
 Run: `npx vitest run tests/cursor.test.ts`
-Expected: PASS (2 tests).
+Expected: PASS (1 test).
 
-- [ ] **Step 5: Ensure xdotool is available (document dependency)**
-
-Run: `which xdotool || echo "MISSING: sudo apt-get install -y xdotool"`
-Expected: prints a path. If missing, install it (X11 pointer read depends on it).
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add electron/cursor.ts tests/cursor.test.ts
-git commit -m "feat: X11 cursor reader via xdotool with pure parser"
+git add electron/cursor.ts tests/cursor.test.ts package.json package-lock.json
+git commit -m "feat: global cursor reader via x11 QueryPointer"
 ```
 
 ## Task A3: Interactivity loop (main process)
