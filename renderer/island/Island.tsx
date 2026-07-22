@@ -1,77 +1,108 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
 import type { Activity } from '@shared/types'
-import { spring } from '../anim/spring'
+import { present } from '@shared/present'
+import { spring, contentFade } from '../anim/spring'
 import { IdlePill } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
 import { ApprovalCard } from './states/ApprovalCard'
+import { CompactMedia } from './states/CompactMedia'
+import { DetachedCircle } from './states/DetachedCircle'
 import { squirclePath } from './squircle'
 
-export function Island({ activity }: { activity: Activity | null }) {
+export function Island({ activities }: { activities: Activity[] }) {
   const [hover, setHover] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const outerRef = useRef<HTMLDivElement>(null)
+  const shellRef = useRef<HTMLDivElement>(null)
+
   const setH = (b: boolean) => {
     setHover(b)
     ;(window as any).island.setHover(b)
   }
-  const isApproval = activity?.kind === 'approval'
-  const expanded = hover || isApproval
-  const radius = expanded ? 24 : 20
 
-  // Continuously report the pill's screen-space rect so the main process can
-  // hit-test the global cursor and toggle click-through. The window is a
-  // full-screen-width strip pinned to the top, so client coords ≈ screen coords.
+  const p = present(activities, { expanded: hover })
+
+  // Report the whole island's screen rect (main-process cursor hit-testing) and
+  // keep the squircle clip tracking the morphing shell size, every frame.
   useEffect(() => {
     let raf = 0
-    const report = () => {
-      const el = ref.current
-      if (el) {
-        const b = el.getBoundingClientRect()
-        ;(window as any).island.reportRect({
-          x: b.x,
-          y: b.y,
-          width: b.width,
-          height: b.height,
-        })
-        // Squircle (continuous-corner) clip tracks the morphing size each frame.
-        if (b.width > 1 && b.height > 1) {
-          const r = Math.min(b.height / 2, 28)
-          el.style.clipPath = `path('${squirclePath(b.width, b.height, r, 0.7)}')`
+    const tick = () => {
+      const outer = outerRef.current
+      if (outer) {
+        const b = outer.getBoundingClientRect()
+        ;(window as any).island.reportRect({ x: b.x, y: b.y, width: b.width, height: b.height })
+      }
+      const shell = shellRef.current
+      if (shell) {
+        const s = shell.getBoundingClientRect()
+        if (s.width > 1 && s.height > 1) {
+          const r = Math.min(s.height / 2, 28)
+          shell.style.clipPath = `path('${squirclePath(s.width, s.height, r, 0.7)}')`
         }
       }
-      raf = requestAnimationFrame(report)
+      raf = requestAnimationFrame(tick)
     }
-    raf = requestAnimationFrame(report)
+    raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
   }, [])
 
+  const key =
+    p.mode === 'idle'
+      ? 'idle'
+      : `${p.mode}:${p.primary.kind}:${p.primary.id}`
+
   return (
-    <motion.div
-      ref={ref}
-      className="island"
-      layout
+    <div
+      ref={outerRef}
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
-      transition={spring}
-      style={{ borderRadius: radius }}
-      animate={{ borderRadius: radius }}
     >
-      <AnimatePresence mode="popLayout" initial={false}>
+      <motion.div ref={shellRef} className="island" layout transition={spring}>
+        <AnimatePresence mode="popLayout" initial={false}>
+          <motion.div
+            key={key}
+            layout
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.85 }}
+            transition={contentFade}
+          >
+            {p.mode === 'idle' && <IdlePill />}
+            {p.mode === 'compact' && p.primary.kind === 'media' && (
+              <CompactMedia media={p.primary.media} />
+            )}
+            {p.mode === 'compact' && p.primary.kind === 'approval' && (
+              <ApprovalCard request={p.primary.request} />
+            )}
+            {p.mode === 'minimal' && p.primary.kind === 'media' && (
+              <CompactMedia media={p.primary.media} />
+            )}
+            {p.mode === 'minimal' && p.primary.kind === 'approval' && (
+              <ApprovalCard request={p.primary.request} />
+            )}
+            {p.mode === 'expanded' && p.primary.kind === 'media' && (
+              <MediaCard media={p.primary.media} expanded />
+            )}
+            {p.mode === 'expanded' && p.primary.kind === 'approval' && (
+              <ApprovalCard request={p.primary.request} />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+
+      {p.mode === 'minimal' && (
         <motion.div
-          key={activity ? activity.kind + activity.id : 'idle'}
           layout
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
+          className="island"
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={spring}
+          style={{ borderRadius: 999 }}
         >
-          {!activity && <IdlePill />}
-          {activity?.kind === 'media' && (
-            <MediaCard media={activity.media} expanded={expanded} />
-          )}
-          {activity?.kind === 'approval' && <ApprovalCard request={activity.request} />}
+          <DetachedCircle activity={p.detached} />
         </motion.div>
-      </AnimatePresence>
-    </motion.div>
+      )}
+    </div>
   )
 }

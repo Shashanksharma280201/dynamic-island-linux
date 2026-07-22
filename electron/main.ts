@@ -17,7 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 const SOCK =
   process.env.DYNAMIC_ISLAND_SOCK ||
   `${process.env.XDG_RUNTIME_DIR || '/tmp'}/dynamic-island.sock`
-const DEMO = process.env.DI_DEMO === '1'
+const DEMO = process.env.DI_DEMO // '1' = media+approval, '2' = two activities (minimal)
 
 async function main() {
   const store = new ActivityStore()
@@ -69,16 +69,31 @@ async function main() {
       priority: 1,
       media: { title: 'Demo Song', artist: 'Demo Artist', playing: true, canControl: true },
     })
-    setTimeout(
-      () =>
-        store.upsert({
-          kind: 'approval',
-          id: 'demo-approval',
-          priority: 10,
-          request: { id: 'demo-approval', toolName: 'Bash', inputSummary: 'rm -rf /tmp/x' },
-        }),
-      2000,
-    )
+    if (DEMO === '2') {
+      // Two ambient activities → minimal (attached pill + detached circle).
+      setTimeout(
+        () =>
+          store.upsert({
+            kind: 'media',
+            id: 'media2',
+            priority: 2,
+            media: { title: 'Podcast', artist: 'Show', playing: true, canControl: true },
+          }),
+        2500,
+      )
+    } else {
+      // Media, then an auto-expanding approval.
+      setTimeout(
+        () =>
+          store.upsert({
+            kind: 'approval',
+            id: 'demo-approval',
+            priority: 10,
+            request: { id: 'demo-approval', toolName: 'Bash', inputSummary: 'rm -rf /tmp/x' },
+          }),
+        2000,
+      )
+    }
   }
 }
 
