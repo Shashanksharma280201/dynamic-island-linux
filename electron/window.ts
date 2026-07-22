@@ -23,6 +23,9 @@ export function createIslandWindow(): BrowserWindow {
     backgroundColor: '#00000000',
     webPreferences: {
       preload: resolve(here, '../preload/preload.mjs'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   })
   win.setAlwaysOnTop(true, 'screen-saver')
