@@ -45,6 +45,22 @@ body {
   object-fit: cover;
   background: #222;
 }
+.ctrl {
+  background: transparent;
+  border: 0;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  line-height: 1;
+}
+.ctrl:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.ctrl.big {
+  font-size: 20px;
+}
 .title {
   font-size: 13px;
   font-weight: 600;

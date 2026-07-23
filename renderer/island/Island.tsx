@@ -75,22 +75,16 @@ export function Island({ activities }: { activities: Activity[] }) {
             transition={contentFade}
           >
             {p.mode === 'idle' && <IdlePill />}
-            {p.mode === 'compact' && p.primary.kind === 'media' && (
-              <CompactMedia media={p.primary.media} />
-            )}
-            {p.mode === 'compact' && p.primary.kind === 'approval' && (
-              <ApprovalCard request={p.primary.request} />
-            )}
+            {/* Single media always shows full controls (no hover needed). */}
+            {(p.mode === 'compact' || p.mode === 'expanded') &&
+              p.primary.kind === 'media' && <MediaCard media={p.primary.media} />}
+            {(p.mode === 'compact' || p.mode === 'expanded') &&
+              p.primary.kind === 'approval' && <ApprovalCard request={p.primary.request} />}
+            {/* Two activities: keep the primary compact next to the detached circle. */}
             {p.mode === 'minimal' && p.primary.kind === 'media' && (
               <CompactMedia media={p.primary.media} />
             )}
             {p.mode === 'minimal' && p.primary.kind === 'approval' && (
-              <ApprovalCard request={p.primary.request} />
-            )}
-            {p.mode === 'expanded' && p.primary.kind === 'media' && (
-              <MediaCard media={p.primary.media} expanded />
-            )}
-            {p.mode === 'expanded' && p.primary.kind === 'approval' && (
               <ApprovalCard request={p.primary.request} />
             )}
           </motion.div>

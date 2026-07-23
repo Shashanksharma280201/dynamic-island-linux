@@ -1,23 +1,47 @@
 import type { MediaState, MediaCmd } from '@shared/types'
 
-export function MediaCard({ media, expanded }: { media: MediaState; expanded: boolean }) {
+/**
+ * Media card with title/artist + transport controls. Controls are ALWAYS
+ * visible when the player supports control, so play/pause/next/previous are
+ * reachable without depending on hover.
+ */
+export function MediaCard({ media }: { media: MediaState }) {
   const cmd = (c: MediaCmd) => (window as any).island.sendMediaCmd(c)
   return (
-    <div className="row" style={{ padding: expanded ? '12px 16px' : '6px 12px' }}>
-      {media.artUrl ? <img className="art" src={media.artUrl} /> : <div className="art" />}
-      <div style={{ minWidth: expanded ? 160 : 90 }}>
-        <div className="title">{media.title}</div>
-        <div className="sub">{media.artist}</div>
+    <div style={{ padding: '10px 14px', minWidth: 240, maxWidth: 340 }}>
+      <div className="row" style={{ gap: 10 }}>
+        {media.artUrl ? (
+          <img className="art" src={media.artUrl} />
+        ) : (
+          <div className="art" />
+        )}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div
+            className="title"
+            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          >
+            {media.title}
+          </div>
+          <div
+            className="sub"
+            style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+          >
+            {media.artist}
+          </div>
+        </div>
       </div>
-      {expanded && media.canControl && (
-        <div className="row">
-          <button className="btn" onClick={() => cmd('previous')}>
+      {media.canControl && (
+        <div
+          className="row"
+          style={{ justifyContent: 'center', gap: 18, marginTop: 10 }}
+        >
+          <button className="ctrl" onClick={() => cmd('previous')} title="Previous">
             ⏮
           </button>
-          <button className="btn" onClick={() => cmd('playpause')}>
+          <button className="ctrl big" onClick={() => cmd('playpause')} title="Play/Pause">
             {media.playing ? '⏸' : '▶'}
           </button>
-          <button className="btn" onClick={() => cmd('next')}>
+          <button className="ctrl" onClick={() => cmd('next')} title="Next">
             ⏭
           </button>
         </div>
