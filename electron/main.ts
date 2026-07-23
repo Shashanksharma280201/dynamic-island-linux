@@ -100,7 +100,13 @@ async function main() {
             kind: 'approval',
             id: 'demo-approval',
             priority: 10,
-            request: { id: 'demo-approval', toolName: 'Bash', inputSummary: 'rm -rf /tmp/x' },
+            request: {
+            id: 'demo-approval',
+            toolName: 'Bash',
+            inputSummary: 'rm -rf /tmp/x',
+            toolInput: { command: 'rm -rf /tmp/x && echo done && ls -la /tmp' },
+            cwd: '/home/shanks/Pictures/dynamic-island-linux',
+          },
           }),
         2000,
       )

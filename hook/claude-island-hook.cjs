@@ -39,6 +39,7 @@ process.stdin.on('end', () => {
     id: `${process.pid}-${Date.now()}`,
     toolName: hook.tool_name || 'unknown',
     inputSummary: summarize(hook.tool_input),
+    toolInput: hook.tool_input,
     cwd: hook.cwd,
   }
 

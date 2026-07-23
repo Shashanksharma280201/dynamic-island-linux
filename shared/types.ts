@@ -2,6 +2,7 @@ export type ToolRequest = {
   id: string
   toolName: string
   inputSummary: string
+  toolInput?: Record<string, unknown>
   cwd?: string
 }
 
