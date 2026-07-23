@@ -1,3 +1,4 @@
+import type { MouseEvent } from 'react'
 import type { MediaState, MediaCmd } from '@shared/types'
 
 /**
@@ -6,7 +7,10 @@ import type { MediaState, MediaCmd } from '@shared/types'
  * reachable without depending on hover.
  */
 export function MediaCard({ media }: { media: MediaState }) {
-  const cmd = (c: MediaCmd) => (window as any).island.sendMediaCmd(c)
+  const cmd = (e: MouseEvent, c: MediaCmd) => {
+    e.stopPropagation()
+    ;(window as any).island.sendMediaCmd(c)
+  }
   return (
     <div style={{ padding: '10px 14px', minWidth: 240, maxWidth: 340 }}>
       <div className="row" style={{ gap: 10 }}>
@@ -35,13 +39,13 @@ export function MediaCard({ media }: { media: MediaState }) {
           className="row"
           style={{ justifyContent: 'center', gap: 18, marginTop: 10 }}
         >
-          <button className="ctrl" onClick={() => cmd('previous')} title="Previous">
+          <button className="ctrl" onClick={(e) => cmd(e, 'previous')} title="Previous">
             ⏮
           </button>
-          <button className="ctrl big" onClick={() => cmd('playpause')} title="Play/Pause">
+          <button className="ctrl big" onClick={(e) => cmd(e, 'playpause')} title="Play/Pause">
             {media.playing ? '⏸' : '▶'}
           </button>
-          <button className="ctrl" onClick={() => cmd('next')} title="Next">
+          <button className="ctrl" onClick={(e) => cmd(e, 'next')} title="Next">
             ⏭
           </button>
         </div>

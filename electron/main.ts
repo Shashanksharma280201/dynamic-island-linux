@@ -5,6 +5,7 @@ import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
 import { NotificationMonitor } from './providers/notifications'
+import { SystemControls } from './providers/system'
 import { createIslandWindow } from './window'
 import { Interactivity } from './interactivity'
 import { pushState, wireIpc } from './ipc'
@@ -61,6 +62,27 @@ async function main() {
     setTimeout(() => store.remove(id), 5000)
   })
   await notifications.start().catch((e) => console.error('notifications:', e))
+
+  // System controls: poll state and push to the renderer; handle commands.
+  const system = new SystemControls()
+  const pushSys = async () => {
+    if (win.isDestroyed()) return
+    try {
+      win.webContents.send(IPC.SYS_STATE, await system.read())
+    } catch (e) {
+      console.error('system read:', e)
+    }
+  }
+  await pushSys()
+  setInterval(pushSys, 2000)
+  ipcMain.on(IPC.SYS_CMD, async (_e, cmd) => {
+    if (cmd.type === 'volume') await system.setVolume(cmd.value)
+    else if (cmd.type === 'brightness') await system.setBrightness(cmd.value)
+    else if (cmd.type === 'mute') await system.toggleMute()
+    else if (cmd.type === 'wifi') await system.setWifi(cmd.value)
+    else if (cmd.type === 'bluetooth') await system.setBluetooth(cmd.value)
+    await pushSys()
+  })
 
   wireIpc({
     onDecision: (m) => {

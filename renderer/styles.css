@@ -61,6 +61,32 @@ body {
 .ctrl.big {
   font-size: 20px;
 }
+.toggle {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 0;
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.toggle .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #555;
+}
+.toggle[data-on='yes'] {
+  background: rgba(72, 224, 111, 0.22);
+}
+.toggle[data-on='yes'] .dot {
+  background: #48e06f;
+}
 .title {
   font-size: 13px;
   font-weight: 600;

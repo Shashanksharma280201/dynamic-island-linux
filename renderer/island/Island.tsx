@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import type { Activity } from '@shared/types'
+import type { Activity, SystemState } from '@shared/types'
 import { present } from '@shared/present'
 import { spring, contentFade } from '../anim/spring'
 import { IdlePill } from './states/IdlePill'
@@ -9,10 +9,13 @@ import { ApprovalCard } from './states/ApprovalCard'
 import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
+import { ControlCenter } from './states/ControlCenter'
 import { squirclePath } from './squircle'
 
 export function Island({ activities }: { activities: Activity[] }) {
   const [hover, setHover] = useState(false)
+  const [panel, setPanel] = useState(false)
+  const [sys, setSys] = useState<SystemState | null>(null)
   const outerRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
 
@@ -21,10 +24,22 @@ export function Island({ activities }: { activities: Activity[] }) {
     ;(window as any).island.setHover(b)
   }
 
-  const p = present(activities, { expanded: hover })
+  useEffect(() => {
+    ;(window as any).island.onSysState((s: SystemState) => setSys(s))
+  }, [])
 
-  // Report the whole island's screen rect (main-process cursor hit-testing) and
-  // keep the squircle clip tracking the morphing shell size, every frame.
+  const p = present(activities, { expanded: hover })
+  const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
+  // The Control Center takes over when opened, unless an approval needs you.
+  const showPanel = panel && !isApproval
+  const sysOrDefault: SystemState = sys ?? {
+    volume: 0,
+    muted: false,
+    wifi: false,
+    bluetooth: false,
+    brightness: null,
+  }
+
   useEffect(() => {
     let raf = 0
     const tick = () => {
@@ -47,8 +62,9 @@ export function Island({ activities }: { activities: Activity[] }) {
     return () => cancelAnimationFrame(raf)
   }, [])
 
-  const key =
-    p.mode === 'idle'
+  const key = showPanel
+    ? 'panel'
+    : p.mode === 'idle'
       ? 'idle'
       : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
@@ -59,11 +75,13 @@ export function Island({ activities }: { activities: Activity[] }) {
         display: 'flex',
         alignItems: 'flex-start',
         gap: 10,
-        // drop-shadow (not box-shadow) follows the squircle clip alpha.
         filter: 'drop-shadow(0 10px 26px rgba(0,0,0,0.5))',
       }}
       onMouseEnter={() => setH(true)}
       onMouseLeave={() => setH(false)}
+      onClick={() => {
+        if (!isApproval) setPanel((v) => !v)
+      }}
     >
       <motion.div ref={shellRef} className="island" layout transition={spring}>
         <AnimatePresence mode="popLayout" initial={false}>
@@ -75,28 +93,30 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={{ opacity: 0, scale: 0.85 }}
             transition={contentFade}
           >
-            {p.mode === 'idle' && <IdlePill />}
-            {/* Single media always shows full controls (no hover needed). */}
-            {(p.mode === 'compact' || p.mode === 'expanded') &&
+            {showPanel && <ControlCenter sys={sysOrDefault} />}
+            {!showPanel && p.mode === 'idle' && <IdlePill />}
+            {!showPanel &&
+              (p.mode === 'compact' || p.mode === 'expanded') &&
               p.primary.kind === 'media' && <MediaCard media={p.primary.media} />}
-            {(p.mode === 'compact' || p.mode === 'expanded') &&
+            {!showPanel &&
+              (p.mode === 'compact' || p.mode === 'expanded') &&
               p.primary.kind === 'approval' && <ApprovalCard request={p.primary.request} />}
-            {(p.mode === 'compact' || p.mode === 'expanded') &&
+            {!showPanel &&
+              (p.mode === 'compact' || p.mode === 'expanded') &&
               p.primary.kind === 'notification' && (
                 <NotificationCard notification={p.primary.notification} />
               )}
-            {/* Two activities: keep the primary compact next to the detached circle. */}
-            {p.mode === 'minimal' && p.primary.kind === 'media' && (
+            {!showPanel && p.mode === 'minimal' && p.primary.kind === 'media' && (
               <CompactMedia media={p.primary.media} />
             )}
-            {p.mode === 'minimal' && p.primary.kind === 'approval' && (
+            {!showPanel && p.mode === 'minimal' && p.primary.kind === 'approval' && (
               <ApprovalCard request={p.primary.request} />
             )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
 
-      {p.mode === 'minimal' && (
+      {!showPanel && p.mode === 'minimal' && (
         <motion.div
           layout
           className="island"
