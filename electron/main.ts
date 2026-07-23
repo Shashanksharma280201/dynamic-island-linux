@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
+import { NotificationMonitor } from './providers/notifications'
 import { createIslandWindow } from './window'
 import { Interactivity } from './interactivity'
 import { pushState, wireIpc } from './ipc'
@@ -50,6 +51,16 @@ async function main() {
     store.upsert({ kind: 'media', id: 'media', priority: 1, media: s })
   })
   await media.start().catch((e) => console.error('media provider:', e))
+
+  const notifications = new NotificationMonitor()
+  let notifSeq = 0
+  notifications.onNotify((n) => {
+    const id = `notif-${notifSeq++}`
+    store.upsert({ kind: 'notification', id, priority: 5, notification: n })
+    // transient: auto-dismiss after 5s
+    setTimeout(() => store.remove(id), 5000)
+  })
+  await notifications.start().catch((e) => console.error('notifications:', e))
 
   wireIpc({
     onDecision: (m) => {

@@ -8,6 +8,7 @@ import { MediaCard } from './states/MediaCard'
 import { ApprovalCard } from './states/ApprovalCard'
 import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
+import { NotificationCard } from './states/NotificationCard'
 import { squirclePath } from './squircle'
 
 export function Island({ activities }: { activities: Activity[] }) {
@@ -80,6 +81,10 @@ export function Island({ activities }: { activities: Activity[] }) {
               p.primary.kind === 'media' && <MediaCard media={p.primary.media} />}
             {(p.mode === 'compact' || p.mode === 'expanded') &&
               p.primary.kind === 'approval' && <ApprovalCard request={p.primary.request} />}
+            {(p.mode === 'compact' || p.mode === 'expanded') &&
+              p.primary.kind === 'notification' && (
+                <NotificationCard notification={p.primary.notification} />
+              )}
             {/* Two activities: keep the primary compact next to the detached circle. */}
             {p.mode === 'minimal' && p.primary.kind === 'media' && (
               <CompactMedia media={p.primary.media} />

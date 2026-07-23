@@ -18,7 +18,9 @@ export function present(list: Activity[], opts: { expanded: boolean }): Presenta
   if (list.length === 0) return { mode: 'idle' }
   const sorted = [...list].sort((a, b) => b.priority - a.priority)
   const primary = sorted[0]
-  if (primary.kind === 'approval' || opts.expanded) return { mode: 'expanded', primary }
+  // Approvals and notifications take over the island as a card.
+  if (primary.kind === 'approval' || primary.kind === 'notification' || opts.expanded)
+    return { mode: 'expanded', primary }
   if (sorted.length >= 2) return { mode: 'minimal', primary, detached: sorted[1] }
   return { mode: 'compact', primary }
 }

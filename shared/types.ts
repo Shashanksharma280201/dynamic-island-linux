@@ -15,9 +15,17 @@ export type MediaState = {
   canControl: boolean
 }
 
+export type NotificationData = {
+  app: string
+  summary: string
+  body: string
+  icon?: string
+}
+
 export type Activity =
   | { kind: 'media'; id: string; priority: number; media: MediaState }
   | { kind: 'approval'; id: string; priority: number; request: ToolRequest }
+  | { kind: 'notification'; id: string; priority: number; notification: NotificationData }
 
 export const IPC = {
   STATE: 'island:state', // main -> renderer: Activity[]
