@@ -3,9 +3,11 @@ import { Badge } from './Badge'
 
 /** A desktop notification surfaced on the island (transient; click to dismiss). */
 export function NotificationCard({
+  id,
   notification: n,
   queued,
 }: {
+  id: string
   notification: NotificationData
   queued: number
 }) {
@@ -24,6 +26,22 @@ export function NotificationCard({
           {n.body && <div className="sub clamp2">{n.body}</div>}
         </div>
       </div>
+      {n.actions && n.actions.length > 0 && (
+        <div className="row actions">
+          {n.actions.map((a) => (
+            <button
+              key={a.key}
+              className="btn small"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.island.notifAction(id, a.key)
+              }}
+            >
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -23,6 +23,76 @@ export function parseNotify(body: any[]): NotificationData {
   return n
 }
 
+/** How to trigger a GNotification button: `ActivateAction` on the app. */
+export type GtkButton = { label: string; action: string; target?: unknown }
+export type GtkInvoke = { appId: string; buttons: GtkButton[]; defaultAction?: GtkButton }
+
+const unwrap = (v: any) => (v && typeof v === 'object' && 'value' in v ? v.value : v)
+
+/**
+ * Parse `org.gtk.Notifications.AddNotification(app_id, id, a{sv})`, the API
+ * GNOME apps (GApplication) use. Only `app.` actions can be triggered. Pure.
+ */
+export function parseGtkNotification(
+  body: any[],
+): { n: NotificationData; invoke: GtkInvoke } | null {
+  const appId = typeof body?.[0] === 'string' ? body[0] : ''
+  const d = body?.[2]
+  if (!appId || !d || typeof d !== 'object') return null
+  const str = (k: string) => {
+    const v = unwrap(d[k])
+    return typeof v === 'string' ? v : ''
+  }
+  const button = (raw: any): GtkButton | null => {
+    const label = unwrap(raw?.label)
+    const action = unwrap(raw?.action)
+    if (typeof action !== 'string' || !action.startsWith('app.')) return null
+    return { label: typeof label === 'string' ? label : action, action, target: raw?.target }
+  }
+  const rawButtons = unwrap(d.buttons)
+  const buttons = (Array.isArray(rawButtons) ? rawButtons : [])
+    .map(button)
+    .filter((b): b is GtkButton => !!b)
+  const def = str('default-action')
+  const n: NotificationData = {
+    app: appId.split('.').pop() || appId,
+    summary: str('title'),
+    body: str('body'),
+  }
+  const priority = str('priority')
+  if (priority === 'urgent' || priority === 'high') n.urgency = 'critical'
+  else if (priority === 'low') n.urgency = 'low'
+  if (buttons.length) n.actions = buttons.map((b, i) => ({ key: String(i), label: b.label }))
+  const invoke: GtkInvoke = { appId, buttons }
+  if (def.startsWith('app.')) invoke.defaultAction = { label: 'Open', action: def, target: d['default-action-target'] }
+  return { n, invoke }
+}
+
+/** Object path GApplication exports for an app id. Pure. */
+export function appObjectPath(appId: string): string {
+  return '/' + appId.replace(/\./g, '/').replace(/-/g, '_')
+}
+
+/** Triggers GNotification buttons, as GNOME Shell does. */
+export class GtkActionInvoker {
+  private bus = dbus.sessionBus()
+
+  constructor() {
+    this.bus.on('error', (e) => console.error('action bus:', e?.message ?? e))
+  }
+
+  async invoke(appId: string, b: GtkButton): Promise<void> {
+    const obj = await this.bus.getProxyObject(appId, appObjectPath(appId))
+    const app = obj.getInterface('org.freedesktop.Application')
+    const params = b.target === undefined ? [] : [b.target]
+    await app.ActivateAction(b.action.slice('app.'.length), params, {})
+  }
+
+  stop(): void {
+    this.bus.disconnect()
+  }
+}
+
 /** Dedup key (same notification is seen once per notification daemon). */
 export function notifKey(n: NotificationData): string {
   return `${n.app}|${n.summary}|${n.body}`
@@ -121,14 +191,14 @@ export async function resolveIcon(icon: string | undefined): Promise<string | un
  */
 export class NotificationMonitor {
   private bus = dbus.sessionBus()
-  private cb: ((n: NotificationData) => void) | null = null
+  private cb: ((n: NotificationData, invoke?: GtkInvoke) => void) | null = null
   private dedupe = new Deduper()
 
   constructor() {
     this.bus.on('error', (e) => console.error('notifications bus:', e?.message ?? e))
   }
 
-  onNotify(cb: (n: NotificationData) => void): void {
+  onNotify(cb: (n: NotificationData, invoke?: GtkInvoke) => void): void {
     this.cb = cb
   }
 
@@ -140,7 +210,13 @@ export class NotificationMonitor {
         interface: 'org.freedesktop.DBus.Monitoring',
         member: 'BecomeMonitor',
         signature: 'asu',
-        body: [["type='method_call',interface='org.freedesktop.Notifications',member='Notify'"], 0],
+        body: [
+          [
+            "type='method_call',interface='org.freedesktop.Notifications',member='Notify'",
+            "type='method_call',interface='org.gtk.Notifications',member='AddNotification'",
+          ],
+          0,
+        ],
       }),
     )
     // A monitor must never send anything, or the bus daemon disconnects it.
@@ -148,13 +224,22 @@ export class NotificationMonitor {
     // UnknownMethod error, so claim every method call as handled.
     this.bus.addMethodHandler(() => true)
     ;(this.bus as any).on('message', (msg: any) => {
-      if (msg?.member !== 'Notify' || !Array.isArray(msg.body)) return
-      const n = parseNotify(msg.body)
+      if (!Array.isArray(msg?.body)) return
+      let n: NotificationData
+      let invoke: GtkInvoke | undefined
+      if (msg.member === 'Notify') {
+        n = parseNotify(msg.body)
+      } else if (msg.member === 'AddNotification') {
+        const g = parseGtkNotification(msg.body)
+        if (!g) return
+        n = g.n
+        invoke = g.invoke
+      } else return
       if (!n.summary && !n.body) return
       if (!this.dedupe.accept(notifKey(n))) return
       resolveIcon(n.icon)
-        .then((icon) => this.cb?.({ ...n, icon }))
-        .catch(() => this.cb?.({ ...n, icon: undefined }))
+        .then((icon) => this.cb?.({ ...n, icon }, invoke))
+        .catch(() => this.cb?.({ ...n, icon: undefined }, invoke))
     })
   }
 

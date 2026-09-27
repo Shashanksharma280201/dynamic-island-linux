@@ -4,6 +4,8 @@ import {
   displayMs,
   Deduper,
   iconCandidates,
+  parseGtkNotification,
+  appObjectPath,
 } from '../electron/providers/notifications'
 
 test('parseNotify pulls app/summary/body/icon from Notify args', () => {
@@ -58,4 +60,40 @@ test('iconCandidates handles paths, URIs and theme names', () => {
   const c = iconCandidates('firefox', '/home/u')
   expect(c).toContain('/usr/share/icons/hicolor/48x48/apps/firefox.png')
   expect(c).toContain('/home/u/.local/share/icons/hicolor/scalable/apps/firefox.svg')
+})
+
+const V = (value: unknown) => ({ signature: 'x', value })
+
+test('parseGtkNotification reads title/body/priority and app. buttons', () => {
+  const body = [
+    'org.gnome.Fractal',
+    'n1',
+    {
+      title: V('Alice'),
+      body: V('are you there?'),
+      priority: V('high'),
+      buttons: V([
+        { label: V('Reply'), action: V('app.reply'), target: V('room1') },
+        { label: V('Evil'), action: V('win.close') },
+      ]),
+      'default-action': V('app.open-room'),
+    },
+  ]
+  const g = parseGtkNotification(body)!
+  expect(g.n).toEqual({
+    app: 'Fractal',
+    summary: 'Alice',
+    body: 'are you there?',
+    urgency: 'critical',
+    actions: [{ key: '0', label: 'Reply' }],
+  })
+  expect(g.invoke.appId).toBe('org.gnome.Fractal')
+  expect(g.invoke.buttons[0].action).toBe('app.reply')
+  expect(g.invoke.defaultAction?.action).toBe('app.open-room')
+  expect(parseGtkNotification(['', 'x', {}])).toBeNull()
+})
+
+test('appObjectPath follows GApplication rules', () => {
+  expect(appObjectPath('org.gnome.Fractal')).toBe('/org/gnome/Fractal')
+  expect(appObjectPath('com.example.my-app')).toBe('/com/example/my_app')
 })
