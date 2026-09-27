@@ -1,49 +1,58 @@
-import type { ToolRequest } from '@shared/types'
+import type { MouseEvent } from 'react'
+import type { ToolRequest, DecisionMsg } from '@shared/types'
 import { describeTool } from '@shared/toolDetail'
+import { ruleLabel } from '@shared/format'
+import { Badge } from './Badge'
 
-export function ApprovalCard({ request }: { request: ToolRequest }) {
-  const decide = (decision: 'allow' | 'deny') =>
-    (window as any).island.sendDecision({ id: request.id, decision })
+export function ApprovalCard({ request, queued }: { request: ToolRequest; queued: number }) {
+  const decide = (e: MouseEvent, msg: Omit<DecisionMsg, 'id'>) => {
+    e.stopPropagation()
+    window.island.sendDecision({ id: request.id, ...msg })
+  }
   const detail = describeTool(request.toolName, request.toolInput ?? {})
+  const rule = ruleLabel(request.suggestions)
 
   return (
-    <div style={{ padding: '14px 16px', width: 400, maxWidth: 460 }}>
-      <div className="sub">Claude wants to</div>
+    <div className="card approval">
+      <div className="row" style={{ justifyContent: 'space-between' }}>
+        <div className="sub">Claude wants to</div>
+        <Badge count={queued} />
+      </div>
       <div className="title" style={{ margin: '3px 0 8px' }}>
         {detail.label}
       </div>
-      <pre
-        style={{
-          margin: 0,
-          background: 'rgba(255,255,255,0.08)',
-          borderRadius: 10,
-          padding: '10px 12px',
-          fontFamily:
-            'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-          fontSize: 12,
-          lineHeight: 1.45,
-          color: '#eaeaea',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          maxHeight: 180,
-          overflow: 'auto',
-        }}
-      >
-        {detail.body || '(no arguments)'}
-      </pre>
+      <pre className="code">{detail.body || '(no arguments)'}</pre>
       {request.cwd && (
-        <div className="sub" style={{ marginTop: 6, opacity: 0.6 }}>
+        <div className="sub ellipsis" style={{ marginTop: 6, opacity: 0.6 }}>
           in {request.cwd}
         </div>
       )}
-      <div className="row" style={{ marginTop: 12, justifyContent: 'flex-end' }}>
-        <button className="btn deny" onClick={() => decide('deny')}>
-          Deny
+      <div className="row" style={{ marginTop: 12, justifyContent: 'space-between' }}>
+        <button
+          className="link"
+          title="Dismiss here and answer in Claude's terminal prompt"
+          onClick={(e) => decide(e, { decision: 'ask' })}
+        >
+          Answer in terminal
         </button>
-        <button className="btn allow" onClick={() => decide('allow')}>
-          Allow
-        </button>
+        <div className="row" style={{ gap: 8 }}>
+          <button className="btn deny" onClick={(e) => decide(e, { decision: 'deny' })}>
+            Deny
+          </button>
+          <button className="btn allow" onClick={(e) => decide(e, { decision: 'allow' })}>
+            Allow
+          </button>
+        </div>
       </div>
+      {rule && (
+        <button
+          className="btn always"
+          title={`Allow and don't ask again for ${rule} in this project`}
+          onClick={(e) => decide(e, { decision: 'allow', always: true })}
+        >
+          <span className="ellipsis">Always allow {rule}</span>
+        </button>
+      )}
     </div>
   )
 }

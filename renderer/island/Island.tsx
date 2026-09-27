@@ -12,6 +12,9 @@ import { NotificationCard } from './states/NotificationCard'
 import { ControlCenter } from './states/ControlCenter'
 import { squirclePath } from './squircle'
 
+/** Close the Control Center this long after the cursor leaves the island. */
+const PANEL_CLOSE_MS = 1500
+
 export function Island({ activities }: { activities: Activity[] }) {
   const [hover, setHover] = useState(false)
   const [panel, setPanel] = useState(false)
@@ -19,47 +22,57 @@ export function Island({ activities }: { activities: Activity[] }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
 
-  const setH = (b: boolean) => {
-    setHover(b)
-    ;(window as any).island.setHover(b)
-  }
-
-  useEffect(() => {
-    ;(window as any).island.onSysState((s: SystemState) => setSys(s))
-  }, [])
+  useEffect(() => window.island.onSysState(setSys), [])
+  // The main process's cursor loop is the source of truth for hover: DOM
+  // mouseleave is not delivered once the window turns click-through.
+  useEffect(() => window.island.onHover(setHover), [])
 
   const p = present(activities, { expanded: hover })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
-  const sysOrDefault: SystemState = sys ?? {
-    volume: 0,
-    muted: false,
-    wifi: false,
-    bluetooth: false,
-    brightness: null,
-  }
 
+  useEffect(() => window.island.setPanel(showPanel), [showPanel])
+
+  // Auto-close the Control Center once the cursor has left for a moment.
   useEffect(() => {
-    let raf = 0
-    const tick = () => {
-      const outer = outerRef.current
-      if (outer) {
-        const b = outer.getBoundingClientRect()
-        ;(window as any).island.reportRect({ x: b.x, y: b.y, width: b.width, height: b.height })
-      }
-      const shell = shellRef.current
-      if (shell) {
-        const s = shell.getBoundingClientRect()
-        if (s.width > 1 && s.height > 1) {
-          const r = Math.min(s.height / 2, 28)
-          shell.style.clipPath = `path('${squirclePath(s.width, s.height, r, 0.7)}')`
-        }
-      }
-      raf = requestAnimationFrame(tick)
+    if (!panel || hover) return
+    const t = setTimeout(() => setPanel(false), PANEL_CLOSE_MS)
+    return () => clearTimeout(t)
+  }, [panel, hover])
+
+  // Report the hit area whenever the island's layout box changes. The outer
+  // box is never transformed, so its rect is the settled (final) size.
+  useEffect(() => {
+    const outer = outerRef.current
+    if (!outer) return
+    const report = () => {
+      const b = outer.getBoundingClientRect()
+      window.island.reportRect({ x: b.x, y: b.y, width: b.width, height: b.height })
     }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
+    const ro = new ResizeObserver(report)
+    ro.observe(outer)
+    window.addEventListener('resize', report)
+    report()
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', report)
+    }
+  }, [])
+
+  // Squircle clip in the shell's own (untransformed) coordinate space.
+  useEffect(() => {
+    const shell = shellRef.current
+    if (!shell) return
+    const ro = new ResizeObserver(() => {
+      const w = shell.offsetWidth
+      const h = shell.offsetHeight
+      if (w > 1 && h > 1) {
+        shell.style.clipPath = `path('${squirclePath(w, h, Math.min(h / 2, 28), 0.7)}')`
+      }
+    })
+    ro.observe(shell)
+    return () => ro.disconnect()
   }, [])
 
   const key = showPanel
@@ -68,66 +81,64 @@ export function Island({ activities }: { activities: Activity[] }) {
       ? 'idle'
       : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
+  const onClick = () => {
+    if (p.mode !== 'idle' && p.primary.kind === 'notification' && !showPanel) {
+      window.island.dismiss(p.primary.id)
+      return
+    }
+    if (!isApproval) setPanel((v) => !v)
+  }
+
   return (
     <div
       ref={outerRef}
-      style={{
-        display: 'flex',
-        alignItems: 'flex-start',
-        gap: 10,
-        filter: 'drop-shadow(0 10px 26px rgba(0,0,0,0.5))',
-      }}
-      onMouseEnter={() => setH(true)}
-      onMouseLeave={() => setH(false)}
-      onClick={() => {
-        if (!isApproval) setPanel((v) => !v)
-      }}
+      className="island-outer"
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      onClick={onClick}
     >
       <motion.div ref={shellRef} className="island" layout transition={spring}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
             layout
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.85 }}
+            initial={{ opacity: 0, scale: 0.85, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.85, filter: 'blur(4px)' }}
             transition={contentFade}
           >
-            {showPanel && <ControlCenter sys={sysOrDefault} />}
-            {!showPanel && p.mode === 'idle' && <IdlePill />}
-            {!showPanel &&
-              (p.mode === 'compact' || p.mode === 'expanded') &&
-              p.primary.kind === 'media' && <MediaCard media={p.primary.media} />}
-            {!showPanel &&
-              (p.mode === 'compact' || p.mode === 'expanded') &&
-              p.primary.kind === 'approval' && <ApprovalCard request={p.primary.request} />}
-            {!showPanel &&
-              (p.mode === 'compact' || p.mode === 'expanded') &&
-              p.primary.kind === 'notification' && (
-                <NotificationCard notification={p.primary.notification} />
-              )}
-            {!showPanel && p.mode === 'minimal' && p.primary.kind === 'media' && (
+            {showPanel ? (
+              <ControlCenter sys={sys} />
+            ) : p.mode === 'idle' ? (
+              <IdlePill />
+            ) : p.primary.kind === 'approval' ? (
+              <ApprovalCard request={p.primary.request} queued={p.queued} />
+            ) : p.primary.kind === 'notification' ? (
+              <NotificationCard notification={p.primary.notification} queued={p.queued} />
+            ) : p.mode === 'expanded' ? (
+              <MediaCard media={p.primary.media} />
+            ) : (
               <CompactMedia media={p.primary.media} />
-            )}
-            {!showPanel && p.mode === 'minimal' && p.primary.kind === 'approval' && (
-              <ApprovalCard request={p.primary.request} />
             )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
 
-      {!showPanel && p.mode === 'minimal' && (
-        <motion.div
-          layout
-          className="island"
-          initial={{ opacity: 0, scale: 0.5 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={spring}
-          style={{ borderRadius: 999 }}
-        >
-          <DetachedCircle activity={p.detached} />
-        </motion.div>
-      )}
+      <AnimatePresence>
+        {!showPanel && p.mode === 'minimal' && (
+          // Buds off the pill's trailing edge and merges back into it.
+          <motion.div
+            key="detached"
+            className="island detached"
+            initial={{ opacity: 0, scale: 0.3, x: -28 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.3, x: -28 }}
+            transition={spring}
+          >
+            <DetachedCircle activity={p.detached} />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { parseMprisMetadata, pickActivePlayer } from '../electron/providers/media'
+import { parseMprisMetadata, pickActivePlayer, usToSec, mediaKey } from '../electron/providers/media'
 
 test('pickActivePlayer prefers a Playing player', () => {
   expect(
@@ -49,4 +49,22 @@ test('handles missing fields and paused status', () => {
   expect(s.title).toBe('Unknown')
   expect(s.artist).toBe('')
   expect(s.playing).toBe(false)
+})
+
+test('parses mpris:length (bigint microseconds) into seconds', () => {
+  const s = parseMprisMetadata({ 'mpris:length': { value: 215_000_000n } } as any, 'Playing', true)
+  expect(s.length).toBe(215)
+})
+
+test('usToSec ignores invalid values', () => {
+  expect(usToSec(undefined)).toBeUndefined()
+  expect(usToSec(0)).toBeUndefined()
+  expect(usToSec(1_500_000)).toBe(1.5)
+})
+
+test('mediaKey ignores position but tracks play state', () => {
+  const a = parseMprisMetadata({} as any, 'Playing', true)
+  expect(mediaKey({ ...a, position: 1 })).toBe(mediaKey({ ...a, position: 99 }))
+  expect(mediaKey(a)).not.toBe(mediaKey({ ...a, playing: false }))
+  expect(mediaKey(null)).toBe('null')
 })

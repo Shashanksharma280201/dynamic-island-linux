@@ -4,8 +4,6 @@ import { Island } from './island/Island'
 
 export function App() {
   const [list, setList] = useState<Activity[]>([])
-  useEffect(() => {
-    ;(window as any).island.onState((a: Activity[]) => setList(a))
-  }, [])
+  useEffect(() => window.island.onState(setList), [])
   return <Island activities={list} />
 }

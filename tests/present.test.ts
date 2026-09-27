@@ -36,3 +36,24 @@ test('two ambient activities -> minimal with detached', () => {
     expect(p.detached.id).toBe('media')
   }
 })
+
+const notif = (id: string, seq: number): Activity => ({
+  kind: 'notification',
+  id,
+  seq,
+  priority: 5,
+  notification: { app: 'a', summary: id, body: '' },
+})
+
+test('newest notification wins among equal priority', () => {
+  const p = present([notif('old', 1), notif('new', 2)], { expanded: false })
+  expect(p.mode === 'expanded' && p.primary.id).toBe('new')
+  expect(p.mode === 'expanded' && p.queued).toBe(1)
+})
+
+test('approvals are answered first-come-first-served', () => {
+  const a = (id: string, seq: number): Activity => ({ ...approval, id, seq })
+  const p = present([a('second', 2), a('first', 1)], { expanded: false })
+  expect(p.mode === 'expanded' && p.primary.id).toBe('first')
+  expect(p.mode === 'expanded' && p.queued).toBe(1)
+})

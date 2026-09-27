@@ -1,36 +1,29 @@
 import type { NotificationData } from '@shared/types'
+import { Badge } from './Badge'
 
-/** A desktop notification surfaced on the island (transient banner). */
-export function NotificationCard({ notification }: { notification: NotificationData }) {
+/** A desktop notification surfaced on the island (transient; click to dismiss). */
+export function NotificationCard({
+  notification: n,
+  queued,
+}: {
+  notification: NotificationData
+  queued: number
+}) {
   return (
-    <div style={{ padding: '12px 16px', maxWidth: 360, minWidth: 220 }}>
-      <div className="sub" style={{ textTransform: 'capitalize' }}>
-        {notification.app || 'Notification'}
-      </div>
-      <div
-        className="title"
-        style={{
-          margin: '3px 0 2px',
-          whiteSpace: 'nowrap',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-        }}
-      >
-        {notification.summary}
-      </div>
-      {notification.body && (
-        <div
-          className="sub"
-          style={{
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: 340,
-          }}
-        >
-          {notification.body}
+    <div className={`card notification${n.urgency === 'critical' ? ' critical' : ''}`}>
+      <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
+        {n.icon && <img className="notif-icon" src={n.icon} alt="" />}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <div className="sub app ellipsis">{n.app || 'Notification'}</div>
+            <Badge count={queued} />
+          </div>
+          <div className="title ellipsis" style={{ margin: '3px 0 2px' }}>
+            {n.summary}
+          </div>
+          {n.body && <div className="sub clamp2">{n.body}</div>}
         </div>
-      )}
+      </div>
     </div>
   )
 }

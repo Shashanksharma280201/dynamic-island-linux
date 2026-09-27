@@ -2,22 +2,9 @@ import type { Activity } from '@shared/types'
 
 /** The small detached element shown for a 2nd simultaneous activity. */
 export function DetachedCircle({ activity }: { activity: Activity }) {
-  const glyph = activity.kind === 'media' ? '♪' : '!'
-  return (
-    <div
-      style={{
-        width: 26,
-        height: 26,
-        borderRadius: 999,
-        background: '#000',
-        color: '#48e06f',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: 13,
-      }}
-    >
-      {glyph}
-    </div>
-  )
+  if (activity.kind === 'media' && activity.media.artUrl) {
+    return <img className="detached-art" src={activity.media.artUrl} alt="" />
+  }
+  const glyph = activity.kind === 'media' ? '♪' : activity.kind === 'approval' ? '!' : '•'
+  return <div className="detached-glyph">{glyph}</div>
 }

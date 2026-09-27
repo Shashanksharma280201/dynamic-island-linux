@@ -8,13 +8,19 @@ export function pickPointer(reply: { rootX: number; rootY: number }): {
   return { x: reply.rootX, y: reply.rootY }
 }
 
-let clientP: Promise<{ X: any; root: number }> | null = null
-function getClient(): Promise<{ X: any; root: number }> {
+type Client = { X: any; root: number }
+let clientP: Promise<Client> | null = null
+
+function getClient(): Promise<Client> {
   if (!clientP) {
-    clientP = new Promise<{ X: any; root: number }>((resolve, reject) => {
-      x11.createClient((err: unknown, display: any) => {
-        if (err || !display) return reject(err ?? new Error('no display'))
-        resolve({ X: display.client, root: display.screen[0].root })
+    clientP = new Promise<Client>((resolve, reject) => {
+      const display = x11.createClient((err: unknown, d: any) => {
+        if (err || !d) return reject(err ?? new Error('no display'))
+        resolve({ X: d.client, root: d.screen[0].root })
+      })
+      // A dropped X connection must not crash the app; reconnect lazily.
+      display?.on?.('error', () => {
+        clientP = null
       })
     }).catch((e) => {
       clientP = null // allow retry on next call
@@ -24,7 +30,9 @@ function getClient(): Promise<{ X: any; root: number }> {
   return clientP
 }
 
+/** Global cursor position in physical root-window pixels, or null. */
 export async function readCursor(): Promise<{ x: number; y: number } | null> {
+  if (!process.env.DISPLAY) return null
   try {
     const { X, root } = await getClient()
     return await new Promise((resolve) => {
@@ -35,5 +43,15 @@ export async function readCursor(): Promise<{ x: number; y: number } | null> {
     })
   } catch {
     return null
+  }
+}
+
+export async function closeCursor(): Promise<void> {
+  const p = clientP
+  clientP = null
+  try {
+    ;(await p)?.X.terminate?.()
+  } catch {
+    // already gone
   }
 }

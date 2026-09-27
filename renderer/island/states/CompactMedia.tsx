@@ -7,24 +7,13 @@ import { Waveform } from './Waveform'
  */
 export function CompactMedia({ media }: { media: MediaState }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        padding: '5px 12px',
-        height: 26,
-      }}
-    >
+    <div className="compact" title={`${media.title} · ${media.artist}`}>
       {media.artUrl ? (
-        <img
-          src={media.artUrl}
-          style={{ width: 20, height: 20, borderRadius: 5, objectFit: 'cover' }}
-        />
+        <img className="compact-art" src={media.artUrl} alt="" />
       ) : (
-        <div style={{ width: 20, height: 20, borderRadius: 5, background: '#48e06f' }} />
+        <div className="compact-art placeholder" />
       )}
-      <div style={{ width: 14 }} />
+      <div style={{ width: 56 }} />
       <Waveform playing={media.playing} />
     </div>
   )
