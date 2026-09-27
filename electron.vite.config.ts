@@ -28,6 +28,10 @@ export default defineConfig({
     root: 'renderer',
     plugins: [react(), csp],
     resolve: { alias: { '@shared': resolve('shared') } },
-    build: { rollupOptions: { input: resolve('renderer/index.html') } },
+    build: {
+      rollupOptions: {
+        input: { index: resolve('renderer/index.html'), settings: resolve('renderer/settings.html') },
+      },
+    },
   },
 })

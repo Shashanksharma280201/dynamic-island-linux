@@ -1,6 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC } from '@shared/types'
-import type { Activity, DecisionMsg, MediaCmd, Rect, SystemState, SysCmd } from '@shared/types'
+import type {
+  Activity,
+  DecisionMsg,
+  MediaCmd,
+  Rect,
+  SystemState,
+  SysCmd,
+  SettingsState,
+  MailAccountView,
+} from '@shared/types'
+import { SETTINGS } from '../electron/settingsChannels'
 
 /** Subscribe and return an unsubscribe function. */
 function on<T>(channel: string, cb: (v: T) => void): () => void {
@@ -19,8 +29,37 @@ const api = {
   reportRect: (rect: Rect | null) => ipcRenderer.send(IPC.REPORT_RECT, rect),
   setPanel: (open: boolean) => ipcRenderer.send(IPC.PANEL, open),
   dismiss: (id: string) => ipcRenderer.send(IPC.DISMISS, id),
+  hold: (id: string, hold: boolean) => ipcRenderer.send(IPC.HOLD, { id, hold }),
+  setFocus: (focus: boolean) => ipcRenderer.send(IPC.FOCUS, focus),
+  reply: (id: string, text: string) => ipcRenderer.send(IPC.REPLY, { id, text }),
+  markRead: (id: string) => ipcRenderer.send(IPC.MESSAGE_ACTION, { id, action: 'read' }),
+  notifAction: (id: string, key: string) => ipcRenderer.send(IPC.NOTIF_ACTION, { id, key }),
+  openSettings: (section?: string) => ipcRenderer.send(IPC.OPEN_SETTINGS, section),
+}
+
+type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
+
+/** Used by the settings window only. */
+const settings = {
+  get: (): Promise<SettingsState> => ipcRenderer.invoke(SETTINGS.GET),
+  onChange: (cb: (s: SettingsState) => void) => on(SETTINGS.CHANGED, cb),
+  setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
+  setAutostart: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AUTOSTART, on),
+  setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
+  setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
+    ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
+  restart: () => ipcRenderer.invoke(SETTINGS.RESTART),
+  whatsappPair: (phone: string): Promise<string> => ipcRenderer.invoke(SETTINGS.WA_PAIR, phone),
+  whatsappLogout: () => ipcRenderer.invoke(SETTINGS.WA_LOGOUT),
+  mailPresets: (email?: string) => ipcRenderer.invoke(SETTINGS.MAIL_PRESETS, email),
+  mailTest: (a: MailInput, password?: string) => ipcRenderer.invoke(SETTINGS.MAIL_TEST, a, password),
+  mailSave: (a: MailInput, password?: string): Promise<string> =>
+    ipcRenderer.invoke(SETTINGS.MAIL_SAVE, a, password),
+  mailRemove: (id: string) => ipcRenderer.invoke(SETTINGS.MAIL_REMOVE, id),
 }
 
 export type IslandApi = typeof api
+export type SettingsApi = typeof settings
 
 contextBridge.exposeInMainWorld('island', api)
+contextBridge.exposeInMainWorld('settings', settings)

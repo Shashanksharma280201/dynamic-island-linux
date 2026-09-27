@@ -11,6 +11,7 @@ export type TrayActions = {
   setNotifications: (on: boolean) => void
   setHook: (on: boolean) => Promise<void>
   setAutostart: (on: boolean) => void
+  openSettings: () => void
   quit: () => void
 }
 
@@ -49,6 +50,8 @@ export class IslandTray {
     this.tray.setContextMenu(
       Menu.buildFromTemplate([
         { label: 'Dynamic Island', enabled: false },
+        { type: 'separator' },
+        { label: 'Settings… (WhatsApp, Mail)', click: () => this.actions.openSettings() },
         { type: 'separator' },
         {
           label: 'Show desktop notifications',

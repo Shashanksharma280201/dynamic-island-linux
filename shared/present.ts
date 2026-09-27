@@ -22,7 +22,7 @@ export function byPresentationOrder(a: Activity, b: Activity): number {
  * Pure selector: given the current activities and whether the island is
  * hover-expanded, decide which Dynamic-Island presentation to render.
  * - 0 activities                     → idle pill
- * - approval / notification OR hover → expanded card
+ * - approval / notification / message OR hover → expanded card
  * - 2+ ambient                       → minimal (attached pill + detached circle)
  * - 1 ambient                        → compact
  * `queued` counts further activities of the same kind waiting behind primary.
@@ -32,7 +32,12 @@ export function present(list: Activity[], opts: { expanded: boolean }): Presenta
   const sorted = [...list].sort(byPresentationOrder)
   const primary = sorted[0]
   const queued = sorted.filter((a) => a !== primary && a.kind === primary.kind).length
-  if (primary.kind === 'approval' || primary.kind === 'notification' || opts.expanded)
+  if (
+    primary.kind === 'approval' ||
+    primary.kind === 'notification' ||
+    primary.kind === 'message' ||
+    opts.expanded
+  )
     return { mode: 'expanded', primary, queued }
   if (sorted.length >= 2) return { mode: 'minimal', primary, detached: sorted[1], queued }
   return { mode: 'compact', primary, queued }

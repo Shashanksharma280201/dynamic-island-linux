@@ -2,7 +2,8 @@
 
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black pill at the
 top center of your screen that morphs with spring physics to show what's going
-on (music, Claude Code permission prompts, notifications) and opens a mini
+on (music, WhatsApp messages, new mail, Claude Code permission prompts,
+notifications), lets you **reply right from the island**, and opens a mini
 Control Center when you click it. Everywhere outside the island, your desktop
 stays fully clickable.
 
@@ -11,12 +12,15 @@ stays fully clickable.
 | Feature | What you see | What you can do |
 | --- | --- | --- |
 | **Idle pill** | A tiny black pill when nothing is happening | Click it to open the Control Center |
-| **Now Playing** | Album art + animated waveform while music plays in any MPRIS player (Spotify, Firefox/Chrome, VLC, Rhythmbox, …) | Hover to expand: title, artist, progress bar with elapsed/remaining time, and previous / play-pause / next buttons |
+| **Now Playing** | Album art + animated waveform while music plays in any MPRIS player: Spotify (app or web), YouTube / YouTube Music in Chrome or Firefox, VLC, Rhythmbox, … | Hover to expand: title, artist, progress bar (click it to seek), previous / play-pause / next, shuffle and repeat |
+| **WhatsApp** | Incoming messages as a card per chat (sender, group, photo, last few lines) | **Reply** (type right in the island, Enter to send), **Mark read**, **Dismiss** |
+| **Mail** | New mail from any IMAP account: sender, subject and a preview | **Reply** (threaded, saved to Sent), **Mark read**, **Dismiss** |
 | **Two activities at once** | The pill plus a small detached circle for the second activity | Hover to expand the main one |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
-| **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more |
+| **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
 | **Control Center** | Volume, brightness, Wi-Fi and Bluetooth | Drag the sliders, click the speaker icon to mute, toggle Wi-Fi / Bluetooth. Closes by itself shortly after the cursor leaves |
-| **Tray menu** | An icon in the top bar | Show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
+| **Settings window** | Opened from the tray menu | Link WhatsApp, add mail accounts, and the general toggles |
+| **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
 
 Other details:
 
@@ -26,6 +30,9 @@ Other details:
 - Only one copy runs at a time.
 - Controls for tools that aren't installed (e.g. no Bluetooth adapter) are hidden
   instead of showing wrong values.
+- Cards stay open while you hover them or type a reply, then close by themselves.
+- The island only takes keyboard focus while you're typing a reply, so it never
+  steals focus from the app you're using.
 
 ## Requirements
 
@@ -68,6 +75,7 @@ No music playing? The demo modes show every state with fake data:
 DI_DEMO=1 npm run dev   # music, then a Claude approval card pops up
 DI_DEMO=2 npm run dev   # two activities: compact pill + detached circle
 DI_DEMO=3 npm run dev   # a normal and a critical notification
+DI_DEMO=4 npm run dev   # WhatsApp messages (fake account) and a mail you can reply to
 ```
 
 ### 4. Connect Claude Code (optional)
@@ -87,7 +95,38 @@ The hook **fails open**: if the island isn't running, or you don't answer within
 45 seconds, Claude shows its normal terminal prompt as usual. It never blocks
 Claude. More detail in [`hook/README.md`](hook/README.md).
 
-### 5. Start it automatically at login (optional)
+### 5. Connect WhatsApp (optional)
+
+1. Open **Settings…** from the tray menu and turn on **Show WhatsApp messages and
+   reply from the island**.
+2. Click **Restart now** (the island needs one restart the first time).
+3. A QR code appears in the WhatsApp section. On your phone open WhatsApp →
+   **Settings → Linked devices → Link a device** and scan it. Or type your phone
+   number to get an 8-character code to enter on the phone instead.
+4. It shows **Connected as …**. New messages now pop up on the island; click
+   **Reply** to answer.
+
+The login is remembered, so you only link once. **Unlink** in Settings logs the
+island out (it also disappears from Linked devices on your phone).
+
+### 6. Add a mail account (optional)
+
+1. Open **Settings…** from the tray menu, then **Add account** under Mail.
+2. Type your email address. For Gmail, Yahoo, iCloud and Fastmail the server
+   settings fill in automatically; for anything else enter your provider's IMAP
+   and SMTP servers.
+3. Enter an **app password**. With 2-step verification on (Gmail requires it),
+   your normal password won't work; create one at
+   [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
+   (Gmail) or in your provider's security settings.
+4. Click **Test**, then **Save**. The dot next to the account turns green when it's
+   connected.
+
+New mail arrives instantly (IMAP IDLE). Replies are sent over SMTP as a proper
+reply in the same thread and saved to your Sent folder. You can add several
+accounts; each card then shows which account it's for.
+
+### 7. Start it automatically at login (optional)
 
 Tick **Start at login** in the tray menu. This writes
 `~/.config/autostart/dynamic-island-linux.desktop`; untick it to remove.
@@ -140,13 +179,28 @@ Environment variables (set them before starting the app):
 | Variable | Meaning |
 | --- | --- |
 | `DI_DISPLAY` | Index of the monitor to show the island on (default: primary monitor) |
-| `DI_DEMO` | Demo mode `1`, `2` or `3` (see above) |
+| `DI_DEMO` | Demo mode `1`, `2`, `3` or `4` (see above) |
 | `DI_DEBUG` | Log when the island becomes clickable / click-through |
 | `DYNAMIC_ISLAND_SOCK` | Socket shared with the Claude hook (default `$XDG_RUNTIME_DIR/dynamic-island.sock`, else `/tmp/dynamic-island-<uid>.sock`) |
 | `DYNAMIC_ISLAND_TIMEOUT` | Seconds the Claude hook waits for your answer (default `45`) |
+| `DI_USER_DATA` | Use a different profile folder (settings, WhatsApp login) |
 
-The "Show desktop notifications" choice is saved in
-`~/.config/dynamic-island-linux/config.json`.
+Settings are saved in `~/.config/dynamic-island-linux/config.json`. Mail
+passwords are encrypted with your desktop keyring (GNOME Keyring); if no keyring
+is available, Settings warns you that they are only obfuscated.
+
+### Privacy and security notes
+
+- **WhatsApp** runs WhatsApp Web inside the island as a linked device, using the
+  open-source [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
+  library (the same engine as whatsapp-connector). It is not an official
+  WhatsApp API; normal personal use is fine, but WhatsApp can restrict accounts
+  that automate bulk messaging. Its login lives in the island's profile folder.
+- To drive WhatsApp Web, the island opens a Chrome DevTools debugging port on
+  `127.0.0.1` (random port) **only while WhatsApp is enabled**. Like any
+  whatsapp-web.js setup, other programs running on the same computer could
+  connect to it, so don't enable WhatsApp on a shared multi-user machine.
+- Messages and mail are shown on the island and never sent anywhere else.
 
 ## Troubleshooting
 
@@ -158,6 +212,10 @@ The "Show desktop notifications" choice is saved in
 | A Control Center control is missing | The matching tool isn't installed (`pactl`, `nmcli`, `bluetoothctl`, `brightnessctl`), or there's no such hardware. |
 | Claude still asks in the terminal | Make sure the island is running, the hook is installed (tray menu or `npm run hook:install`), and Claude Code was restarted. Set `DYNAMIC_ISLAND_DEBUG_LOG=/tmp/hook.log` to log what the hook does. |
 | No tray icon | Enable the "AppIndicator and KStatusNotifierItem Support" GNOME extension. |
+| WhatsApp says "Couldn't start" | Check your internet connection, then toggle WhatsApp off and on in Settings. If the QR never appears after a WhatsApp update, update the app (`npm update whatsapp-web.js`). |
+| WhatsApp shows "Disconnected" | The island was unlinked from your phone. Toggle WhatsApp off and on and scan the QR again. |
+| Mail account shows a red dot | Read the error shown next to the account. Usually it is a wrong password: use an app password, not your normal one. |
+| Can't type in the reply box | Your window manager refused keyboard focus for the island. Please open an issue with your desktop environment. |
 
 ## Development
 
@@ -169,9 +227,11 @@ npm run test:e2e     # the real app under Xvfb with a private D-Bus session
 ```
 
 `npm run test:e2e` needs `xvfb`, `dbus` and `gdbus` (`sudo apt install xvfb dbus libglib2.0-bin`).
-It drives the real Electron app: a fake music player, real Claude hook
-round-trips, real pointer movement, notifications, the Control Center and
-`--quit`. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
+It drives the real Electron app: a fake music player (including seek, shuffle
+and repeat), real Claude hook round-trips, real pointer movement, notifications
+and GNotification buttons, the Control Center and `--quit`. A second suite tests
+messaging: a scripted fake WhatsApp, a real local IMAP + SMTP server for mail,
+typing replies on the keyboard, and the settings window. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
 on every push and pull request.
 
 ### Project layout
@@ -183,8 +243,12 @@ electron/            main process
   interactivity.ts   cursor loop: click-through except over the island
   store.ts           list of current activities
   tray.ts            tray menu
-  providers/         media (MPRIS), claude (socket), notifications, system controls
-renderer/            React UI (island shapes, cards, animations)
+  providers/         media (MPRIS), claude (socket), notifications, system controls,
+                     whatsapp (whatsapp-web.js), mail (IMAP IDLE + SMTP)
+  messages.ts        turns WhatsApp messages / mail into cards, routes replies
+  transient.ts       cards that close by themselves (held while hovered or replying)
+  settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
+renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
 e2e/                 end-to-end test harness
@@ -205,7 +269,12 @@ tests/               unit tests (vitest)
 - **Claude approvals** arrive from the hook over a private unix socket (only your
   user can connect); your click is sent back to the waiting hook.
 - **Notifications** are observed on D-Bus as they are sent to the notification
-  daemon, so your normal notification popups still work.
+  daemon, so your normal notification popups still work. Buttons of apps that
+  use GNOME's GNotification API are triggered the same way GNOME Shell does it
+  (`org.freedesktop.Application.ActivateAction`).
+- **WhatsApp** runs whatsapp-web.js against a hidden window of the island itself
+  (Electron is Chromium), so no separate browser is needed.
+- **Mail** keeps an IMAP IDLE connection per account and sends replies over SMTP.
 - **Control Center** uses standard command-line tools, and only checks them
   while the panel is open.
 
@@ -218,3 +287,11 @@ tests/               unit tests (vitest)
 - The island window can't take keyboard focus, so there's no way to type a
   reason when denying a Claude request (the hook itself supports one).
 - The two-activity split uses a spring animation rather than a liquid "goo" merge.
+- **Replying to any notification isn't possible in general.** Standard Linux
+  notifications have no way for another program to press their buttons; only
+  apps using GNOME's GNotification API expose them. WhatsApp and mail replies
+  work through their own built-in integrations instead.
+- Mail uses IMAP/SMTP with a password or app password. Outlook.com / Microsoft
+  365 accounts that only allow OAuth sign-in aren't supported yet.
+- The WhatsApp integration is tested automatically against a scripted fake;
+  the real WhatsApp Web connection has to be tried with a real phone.

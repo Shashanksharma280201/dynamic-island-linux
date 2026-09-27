@@ -1,0 +1,303 @@
+import { ImapFlow, type FetchMessageObject } from 'imapflow'
+import nodemailer from 'nodemailer'
+import MailComposer from 'nodemailer/lib/mail-composer/index.js'
+import { simpleParser } from 'mailparser'
+
+import type { MailServer, MailStatus } from '@shared/types'
+
+export type ServerConfig = MailServer
+
+export type MailAccount = {
+  id: string
+  label: string
+  /** Login and From address. */
+  user: string
+  name?: string
+  imap: ServerConfig
+  smtp: ServerConfig
+}
+
+export type MailPreset = { imap: ServerConfig; smtp: ServerConfig; note?: string }
+
+/** Known providers (all need an app password when 2-step verification is on). */
+export const MAIL_PRESETS: Record<string, MailPreset> = {
+  gmail: {
+    imap: { host: 'imap.gmail.com', port: 993, secure: true },
+    smtp: { host: 'smtp.gmail.com', port: 465, secure: true },
+    note: 'Use an app password: myaccount.google.com/apppasswords',
+  },
+  yahoo: {
+    imap: { host: 'imap.mail.yahoo.com', port: 993, secure: true },
+    smtp: { host: 'smtp.mail.yahoo.com', port: 465, secure: true },
+    note: 'Use an app password from Yahoo account security settings',
+  },
+  icloud: {
+    imap: { host: 'imap.mail.me.com', port: 993, secure: true },
+    smtp: { host: 'smtp.mail.me.com', port: 587, secure: false },
+    note: 'Use an app-specific password from appleid.apple.com',
+  },
+  fastmail: {
+    imap: { host: 'imap.fastmail.com', port: 993, secure: true },
+    smtp: { host: 'smtp.fastmail.com', port: 465, secure: true },
+    note: 'Use an app password from Fastmail settings',
+  },
+}
+
+/** Guess a preset from an email address. Pure. */
+export function presetFor(email: string): string | null {
+  const domain = email.split('@')[1]?.toLowerCase() ?? ''
+  if (domain === 'gmail.com' || domain === 'googlemail.com') return 'gmail'
+  if (/^yahoo\./.test(domain) || domain === 'ymail.com') return 'yahoo'
+  if (['icloud.com', 'me.com', 'mac.com'].includes(domain)) return 'icloud'
+  if (/^fastmail\./.test(domain)) return 'fastmail'
+  return null
+}
+
+/** "Re: " once, never "Re: Re:". Pure. */
+export function replySubject(subject: string | undefined): string {
+  const s = (subject ?? '').trim()
+  return /^re:/i.test(s) ? s : `Re: ${s}`.trim()
+}
+
+/** In-Reply-To / References for a reply (RFC 5322 §3.6.4). Pure. */
+export function replyThreading(
+  messageId: string | undefined,
+  references: string | string[] | undefined,
+): { inReplyTo?: string; references?: string[] } {
+  if (!messageId) return {}
+  const refs = Array.isArray(references)
+    ? references
+    : (references ?? '').split(/\s+/).filter(Boolean)
+  return { inReplyTo: messageId, references: [...refs.filter((r) => r !== messageId), messageId] }
+}
+
+/** Short preview: drops quoted replies and signatures, collapses whitespace. Pure. */
+export function snippet(text: string | undefined, max = 180): string {
+  if (!text) return ''
+  const lines: string[] = []
+  for (const line of text.split(/\r?\n/)) {
+    if (/^-- ?$/.test(line)) break // signature
+    if (/^On .+wrote:\s*$/.test(line.trim())) break // start of quoted reply
+    if (line.trimStart().startsWith('>')) continue
+    lines.push(line)
+  }
+  const s = lines.join(' ').replace(/\s+/g, ' ').trim()
+  return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s
+}
+
+/** Gmail's SMTP server files sent mail itself; others need an IMAP APPEND. Pure. */
+export function smtpSavesSent(smtpHost: string): boolean {
+  return /(^|\.)gmail\.com$|(^|\.)googlemail\.com$/i.test(smtpHost)
+}
+
+export type IncomingMail = {
+  accountId: string
+  uid: number
+  from: { name: string; address: string }
+  replyTo?: string
+  subject: string
+  snippet: string
+  date: number
+  messageId?: string
+  references?: string[]
+}
+
+export type AccountStatus = MailStatus
+
+const MAX_SOURCE = 256 * 1024
+
+/**
+ * Watches one account's INBOX over IMAP IDLE and replies over SMTP. New,
+ * unread messages that arrive while running are reported; nothing already in
+ * the mailbox at startup is.
+ */
+export class MailAccountWatcher {
+  private client: ImapFlow | null = null
+  private lastUid = 0
+  private stopped = false
+  private retryMs = 2000
+  private retryTimer: ReturnType<typeof setTimeout> | null = null
+  private known = new Map<number, IncomingMail>()
+  private fetching: Promise<void> = Promise.resolve()
+
+  constructor(
+    private account: MailAccount,
+    private password: string,
+    private onMail: (m: IncomingMail) => void,
+    private onStatus: (s: AccountStatus) => void = () => {},
+  ) {}
+
+  start(): void {
+    this.stopped = false
+    void this.connect()
+  }
+
+  private async connect(): Promise<void> {
+    if (this.stopped) return
+    this.onStatus({ state: 'connecting' })
+    const { imap, user } = this.account
+    const client = new ImapFlow({
+      host: imap.host,
+      port: imap.port,
+      secure: imap.secure,
+      auth: { user, pass: this.password },
+      logger: false,
+    })
+    this.client = client
+    client.on('error', () => {}) // 'close' follows and handles reconnection
+    client.on('close', () => this.scheduleReconnect())
+    client.on('exists', () => {
+      this.fetching = this.fetching.then(() => this.fetchNew()).catch(() => {})
+    })
+    try {
+      await client.connect()
+      const box = await client.mailboxOpen('INBOX')
+      if (!this.lastUid) this.lastUid = Number(box.uidNext) - 1
+      else this.fetching = this.fetching.then(() => this.fetchNew()).catch(() => {})
+      this.retryMs = 2000
+      this.onStatus({ state: 'connected' })
+    } catch (e: any) {
+      this.onStatus({ state: 'error', error: e?.responseText || e?.message || String(e) })
+      client.close()
+    }
+  }
+
+  private scheduleReconnect(): void {
+    if (this.stopped || this.retryTimer) return
+    this.retryTimer = setTimeout(() => {
+      this.retryTimer = null
+      void this.connect()
+    }, this.retryMs)
+    this.retryMs = Math.min(this.retryMs * 2, 5 * 60 * 1000)
+  }
+
+  private async fetchNew(): Promise<void> {
+    const client = this.client
+    if (!client?.usable) return
+    const found: FetchMessageObject[] = []
+    for await (const msg of client.fetch(
+      `${this.lastUid + 1}:*`,
+      { uid: true, flags: true, envelope: true, source: { maxLength: MAX_SOURCE } },
+      { uid: true },
+    )) {
+      found.push(msg)
+    }
+    for (const msg of found) {
+      if (msg.uid <= this.lastUid) continue // `n:*` always returns the last message
+      this.lastUid = msg.uid
+      if (msg.flags?.has('\\Seen')) continue
+      const from = msg.envelope?.from?.[0]
+      if (!from?.address || from.address.toLowerCase() === this.account.user.toLowerCase()) continue
+      let text = ''
+      let references: string[] | undefined
+      try {
+        const parsed = await simpleParser(msg.source ?? Buffer.alloc(0))
+        text = parsed.text ?? ''
+        const r = parsed.references
+        references = Array.isArray(r) ? r : r ? [r] : undefined
+      } catch {
+        // headers-only preview
+      }
+      const mail: IncomingMail = {
+        accountId: this.account.id,
+        uid: msg.uid,
+        from: { name: from.name || from.address, address: from.address },
+        replyTo: msg.envelope?.replyTo?.[0]?.address,
+        subject: msg.envelope?.subject || '(no subject)',
+        snippet: snippet(text),
+        date: msg.envelope?.date ? new Date(msg.envelope.date).getTime() : Date.now(),
+        messageId: msg.envelope?.messageId,
+        references,
+      }
+      this.known.set(mail.uid, mail)
+      if (this.known.size > 200) this.known.delete(this.known.keys().next().value!)
+      this.onMail(mail)
+    }
+  }
+
+  async markRead(uid: number): Promise<void> {
+    await this.client?.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true })
+  }
+
+  /** Reply to a message seen by this watcher. */
+  async reply(uid: number, text: string): Promise<void> {
+    const orig = this.known.get(uid)
+    if (!orig) throw new Error('That message is no longer available')
+    const { smtp, user, name } = this.account
+    const mail = {
+      from: name ? { name, address: user } : user,
+      to: orig.replyTo || orig.from.address,
+      subject: replySubject(orig.subject),
+      text,
+      ...replyThreading(orig.messageId, orig.references),
+    }
+    const raw = await new MailComposer(mail).compile().build()
+    const transport = nodemailer.createTransport({
+      host: smtp.host,
+      port: smtp.port,
+      secure: smtp.secure,
+      auth: { user, pass: this.password },
+    })
+    try {
+      await transport.sendMail({
+        envelope: { from: user, to: [mail.to] },
+        raw,
+      })
+    } finally {
+      transport.close()
+    }
+    if (!smtpSavesSent(smtp.host)) await this.appendToSent(raw).catch(() => {})
+    await this.client
+      ?.messageFlagsAdd(String(uid), ['\\Seen', '\\Answered'], { uid: true })
+      .catch(() => {})
+  }
+
+  private async appendToSent(raw: Buffer): Promise<void> {
+    const client = this.client
+    if (!client?.usable) return
+    const boxes = await client.list()
+    const sent = boxes.find((b) => b.specialUse === '\\Sent')
+    if (sent) await client.append(sent.path, raw, ['\\Seen'])
+  }
+
+  async stop(): Promise<void> {
+    this.stopped = true
+    if (this.retryTimer) clearTimeout(this.retryTimer)
+    this.retryTimer = null
+    await this.client?.logout().catch(() => this.client?.close())
+    this.client = null
+  }
+}
+
+/** Try logging in to IMAP and SMTP with these settings; throws a readable error. */
+export async function testMailAccount(account: MailAccount, password: string): Promise<void> {
+  const { imap, smtp, user } = account
+  const client = new ImapFlow({
+    host: imap.host,
+    port: imap.port,
+    secure: imap.secure,
+    auth: { user, pass: password },
+    logger: false,
+  })
+  client.on('error', () => {})
+  try {
+    await client.connect()
+  } catch (e: any) {
+    throw new Error(`IMAP: ${e?.responseText || e?.message || e}`)
+  } finally {
+    await client.logout().catch(() => client.close())
+  }
+  const transport = nodemailer.createTransport({
+    host: smtp.host,
+    port: smtp.port,
+    secure: smtp.secure,
+    auth: { user, pass: password },
+  })
+  try {
+    await transport.verify()
+  } catch (e: any) {
+    throw new Error(`SMTP: ${e?.response || e?.message || e}`)
+  } finally {
+    transport.close()
+  }
+}

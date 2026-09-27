@@ -21,7 +21,15 @@ export type MediaState = {
   /** Playback position in seconds at `positionAt` (epoch ms). */
   position?: number
   positionAt?: number
+  /** MPRIS track id, needed to seek with SetPosition. */
+  trackId?: string
+  canSeek?: boolean
+  /** Undefined when the player doesn't support it. */
+  shuffle?: boolean
+  loop?: LoopStatus
 }
+
+export type LoopStatus = 'None' | 'Track' | 'Playlist'
 
 export type Urgency = 'low' | 'normal' | 'critical'
 
@@ -31,6 +39,29 @@ export type NotificationData = {
   body: string
   icon?: string
   urgency?: Urgency
+  /** Buttons the island can trigger (apps using GNOME's GNotification API). */
+  actions?: { key: string; label: string }[]
+}
+
+export type MessageSource = 'whatsapp' | 'mail'
+
+export type ChatLine = { text: string; time: number; author?: string }
+
+/** A conversation update (WhatsApp chat or mail message) that can be replied to. */
+export type MessageData = {
+  source: MessageSource
+  /** WhatsApp chat id, or `<accountId>:<uid>` for mail. */
+  threadId: string
+  sender: string
+  /** Group name (WhatsApp) or subject (mail). */
+  title?: string
+  /** Mail account label, when more than one account is set up. */
+  account?: string
+  avatar?: string
+  /** Most recent last; capped. */
+  lines: ChatLine[]
+  canReply: boolean
+  status?: { kind: 'sending' | 'sent' | 'error'; text?: string }
 }
 
 type Base = { id: string; priority: number; /** insertion order, newer = larger */ seq?: number }
@@ -39,6 +70,7 @@ export type Activity =
   | (Base & { kind: 'media'; media: MediaState })
   | (Base & { kind: 'approval'; request: ToolRequest })
   | (Base & { kind: 'notification'; notification: NotificationData })
+  | (Base & { kind: 'message'; message: MessageData })
 
 export type SystemState = {
   volume: number // 0-100
@@ -64,8 +96,19 @@ export const IPC = {
   SYS_CMD: 'island:sys-cmd', // renderer -> main: SysCmd
   PANEL: 'island:panel', // renderer -> main: boolean (Control Center open)
   HOVER: 'island:hover', // main -> renderer: boolean (cursor over the island)
-  DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a notification)
+  DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
+  HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
+  FOCUS: 'island:focus', // renderer -> main: boolean (take keyboard focus for typing)
+  REPLY: 'island:reply', // renderer -> main: { id, text }
+  MESSAGE_ACTION: 'island:message-action', // renderer -> main: { id, action }
+  NOTIF_ACTION: 'island:notif-action', // renderer -> main: { id, key }
+  OPEN_SETTINGS: 'island:open-settings', // renderer -> main: optional section
 } as const
+
+export type ReplyMsg = { id: string; text: string }
+export type MessageAction = 'read'
+export type MessageActionMsg = { id: string; action: MessageAction }
+export type NotifActionMsg = { id: string; key: string }
 
 export type DecisionMsg = {
   id: string
@@ -75,6 +118,47 @@ export type DecisionMsg = {
   /** Allow and apply Claude's suggested permission rules. */
   always?: boolean
 }
-export type MediaCmd = 'playpause' | 'next' | 'previous'
+export type MediaCmd =
+  | 'playpause'
+  | 'next'
+  | 'previous'
+  | 'shuffle'
+  | 'loop'
+  | { type: 'seek'; position: number }
 
 export type { Rect } from './hitbox'
+
+// ---- settings window ----
+
+export type WaState =
+  | { state: 'disabled' }
+  | { state: 'starting' }
+  | { state: 'qr'; qr: string }
+  | { state: 'ready'; me?: string }
+  | { state: 'disconnected'; reason?: string }
+  | { state: 'error'; error: string }
+
+export type MailStatus = { state: 'connecting' | 'connected' | 'error'; error?: string }
+
+export type MailServer = { host: string; port: number; secure: boolean }
+
+/** A mail account as the settings window sees it (never includes the password). */
+export type MailAccountView = {
+  id: string
+  label: string
+  user: string
+  name?: string
+  imap: MailServer
+  smtp: MailServer
+  status?: MailStatus
+}
+
+export type SettingsState = {
+  notifications: boolean
+  autostart: boolean
+  hookInstalled: boolean
+  /** False when passwords can only be obfuscated (no desktop keyring). */
+  secureStorage: boolean
+  whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
+  mail: MailAccountView[]
+}

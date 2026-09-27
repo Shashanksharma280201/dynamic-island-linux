@@ -77,12 +77,26 @@ function hook(input, env = {}) {
     await shot('02-expanded-media')
 
     // 3. transport controls reach the player
-    await page.click('button[title="Play/Pause"]')
-    await page.waitForFunction(() => document.querySelector('button[title="Play/Pause"]')?.textContent === '▶', null, { timeout: 3000 })
+    await page.click('button[title="Pause"]')
+    await page.waitForSelector('button[title="Play"]', { timeout: 3000 })
     check('play/pause round-trips to player', playerLog.includes('STATUS Paused'))
     await page.click('button[title="Next"]')
     await page.waitForFunction(() => document.querySelector('.card.media .title')?.textContent === 'Fake Track Two', null, { timeout: 3000 })
     check('next track updates via PropertiesChanged', true)
+
+    // 3b. shuffle / repeat / seek through MPRIS
+    await page.click('button[title="Shuffle off"]')
+    await page.waitForSelector('button[title="Shuffle on"]', { timeout: 3000 })
+    check('shuffle toggles on the player', playerLog.includes('SHUFFLE true'))
+    await page.click('button[title="Repeat off"]')
+    await page.waitForSelector('button[title="Repeat all"]', { timeout: 3000 })
+    check('repeat cycles on the player', playerLog.includes('LOOP Playlist'))
+    const bar = await page.$('.progress .bar.seekable')
+    const bb = await bar.boundingBox()
+    await page.mouse.click(bb.x + bb.width / 2, bb.y + bb.height / 2)
+    await sleep(500)
+    const seek = /SEEK \/org\/fake\/track1 (\d+)/.exec(playerLog)
+    check('clicking the progress bar seeks', !!seek && Math.abs(Number(seek[1]) / 1e6 - 90) < 5, seek?.[1])
 
     // 4. pointer leaves → collapse to compact (authoritative hover from main)
     pointer(5, 450)
@@ -151,6 +165,33 @@ function hook(input, env = {}) {
       check('monitor survives: second notification also shown', second)
       if (second) await page.click('.card.notification')
     }
+
+    // 9b. GNotification buttons trigger the app's action (like GNOME Shell does)
+    const gtk = spawn('node', [path.join(__dirname, 'fake-gtk-app.cjs')])
+    let gtkLog = ''
+    gtk.stdout.on('data', (d) => (gtkLog += d))
+    const until = async (fn, ms = 4000) => {
+      const end = Date.now() + ms
+      while (!fn() && Date.now() < end) await sleep(100)
+      return fn()
+    }
+    await until(() => gtkLog.includes('READY'))
+    gtk.stdin.write('go\n')
+    const gotGtk = await page
+      .waitForSelector('.card.notification .actions button', { timeout: 4000 })
+      .then(() => true, () => false)
+    check('GNotification shows its button', gotGtk)
+    if (gotGtk) {
+      await sleep(300)
+      await shot('05b-notification-actions')
+      await page.click('.card.notification .actions button')
+      check(
+        'button runs the app action with its target',
+        await until(() => gtkLog.includes('ACTION open-log ["run-42"]')),
+        gtkLog.trim().split('\n').pop(),
+      )
+    }
+    gtk.kill()
 
     // 10. Control Center opens on click, closes after pointer leaves
     const r2 = await page.evaluate(() => {

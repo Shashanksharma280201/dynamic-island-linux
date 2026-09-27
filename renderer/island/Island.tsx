@@ -10,6 +10,7 @@ import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
 import { ControlCenter } from './states/ControlCenter'
+import { MessageCard } from './states/MessageCard'
 import { squirclePath } from './squircle'
 
 /** Close the Control Center this long after the cursor leaves the island. */
@@ -19,6 +20,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   const [hover, setHover] = useState(false)
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
+  const [replying, setReplying] = useState(false)
   const outerRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
 
@@ -33,6 +35,21 @@ export function Island({ activities }: { activities: Activity[] }) {
   const showPanel = panel && !isApproval
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
+
+  // Keep a notification / message open while it's hovered or being answered.
+  const transientId =
+    p.mode !== 'idle' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
+      ? p.primary.id
+      : null
+  const holding = hover || replying
+  useEffect(() => {
+    if (!transientId || !holding) return
+    window.island.hold(transientId, true)
+    return () => window.island.hold(transientId, false)
+  }, [transientId, holding])
+  useEffect(() => {
+    if (!transientId) setReplying(false)
+  }, [transientId])
 
   // Auto-close the Control Center once the cursor has left for a moment.
   useEffect(() => {
@@ -82,9 +99,9 @@ export function Island({ activities }: { activities: Activity[] }) {
       : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
   const onClick = () => {
-    if (p.mode !== 'idle' && p.primary.kind === 'notification' && !showPanel) {
-      window.island.dismiss(p.primary.id)
-      return
+    if (p.mode !== 'idle' && !showPanel) {
+      if (p.primary.kind === 'notification') return window.island.dismiss(p.primary.id)
+      if (p.primary.kind === 'message') return // has its own buttons
     }
     if (!isApproval) setPanel((v) => !v)
   }
@@ -114,7 +131,18 @@ export function Island({ activities }: { activities: Activity[] }) {
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (
-              <NotificationCard notification={p.primary.notification} queued={p.queued} />
+              <NotificationCard
+                id={p.primary.id}
+                notification={p.primary.notification}
+                queued={p.queued}
+              />
+            ) : p.primary.kind === 'message' ? (
+              <MessageCard
+                id={p.primary.id}
+                message={p.primary.message}
+                queued={p.queued}
+                onReplying={setReplying}
+              />
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
             ) : (

@@ -1,19 +1,32 @@
 import { app, screen, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
+import { readFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
-import { NotificationMonitor, displayMs } from './providers/notifications'
+import {
+  NotificationMonitor,
+  GtkActionInvoker,
+  displayMs,
+  type GtkInvoke,
+} from './providers/notifications'
 import { SystemControls, CommandQueue } from './providers/system'
+import { WhatsAppService, WwebjsEngine } from './providers/whatsapp'
+import { FakeWhatsAppEngine } from './providers/whatsappFake'
 import { createIslandWindow, placeIslandWindow } from './window'
 import { Interactivity } from './interactivity'
 import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
 import { loadConfig, saveConfig } from './config'
+import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import { isHookInstalled, setHookInstalled } from './hookSetup'
+import { TransientCards } from './transient'
+import { MessageHub, MESSAGE_MS } from './messages'
+import { MailManager } from './mailManager'
+import { SettingsController } from './settings'
 import { IPC } from '@shared/types'
 import type { NotificationData } from '@shared/types'
 import { defaultSocketPath } from '@shared/protocol'
@@ -26,16 +39,35 @@ app.commandLine.appendSwitch('enable-transparent-visuals')
 if (WAYLAND && !process.env.ELECTRON_OZONE_PLATFORM_HINT) {
   app.commandLine.appendSwitch('ozone-platform', 'x11')
 }
+// Separate profile for tests / portable use.
+if (process.env.DI_USER_DATA) app.setPath('userData', process.env.DI_USER_DATA)
 
 const here = dirname(fileURLToPath(import.meta.url))
 const SOCK = defaultSocketPath(process.env, process.getuid?.() ?? 'user')
-const DEMO = process.env.DI_DEMO // '1' media+approval, '2' two activities, '3' notifications
-const MAX_NOTIFICATIONS = 5
+// '1' media+approval, '2' two activities, '3' notifications, '4' messages
+const DEMO = process.env.DI_DEMO
+// 'fake' swaps the real WhatsApp Web engine for a scripted one (demo/tests).
+const FAKE_WA = process.env.DI_WHATSAPP_ENGINE === 'fake' || DEMO === '4'
+
+const bootConfig = loadConfig()
+// whatsapp-web.js drives a hidden window of this app over the Chrome DevTools
+// Protocol, which Chromium only offers when started with a debugging port.
+// Only opened when WhatsApp is enabled, bound to localhost, on a random port.
+const WA_CDP = bootConfig.whatsapp && !FAKE_WA
+if (WA_CDP) {
+  app.commandLine.appendSwitch('remote-debugging-address', '127.0.0.1')
+  app.commandLine.appendSwitch('remote-debugging-port', '0')
+}
 
 let cleanup: (() => Promise<void>) | null = null
 
+function cdpUrl(): string {
+  const file = readFileSync(join(app.getPath('userData'), 'DevToolsActivePort'), 'utf8')
+  return `http://127.0.0.1:${file.split('\n')[0].trim()}`
+}
+
 async function main() {
-  const config = loadConfig()
+  const config = bootConfig
   const store = new ActivityStore()
   const win = createIslandWindow()
   let display: Display = placeIslandWindow(win)
@@ -49,6 +81,7 @@ async function main() {
 
   const pushState = () => send(win, IPC.STATE, store.list())
   store.onChange(pushState)
+  const transient = new TransientCards(store)
 
   // ---- interactivity: renderer rect (CSS px) → physical hit area ----
   const interactivity = new Interactivity(win)
@@ -85,28 +118,67 @@ async function main() {
   })
   await media.start().catch((e) => console.error('media provider:', e))
 
-  // ---- notifications ----
-  const notifTimers = new Map<string, ReturnType<typeof setTimeout>>()
+  // ---- notifications (with GNotification buttons) ----
+  const invokes = new Map<string, GtkInvoke>()
+  const invoker = new GtkActionInvoker()
+  transient.onDismiss((id) => invokes.delete(id))
   let notifSeq = 0
-  const dismiss = (id: string) => {
-    clearTimeout(notifTimers.get(id))
-    notifTimers.delete(id)
-    store.remove(id)
-  }
-  const showNotification = (n: NotificationData) => {
+  const showNotification = (n: NotificationData, invoke?: GtkInvoke) => {
     const id = `notif-${notifSeq++}`
+    if (invoke) invokes.set(id, invoke)
     const priority = n.urgency === 'critical' ? 6 : 5
-    store.upsert({ kind: 'notification', id, priority, notification: n })
-    notifTimers.set(id, setTimeout(() => dismiss(id), displayMs(n)))
-    // Keep the queue short: drop the oldest beyond the limit.
-    const ids = [...notifTimers.keys()]
-    for (const old of ids.slice(0, Math.max(0, ids.length - MAX_NOTIFICATIONS))) dismiss(old)
+    transient.show({ kind: 'notification', id, priority, notification: n }, displayMs(n))
   }
   const notifications = new NotificationMonitor()
-  notifications.onNotify((n) => {
-    if (config.notifications) showNotification(n)
+  notifications.onNotify((n, invoke) => {
+    if (config.notifications) showNotification(n, invoke)
   })
   await notifications.start().catch((e) => console.error('notifications:', e))
+
+  // ---- messages: WhatsApp + mail ----
+  const hub = new MessageHub(transient)
+  let settings: SettingsController | null = null
+  let tray: IslandTray | null = null
+  const mail = new MailManager(
+    (m, account) => hub.addMail(m, config.mail.length > 1 ? account.label : undefined),
+    () => settings?.changed(),
+  )
+  hub.setBackend('mail', mail)
+
+  const whatsapp = new WhatsAppService(() =>
+    FAKE_WA
+      ? new FakeWhatsAppEngine(process.env.DI_DEMO_LOG, Number(process.env.DI_FAKE_WA_READY_MS) || 2500)
+      : new WwebjsEngine(cdpUrl()),
+  )
+  whatsapp.onMessage((m) => hub.addWhatsApp(m))
+  whatsapp.onState((s) => {
+    hub.setBackend(
+      'whatsapp',
+      s.state === 'ready'
+        ? { reply: (c, t) => whatsapp.send(c, t), markRead: (c) => whatsapp.markRead(c) }
+        : null,
+    )
+    settings?.changed()
+  })
+
+  // ---- settings window (created before the services report status to it) ----
+  settings = new SettingsController({
+    config,
+    mail,
+    whatsapp,
+    whatsappCapable: WA_CDP || FAKE_WA,
+    onConfigChanged: () => tray?.refresh(),
+  })
+  settings.wire()
+
+  for (const { secret, ...account } of config.mail) {
+    try {
+      await mail.set(account, decryptSecret(secret))
+    } catch (e) {
+      console.error(`mail ${account.label}:`, e)
+    }
+  }
+  if ((config.whatsapp && WA_CDP) || FAKE_WA) void whatsapp.start()
 
   // ---- system controls: polled only while the Control Center is open ----
   const system = new SystemControls()
@@ -123,12 +195,21 @@ async function main() {
     () => void pushSys(),
   )
 
+  // Typing a reply needs keyboard focus; the island is unfocusable otherwise
+  // so it never steals focus from the app you're using.
+  const setFocus = (focus: boolean) => {
+    if (win.isDestroyed()) return
+    win.setFocusable(focus)
+    if (focus) win.focus()
+    else win.blur()
+  }
+
   wireIpc({
     onDecision: (m) => {
       claude.resolve(m)
       store.remove(m.id)
     },
-    onMediaCmd: (c) => media.command(c),
+    onMediaCmd: (c) => void media.command(c),
     onSysCmd: (c) => commands.push(c),
     onRect: (r) => {
       cssRect = r
@@ -141,7 +222,22 @@ async function main() {
       void pushSys()
       sysTimer = setInterval(pushSys, 2000)
     },
-    onDismiss: dismiss,
+    onDismiss: (id) => transient.dismiss(id),
+    onHold: (id, hold) => {
+      if (process.env.DI_DEBUG) console.error('[hold]', id, hold)
+      transient.hold(id, hold)
+    },
+    onFocus: setFocus,
+    onReply: (m) => void hub.reply(m.id, m.text),
+    onMessageAction: (m) => void hub.markRead(m.id),
+    onNotifAction: ({ id, key }) => {
+      const inv = invokes.get(id)
+      const button = inv?.buttons[Number(key)]
+      if (!inv || !button) return
+      transient.dismiss(id)
+      invoker.invoke(inv.appId, button).catch((e) => console.error('notification action:', e))
+    },
+    onOpenSettings: (section) => settings?.open(section),
   })
 
   // A renderer reload (dev HMR, crash recovery) must get the current state.
@@ -151,7 +247,7 @@ async function main() {
   })
 
   // ---- tray ----
-  const tray = new IslandTray(
+  tray = new IslandTray(
     () => ({
       notifications: config.notifications,
       hookInstalled: isHookInstalled(),
@@ -161,11 +257,17 @@ async function main() {
       setNotifications: (on) => {
         config.notifications = on
         saveConfig(config)
+        settings?.changed()
       },
       setHook: async (on) => {
         console.log((await setHookInstalled(on)).trim())
+        settings?.changed()
       },
-      setAutostart,
+      setAutostart: (on) => {
+        setAutostart(on)
+        settings?.changed()
+      },
+      openSettings: () => settings?.open(),
       quit: () => app.quit(),
     },
   )
@@ -174,9 +276,17 @@ async function main() {
   cleanup = async () => {
     interactivity.stop()
     if (sysTimer) clearInterval(sysTimer)
-    for (const t of notifTimers.values()) clearTimeout(t)
-    tray.destroy()
-    await Promise.allSettled([claude.stop(), media.stop(), notifications.stop(), closeCursor()])
+    transient.clear()
+    tray?.destroy()
+    invoker.stop()
+    await Promise.allSettled([
+      claude.stop(),
+      media.stop(),
+      notifications.stop(),
+      mail.stop(),
+      whatsapp.stop(),
+      closeCursor(),
+    ])
   }
 
   if (WAYLAND) {
@@ -192,10 +302,14 @@ async function main() {
     })
   }
 
-  if (DEMO) runDemo(store, showNotification)
+  if (DEMO) runDemo(store, showNotification, hub)
 }
 
-function runDemo(store: ActivityStore, notify: (n: NotificationData) => void) {
+function runDemo(
+  store: ActivityStore,
+  notify: (n: NotificationData) => void,
+  hub: MessageHub,
+) {
   const demoMedia = (id: string, title: string, artist: string, priority: number) =>
     store.upsert({
       kind: 'media',
@@ -209,6 +323,9 @@ function runDemo(store: ActivityStore, notify: (n: NotificationData) => void) {
         length: 215,
         position: 42,
         positionAt: Date.now(),
+        canSeek: true,
+        shuffle: false,
+        loop: 'None',
       },
     })
   demoMedia('media', 'Demo Song', 'Demo Artist', 1)
@@ -223,6 +340,20 @@ function runDemo(store: ActivityStore, notify: (n: NotificationData) => void) {
     setTimeout(
       () => notify({ app: 'Calendar', summary: 'Standup in 5 min', body: '', urgency: 'critical' }),
       2500,
+    )
+  } else if (DEMO === '4') {
+    // WhatsApp messages come from the fake engine; add a mail too.
+    setTimeout(
+      () =>
+        hub.addMail({
+          accountId: 'demo',
+          uid: 1,
+          from: { name: 'Bob Builder', address: 'bob@example.com' },
+          subject: 'Quarterly report',
+          snippet: 'Hi! Attached is the draft of the quarterly report, let me know what you think.',
+          date: Date.now(),
+        }),
+      MESSAGE_MS / 2,
     )
   } else {
     // Media, then an auto-expanding approval.
