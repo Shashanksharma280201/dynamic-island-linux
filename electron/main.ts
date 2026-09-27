@@ -1,4 +1,4 @@
-import { app, screen, type Display } from 'electron'
+import { app, screen, globalShortcut, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
@@ -28,6 +28,8 @@ import { TransientCards } from './transient'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
+import { wireInbox } from './inbox'
+import { FakeMailWatcher } from './providers/mailFake'
 import { IPC } from '@shared/types'
 import type { NotificationData, SystemState } from '@shared/types'
 import type { Dock, Side } from '@shared/dock'
@@ -52,6 +54,7 @@ const DEMO = process.env.DI_DEMO
 const FAKE_WA = process.env.DI_WHATSAPP_ENGINE === 'fake' || DEMO === '4'
 
 const bootConfig = loadConfig()
+const SHORTCUT = 'CommandOrControl+I'
 // whatsapp-web.js drives a hidden window of this app over the Chrome DevTools
 // Protocol, which Chromium only offers when started with a debugging port.
 // Only opened when WhatsApp is enabled, bound to localhost, on a random port.
@@ -88,6 +91,7 @@ async function main() {
   const pushState = () => send(win, IPC.STATE, store.list())
   store.onChange(pushState)
   const transient = new TransientCards(store)
+  let shortcutActive = false
 
   // ---- interactivity: clicks reach the island, everything else passes through ----
   // Preferred: an X11 input shape (the X server routes clicks; no polling).
@@ -185,9 +189,19 @@ async function main() {
   const hub = new MessageHub(transient)
   let settings: SettingsController | null = null
   let tray: IslandTray | null = null
+  let inbox: ReturnType<typeof wireInbox> | null = null
   const mail = new MailManager(
-    (m, account) => hub.addMail(m, config.mail.length > 1 ? account.label : undefined),
-    () => settings?.changed(),
+    (m, account) => {
+      hub.addMail(m, config.mail.length > 1 ? account.label : undefined)
+      inbox?.changed('mail')
+    },
+    () => {
+      settings?.changed()
+      inbox?.changed('sources')
+    },
+    DEMO === '4'
+      ? (a, _p, onMail, onStatus) => new FakeMailWatcher(a.id, onStatus, onMail)
+      : undefined,
   )
   hub.setBackend('mail', mail)
 
@@ -196,8 +210,12 @@ async function main() {
       ? new FakeWhatsAppEngine(process.env.DI_DEMO_LOG, Number(process.env.DI_FAKE_WA_READY_MS) || 2500)
       : new WwebjsEngine(cdpUrl()),
   )
-  whatsapp.onMessage((m) => hub.addWhatsApp(m))
+  whatsapp.onMessage((m) => {
+    hub.addWhatsApp(m)
+    inbox?.changed('whatsapp')
+  })
   whatsapp.onState((s) => {
+    inbox?.changed('sources')
     hub.setBackend(
       'whatsapp',
       s.state === 'ready'
@@ -215,6 +233,8 @@ async function main() {
     whatsappCapable: WA_CDP || FAKE_WA,
     onConfigChanged: () => tray?.refresh(),
     onDockSide: (side) => setDock({ ...config.dock, side }),
+    applyShortcut: () => applyShortcut(),
+    shortcutActive: () => shortcutActive,
     onAppearance: () => {
       pushAppearance()
       updateHitArea()
@@ -222,6 +242,18 @@ async function main() {
   })
   settings.wire()
 
+  inbox = wireInbox(win, {
+    whatsapp,
+    mail,
+    closeCard: (source, threadId) => hub.closeThread(source, threadId),
+  })
+  if (DEMO === '4') {
+    const demoServer = { host: 'demo.invalid', port: 993, secure: true }
+    await mail.set(
+      { id: 'demo', label: 'Demo', user: 'me@example.com', imap: demoServer, smtp: demoServer },
+      '',
+    )
+  }
   for (const { secret, ...account } of config.mail) {
     try {
       await mail.set(account, decryptSecret(secret))
@@ -314,6 +346,17 @@ async function main() {
   // A renderer reload (dev HMR, crash recovery) must get the current state.
   // KWin blurs behind windows that set _KDE_NET_WM_BLUR_BEHIND_REGION.
   const blurBehind = !!shape && /kde/i.test(process.env.XDG_CURRENT_DESKTOP ?? '')
+  // Ctrl+I opens / closes the island panel from anywhere (X11 key grab).
+  const applyShortcut = (): boolean => {
+    if (shortcutActive) globalShortcut.unregister(SHORTCUT)
+    shortcutActive = false
+    if (config.shortcut) {
+      shortcutActive = globalShortcut.register(SHORTCUT, () => send(win, IPC.TOGGLE_PANEL, null))
+      if (!shortcutActive) console.error(`[island] couldn't register ${SHORTCUT}; another app may own it`)
+    }
+    return shortcutActive
+  }
+  applyShortcut()
   const pushAppearance = () =>
     send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
   win.webContents.on('did-finish-load', () => {
@@ -355,6 +398,7 @@ async function main() {
   tray.create()
 
   cleanup = async () => {
+    globalShortcut.unregisterAll()
     interactivity?.stop()
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)

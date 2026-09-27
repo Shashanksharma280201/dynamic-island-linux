@@ -3,7 +3,7 @@
 // (hoodiecrow) + SMTP (smtp-server) servers, including typing replies and the
 // settings window. Run through `npm run test:e2e`.
 const { _electron } = require('playwright-core')
-const { spawn } = require('child_process')
+const { spawn, execFileSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
@@ -176,6 +176,54 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       check('mark read sets \\Seen on the server', await until(() => msg()?.flags.includes('\\Seen')))
       await page.waitForSelector('.card.message', { state: 'detached', timeout: 3000 })
     } else check('second mail appears', false)
+
+    // ---- Hub: browse chats and inbox any time; Ctrl+I opens / closes ----
+    const key = (combo) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'key', combo])
+    key('ctrl+i')
+    check('Ctrl+I opens the island panel', await page.waitForSelector('.hub', { timeout: 3000 }).then(() => true, () => false))
+    await sleep(2500)
+    check('a panel opened from the keyboard stays open without hover', !!(await page.$('.hub')))
+
+    await page.click('.tabs button:has-text("Chats")')
+    await page.waitForSelector('.chat-row', { timeout: 5000 })
+    const chatNames = await page.$$eval('.chat-row .title', (e) => e.map((x) => x.textContent))
+    check('Chats tab lists WhatsApp chats', chatNames.includes('Alice') && chatNames.includes('Weekend Trip'), chatNames.join(', '))
+    await page.click('.chat-row:has-text("Weekend Trip")')
+    await page.waitForSelector('.thread .bubble', { timeout: 5000 })
+    check('opening a chat shows its history', (await page.$$('.thread .bubble')).length >= 3)
+    await page.click('.composer textarea')
+    await page.keyboard.type('Leaving now')
+    await page.keyboard.press('Enter')
+    check(
+      'message sent from the conversation view',
+      await until(() => waLog().includes('"chatId":"120363000000000000@g.us","text":"Leaving now"')),
+    )
+    check(
+      'sent message appears in the thread',
+      await page.waitForSelector('.thread .bubble.mine:has-text("Leaving now")', { timeout: 3000 }).then(() => true, () => false),
+    )
+    await page.click('.back')
+
+    await page.click('.tabs button:has-text("Mail")')
+    await page.waitForSelector('.mail-row', { timeout: 10000 })
+    const subjects = await page.$$eval('.mail-row .subject', (e) => e.map((x) => x.textContent))
+    check('Mail tab lists the inbox, newest first', subjects[0] === 'FYI' && subjects.includes('Quarterly report'), subjects.join(', '))
+    const sentBefore = smtpGot.length
+    await page.click('.mail-row:has-text("Quarterly report")')
+    await page.waitForSelector('.mail-body', { timeout: 5000 })
+    check(
+      'opening a mail shows its body',
+      await until(async () => ((await page.textContent('.mail-body')) ?? '').includes('Draft attached')),
+    )
+    await page.click('.view-head .pill:has-text("Reply")')
+    await page.waitForSelector('.composer textarea')
+    await page.keyboard.type('Second thoughts: ship Monday.')
+    await page.keyboard.press('Enter')
+    check('reply from the reader goes out over SMTP', await until(() => smtpGot.length === sentBefore + 1, 8000))
+    await shot(page, '14-hub-mail')
+
+    key('ctrl+i')
+    check('Ctrl+I closes it again', await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).then(() => true, () => false))
 
     // ---- Settings window ----
     const [settings] = await Promise.all([app.waitForEvent('window'), page.evaluate(() => window.island.openSettings())])

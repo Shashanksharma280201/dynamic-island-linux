@@ -9,7 +9,7 @@ import { ApprovalCard } from './states/ApprovalCard'
 import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
-import { ControlCenter } from './states/ControlCenter'
+import { Hub, type HubTab } from './hub/Hub'
 import { MessageCard } from './states/MessageCard'
 import { squirclePath } from './squircle'
 import { useDock } from './useDock'
@@ -23,6 +23,10 @@ export function Island({ activities }: { activities: Activity[] }) {
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
   const [replying, setReplying] = useState(false)
+  const [typing, setTyping] = useState(false)
+  const [hubTab, setHubTab] = useState<HubTab | undefined>(undefined)
+  // Opened from the keyboard: stay open until the pointer has visited and left.
+  const pinned = useRef(false)
   const outerRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
@@ -57,12 +61,31 @@ export function Island({ activities }: { activities: Activity[] }) {
     if (!transientId) setReplying(false)
   }, [transientId])
 
-  // Auto-close the Control Center once the cursor has left for a moment.
+  // Ctrl+I (global shortcut in the main process) opens / closes the panel.
+  useEffect(
+    () =>
+      window.island.onTogglePanel(() => {
+        setPanel((open) => {
+          pinned.current = !open
+          if (!open) setHubTab(undefined)
+          return !open
+        })
+      }),
+    [],
+  )
   useEffect(() => {
-    if (!panel || hover) return
+    if (hover) pinned.current = false
+  }, [hover])
+  useEffect(() => {
+    if (!panel) setTyping(false)
+  }, [panel])
+
+  // Auto-close the panel once the cursor has left for a moment (not while typing).
+  useEffect(() => {
+    if (!panel || hover || typing || pinned.current) return
     const t = setTimeout(() => setPanel(false), PANEL_CLOSE_MS)
     return () => clearTimeout(t)
-  }, [panel, hover])
+  }, [panel, hover, typing])
 
   // Track the island's settled size (the outer box is never transformed).
   useEffect(() => {
@@ -118,7 +141,10 @@ export function Island({ activities }: { activities: Activity[] }) {
       if (p.primary.kind === 'notification') return window.island.dismiss(p.primary.id)
       if (p.primary.kind === 'message') return // has its own buttons
     }
-    if (!isApproval) setPanel((v) => !v)
+    if (!isApproval) {
+      setHubTab(undefined)
+      setPanel((v) => !v)
+    }
   }
 
   return (
@@ -144,7 +170,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             transition={contentFade}
           >
             {showPanel ? (
-              <ControlCenter sys={sys} />
+              <Hub sys={sys} onTyping={setTyping} initialTab={hubTab} />
             ) : p.mode === 'idle' ? (
               <IdlePill />
             ) : p.primary.kind === 'approval' ? (
@@ -161,6 +187,10 @@ export function Island({ activities }: { activities: Activity[] }) {
                 message={p.primary.message}
                 queued={p.queued}
                 onReplying={setReplying}
+                onOpen={() => {
+                  setHubTab(p.primary.kind === 'message' && p.primary.message.source === 'mail' ? 'mail' : 'chats')
+                  setPanel(true)
+                }}
               />
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />

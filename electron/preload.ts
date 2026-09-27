@@ -12,8 +12,14 @@ import type {
   DockState,
   Dock,
   Side,
+  InboxSources,
+  ChatSummary,
+  ChatMessage,
+  MailSummary,
+  MailMessageView,
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
+import { INBOX } from '../electron/inboxChannels'
 
 /** Subscribe and return an unsubscribe function. */
 function on<T>(channel: string, cb: (v: T) => void): () => void {
@@ -42,8 +48,23 @@ const api = {
   setDock: (d: Dock) => ipcRenderer.send(IPC.DOCK_SET, d),
   previewSide: (side: Side) => ipcRenderer.send(IPC.DOCK_PREVIEW, side),
   setDragging: (on: boolean) => ipcRenderer.send(IPC.DRAG, on),
+  onTogglePanel: (cb: () => void) => on(IPC.TOGGLE_PANEL, cb),
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),
+  inbox: {
+    sources: (): Promise<InboxSources> => ipcRenderer.invoke(INBOX.SOURCES),
+    chats: (): Promise<ChatSummary[]> => ipcRenderer.invoke(INBOX.CHATS),
+    chat: (id: string): Promise<ChatMessage[]> => ipcRenderer.invoke(INBOX.CHAT, id),
+    sendChat: (id: string, text: string): Promise<void> => ipcRenderer.invoke(INBOX.CHAT_SEND, id, text),
+    mailList: (accountId?: string): Promise<MailSummary[]> => ipcRenderer.invoke(INBOX.MAIL_LIST, accountId),
+    mailGet: (accountId: string, uid: number): Promise<MailMessageView> =>
+      ipcRenderer.invoke(INBOX.MAIL_GET, accountId, uid),
+    mailReply: (accountId: string, uid: number, text: string): Promise<void> =>
+      ipcRenderer.invoke(INBOX.MAIL_REPLY, accountId, uid, text),
+    mailRead: (accountId: string, uid: number): Promise<void> =>
+      ipcRenderer.invoke(INBOX.MAIL_READ, accountId, uid),
+    onChanged: (cb: (what: 'whatsapp' | 'mail' | 'sources') => void) => on(INBOX.CHANGED, cb),
+  },
 }
 
 type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
@@ -57,6 +78,7 @@ const settings = {
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
+  setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

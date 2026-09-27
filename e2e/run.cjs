@@ -80,6 +80,9 @@ function hook(input, env = {}) {
     })
     check('input goes to the island over it', childAt(ic.x, ic.y) === xid)
     check('elsewhere in its column, clicks pass through to the desktop', childAt(ic.col, ic.y + 200) !== xid)
+    // The probe hovered the island; let it settle back to the capsule before measuring it again.
+    await page.waitForSelector('.capsule:not(.idle)', { timeout: 3000 })
+    await sleep(600)
 
     // 2. real X pointer over the island → hover → expand
     const r = await page.evaluate(() => {

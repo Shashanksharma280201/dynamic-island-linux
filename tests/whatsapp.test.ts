@@ -33,6 +33,12 @@ class FakeEngine implements WhatsAppEngine {
   async send(chatId: string, text: string) {
     this.sent.push(`${chatId}:${text}`)
   }
+  async listChats() {
+    return [{ id: '1@c.us', name: 'A', isGroup: false, unread: 0, time: 1, last: 'hi', lastFromMe: false }]
+  }
+  async getMessages() {
+    return [{ id: 'm1', fromMe: false, text: 'hi', time: 1 }]
+  }
   async markRead() {}
   async pairingCode() {
     return 'ABCD-EFGH'
@@ -52,7 +58,10 @@ test('service tracks QR → ready and only sends when ready', async () => {
   expect(svc.current).toEqual({ state: 'qr', qr: 'data:image/png;base64,QR' })
   expect(await svc.pairingCode('+91 98765 43210')).toBe('ABCD-EFGH')
   await expect(svc.send('1@c.us', 'x')).rejects.toThrow(/not connected/)
+  await expect(svc.listChats()).rejects.toThrow(/not connected/)
   engine.ev.onReady('Sam')
+  expect((await svc.listChats())[0].name).toBe('A')
+  expect((await svc.getMessages('1@c.us'))[0].text).toBe('hi')
   await svc.send('1@c.us', 'hi')
   expect(engine.sent).toEqual(['1@c.us:hi'])
   await svc.stop()
@@ -71,4 +80,19 @@ test('engine start failure becomes an error state', async () => {
   await svc.start()
   expect(svc.current).toEqual({ state: 'error', error: 'net::ERR_TUNNEL_CONNECTION_FAILED' })
   expect(svc.running).toBe(false)
+})
+
+import { FakeWhatsAppEngine } from '../electron/providers/whatsappFake'
+
+test('fake engine keeps history: sending appends, reading clears unread', async () => {
+  const e = new FakeWhatsAppEngine()
+  const chats = await e.listChats(10)
+  const group = chats.find((c) => c.isGroup)!
+  expect(group.unread).toBeGreaterThan(0)
+  expect(group.last).toContain(':') // author prefix in groups
+  await e.getMessages(group.id, 10)
+  expect((await e.listChats(10)).find((c) => c.id === group.id)!.unread).toBe(0)
+  await e.send(group.id, 'On my way')
+  const msgs = await e.getMessages(group.id, 10)
+  expect(msgs.at(-1)).toMatchObject({ fromMe: true, text: 'On my way' })
 })

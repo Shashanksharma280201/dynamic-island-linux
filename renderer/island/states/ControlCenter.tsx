@@ -109,7 +109,7 @@ function Toggle({
 export function ControlCenter({ sys }: { sys: SystemState | null }) {
   const hasRadios = sys && (sys.wifi !== null || sys.bluetooth !== null)
   return (
-    <div className="card panel" onClick={(e) => e.stopPropagation()}>
+    <div className="cc" onClick={(e) => e.stopPropagation()}>
       {!sys ? (
         <div className="module caption">Loading…</div>
       ) : (

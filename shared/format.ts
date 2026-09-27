@@ -31,3 +31,32 @@ export function ruleLabel(suggestions: unknown[] | undefined): string | null {
   }
   return labels.length ? labels.join(', ') : null
 }
+
+const DAY = 86_400_000
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+/**
+ * List timestamp in the style of Mail / Messages: "now", "5m", "14:05" today,
+ * "Yesterday", a weekday within a week, else "12 Mar". Pure (local time).
+ */
+export function relativeTime(ts: number, now: number): string {
+  const diff = now - ts
+  if (diff < 60_000) return 'now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m`
+  const d = new Date(ts)
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+  const start = today.getTime()
+  if (ts >= start) return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  if (ts >= start - DAY) return 'Yesterday'
+  if (ts >= start - 6 * DAY) return WEEKDAYS[d.getDay()]
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
+
+/** "Mon 12 Mar, 14:05" for a message header. Pure (local time). */
+export function fullTime(ts: number): string {
+  const d = new Date(ts)
+  const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  return `${WEEKDAYS[d.getDay()].slice(0, 3)} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${hm}`
+}

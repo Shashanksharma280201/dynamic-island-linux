@@ -22,3 +22,16 @@ test('ruleLabel describes suggested allow rules', () => {
   ).toBe('Bash(npm test)')
   expect(ruleLabel([{ rules: [{ toolName: 'WebFetch' }] }])).toBe('WebFetch')
 })
+
+import { relativeTime, fullTime } from '../shared/format'
+
+test('relativeTime follows Mail/Messages conventions', () => {
+  const now = new Date(2026, 8, 27, 15, 30).getTime() // Sun 27 Sep 2026 15:30
+  expect(relativeTime(now - 20_000, now)).toBe('now')
+  expect(relativeTime(now - 5 * 60_000, now)).toBe('5m')
+  expect(relativeTime(new Date(2026, 8, 27, 9, 5).getTime(), now)).toBe('09:05')
+  expect(relativeTime(new Date(2026, 8, 26, 23, 0).getTime(), now)).toBe('Yesterday')
+  expect(relativeTime(new Date(2026, 8, 23, 12, 0).getTime(), now)).toBe('Wednesday')
+  expect(relativeTime(new Date(2026, 2, 12, 12, 0).getTime(), now)).toBe('12 Mar')
+  expect(fullTime(new Date(2026, 2, 12, 14, 5).getTime())).toBe('Thu 12 Mar, 14:05')
+})

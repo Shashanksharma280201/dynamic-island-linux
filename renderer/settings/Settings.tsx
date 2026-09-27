@@ -145,6 +145,16 @@ export function Settings() {
             ))}
           </div>
         </div>
+        <Toggle
+          label="Keyboard shortcut Ctrl+I"
+          hint={
+            s.shortcut && !s.shortcutActive
+              ? 'Another app is already using Ctrl+I, so it could not be registered'
+              : 'Opens and closes the island from any app (Ctrl+I then no longer reaches other apps)'
+          }
+          on={s.shortcut}
+          onChange={(v) => general.run(() => window.settings.setShortcut(v))}
+        />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
         <Toggle
           label="Claude Code approvals"

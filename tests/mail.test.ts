@@ -141,3 +141,58 @@ test(
   },
   40000,
 )
+
+import { htmlToText } from '../electron/providers/mail'
+
+test('htmlToText keeps paragraphs and drops markup', () => {
+  expect(htmlToText('<style>p{}</style><p>Hi&nbsp;Sam</p><p>See <b>you</b> &amp; bye<br>x</p>')).toBe(
+    'Hi Sam\nSee you & bye\nx',
+  )
+  expect(htmlToText(undefined)).toBe('')
+})
+
+test(
+  'inbox: lists newest first, opening marks read, can reply to an older message',
+  async () => {
+    const imap = await startImap(12143)
+    imap.appendMessage(
+      'INBOX',
+      [],
+      false,
+      'From: Zoe <zoe@x.test>\r\nSubject: Newer\r\nDate: Tue, 2 Jan 2024 10:00:00 +0000\r\nMessage-ID: <z@x.test>\r\nContent-Type: text/html\r\n\r\n<p>Hello <b>there</b></p>',
+    )
+    const sent: string[] = []
+    const smtp = await startSmtp(12025, (r) => sent.push(r))
+    const acc = { ...ACCOUNT, imap: { ...ACCOUNT.imap, port: 12143 }, smtp: { ...ACCOUNT.smtp, port: 12025 } }
+    const w = new MailAccountWatcher(acc, 'pw', () => {})
+    try {
+      w.start()
+      let list: Awaited<ReturnType<typeof w.listRecent>> = []
+      const deadline = Date.now() + 10000
+      while (Date.now() < deadline) {
+        try {
+          list = await w.listRecent(10)
+          break
+        } catch {
+          await new Promise((r) => setTimeout(r, 200))
+        }
+      }
+      expect(list.map((m) => m.subject)).toEqual(['Newer', 'old'])
+      expect(list[0]).toMatchObject({ unread: true, snippet: 'Hello there', from: { name: 'Zoe' } })
+
+      const full = await w.getMessage(list[1].uid)
+      expect(full.text).toBe('already here')
+      expect(imap.getMailbox('INBOX').messages[0].flags).toContain('\\Seen')
+
+      await w.reply(list[0].uid, 'Hi Zoe')
+      const out = await simpleParser(sent[0])
+      expect(out.subject).toBe('Re: Newer')
+      expect(out.inReplyTo).toBe('<z@x.test>')
+    } finally {
+      await w.stop()
+      await new Promise<void>((r) => smtp.close(() => r()))
+      await new Promise<void>((r) => imap.close(() => r()))
+    }
+  },
+  30000,
+)

@@ -3,7 +3,7 @@ import nodemailer from 'nodemailer'
 import MailComposer from 'nodemailer/lib/mail-composer/index.js'
 import { simpleParser } from 'mailparser'
 
-import type { MailServer, MailStatus } from '@shared/types'
+import type { MailServer, MailStatus, MailSummary, MailMessageView } from '@shared/types'
 
 export type ServerConfig = MailServer
 
@@ -104,7 +104,36 @@ export type IncomingMail = {
 
 export type AccountStatus = MailStatus
 
+/** Arrival time of a fetched message: INTERNALDATE, else its Date header, else now. */
+function arrival(msg: FetchMessageObject): number {
+  const d = msg.internalDate ?? msg.envelope?.date
+  const t = d ? new Date(d).getTime() : NaN
+  return Number.isFinite(t) ? t : Date.now()
+}
+
+/** Plain text from an HTML-only mail body (good enough for reading). Pure. */
+export function htmlToText(html: string | undefined): string {
+  if (!html) return ''
+  return html
+    .replace(/<(script|style|head)[^>]*>[\s\S]*?<\/\1>/gi, '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim()
+}
+
 const MAX_SOURCE = 256 * 1024
+const PREVIEW_SOURCE = 16 * 1024
+const FULL_SOURCE = 2 * 1024 * 1024
 
 /**
  * Watches one account's INBOX over IMAP IDLE and replies over SMTP. New,
@@ -118,7 +147,9 @@ export class MailAccountWatcher {
   private retryMs = 2000
   private retryTimer: ReturnType<typeof setTimeout> | null = null
   private known = new Map<number, IncomingMail>()
-  private fetching: Promise<void> = Promise.resolve()
+  private fetching: Promise<unknown> = Promise.resolve()
+  /** INBOX is open on the current connection. */
+  private ready = false
 
   constructor(
     private account: MailAccount,
@@ -145,15 +176,17 @@ export class MailAccountWatcher {
     })
     this.client = client
     client.on('error', () => {}) // 'close' follows and handles reconnection
-    client.on('close', () => this.scheduleReconnect())
-    client.on('exists', () => {
-      this.fetching = this.fetching.then(() => this.fetchNew()).catch(() => {})
+    client.on('close', () => {
+      this.ready = false
+      this.scheduleReconnect()
     })
+    client.on('exists', () => void this.queue(() => this.fetchNew()).catch(() => {}))
     try {
       await client.connect()
       const box = await client.mailboxOpen('INBOX')
+      this.ready = true
       if (!this.lastUid) this.lastUid = Number(box.uidNext) - 1
-      else this.fetching = this.fetching.then(() => this.fetchNew()).catch(() => {})
+      else void this.queue(() => this.fetchNew()).catch(() => {})
       this.retryMs = 2000
       this.onStatus({ state: 'connected' })
     } catch (e: any) {
@@ -171,13 +204,134 @@ export class MailAccountWatcher {
     this.retryMs = Math.min(this.retryMs * 2, 5 * 60 * 1000)
   }
 
+  /** Run IMAP work one operation at a time on this connection. */
+  private queue<T>(fn: () => Promise<T>): Promise<T> {
+    const p = this.fetching.then(fn, fn)
+    this.fetching = p.catch(() => {})
+    return p
+  }
+
+  private usable(): ImapFlow {
+    if (!this.ready || !this.client?.usable) throw new Error('Not connected to the mail server yet')
+    return this.client
+  }
+
+  private remember(mail: IncomingMail): void {
+    this.known.set(mail.uid, mail)
+    if (this.known.size > 300) this.known.delete(this.known.keys().next().value!)
+  }
+
+  /** Parse a fetched message into what the island needs. */
+  private async toMail(msg: FetchMessageObject): Promise<{ mail: IncomingMail; text: string; to?: string }> {
+    let text = ''
+    let references: string[] | undefined
+    let to: string | undefined
+    try {
+      const parsed = await simpleParser(msg.source ?? Buffer.alloc(0))
+      text = parsed.text?.trim() || htmlToText(typeof parsed.html === 'string' ? parsed.html : '')
+      const r = parsed.references
+      references = Array.isArray(r) ? r : r ? [r] : undefined
+      const t = parsed.to
+      to = Array.isArray(t) ? t.map((x) => x.text).join(', ') : t?.text
+    } catch {
+      // headers-only
+    }
+    const from = msg.envelope?.from?.[0]
+    const mail: IncomingMail = {
+      accountId: this.account.id,
+      uid: msg.uid,
+      from: { name: from?.name || from?.address || 'Unknown', address: from?.address || '' },
+      replyTo: msg.envelope?.replyTo?.[0]?.address,
+      subject: msg.envelope?.subject || '(no subject)',
+      snippet: snippet(text),
+      // When it arrived (server time) beats the sender's Date header, which can be missing or wrong.
+      date: arrival(msg),
+      messageId: msg.envelope?.messageId,
+      references,
+    }
+    return { mail, text, to }
+  }
+
+  /** The newest messages in INBOX, newest first. */
+  listRecent(limit = 30): Promise<MailSummary[]> {
+    return this.queue(async () => {
+      const client = this.usable()
+      const box = client.mailbox
+      const exists = box && typeof box === 'object' ? box.exists : 0
+      if (!exists) return []
+      const out: MailSummary[] = []
+      const from = Math.max(1, exists - limit + 1)
+      const found: FetchMessageObject[] = []
+      for await (const msg of client.fetch(`${from}:*`, {
+        uid: true,
+        flags: true,
+        envelope: true,
+        internalDate: true,
+        source: { maxLength: PREVIEW_SOURCE },
+      })) {
+        found.push(msg)
+      }
+      // A server that mishandles partial fetches returns an empty body; fetch those whole.
+      const empty = found.filter((m) => !m.source?.length).map((m) => m.uid)
+      if (empty.length) {
+        const full = new Map<number, FetchMessageObject>()
+        for await (const m of client.fetch(empty.join(','), { uid: true, source: true }, { uid: true })) {
+          full.set(m.uid, m)
+        }
+        for (const m of found) if (full.has(m.uid)) m.source = full.get(m.uid)!.source
+      }
+      for (const msg of found) {
+        const { mail } = await this.toMail(msg)
+        this.remember(mail)
+        out.push({
+          accountId: mail.accountId,
+          uid: mail.uid,
+          from: mail.from,
+          subject: mail.subject,
+          snippet: mail.snippet,
+          date: mail.date,
+          unread: !msg.flags?.has('\\Seen'),
+        })
+      }
+      // Newest first; UIDs grow with arrival, so they break ties reliably.
+      return out.sort((a, b) => b.date - a.date || b.uid - a.uid)
+    })
+  }
+
+  /** One full message for reading; opening it marks it as read, like Mail does. */
+  getMessage(uid: number): Promise<MailMessageView> {
+    return this.queue(async () => {
+      const client = this.usable()
+      const msg = await client.fetchOne(
+        String(uid),
+        { uid: true, flags: true, envelope: true, internalDate: true, source: { maxLength: FULL_SOURCE } },
+        { uid: true },
+      )
+      if (!msg) throw new Error('That message is no longer in the inbox')
+      const { mail, text, to } = await this.toMail(msg)
+      this.remember(mail)
+      await client.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }).catch(() => {})
+      return {
+        accountId: mail.accountId,
+        uid,
+        from: mail.from,
+        subject: mail.subject,
+        snippet: mail.snippet,
+        date: mail.date,
+        unread: false,
+        to,
+        text,
+      }
+    })
+  }
+
   private async fetchNew(): Promise<void> {
     const client = this.client
     if (!client?.usable) return
     const found: FetchMessageObject[] = []
     for await (const msg of client.fetch(
       `${this.lastUid + 1}:*`,
-      { uid: true, flags: true, envelope: true, source: { maxLength: MAX_SOURCE } },
+      { uid: true, flags: true, envelope: true, internalDate: true, source: { maxLength: MAX_SOURCE } },
       { uid: true },
     )) {
       found.push(msg)
@@ -188,39 +342,19 @@ export class MailAccountWatcher {
       if (msg.flags?.has('\\Seen')) continue
       const from = msg.envelope?.from?.[0]
       if (!from?.address || from.address.toLowerCase() === this.account.user.toLowerCase()) continue
-      let text = ''
-      let references: string[] | undefined
-      try {
-        const parsed = await simpleParser(msg.source ?? Buffer.alloc(0))
-        text = parsed.text ?? ''
-        const r = parsed.references
-        references = Array.isArray(r) ? r : r ? [r] : undefined
-      } catch {
-        // headers-only preview
-      }
-      const mail: IncomingMail = {
-        accountId: this.account.id,
-        uid: msg.uid,
-        from: { name: from.name || from.address, address: from.address },
-        replyTo: msg.envelope?.replyTo?.[0]?.address,
-        subject: msg.envelope?.subject || '(no subject)',
-        snippet: snippet(text),
-        date: msg.envelope?.date ? new Date(msg.envelope.date).getTime() : Date.now(),
-        messageId: msg.envelope?.messageId,
-        references,
-      }
-      this.known.set(mail.uid, mail)
-      if (this.known.size > 200) this.known.delete(this.known.keys().next().value!)
+      const { mail } = await this.toMail(msg)
+      this.remember(mail)
       this.onMail(mail)
     }
   }
 
   async markRead(uid: number): Promise<void> {
-    await this.client?.messageFlagsAdd(String(uid), ['\\Seen'], { uid: true })
+    await this.queue(() => this.usable().messageFlagsAdd(String(uid), ['\\Seen'], { uid: true }))
   }
 
-  /** Reply to a message seen by this watcher. */
+  /** Reply to a message in the inbox. */
   async reply(uid: number, text: string): Promise<void> {
+    if (!this.known.has(uid)) await this.getMessage(uid)
     const orig = this.known.get(uid)
     if (!orig) throw new Error('That message is no longer available')
     const { smtp, user, name } = this.account

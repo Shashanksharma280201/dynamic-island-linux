@@ -108,6 +108,7 @@ export const IPC = {
   DOCK_PREVIEW: 'island:dock-preview', // renderer -> main: Side (dragged across the middle)
   DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
   APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur }
+  TOGGLE_PANEL: 'island:toggle-panel', // main -> renderer: global shortcut pressed
 } as const
 
 import type { Dock } from './dock'
@@ -138,6 +139,46 @@ export type MediaCmd =
   | { type: 'seek'; position: number }
 
 export type { Rect } from './hitbox'
+
+// ---- inbox browsing (hub panel) ----
+
+export type MailSummary = {
+  accountId: string
+  uid: number
+  from: { name: string; address: string }
+  subject: string
+  snippet: string
+  date: number
+  unread: boolean
+}
+
+export type MailMessageView = MailSummary & { to?: string; text: string }
+
+export type ChatSummary = {
+  id: string
+  name: string
+  isGroup: boolean
+  unread: number
+  time: number
+  /** Last message preview. */
+  last: string
+  lastFromMe: boolean
+  avatar?: string
+}
+
+export type ChatMessage = {
+  id: string
+  fromMe: boolean
+  author?: string
+  text: string
+  time: number
+}
+
+/** What the hub can show: WhatsApp state and configured mail accounts. */
+export type InboxSources = {
+  whatsapp: 'off' | 'linking' | 'ready'
+  mail: { id: string; label: string }[]
+}
 
 // ---- settings window ----
 
@@ -172,6 +213,9 @@ export type SettingsState = {
   secureStorage: boolean
   dockSide: 'left' | 'right'
   appearance: 'glass' | 'solid'
+  shortcut: boolean
+  /** False if another app already owns the shortcut. */
+  shortcutActive: boolean
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
   mail: MailAccountView[]
 }

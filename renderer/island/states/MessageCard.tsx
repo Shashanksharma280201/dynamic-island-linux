@@ -26,11 +26,14 @@ export function MessageCard({
   message: m,
   queued,
   onReplying,
+  onOpen,
 }: {
   id: string
   message: MessageData
   queued: number
   onReplying: (on: boolean) => void
+  /** Open this source in the hub (full chat list / inbox). */
+  onOpen: () => void
 }) {
   const [replying, setReplying] = useState(false)
   const src = SOURCE[m.source]
@@ -104,6 +107,10 @@ export function MessageCard({
       ) : (
         !sent && (
           <div className="actions">
+            <button className="plain" onClick={(e) => act(e, onOpen)}>
+              {m.source === 'mail' ? 'Open Inbox' : 'Open Chats'}
+            </button>
+            <span className="spacer" />
             <button className="pill" onClick={(e) => act(e, () => window.island.markRead(id))}>
               Mark as Read
             </button>

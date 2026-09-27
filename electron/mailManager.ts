@@ -1,8 +1,14 @@
 import { MailAccountWatcher, type IncomingMail, type MailAccount } from './providers/mail'
-import type { MailStatus } from '@shared/types'
+import type { MailStatus, MailSummary, MailMessageView } from '@shared/types'
 import type { MessageBackend } from './messages'
 
-type Entry = { account: MailAccount; watcher: MailAccountWatcher; status: MailStatus }
+/** What the manager needs from an account watcher (a fake one backs demo mode). */
+export type MailWatcher = Pick<
+  MailAccountWatcher,
+  'start' | 'stop' | 'listRecent' | 'getMessage' | 'reply' | 'markRead'
+>
+
+type Entry = { account: MailAccount; watcher: MailWatcher; status: MailStatus }
 
 /** Split a mail thread id `<accountId>:<uid>`. Pure. */
 export function parseMailThread(threadId: string): { accountId: string; uid: number } | null {
@@ -24,7 +30,7 @@ export class MailManager implements MessageBackend {
       password: string,
       onMail: (m: IncomingMail) => void,
       onStatus: (s: MailStatus) => void,
-    ) => new MailAccountWatcher(a, password, onMail, onStatus),
+    ): MailWatcher => new MailAccountWatcher(a, password, onMail, onStatus),
   ) {}
 
   /** Start or restart an account's watcher. */
@@ -56,6 +62,30 @@ export class MailManager implements MessageBackend {
     this.onStatus()
   }
 
+  /** Configured accounts, for the inbox picker. */
+  accounts(): { id: string; label: string }[] {
+    return [...this.entries.values()].map((e) => ({ id: e.account.id, label: e.account.label }))
+  }
+
+  /** Newest inbox messages of one account, or of all accounts merged. */
+  async listRecent(accountId?: string, limit = 30): Promise<MailSummary[]> {
+    const entries = [...this.entries.values()].filter((e) => !accountId || e.account.id === accountId)
+    if (!entries.length) throw new Error('No mail account is set up')
+    const lists = await Promise.allSettled(entries.map((e) => e.watcher.listRecent(limit)))
+    const ok = lists.flatMap((r) => (r.status === 'fulfilled' ? r.value : []))
+    if (!ok.length) {
+      const failed = lists.find((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failed) throw failed.reason
+    }
+    return ok.sort((a, b) => b.date - a.date).slice(0, limit)
+  }
+
+  async getMessage(accountId: string, uid: number): Promise<MailMessageView> {
+    const e = this.entries.get(accountId)
+    if (!e) throw new Error('That mail account is no longer set up')
+    return e.watcher.getMessage(uid)
+  }
+
   status(id: string): MailStatus | undefined {
     return this.entries.get(id)?.status
   }
@@ -64,7 +94,7 @@ export class MailManager implements MessageBackend {
     return this.entries.size
   }
 
-  private watcherFor(threadId: string): { w: MailAccountWatcher; uid: number } {
+  private watcherFor(threadId: string): { w: MailWatcher; uid: number } {
     const t = parseMailThread(threadId)
     const e = t && this.entries.get(t.accountId)
     if (!t || !e) throw new Error('That mail account is no longer set up')

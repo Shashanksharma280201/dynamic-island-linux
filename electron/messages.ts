@@ -98,6 +98,12 @@ export class MessageHub {
     }
   }
 
+  /** Close the card for a conversation (e.g. it was opened in the hub). */
+  closeThread(source: MessageSource, threadId: string): void {
+    const id = messageId(source, threadId)
+    if (this.cards.has(id)) this.transient.dismiss(id)
+  }
+
   async markRead(id: string): Promise<void> {
     const cur = this.cards.get(id)
     const backend = cur && this.backends[cur.source]

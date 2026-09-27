@@ -15,7 +15,7 @@ export type WaIncoming = {
 }
 
 export type { WaState } from '@shared/types'
-import type { WaState } from '@shared/types'
+import type { WaState, ChatSummary, ChatMessage } from '@shared/types'
 
 export type EngineEvents = {
   onQr: (qr: string) => void
@@ -27,6 +27,8 @@ export type EngineEvents = {
 /** What the island needs from a WhatsApp backend (a fake one is used in tests). */
 export interface WhatsAppEngine {
   start(ev: EngineEvents): Promise<void>
+  listChats(limit: number): Promise<ChatSummary[]>
+  getMessages(chatId: string, limit: number): Promise<ChatMessage[]>
   send(chatId: string, text: string): Promise<void>
   markRead(chatId: string): Promise<void>
   pairingCode(phone: string): Promise<string>
@@ -146,6 +148,40 @@ export class WwebjsEngine implements WhatsAppEngine {
     await client.initialize()
   }
 
+  async listChats(limit: number): Promise<ChatSummary[]> {
+    const chats: any[] = await this.client.getChats()
+    return chats
+      .filter((c) => !c.archived && c.id?._serialized !== 'status@broadcast')
+      .slice(0, limit)
+      .map((c) => {
+        const last = c.lastMessage
+        return {
+          id: c.id._serialized,
+          name: c.name || c.id.user || 'Unknown',
+          isGroup: !!c.isGroup,
+          unread: c.unreadCount || 0,
+          time: (c.timestamp || last?.timestamp || 0) * 1000,
+          last: last ? messageText(last.type, last.body) : '',
+          lastFromMe: !!last?.fromMe,
+        }
+      })
+  }
+
+  async getMessages(chatId: string, limit: number): Promise<ChatMessage[]> {
+    const chat = await this.client.getChatById(chatId)
+    const msgs: any[] = await chat.fetchMessages({ limit })
+    await chat.sendSeen().catch(() => {})
+    return msgs
+      .filter((m) => m.type !== 'e2e_notification' && m.type !== 'notification_template')
+      .map((m) => ({
+        id: m.id?._serialized ?? String(m.timestamp),
+        fromMe: !!m.fromMe,
+        author: chat.isGroup && !m.fromMe ? m._data?.notifyName || m.author?.split('@')[0] : undefined,
+        text: messageText(m.type, m.body),
+        time: (m.timestamp ?? 0) * 1000,
+      }))
+  }
+
   async send(chatId: string, text: string): Promise<void> {
     await this.client.sendMessage(chatId, text)
     await this.markRead(chatId).catch(() => {})
@@ -232,6 +268,14 @@ export class WhatsAppService {
 
   async send(chatId: string, text: string): Promise<void> {
     return this.need().send(chatId, text)
+  }
+
+  async listChats(limit = 40): Promise<ChatSummary[]> {
+    return this.need().listChats(limit)
+  }
+
+  async getMessages(chatId: string, limit = 40): Promise<ChatMessage[]> {
+    return this.need().getMessages(chatId, limit)
   }
 
   async markRead(chatId: string): Promise<void> {

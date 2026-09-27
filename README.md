@@ -12,15 +12,16 @@ stays fully clickable.
 
 | Feature | What you see | What you can do |
 | --- | --- | --- |
-| **Edge capsule** | A slim black capsule docked to the right (or left) edge of the screen; with music playing it shows the album art above a waveform | Click it to open the Control Center. **Drag it** up or down the edge, or across the screen to dock it on the other side; it snaps to the nearer edge and remembers the spot |
+| **Edge capsule** | A slim black capsule docked to the right (or left) edge of the screen; with music playing it shows the album art above a waveform | Click it (or press **Ctrl+I** anywhere) to open the panel. **Drag it** up or down the edge, or across the screen to dock it on the other side; it snaps to the nearer edge and remembers the spot |
 | **Now Playing** | Album art + animated waveform while music plays in any MPRIS player: Spotify (app or web), YouTube / YouTube Music in Chrome or Firefox, VLC, Rhythmbox, … | Hover to expand: title, artist, progress bar (click it to seek), previous / play-pause / next, shuffle and repeat |
-| **WhatsApp** | Incoming messages as a card per chat (sender, group, photo, last few lines) | **Reply** (type right in the island, Enter to send), **Mark read**, **Dismiss** |
-| **Mail** | New mail from any IMAP account: sender, subject and a preview | **Reply** (threaded, saved to Sent), **Mark read**, **Dismiss** |
+| **Panel (Controls / Chats / Mail)** | Opens on click or **Ctrl+I**, with a segmented control at the top, and remembers the last tab | Switch between the Control Center, your WhatsApp chats and your mail inbox at any time, not only when something new arrives. **Ctrl+I** again (or moving the pointer away) closes it |
+| **WhatsApp** | New messages pop up as a card per chat. The **Chats** tab lists your recent chats (name, last message, time, unread count) and opens full conversations as bubbles | Reply from the card or from the conversation view, **Mark as Read**, **Open Chats** |
+| **Mail** | New mail pops up as a card. The **Mail** tab lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
 | **Control Center** | macOS-style modules: round Wi-Fi / Bluetooth toggles and large Display / Sound sliders | Drag the sliders, click the volume value to mute, toggle Wi-Fi / Bluetooth, open Settings. Closes by itself shortly after the cursor leaves |
-| **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), island position, link WhatsApp, add mail accounts, and the general toggles |
+| **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), island position, Ctrl+I shortcut on/off, link WhatsApp, add mail accounts, and the general toggles |
 | **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
 
 Other details:
@@ -40,6 +41,10 @@ Other details:
 - Cards open inward from the edge the island is docked to and always stay fully
   on screen, even when the island sits near the top or bottom.
 - Cards stay open while you hover them or type a reply, then close by themselves.
+- **Ctrl+I** is a global shortcut: while the island runs, other apps no longer
+  receive Ctrl+I (for example italics in editors). Turn it off in Settings if
+  that gets in the way. It works on X11; Wayland doesn't allow global shortcuts
+  for apps.
 - The island only takes keyboard focus while you're typing a reply, so it never
   steals focus from the app you're using.
 
@@ -223,6 +228,7 @@ is available, Settings warns you that they are only obfuscated.
 | Claude still asks in the terminal | Make sure the island is running, the hook is installed (tray menu or `npm run hook:install`), and Claude Code was restarted. Set `DYNAMIC_ISLAND_DEBUG_LOG=/tmp/hook.log` to log what the hook does. |
 | No tray icon | Enable the "AppIndicator and KStatusNotifierItem Support" GNOME extension. |
 | WhatsApp says "Couldn't start" | Check your internet connection, then toggle WhatsApp off and on in Settings. If the QR never appears after a WhatsApp update, update the app (`npm update whatsapp-web.js`). |
+| Ctrl+I does nothing | Another app may already own Ctrl+I (Settings then says so), or you're on Wayland. You can still click the island. |
 | WhatsApp shows "Disconnected" | The island was unlinked from your phone. Toggle WhatsApp off and on and scan the QR again. |
 | Mail account shows a red dot | Read the error shown next to the account. Usually it is a wrong password: use an app password, not your normal one. |
 | Can't type in the reply box | Your window manager refused keyboard focus for the island. Please open an issue with your desktop environment. |

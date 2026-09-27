@@ -32,6 +32,9 @@ type Deps = {
   onConfigChanged: () => void
   onDockSide: (side: 'left' | 'right') => void
   onAppearance: () => void
+  /** Re-register the global shortcut; returns whether it is active. */
+  applyShortcut: () => boolean
+  shortcutActive: () => boolean
 }
 
 /** Settings window + the IPC it uses. */
@@ -49,6 +52,8 @@ export class SettingsController {
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
+      shortcut: config.shortcut,
+      shortcutActive: this.d.shortcutActive(),
       whatsapp: {
         enabled: config.whatsapp,
         needsRestart: config.whatsapp && !whatsappCapable,
@@ -112,6 +117,12 @@ export class SettingsController {
       setAutostart(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_SHORTCUT, (_e, on) => {
+      config.shortcut = on === true
+      this.save()
+      this.d.applyShortcut()
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_APPEARANCE, (_e, a) => {
       if (a !== 'glass' && a !== 'solid') return
