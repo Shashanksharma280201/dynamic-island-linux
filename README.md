@@ -19,8 +19,8 @@ stays fully clickable.
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
-| **Control Center** | Volume, brightness, Wi-Fi and Bluetooth | Drag the sliders, click the speaker icon to mute, toggle Wi-Fi / Bluetooth. Closes by itself shortly after the cursor leaves |
-| **Settings window** | Opened from the tray menu | Link WhatsApp, add mail accounts, and the general toggles |
+| **Control Center** | macOS-style modules: round Wi-Fi / Bluetooth toggles and large Display / Sound sliders | Drag the sliders, click the volume value to mute, toggle Wi-Fi / Bluetooth, open Settings. Closes by itself shortly after the cursor leaves |
+| **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), island position, link WhatsApp, add mail accounts, and the general toggles |
 | **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
 
 Other details:
@@ -31,6 +31,12 @@ Other details:
 - Only one copy runs at a time.
 - Controls for tools that aren't installed (e.g. no Bluetooth adapter) are hidden
   instead of showing wrong values.
+- The look follows Apple's design language: dark HUD "glass" material with a
+  light rim, system colours (blue for the main action), capsule buttons,
+  iMessage-style reply field and message bubbles, SF Symbols-style icons, and
+  the Inter typeface (bundled). On KDE Plasma the desktop behind the island is
+  really blurred; GNOME doesn't let apps blur what's behind them, so there the
+  glass is denser to stay readable. Choose **Solid** in Settings for an opaque look.
 - Cards open inward from the edge the island is docked to and always stay fully
   on screen, even when the island sits near the top or bottom.
 - Cards stay open while you hover them or type a reply, then close by themselves.

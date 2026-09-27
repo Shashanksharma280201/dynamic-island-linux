@@ -15,9 +15,19 @@ export type Config = {
   mail: StoredMailAccount[]
   /** Which screen edge the island sits on, and where. */
   dock: Dock
+  /** Translucent glass material, or a solid dark one. */
+  appearance: Appearance
 }
 
-const DEFAULTS: Config = { notifications: true, whatsapp: false, mail: [], dock: DEFAULT_DOCK }
+export type Appearance = 'glass' | 'solid'
+
+const DEFAULTS: Config = {
+  notifications: true,
+  whatsapp: false,
+  mail: [],
+  dock: DEFAULT_DOCK,
+  appearance: 'glass',
+}
 
 function server(raw: any): ServerConfig | null {
   if (!raw || typeof raw.host !== 'string' || !raw.host) return null
@@ -50,6 +60,7 @@ export function mergeConfig(raw: unknown): Config {
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   if (r.dock) c.dock = parseDock(r.dock)
+  if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {

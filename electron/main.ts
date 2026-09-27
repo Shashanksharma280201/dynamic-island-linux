@@ -29,7 +29,7 @@ import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { IPC } from '@shared/types'
-import type { NotificationData } from '@shared/types'
+import type { NotificationData, SystemState } from '@shared/types'
 import type { Dock, Side } from '@shared/dock'
 import { defaultSocketPath } from '@shared/protocol'
 import { toPhysicalRect, type Rect } from '@shared/hitbox'
@@ -109,6 +109,10 @@ async function main() {
     if (shape) {
       if (dragging) shape.full()
       else shape.set(cssRect ? [shapeRect(cssRect, display.scaleFactor, 4)] : [])
+      // Real frosted glass where the compositor supports blur-behind (KDE).
+      shape.setBlur(
+        config.appearance === 'glass' && cssRect ? [shapeRect(cssRect, display.scaleFactor)] : null,
+      )
     } else {
       interactivity!.setRect(
         cssRect && toPhysicalRect(cssRect, win.getBounds(), display.scaleFactor, 4),
@@ -211,6 +215,10 @@ async function main() {
     whatsappCapable: WA_CDP || FAKE_WA,
     onConfigChanged: () => tray?.refresh(),
     onDockSide: (side) => setDock({ ...config.dock, side }),
+    onAppearance: () => {
+      pushAppearance()
+      updateHitArea()
+    },
   })
   settings.wire()
 
@@ -226,15 +234,24 @@ async function main() {
   // ---- system controls: polled only while the Control Center is open ----
   const system = new SystemControls()
   let sysTimer: ReturnType<typeof setInterval> | null = null
+  // Demo mode simulates the system so every control can be shown.
+  const demoSys: SystemState = { volume: 62, muted: false, wifi: true, bluetooth: false, brightness: 78 }
   const pushSys = async () => {
     try {
-      send(win, IPC.SYS_STATE, await system.read())
+      send(win, IPC.SYS_STATE, DEMO ? { ...demoSys } : await system.read())
     } catch (e) {
       console.error('system read:', e)
     }
   }
   const commands = new CommandQueue(
-    (c) => system.apply(c),
+    async (c) => {
+      if (!DEMO) return system.apply(c)
+      if (c.type === 'volume') demoSys.volume = c.value
+      else if (c.type === 'brightness') demoSys.brightness = c.value
+      else if (c.type === 'mute') demoSys.muted = !demoSys.muted
+      else if (c.type === 'wifi') demoSys.wifi = c.value
+      else if (c.type === 'bluetooth') demoSys.bluetooth = c.value
+    },
     () => void pushSys(),
   )
 
@@ -295,10 +312,16 @@ async function main() {
   })
 
   // A renderer reload (dev HMR, crash recovery) must get the current state.
+  // KWin blurs behind windows that set _KDE_NET_WM_BLUR_BEHIND_REGION.
+  const blurBehind = !!shape && /kde/i.test(process.env.XDG_CURRENT_DESKTOP ?? '')
+  const pushAppearance = () =>
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
   win.webContents.on('did-finish-load', () => {
     pushState()
     pushDock()
+    pushAppearance()
   })
+  pushAppearance()
   pushDock()
   win.webContents.on('render-process-gone', () => {
     if (!win.isDestroyed()) win.webContents.reload()

@@ -3,7 +3,7 @@ import type { BrowserWindow } from 'electron'
 import x11 from 'x11'
 import type { Rect } from '@shared/hitbox'
 
-type Shape = { ext: any; X: any; xid: number }
+type Shape = { ext: any; X: any; xid: number; blurAtom?: number }
 
 /** The X11 window id behind an Electron window. */
 export function xidOf(win: BrowserWindow): number {
@@ -54,6 +54,31 @@ export class InputShape {
   set(rects: [number, number, number, number][]): void {
     const { ext, xid } = this.s
     ext.Rectangles(ext.Op.Set, ext.Kind.Input, xid, 0, 0, rects)
+  }
+
+  /**
+   * Ask the compositor to blur what's behind these rectangles (physical px).
+   * KDE KWin honours _KDE_NET_WM_BLUR_BEHIND_REGION; others ignore it. `null`
+   * removes the request.
+   */
+  setBlur(rects: [number, number, number, number][] | null): void {
+    const s = this.s
+    const apply = () => {
+      if (!rects) {
+        s.X.DeleteProperty(s.xid, s.blurAtom)
+        return
+      }
+      const data = Buffer.alloc(rects.length * 16)
+      rects.forEach((r, i) => r.forEach((v, j) => data.writeUInt32LE(Math.max(0, v), i * 16 + j * 4)))
+      const XA_CARDINAL = 6
+      s.X.ChangeProperty(0, s.xid, s.blurAtom, XA_CARDINAL, 32, data)
+    }
+    if (s.blurAtom) return apply()
+    s.X.InternAtom(false, '_KDE_NET_WM_BLUR_BEHIND_REGION', (err: unknown, atom: number) => {
+      if (err || !atom) return
+      s.blurAtom = atom
+      apply()
+    })
   }
 
   /** Accept input on the whole window (e.g. while dragging). */

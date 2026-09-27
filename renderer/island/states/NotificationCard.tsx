@@ -1,7 +1,8 @@
 import type { NotificationData } from '@shared/types'
 import { Badge } from './Badge'
+import { BellIcon } from '../icons'
 
-/** A desktop notification surfaced on the island (transient; click to dismiss). */
+/** A desktop notification, styled like an Apple notification banner. */
 export function NotificationCard({
   id,
   notification: n,
@@ -13,25 +14,23 @@ export function NotificationCard({
 }) {
   return (
     <div className={`card notification${n.urgency === 'critical' ? ' critical' : ''}`}>
-      <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-        {n.icon && <img className="notif-icon" src={n.icon} alt="" />}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="row" style={{ justifyContent: 'space-between' }}>
-            <div className="sub app ellipsis">{n.app || 'Notification'}</div>
-            <Badge count={queued} />
-          </div>
-          <div className="title ellipsis" style={{ margin: '3px 0 2px' }}>
-            {n.summary}
-          </div>
-          {n.body && <div className="sub clamp2">{n.body}</div>}
-        </div>
+      <div className="card-head">
+        <span className="app-glyph" style={{ background: n.icon ? 'transparent' : 'var(--fill)' }}>
+          {n.icon ? <img src={n.icon} alt="" /> : <BellIcon />}
+        </span>
+        <span className="app-name ellipsis">{n.app || 'Notification'}</span>
+        <span className="spacer" />
+        <Badge count={queued} />
+        <span className="when">now</span>
       </div>
+      <div className="title ellipsis">{n.summary}</div>
+      {n.body && <div className="notif-body clamp2">{n.body}</div>}
       {n.actions && n.actions.length > 0 && (
-        <div className="row actions">
+        <div className="actions">
           {n.actions.map((a) => (
             <button
               key={a.key}
-              className="btn small"
+              className="pill"
               onClick={(e) => {
                 e.stopPropagation()
                 window.island.notifAction(id, a.key)

@@ -1,12 +1,18 @@
+@import '@fontsource-variable/inter';
+
+/* Apple System Settings, dark: grouped inset lists, iOS switches. */
 :root {
   color-scheme: dark;
-  --bg: #15171c;
-  --card: #1e2128;
-  --line: #2c3039;
-  --text: #e8eaee;
-  --muted: #9aa0ab;
-  --accent: #2fd267;
-  --danger: #ff5f5f;
+  --bg: #1c1c1e;
+  --group: #2c2c2e;
+  --field: #1c1c1e;
+  --separator: rgba(84, 84, 88, 0.6);
+  --text: rgba(255, 255, 255, 0.96);
+  --muted: rgba(235, 235, 245, 0.6);
+  --blue: #0a84ff;
+  --green: #30d158;
+  --red: #ff453a;
+  --fill: rgba(120, 120, 128, 0.32);
 }
 * {
   box-sizing: border-box;
@@ -15,33 +21,56 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.45 -apple-system, 'Inter', 'Cantarell', system-ui, sans-serif;
+  font: 13px/1.4 'Inter Variable', -apple-system, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
 }
 main {
-  max-width: 640px;
+  max-width: 620px;
   margin: 0 auto;
-  padding: 24px 20px 40px;
+  padding: 28px 22px 44px;
 }
 h1 {
-  font-size: 20px;
-  margin: 0 0 16px;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
 }
+/* Section header sits above its group, like iOS. */
 h2 {
-  font-size: 13px;
+  font-size: 12px;
+  font-weight: 500;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--muted);
-  margin: 0 0 10px;
+  margin: 0 0 6px 14px;
 }
 section {
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-bottom: 24px;
+}
+section > h2 + * {
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+/* Everything after the header forms one rounded group of rows. */
+section > :not(h2) {
+  background: var(--group);
+  padding: 11px 14px;
+  margin: 0;
+  position: relative;
+}
+section > :not(h2):not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 0;
+  bottom: 0;
+  height: 0.5px;
+  background: var(--separator);
+}
+section > :last-child {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
 }
 .toggle-row {
   display: flex;
@@ -49,15 +78,12 @@ section {
   align-items: center;
   gap: 12px;
   cursor: pointer;
-}
-.toggle-row input {
-  width: 20px;
-  height: 20px;
-  accent-color: var(--accent);
+  font-size: 13.5px;
 }
 .hint {
   color: var(--muted);
   font-size: 12px;
+  margin-top: 1px;
 }
 .row {
   display: flex;
@@ -65,9 +91,66 @@ section {
   gap: 8px;
   flex-wrap: wrap;
 }
+
+/* iOS switch */
+input.switch {
+  appearance: none;
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--fill);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.2s ease;
+  margin: 0;
+}
+input.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: transform 0.22s cubic-bezier(0.3, 1.3, 0.6, 1);
+}
+input.switch:checked {
+  background: var(--green);
+}
+input.switch:checked::after {
+  transform: translateX(18px);
+}
+
+/* Segmented control */
+.segmented {
+  display: flex;
+  background: var(--fill);
+  padding: 2px;
+  border-radius: 9px;
+  flex-shrink: 0;
+}
+.segmented button {
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 500;
+  padding: 4px 14px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.segmented button.on {
+  background: #636366;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+/* Fields and buttons */
 input:not([type='checkbox']) {
-  background: var(--bg);
-  border: 1px solid var(--line);
+  background: var(--field);
+  border: 0.5px solid var(--separator);
   color: var(--text);
   border-radius: 8px;
   padding: 8px 10px;
@@ -75,60 +158,67 @@ input:not([type='checkbox']) {
   flex: 1;
   min-width: 0;
 }
-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
+input:not([type='checkbox']):focus {
+  outline: 3px solid rgba(10, 132, 255, 0.5);
+  outline-offset: 0;
+  border-color: var(--blue);
 }
 button {
-  background: var(--accent);
-  color: #000;
+  background: var(--blue);
+  color: #fff;
   border: 0;
-  border-radius: 8px;
-  padding: 8px 14px;
+  border-radius: 999px;
+  padding: 7px 16px;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+button:hover:not(:disabled) {
+  filter: brightness(1.12);
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
 }
 button.secondary {
-  background: var(--line);
+  background: var(--fill);
   color: var(--text);
 }
 button.danger {
-  background: transparent;
-  color: var(--danger);
-  border: 1px solid var(--danger);
+  background: rgba(255, 69, 58, 0.18);
+  color: #ff6961;
 }
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: default;
 }
 .error {
-  color: var(--danger);
-  font-size: 13px;
+  color: #ff6961;
+  font-size: 12.5px;
   margin: 0;
 }
 .warn {
-  color: #ffcc66;
-  font-size: 13px;
+  color: #ffd60a;
+  font-size: 12.5px;
   margin: 0;
 }
 .ok-text {
-  color: var(--accent);
+  color: var(--green);
   margin: 0;
 }
 .dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 999px;
   background: var(--muted);
   display: inline-block;
   flex-shrink: 0;
 }
 .dot.ok {
-  background: var(--accent);
+  background: var(--green);
 }
 .dot.bad {
-  background: var(--danger);
+  background: var(--red);
 }
 .qr-block {
   display: flex;
@@ -137,15 +227,20 @@ button:disabled {
   align-items: flex-start;
 }
 .qr {
-  width: 240px;
-  height: 240px;
+  width: 220px;
+  height: 220px;
   image-rendering: pixelated;
   background: #fff;
-  border-radius: 10px;
-  padding: 8px;
+  border-radius: 14px;
+  padding: 10px;
+}
+ol.hint {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
 }
 .code {
-  font-family: ui-monospace, monospace;
+  font-family: ui-monospace, 'SF Mono', monospace;
   font-size: 16px;
   letter-spacing: 0.1em;
 }
@@ -153,50 +248,61 @@ button:disabled {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line);
 }
 .editor {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  border-top: 1px solid var(--line);
-  padding-top: 10px;
 }
 .server {
   display: grid;
-  grid-template-columns: 110px 1fr 80px auto;
+  grid-template-columns: 110px 1fr 76px auto;
   gap: 8px;
   align-items: center;
 }
 .server .port {
-  width: 80px;
+  width: 76px;
 }
 .inline {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   align-items: center;
   font-size: 12px;
   white-space: nowrap;
 }
+section > p.hint,
+section > p.warn,
+section > p.error {
+  margin: 0;
+}
 @media (max-width: 520px) {
   .server {
-    grid-template-columns: 1fr 80px;
+    grid-template-columns: 1fr 76px;
   }
   .server .hint {
     grid-column: 1 / -1;
   }
 }
-.segmented {
-  display: flex;
-  gap: 4px;
-  background: var(--bg);
-  padding: 3px;
-  border-radius: 10px;
+input.switch.small {
+  transform: scale(0.8);
 }
-.segmented button {
-  padding: 6px 14px;
+/* A tappable row inside a group, like "Add Account…" in System Settings. */
+section > button.row-button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--group);
+  color: var(--blue);
+  font-weight: 500;
+  border-radius: 0;
+  padding: 11px 14px;
+  transform: none;
 }
-.segmented button.secondary {
-  background: transparent;
+section > button.row-button:last-child {
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+section > button.row-button:hover {
+  filter: none;
+  background: #3a3a3c;
 }

@@ -34,7 +34,7 @@ function ServerFields({ title, v, onChange }: { title: string; v: MailServer; on
         onChange={(e) => onChange({ ...v, port: Number(e.target.value) })}
       />
       <label className="inline">
-        <input type="checkbox" checked={v.secure} onChange={(e) => onChange({ ...v, secure: e.target.checked })} /> SSL/TLS
+        <input className="switch small" type="checkbox" checked={v.secure} onChange={(e) => onChange({ ...v, secure: e.target.checked })} /> SSL/TLS
       </label>
     </div>
   )
@@ -143,7 +143,9 @@ export function MailSection({ accounts }: { accounts: MailAccountView[] }) {
       {editing ? (
         <Editor key={editing.id ?? 'new'} initial={editing} onDone={() => setEditing(null)} />
       ) : (
-        <button onClick={() => setEditing(EMPTY)}>Add account</button>
+        <button className="row-button" onClick={() => setEditing(EMPTY)}>
+          Add Account…
+        </button>
       )}
     </>
   )

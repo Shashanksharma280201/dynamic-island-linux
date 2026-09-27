@@ -42,6 +42,8 @@ const api = {
   setDock: (d: Dock) => ipcRenderer.send(IPC.DOCK_SET, d),
   previewSide: (side: Side) => ipcRenderer.send(IPC.DOCK_PREVIEW, side),
   setDragging: (on: boolean) => ipcRenderer.send(IPC.DRAG, on),
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
+    on(IPC.APPEARANCE, cb),
 }
 
 type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
@@ -54,6 +56,7 @@ const settings = {
   setAutostart: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AUTOSTART, on),
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
+  setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

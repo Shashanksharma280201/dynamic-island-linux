@@ -23,7 +23,13 @@ test('autostartFile honours XDG_CONFIG_HOME', () => {
 })
 
 test('mergeConfig ignores unknown and mistyped keys', () => {
-  const d = { notifications: true, whatsapp: false, mail: [], dock: { side: 'right', y: 0.3 } }
+  const d = {
+    notifications: true,
+    whatsapp: false,
+    mail: [],
+    dock: { side: 'right', y: 0.3 },
+    appearance: 'glass',
+  }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)
   expect(mergeConfig({ notifications: false, whatsapp: true })).toEqual({
@@ -52,4 +58,6 @@ test('parseMailAccount validates servers and defaults the label', () => {
   expect(parseMailAccount({ ...ACC, secret: undefined })).toBeNull()
   expect(mergeConfig({ mail: [ACC, { bogus: 1 }] }).mail).toHaveLength(1)
   expect(mergeConfig({ dock: { side: 'left', y: 0.8 } }).dock).toEqual({ side: 'left', y: 0.8 })
+  expect(mergeConfig({ appearance: 'solid' }).appearance).toBe('solid')
+  expect(mergeConfig({ appearance: 'neon' }).appearance).toBe('glass')
 })

@@ -22,7 +22,6 @@ function Progress({ media }: { media: MediaState }) {
   }
   return (
     <div className="progress">
-      <span className="sub time">{formatTime(pos)}</span>
       <div
         className={`bar${media.canSeek ? ' seekable' : ''}`}
         onClick={seek}
@@ -30,15 +29,15 @@ function Progress({ media }: { media: MediaState }) {
       >
         <div className="fill" style={{ width: `${(pos / length) * 100}%` }} />
       </div>
-      <span className="sub time">-{formatTime(length - pos)}</span>
+      <div className="times">
+        <span className="time">{formatTime(pos)}</span>
+        <span className="time">-{formatTime(length - pos)}</span>
+      </div>
     </div>
   )
 }
 
-/**
- * Media card with title/artist, progress and transport controls. Controls are
- * always visible when the player supports control.
- */
+/** Now Playing: artwork, title/artist, scrubber and transport controls. */
 export function MediaCard({ media }: { media: MediaState }) {
   const cmd = (e: MouseEvent, c: MediaCmd) => {
     e.stopPropagation()
@@ -46,37 +45,45 @@ export function MediaCard({ media }: { media: MediaState }) {
   }
   return (
     <div className="card media">
-      <div className="row" style={{ gap: 10 }}>
+      <div className="row" style={{ gap: 12 }}>
         {media.artUrl ? <img className="art" src={media.artUrl} alt="" /> : <div className="art" />}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="title ellipsis">{media.title}</div>
-          <div className="sub ellipsis">{media.artist}</div>
+          <div className="headline ellipsis">{media.title}</div>
+          <div className="secondary ellipsis" style={{ fontSize: 13, marginTop: 1 }}>
+            {media.artist}
+          </div>
         </div>
       </div>
       <Progress media={media} />
       {media.canControl && (
-        <div className="row" style={{ justifyContent: 'center', gap: 14, marginTop: 8 }}>
-          {media.shuffle !== undefined && (
+        <div className="transport">
+          {media.shuffle !== undefined ? (
             <button
-              className={`ctrl small${media.shuffle ? ' on' : ''}`}
+              className={`icon-btn small${media.shuffle ? ' on' : ''}`}
               onClick={(e) => cmd(e, 'shuffle')}
               title={media.shuffle ? 'Shuffle on' : 'Shuffle off'}
             >
               <ShuffleIcon />
             </button>
+          ) : (
+            <span style={{ width: 30 }} />
           )}
-          <button className="ctrl" onClick={(e) => cmd(e, 'previous')} title="Previous">
+          <button className="icon-btn" onClick={(e) => cmd(e, 'previous')} title="Previous">
             <PrevIcon />
           </button>
-          <button className="ctrl big" onClick={(e) => cmd(e, 'playpause')} title={media.playing ? 'Pause' : 'Play'}>
-            {media.playing ? <PauseIcon /> : <PlayIcon />}
+          <button
+            className="icon-btn big"
+            onClick={(e) => cmd(e, 'playpause')}
+            title={media.playing ? 'Pause' : 'Play'}
+          >
+            {media.playing ? <PauseIcon size={26} /> : <PlayIcon size={26} />}
           </button>
-          <button className="ctrl" onClick={(e) => cmd(e, 'next')} title="Next">
+          <button className="icon-btn" onClick={(e) => cmd(e, 'next')} title="Next">
             <NextIcon />
           </button>
-          {media.loop !== undefined && (
+          {media.loop !== undefined ? (
             <button
-              className={`ctrl small${media.loop !== 'None' ? ' on' : ''}`}
+              className={`icon-btn small${media.loop !== 'None' ? ' on' : ''}`}
               onClick={(e) => cmd(e, 'loop')}
               title={
                 media.loop === 'Track' ? 'Repeat one' : media.loop === 'Playlist' ? 'Repeat all' : 'Repeat off'
@@ -84,6 +91,8 @@ export function MediaCard({ media }: { media: MediaState }) {
             >
               <RepeatIcon one={media.loop === 'Track'} />
             </button>
+          ) : (
+            <span style={{ width: 30 }} />
           )}
         </div>
       )}

@@ -107,6 +107,7 @@ export const IPC = {
   DOCK_SET: 'island:dock-set', // renderer -> main: Dock (drag released)
   DOCK_PREVIEW: 'island:dock-preview', // renderer -> main: Side (dragged across the middle)
   DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
+  APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur }
 } as const
 
 import type { Dock } from './dock'
@@ -170,6 +171,7 @@ export type SettingsState = {
   /** False when passwords can only be obfuscated (no desktop keyring). */
   secureStorage: boolean
   dockSide: 'left' | 'right'
+  appearance: 'glass' | 'solid'
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
   mail: MailAccountView[]
 }

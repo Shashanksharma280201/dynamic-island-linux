@@ -31,6 +31,7 @@ type Deps = {
   whatsappCapable: boolean
   onConfigChanged: () => void
   onDockSide: (side: 'left' | 'right') => void
+  onAppearance: () => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -47,6 +48,7 @@ export class SettingsController {
       hookInstalled: isHookInstalled(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
+      appearance: config.appearance,
       whatsapp: {
         enabled: config.whatsapp,
         needsRestart: config.whatsapp && !whatsappCapable,
@@ -110,6 +112,12 @@ export class SettingsController {
       setAutostart(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_APPEARANCE, (_e, a) => {
+      if (a !== 'glass' && a !== 'solid') return
+      config.appearance = a
+      this.save()
+      this.d.onAppearance()
     })
     ipcMain.handle(SETTINGS.SET_DOCK_SIDE, (_e, side) => {
       if (side === 'left' || side === 'right') this.d.onDockSide(side)

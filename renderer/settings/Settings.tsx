@@ -9,7 +9,7 @@ function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: bool
         <div>{label}</div>
         {hint && <div className="hint">{hint}</div>}
       </div>
-      <input type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      <input className="switch" type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
     </label>
   )
 }
@@ -111,6 +111,23 @@ export function Settings() {
           on={s.notifications}
           onChange={(v) => general.run(() => window.settings.setNotifications(v))}
         />
+        <div className="toggle-row">
+          <div>
+            <div>Appearance</div>
+            <div className="hint">Glass is translucent; the desktop behind is blurred on KDE Plasma</div>
+          </div>
+          <div className="segmented">
+            {(['glass', 'solid'] as const).map((a) => (
+              <button
+                key={a}
+                className={s.appearance === a ? 'on' : 'secondary'}
+                onClick={() => general.run(() => window.settings.setAppearance(a))}
+              >
+                {a === 'glass' ? 'Glass' : 'Solid'}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="toggle-row">
           <div>
             <div>Island position</div>
