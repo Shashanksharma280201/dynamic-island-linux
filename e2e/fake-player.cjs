@@ -1,6 +1,6 @@
 // Minimal MPRIS player on the session bus for e2e tests.
 const dbus = require('dbus-next')
-const { Interface, ACCESS_READ } = dbus.interface
+const { Interface, ACCESS_READ, ACCESS_READWRITE } = dbus.interface
 const { Variant } = dbus
 
 class Player extends Interface {
@@ -8,6 +8,24 @@ class Player extends Interface {
     super('org.mpris.MediaPlayer2.Player')
     this._status = 'Playing'
     this._track = 0
+    this._shuffle = false
+    this._loop = 'None'
+  }
+  get Shuffle() { return this._shuffle }
+  set Shuffle(v) {
+    this._shuffle = v
+    Interface.emitPropertiesChanged(this, { Shuffle: v }, [])
+    console.log('SHUFFLE', v)
+  }
+  get LoopStatus() { return this._loop }
+  set LoopStatus(v) {
+    this._loop = v
+    Interface.emitPropertiesChanged(this, { LoopStatus: v }, [])
+    console.log('LOOP', v)
+  }
+  get CanSeek() { return true }
+  SetPosition(trackId, pos) {
+    console.log('SEEK', trackId, String(pos))
   }
   get PlaybackStatus() { return this._status }
   get CanControl() { return true }
@@ -17,6 +35,7 @@ class Player extends Interface {
       'xesam:title': new Variant('s', ['Fake Track One', 'Fake Track Two'][this._track % 2]),
       'xesam:artist': new Variant('as', ['E2E Band']),
       'mpris:length': new Variant('x', BigInt(180_000_000)),
+      'mpris:trackid': new Variant('o', `/org/fake/track${this._track}`),
     }
   }
   PlayPause() {
@@ -35,6 +54,9 @@ Player.configureMembers({
   properties: {
     PlaybackStatus: { signature: 's', access: ACCESS_READ },
     CanControl: { signature: 'b', access: ACCESS_READ },
+    CanSeek: { signature: 'b', access: ACCESS_READ },
+    Shuffle: { signature: 'b', access: ACCESS_READWRITE },
+    LoopStatus: { signature: 's', access: ACCESS_READWRITE },
     Position: { signature: 'x', access: ACCESS_READ },
     Metadata: { signature: 'a{sv}', access: ACCESS_READ },
   },
@@ -42,6 +64,7 @@ Player.configureMembers({
     PlayPause: { inSignature: '', outSignature: '' },
     Next: { inSignature: '', outSignature: '' },
     Previous: { inSignature: '', outSignature: '' },
+    SetPosition: { inSignature: 'ox', outSignature: '' },
   },
   signals: { Seeked: { signature: 'x' } },
 })

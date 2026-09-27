@@ -1,4 +1,4 @@
-import { parseMprisMetadata, pickActivePlayer, usToSec, mediaKey } from '../electron/providers/media'
+import { parseMprisMetadata, pickActivePlayer, usToSec, mediaKey, nextLoop, parseLoop } from '../electron/providers/media'
 
 test('pickActivePlayer prefers a Playing player', () => {
   expect(
@@ -67,4 +67,18 @@ test('mediaKey ignores position but tracks play state', () => {
   expect(mediaKey({ ...a, position: 1 })).toBe(mediaKey({ ...a, position: 99 }))
   expect(mediaKey(a)).not.toBe(mediaKey({ ...a, playing: false }))
   expect(mediaKey(null)).toBe('null')
+})
+
+test('parses mpris:trackid', () => {
+  const s = parseMprisMetadata({ 'mpris:trackid': { value: '/org/x/1' } } as any, 'Playing', true)
+  expect(s.trackId).toBe('/org/x/1')
+})
+
+test('nextLoop cycles off → all → one → off', () => {
+  expect(nextLoop(undefined)).toBe('Playlist')
+  expect(nextLoop('None')).toBe('Playlist')
+  expect(nextLoop('Playlist')).toBe('Track')
+  expect(nextLoop('Track')).toBe('None')
+  expect(parseLoop('Track')).toBe('Track')
+  expect(parseLoop('bogus')).toBeUndefined()
 })

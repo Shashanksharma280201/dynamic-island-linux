@@ -2,7 +2,7 @@ import dbus from 'dbus-next'
 import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { extname } from 'node:path'
-import type { MediaState, MediaCmd } from '@shared/types'
+import type { MediaState, MediaCmd, LoopStatus } from '@shared/types'
 
 /** Microseconds (number | bigint) → seconds, or undefined if not positive. */
 export function usToSec(v: unknown): number | undefined {
@@ -30,7 +30,21 @@ export function parseMprisMetadata(
   }
   const length = usToSec(get('mpris:length'))
   if (length) s.length = length
+  const trackId = get('mpris:trackid')
+  if (typeof trackId === 'string' && trackId) s.trackId = trackId
   return s
+}
+
+const LOOPS: LoopStatus[] = ['None', 'Playlist', 'Track']
+
+/** Next repeat mode in the usual cycle: off → all → one → off. Pure. */
+export function nextLoop(current: LoopStatus | undefined): LoopStatus {
+  const i = LOOPS.indexOf(current ?? 'None')
+  return LOOPS[(i + 1) % LOOPS.length]
+}
+
+export function parseLoop(v: unknown): LoopStatus | undefined {
+  return LOOPS.includes(v as LoopStatus) ? (v as LoopStatus) : undefined
 }
 
 /**
@@ -52,7 +66,7 @@ export function pickActivePlayer(
 /** Identity of a media state for change detection (position excluded). Pure. */
 export function mediaKey(s: MediaState | null): string {
   return s
-    ? [s.title, s.artist, s.playing, s.artUrl, s.canControl, s.length].join('|')
+    ? [s.title, s.artist, s.playing, s.artUrl, s.canControl, s.length, s.canSeek, s.shuffle, s.loop].join('|')
     : 'null'
 }
 
@@ -60,6 +74,7 @@ const PREFIX = 'org.mpris.MediaPlayer2.'
 const PATH = '/org/mpris/MediaPlayer2'
 const PLAYER = 'org.mpris.MediaPlayer2.Player'
 const PROPS = 'org.freedesktop.DBus.Properties'
+const { Variant } = dbus
 const MIME: Record<string, string> = {
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
@@ -196,6 +211,10 @@ export class MediaProvider {
       const canControl = await this.prop(active, 'CanControl', true)
       const s = parseMprisMetadata(meta, status, canControl)
       s.artUrl = await this.resolveArt(s.artUrl)
+      s.canSeek = (await this.prop(active, 'CanSeek', false)) === true && !!s.trackId
+      const shuffle = await this.prop(active, 'Shuffle', null)
+      if (typeof shuffle === 'boolean') s.shuffle = shuffle
+      s.loop = parseLoop(await this.prop(active, 'LoopStatus', null))
       const pos = usToSec(await this.prop(active, 'Position', 0))
       if (pos !== undefined || s.length) {
         s.position = pos ?? 0
@@ -217,11 +236,24 @@ export class MediaProvider {
 
   async command(cmd: MediaCmd): Promise<void> {
     if (!this.active) return
+    const name = this.active
     try {
-      const p = await this.getProxy(this.active)
+      const p = await this.getProxy(name)
       if (cmd === 'playpause') await p.player.PlayPause()
-      if (cmd === 'next') await p.player.Next()
-      if (cmd === 'previous') await p.player.Previous()
+      else if (cmd === 'next') await p.player.Next()
+      else if (cmd === 'previous') await p.player.Previous()
+      else if (cmd === 'shuffle') {
+        const cur = await this.prop(name, 'Shuffle')
+        await p.props.Set(PLAYER, 'Shuffle', new Variant('b', !cur))
+      } else if (cmd === 'loop') {
+        const cur = parseLoop(await this.prop(name, 'LoopStatus'))
+        await p.props.Set(PLAYER, 'LoopStatus', new Variant('s', nextLoop(cur)))
+      } else if (cmd.type === 'seek') {
+        const meta = await this.prop(name, 'Metadata')
+        const trackId = meta?.['mpris:trackid']?.value
+        if (typeof trackId !== 'string') return
+        await p.player.SetPosition(trackId, BigInt(Math.round(cmd.position * 1e6)))
+      }
       this.schedule(true)
     } catch {
       // player may not support the command; ignore
