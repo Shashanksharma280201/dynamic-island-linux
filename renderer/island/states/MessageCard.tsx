@@ -31,6 +31,14 @@ export function MessageCard({
   const sent = m.status?.kind === 'sent'
 
   useEffect(() => onReplying(replying), [replying, onReplying])
+  // Clicking into another app while replying puts the reply away, so the
+  // card is no longer held open and closes by itself.
+  useEffect(() => {
+    if (!replying) return
+    const away = () => setReplying(false)
+    window.addEventListener('blur', away)
+    return () => window.removeEventListener('blur', away)
+  }, [replying])
   // Close the field once the reply has gone out.
   useEffect(() => {
     if (sent) setReplying(false)

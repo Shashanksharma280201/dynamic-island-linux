@@ -21,6 +21,13 @@ export function useKeyboard(onTyping: (on: boolean) => void) {
     onTyping(false)
     window.island.setFocus(false)
   }
-  useEffect(() => release, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    // You clicked into another app: stop "typing" so the island can close.
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('blur', release)
+      release()
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return { take, release }
 }

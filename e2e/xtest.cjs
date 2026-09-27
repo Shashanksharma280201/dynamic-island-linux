@@ -5,6 +5,7 @@
 //   node xtest.cjs type "hello"   type lowercase letters, digits and spaces (real X key events)
 //   node xtest.cjs click X Y      move there and click the left button
 //   node xtest.cjs focus          print the window that has keyboard focus
+//   node xtest.cjs steal          another window takes keyboard focus (like clicking into an app)
 //   node xtest.cjs child X Y      move, then print the top-level window that
 //                                 receives input there (honours input shapes)
 const x11 = require('x11')
@@ -30,6 +31,16 @@ x11.createClient((err, display) => {
       }
       await sleep(100)
       xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
+      await sleep(100)
+    } else if (args[0] === 'steal') {
+      // Another app takes the keyboard: map a small window and focus it.
+      const wid = X.AllocID()
+      X.CreateWindow(wid, root, 0, 0, 200, 100, 0, 0, 0, 0, { backgroundPixel: 0xdddddd })
+      X.MapWindow(wid)
+      await sleep(200)
+      X.SetInputFocus(wid, 1)
+      await sleep(1500)
+      X.DestroyWindow(wid)
       await sleep(100)
     } else if (args[0] === 'focus') {
       X.GetInputFocus((e, f) => {

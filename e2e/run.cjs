@@ -247,7 +247,14 @@ function hook(input, env = {}) {
     const before = await bounds()
     check('island starts docked on the right edge', before.x + before.width >= 1920 / SCALE - 1, JSON.stringify(before))
     await page.waitForSelector('.capsule', { timeout: 3000 })
+    // Grab it once it has finished shrinking back (it animates after the panel closes).
     let c = await center()
+    for (let i = 0; i < 20; i++) {
+      await sleep(150)
+      const n = await center()
+      if (Math.abs(n.x - c.x) < 1 && Math.abs(n.y - c.y) < 1) break
+      c = n
+    }
     const targetY = 700 / SCALE
     dragPointer(c.x, c.y, 200 / SCALE, targetY)
     await sleep(600)

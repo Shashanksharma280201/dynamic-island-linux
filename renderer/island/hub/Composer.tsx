@@ -47,7 +47,12 @@ export function Composer({
 
   useEffect(() => {
     if (autoFocus) take()
-    return release
+    // You clicked into another app: stop "typing" so the island can close.
+    window.addEventListener('blur', release)
+    return () => {
+      window.removeEventListener('blur', release)
+      release()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

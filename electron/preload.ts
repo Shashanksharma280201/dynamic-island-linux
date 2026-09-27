@@ -51,6 +51,7 @@ const api = {
   previewSide: (side: Side) => ipcRenderer.send(IPC.DOCK_PREVIEW, side),
   setDragging: (on: boolean) => ipcRenderer.send(IPC.DRAG, on),
   onTogglePanel: (cb: () => void) => on(IPC.TOGGLE_PANEL, cb),
+  onFocusLost: (cb: () => void) => on(IPC.FOCUS_LOST, cb),
   onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
   notes: {
     list: (): Promise<NoteSummary[]> => ipcRenderer.invoke(INBOX.NOTES_LIST),

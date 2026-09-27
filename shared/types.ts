@@ -109,6 +109,7 @@ export const IPC = {
   DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
   APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur }
   TOGGLE_PANEL: 'island:toggle-panel', // main -> renderer: global shortcut pressed
+  FOCUS_LOST: 'island:focus-lost', // main -> renderer: keyboard focus moved to another app
   BACKDROP: 'island:backdrop', // main -> renderer: blurred-glass snapshot (data URL) or null
 } as const
 

@@ -333,6 +333,21 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await page.waitForSelector('.search input', { timeout: 5000 })
     check('real keyboard: searching chats', await realType('.search input', 'alice'))
 
+    // Typing, then going back to another app: the island lets go and closes.
+    await page.fill('.search input', '')
+    await realClick('.chat-row:has-text("Alice")')
+    await page.waitForSelector('.composer textarea', { timeout: 5000 })
+    check('real keyboard: typing again', await realType('.composer textarea', 'half a thought'))
+    await page.fill('.composer textarea', '')
+    xt('steal')
+    xt(20, 20) // pointer away from the island
+    check(
+      'clicking into another app while typing lets the island close',
+      await page.waitForSelector('.hub', { state: 'detached', timeout: 6000 }).then(() => true, () => false),
+    )
+    key('ctrl+i')
+    await page.waitForSelector('.hub', { timeout: 3000 })
+
     key('ctrl+i')
     check('Ctrl+I closes it again', await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).then(() => true, () => false))
 

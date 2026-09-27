@@ -134,6 +134,7 @@ async function main() {
     }
   }
   updateHitArea()
+  shape?.onFocusLost(() => send(win, IPC.FOCUS_LOST, null))
   if (interactivity) {
     interactivity.onHover((inside) => send(win, IPC.HOVER, inside))
     interactivity.start()
@@ -308,10 +309,16 @@ async function main() {
     if (win.isDestroyed()) return
     if (focus && win.isFocusable() && win.isFocused()) return // already ours
     win.setFocusable(focus)
+    // Not win.blur(): on X11 Chromium "deactivates" by lowering the window to
+    // the bottom of the stack, putting the app behind on top of the island.
     if (focus) win.focus()
-    else win.blur()
+    else win.moveTop() // stay above the app that gets focus back
     // Electron alone can't focus a dock window on X11; do it at the X level.
     shape?.keyboard(focus)
+    // Changing focusability makes Chromium reset the window's input region,
+    // which would let clicks on the island fall through to the app behind.
+    updateHitArea()
+    for (const ms of [30, 150, 400]) setTimeout(() => !win.isDestroyed() && updateHitArea(), ms)
   }
 
   wireIpc({

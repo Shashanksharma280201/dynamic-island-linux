@@ -107,6 +107,33 @@ export class InputShape {
 
   private prevFocus = 0
   private activeAtom = 0
+  private watch: ReturnType<typeof setInterval> | null = null
+  private focusLostCbs: Array<() => void> = []
+
+  /** Called when keyboard focus we took moves to another window (you clicked into another app). */
+  onFocusLost(cb: () => void): void {
+    this.focusLostCbs.push(cb)
+  }
+
+  /** While we hold the keyboard, check who has it; X doesn't reliably tell Chromium. */
+  private watchFocus(on: boolean): void {
+    if (this.watch) clearInterval(this.watch)
+    this.watch = null
+    if (!on) return
+    const { X, xid } = this.s
+    let confirmed = false // focus must have reached us before it can be lost
+    this.watch = setInterval(() => {
+      X.GetInputFocus((err: unknown, f: any) => {
+        if (err || !this.watch) return
+        if (f?.focus === xid) return void (confirmed = true)
+        if (!confirmed) return
+        this.watchFocus(false)
+        this.prevFocus = 0 // the app you clicked keeps its focus
+        X.ChangeProperty(0, xid, WM_HINTS, WM_HINTS, 32, wmHints(false))
+        for (const cb of this.focusLostCbs) cb()
+      })
+    }, 250)
+  }
 
   /**
    * Give the island real keyboard focus, or hand it back to the app that had
@@ -136,8 +163,10 @@ export class InputShape {
         X.ChangeProperty(0, xid, WM_HINTS, WM_HINTS, 32, wmHints(true))
         activate(xid)
         X.SetInputFocus(xid, 2) // RevertToParent
+        this.watchFocus(true)
       })
     } else {
+      this.watchFocus(false)
       X.ChangeProperty(0, xid, WM_HINTS, WM_HINTS, 32, wmHints(false))
       const prev = this.prevFocus
       this.prevFocus = 0
@@ -161,6 +190,7 @@ export class InputShape {
   }
 
   close(): void {
+    this.watchFocus(false)
     try {
       this.s.X.terminate()
     } catch {
