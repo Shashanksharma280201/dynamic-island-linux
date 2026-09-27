@@ -103,7 +103,17 @@ export const IPC = {
   MESSAGE_ACTION: 'island:message-action', // renderer -> main: { id, action }
   NOTIF_ACTION: 'island:notif-action', // renderer -> main: { id, key }
   OPEN_SETTINGS: 'island:open-settings', // renderer -> main: optional section
+  DOCK: 'island:dock', // main -> renderer: DockState
+  DOCK_SET: 'island:dock-set', // renderer -> main: Dock (drag released)
+  DOCK_PREVIEW: 'island:dock-preview', // renderer -> main: Side (dragged across the middle)
+  DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
 } as const
+
+import type { Dock } from './dock'
+export type { Dock, Side } from './dock'
+
+/** Dock plus the work area it refers to (DIP), so the renderer can map screen x. */
+export type DockState = Dock & { workArea: { x: number; y: number; width: number; height: number } }
 
 export type ReplyMsg = { id: string; text: string }
 export type MessageAction = 'read'
@@ -159,6 +169,7 @@ export type SettingsState = {
   hookInstalled: boolean
   /** False when passwords can only be obfuscated (no desktop keyring). */
   secureStorage: boolean
+  dockSide: 'left' | 'right'
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
   mail: MailAccountView[]
 }

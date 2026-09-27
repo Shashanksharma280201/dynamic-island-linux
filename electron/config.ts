@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import type { MailAccount, ServerConfig } from './providers/mail'
+import { DEFAULT_DOCK, parseDock, type Dock } from '@shared/dock'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -12,9 +13,11 @@ export type Config = {
   /** Run the built-in WhatsApp (linked device). */
   whatsapp: boolean
   mail: StoredMailAccount[]
+  /** Which screen edge the island sits on, and where. */
+  dock: Dock
 }
 
-const DEFAULTS: Config = { notifications: true, whatsapp: false, mail: [] }
+const DEFAULTS: Config = { notifications: true, whatsapp: false, mail: [], dock: DEFAULT_DOCK }
 
 function server(raw: any): ServerConfig | null {
   if (!raw || typeof raw.host !== 'string' || !raw.host) return null
@@ -43,9 +46,10 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [] }
+  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK } }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
+  if (r.dock) c.dock = parseDock(r.dock)
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {

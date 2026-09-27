@@ -24,6 +24,10 @@ const pointer = (x, y) =>
   execFileSync('node', [path.join(__dirname, 'xtest.cjs'), Math.round(x * SCALE), Math.round(y * SCALE)])
     .toString()
     .trim()
+// Real X11 drag (press, move, release) between two screen points (DIP).
+const dragPointer = (x1, y1, x2, y2) =>
+  execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'drag', ...[x1, y1, x2, y2].map((v) => Math.round(v * SCALE))])
+const USER_DATA = path.join(TMP, 'profile')
 
 function hook(input, env = {}) {
   const p = spawn('node', [path.join(ROOT, 'hook/claude-island-hook.cjs')], {
@@ -46,7 +50,7 @@ function hook(input, env = {}) {
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox', ...(SCALE !== 1 ? [`--force-device-scale-factor=${SCALE}`] : [])],
     cwd: ROOT,
-    env: { ...process.env, DYNAMIC_ISLAND_SOCK: SOCK },
+    env: { ...process.env, DYNAMIC_ISLAND_SOCK: SOCK, DI_USER_DATA: USER_DATA },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -56,7 +60,7 @@ function hook(input, env = {}) {
 
   try {
     // 1. compact media from the fake MPRIS player
-    await page.waitForSelector('.compact', { timeout: 8000 })
+    await page.waitForSelector('.capsule:not(.idle)', { timeout: 8000 })
     check('compact media view for a single player', true)
     await sleep(500)
     await shot('01-compact')
@@ -64,7 +68,7 @@ function hook(input, env = {}) {
     // 2. real X pointer over the island → main's cursor loop → hover → expand
     const r = await page.evaluate(() => {
       const b = document.querySelector('.island-outer').getBoundingClientRect()
-      return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+      return { x: window.screenX + b.x + b.width / 2, y: window.screenY + b.y + b.height / 2 }
     })
     pointer(Math.round(r.x), Math.round(r.y))
     await page.waitForSelector('.card.media', { timeout: 3000 })
@@ -100,7 +104,7 @@ function hook(input, env = {}) {
 
     // 4. pointer leaves → collapse to compact (authoritative hover from main)
     pointer(5, 450)
-    await page.waitForSelector('.compact', { timeout: 3000 })
+    await page.waitForSelector('.capsule:not(.idle)', { timeout: 3000 })
     check('pointer leaving collapses island', true)
 
     // 5. approval via real hook, Always allow
@@ -196,7 +200,7 @@ function hook(input, env = {}) {
     // 10. Control Center opens on click, closes after pointer leaves
     const r2 = await page.evaluate(() => {
       const b = document.querySelector('.island-outer').getBoundingClientRect()
-      return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+      return { x: window.screenX + b.x + b.width / 2, y: window.screenY + b.y + b.height / 2 }
     })
     pointer(Math.round(r2.x), Math.round(r2.y))
     await sleep(200)
@@ -213,9 +217,46 @@ function hook(input, env = {}) {
     await shot('99-failure').catch(() => {})
   }
 
+  // 10b. drag the island to the other edge with a real X11 press/move/release
+  try {
+    const bounds = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())
+    const center = () =>
+      page.evaluate(() => {
+        const b = document.querySelector('.island-outer').getBoundingClientRect()
+        return { x: window.screenX + b.x + b.width / 2, y: window.screenY + b.y + b.height / 2 }
+      })
+    const before = await bounds()
+    check('island starts docked on the right edge', before.x + before.width >= 1920 / SCALE - 1, JSON.stringify(before))
+    await page.waitForSelector('.capsule', { timeout: 3000 })
+    let c = await center()
+    const targetY = 700 / SCALE
+    dragPointer(c.x, c.y, 200 / SCALE, targetY)
+    await sleep(600)
+    const after = await bounds()
+    check('dragging across the middle docks it on the left edge', after.x === 0, JSON.stringify(after))
+    c = await center()
+    check('it follows the pointer vertically', Math.abs(c.y - targetY) < 30, `${Math.round(c.y)} vs ${targetY}`)
+    check('releasing a drag does not count as a click', !(await page.$('.card.panel')))
+    const cfg = JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8'))
+    check('dock position is saved', cfg.dock?.side === 'left' && Math.abs(cfg.dock.y - 700 / 1080) < 0.05, JSON.stringify(cfg.dock))
+    await shot('07-docked-left')
+    // and back: a small vertical drag keeps the side
+    dragPointer(c.x, c.y, c.x, c.y - 150 / SCALE)
+    await sleep(600)
+    check('a vertical drag keeps the side', (await bounds()).x === 0)
+    c = await center()
+    dragPointer(c.x, c.y, 1800 / SCALE, 300 / SCALE)
+    await sleep(600)
+    const back = await bounds()
+    check('dragging back docks it on the right again', back.x + back.width >= 1920 / SCALE - 1, JSON.stringify(back))
+    pointer(900 / SCALE, 500 / SCALE)
+  } catch (e) {
+    check('drag test error', false, e.message)
+  }
+
   // 11. single instance: `--quit` from a second launch closes the first
   const exited = new Promise((r) => app.process().on('exit', () => r(true)))
-  spawn(ELECTRON, [ROOT, '--no-sandbox', '--quit'], { cwd: ROOT, stdio: 'ignore' })
+  spawn(ELECTRON, [ROOT, '--no-sandbox', '--quit'], { cwd: ROOT, stdio: 'ignore', env: { ...process.env, DI_USER_DATA: USER_DATA } })
   const quit = await Promise.race([exited, sleep(8000).then(() => false)])
   check('second instance with --quit stops the island', quit)
   check('socket removed on quit', quit && !fs.existsSync(SOCK))

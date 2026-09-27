@@ -187,3 +187,16 @@ button:disabled {
     grid-column: 1 / -1;
   }
 }
+.segmented {
+  display: flex;
+  gap: 4px;
+  background: var(--bg);
+  padding: 3px;
+  border-radius: 10px;
+}
+.segmented button {
+  padding: 6px 14px;
+}
+.segmented button.secondary {
+  background: transparent;
+}

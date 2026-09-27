@@ -9,6 +9,9 @@ import type {
   SysCmd,
   SettingsState,
   MailAccountView,
+  DockState,
+  Dock,
+  Side,
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
 
@@ -35,6 +38,10 @@ const api = {
   markRead: (id: string) => ipcRenderer.send(IPC.MESSAGE_ACTION, { id, action: 'read' }),
   notifAction: (id: string, key: string) => ipcRenderer.send(IPC.NOTIF_ACTION, { id, key }),
   openSettings: (section?: string) => ipcRenderer.send(IPC.OPEN_SETTINGS, section),
+  onDock: (cb: (d: DockState) => void) => on(IPC.DOCK, cb),
+  setDock: (d: Dock) => ipcRenderer.send(IPC.DOCK_SET, d),
+  previewSide: (side: Side) => ipcRenderer.send(IPC.DOCK_PREVIEW, side),
+  setDragging: (on: boolean) => ipcRenderer.send(IPC.DRAG, on),
 }
 
 type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
@@ -46,6 +53,7 @@ const settings = {
   setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
   setAutostart: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AUTOSTART, on),
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
+  setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

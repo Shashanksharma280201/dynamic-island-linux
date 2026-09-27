@@ -29,6 +29,7 @@ import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { IPC } from '@shared/types'
 import type { NotificationData } from '@shared/types'
+import type { Dock, Side } from '@shared/dock'
 import { defaultSocketPath } from '@shared/protocol'
 import { toPhysicalRect, type Rect } from '@shared/hitbox'
 
@@ -69,8 +70,12 @@ function cdpUrl(): string {
 async function main() {
   const config = bootConfig
   const store = new ActivityStore()
-  const win = createIslandWindow()
-  let display: Display = placeIslandWindow(win)
+  const win = createIslandWindow(config.dock.side)
+  let display: Display = placeIslandWindow(win, config.dock.side)
+  // The side actually shown: config.dock.side, or a preview while dragging.
+  let shownSide: Side = config.dock.side
+  const pushDock = () =>
+    send(win, IPC.DOCK, { side: shownSide, y: config.dock.y, workArea: display.workArea })
 
   if (process.env.ELECTRON_RENDERER_URL) {
     await win.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -94,8 +99,16 @@ async function main() {
   interactivity.onHover((inside) => send(win, IPC.HOVER, inside))
   interactivity.start()
   const replace = () => {
-    display = placeIslandWindow(win)
+    display = placeIslandWindow(win, shownSide)
     updateHitArea()
+    pushDock()
+  }
+  const setDock = (d: Dock) => {
+    config.dock = d
+    shownSide = d.side
+    saveConfig(config)
+    replace()
+    settings?.changed()
   }
   screen.on('display-metrics-changed', replace)
   screen.on('display-added', replace)
@@ -168,6 +181,7 @@ async function main() {
     whatsapp,
     whatsappCapable: WA_CDP || FAKE_WA,
     onConfigChanged: () => tray?.refresh(),
+    onDockSide: (side) => setDock({ ...config.dock, side }),
   })
   settings.wire()
 
@@ -238,10 +252,21 @@ async function main() {
       invoker.invoke(inv.appId, button).catch((e) => console.error('notification action:', e))
     },
     onOpenSettings: (section) => settings?.open(section),
+    onDockSet: setDock,
+    onDockPreview: (side) => {
+      if (side === shownSide) return
+      shownSide = side
+      replace()
+    },
+    onDrag: (dragging) => interactivity.lock(dragging),
   })
 
   // A renderer reload (dev HMR, crash recovery) must get the current state.
-  win.webContents.on('did-finish-load', pushState)
+  win.webContents.on('did-finish-load', () => {
+    pushState()
+    pushDock()
+  })
+  pushDock()
   win.webContents.on('render-process-gone', () => {
     if (!win.isDestroyed()) win.webContents.reload()
   })

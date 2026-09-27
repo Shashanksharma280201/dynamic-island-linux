@@ -184,6 +184,18 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await settings.waitForSelector('.account .dot.ok', { timeout: 5000 })
     check('settings shows the mail account connected', true)
 
+    // Island position from settings
+    const bounds = () =>
+      app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((b) => b.webContents.getURL().includes('index.html'))
+          .getBounds(),
+      )
+    await settings.click('.segmented button:has-text("Left")')
+    check('settings can move the island to the left edge', await until(async () => (await bounds()).x === 0, 3000))
+    await settings.click('.segmented button:has-text("Right")')
+    check('and back to the right', await until(async () => (await bounds()).x > 0, 3000))
+
     await settings.click('text=Add account')
     await settings.fill('input[placeholder="Email address"]', 'me@x.test')
     await settings.fill('input[placeholder="Label (e.g. Work)"]', 'Second')

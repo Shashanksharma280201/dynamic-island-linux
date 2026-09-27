@@ -16,6 +16,7 @@ export class Interactivity {
   private busy = false
   private hoverCb: ((inside: boolean) => void) | null = null
   private failures = 0
+  private locked = false
 
   constructor(private win: BrowserWindow) {
     this.win.setIgnoreMouseEvents(true)
@@ -24,6 +25,15 @@ export class Interactivity {
   /** Island hit area in physical screen pixels (X11 root coordinates). */
   setRect(r: Rect | null): void {
     this.rect = r
+  }
+
+  /** Keep the window interactive regardless of the cursor (e.g. while dragging). */
+  lock(on: boolean): void {
+    this.locked = on
+    if (on && this.ignoring) {
+      this.win.setIgnoreMouseEvents(false)
+      this.ignoring = false
+    }
   }
 
   onHover(cb: (inside: boolean) => void): void {
@@ -36,7 +46,7 @@ export class Interactivity {
   }
 
   private async tick(): Promise<void> {
-    if (this.busy || this.win.isDestroyed()) return
+    if (this.busy || this.locked || this.win.isDestroyed()) return
     this.busy = true
     try {
       const p = this.rect ? await readCursor() : null

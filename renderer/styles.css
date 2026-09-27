@@ -8,19 +8,33 @@ body {
   user-select: none;
 }
 #root {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding-top: 6px;
+  position: relative;
+  height: 100%;
 }
+/* Docked to a screen edge; `top` and `left`/`right` are set inline. */
 .island-outer {
+  position: absolute;
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
   gap: 8px;
   filter: drop-shadow(0 10px 26px rgba(0, 0, 0, 0.5));
+  transition: top 0.38s cubic-bezier(0.2, 0.9, 0.3, 1.12);
+  touch-action: none;
+}
+.island-outer.left {
+  align-items: flex-start;
+}
+.island-outer.right {
+  align-items: flex-end;
+}
+.island-outer.dragging {
+  transition: none;
+  cursor: grabbing;
+  filter: drop-shadow(0 16px 34px rgba(0, 0, 0, 0.6));
 }
 .island {
-  background: #000;
+  /* A hint of depth instead of flat black. */
+  background: linear-gradient(180deg, #161616 0%, #000 42%);
   color: #fff;
   overflow: hidden;
 }
@@ -134,17 +148,32 @@ body {
   background: #222;
   flex-shrink: 0;
 }
-.compact {
+/* Collapsed capsule: vertical, hugging the screen edge. */
+.capsule {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 5px 12px;
-  height: 26px;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 7px;
+  cursor: grab;
+}
+.capsule.idle {
+  padding: 16px 6px;
+}
+.capsule .grip {
+  width: 4px;
+  height: 30px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3d3d3d, #2a2a2a);
+}
+.dragging .capsule {
+  cursor: grabbing;
 }
 .compact-art {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   object-fit: cover;
 }
 .compact-art.placeholder {

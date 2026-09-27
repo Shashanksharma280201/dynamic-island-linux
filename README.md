@@ -1,7 +1,8 @@
 # Dynamic Island for Linux
 
-A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black pill at the
-top center of your screen that morphs with spring physics to show what's going
+A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule on
+the edge of your screen (right side by default, drag it anywhere along the left or
+right edge) that morphs with spring physics to show what's going
 on (music, WhatsApp messages, new mail, Claude Code permission prompts,
 notifications), lets you **reply right from the island**, and opens a mini
 Control Center when you click it. Everywhere outside the island, your desktop
@@ -11,11 +12,11 @@ stays fully clickable.
 
 | Feature | What you see | What you can do |
 | --- | --- | --- |
-| **Idle pill** | A tiny black pill when nothing is happening | Click it to open the Control Center |
+| **Edge capsule** | A slim black capsule docked to the right (or left) edge of the screen; with music playing it shows the album art above a waveform | Click it to open the Control Center. **Drag it** up or down the edge, or across the screen to dock it on the other side; it snaps to the nearer edge and remembers the spot |
 | **Now Playing** | Album art + animated waveform while music plays in any MPRIS player: Spotify (app or web), YouTube / YouTube Music in Chrome or Firefox, VLC, Rhythmbox, … | Hover to expand: title, artist, progress bar (click it to seek), previous / play-pause / next, shuffle and repeat |
 | **WhatsApp** | Incoming messages as a card per chat (sender, group, photo, last few lines) | **Reply** (type right in the island, Enter to send), **Mark read**, **Dismiss** |
 | **Mail** | New mail from any IMAP account: sender, subject and a preview | **Reply** (threaded, saved to Sent), **Mark read**, **Dismiss** |
-| **Two activities at once** | The pill plus a small detached circle for the second activity | Hover to expand the main one |
+| **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
 | **Control Center** | Volume, brightness, Wi-Fi and Bluetooth | Drag the sliders, click the speaker icon to mute, toggle Wi-Fi / Bluetooth. Closes by itself shortly after the cursor leaves |
@@ -30,6 +31,8 @@ Other details:
 - Only one copy runs at a time.
 - Controls for tools that aren't installed (e.g. no Bluetooth adapter) are hidden
   instead of showing wrong values.
+- Cards open inward from the edge the island is docked to and always stay fully
+  on screen, even when the island sits near the top or bottom.
 - Cards stay open while you hover them or type a reply, then close by themselves.
 - The island only takes keyboard focus while you're typing a reply, so it never
   steals focus from the app you're using.
@@ -61,8 +64,8 @@ npm install
 npm start
 ```
 
-This builds the app and launches it. The island appears at the top center of the
-screen; play some music or send a notification (`notify-send "Hello" "World"`)
+This builds the app and launches it. The island appears on the right edge of the
+screen (drag it to move it, or pick Left/Right in Settings); play some music or send a notification (`notify-send "Hello" "World"`)
 to see it react.
 
 For development with hot reload, use `npm run dev` instead.
@@ -239,7 +242,7 @@ on every push and pull request.
 ```
 electron/            main process
   main.ts            startup, wiring, lifecycle
-  window.ts          transparent always-on-top window across the top of a monitor
+  window.ts          transparent always-on-top window: a column along the docked screen edge
   interactivity.ts   cursor loop: click-through except over the island
   store.ts           list of current activities
   tray.ts            tray menu
@@ -257,11 +260,13 @@ tests/               unit tests (vitest)
 
 ### How it works
 
-- **Window and clicks.** The app is one transparent, click-through window across
-  the top of the screen. Electron can't forward mouse events on Linux, so the
-  main process reads the global cursor position over X11 about 25 times a
-  second and makes the window clickable only while the cursor is over the
-  island (converted to physical pixels for HiDPI). That same signal drives hover.
+- **Window and clicks.** The app is one transparent, click-through window: a
+  column along the docked screen edge. Electron can't forward mouse events on
+  Linux, so the main process reads the global cursor position over X11 about 25
+  times a second and makes the window clickable only while the cursor is over
+  the island (converted to physical pixels for HiDPI). That same signal drives
+  hover. While you drag the island it stays clickable, and crossing the middle
+  of the screen moves the column to the other edge.
 - **What to show.** Every source adds "activities" with a priority (approvals
   10, notifications 5, music 1). A pure function in `shared/present.ts` picks the
   presentation: idle, compact, minimal (two activities) or expanded.

@@ -30,6 +30,7 @@ type Deps = {
   /** Whether this process was started with the CDP port WhatsApp needs. */
   whatsappCapable: boolean
   onConfigChanged: () => void
+  onDockSide: (side: 'left' | 'right') => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -45,6 +46,7 @@ export class SettingsController {
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),
       secureStorage: isSecretStorageSecure(),
+      dockSide: config.dock.side,
       whatsapp: {
         enabled: config.whatsapp,
         needsRestart: config.whatsapp && !whatsappCapable,
@@ -108,6 +110,9 @@ export class SettingsController {
       setAutostart(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_DOCK_SIDE, (_e, side) => {
+      if (side === 'left' || side === 'right') this.d.onDockSide(side)
     })
     ipcMain.handle(SETTINGS.SET_HOOK, async (_e, on) => {
       await setHookInstalled(on === true)

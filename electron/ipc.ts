@@ -9,6 +9,7 @@ import type {
   NotifActionMsg,
 } from '@shared/types'
 import { isRect, type Rect } from '@shared/hitbox'
+import { parseDock, type Dock, type Side } from '@shared/dock'
 
 /** Send to the renderer if the window is still alive. */
 export function send(win: BrowserWindow, channel: string, payload: unknown): void {
@@ -81,6 +82,9 @@ export function wireIpc(h: {
   onMessageAction: (m: MessageActionMsg) => void
   onNotifAction: (m: NotifActionMsg) => void
   onOpenSettings: (section?: string) => void
+  onDockSet: (d: Dock) => void
+  onDockPreview: (side: Side) => void
+  onDrag: (dragging: boolean) => void
 }): void {
   ipcMain.on(IPC.DECISION, (_e, m) => {
     const d = parseDecisionMsg(m)
@@ -115,6 +119,11 @@ export function wireIpc(h: {
     const a = parseNotifAction(m)
     if (a) h.onNotifAction(a)
   })
+  ipcMain.on(IPC.DOCK_SET, (_e, d) => h.onDockSet(parseDock(d)))
+  ipcMain.on(IPC.DOCK_PREVIEW, (_e, side) => {
+    if (side === 'left' || side === 'right') h.onDockPreview(side)
+  })
+  ipcMain.on(IPC.DRAG, (_e, on) => h.onDrag(on === true))
   ipcMain.on(IPC.OPEN_SETTINGS, (_e, section) =>
     h.onOpenSettings(typeof section === 'string' ? section : undefined),
   )

@@ -5,6 +5,7 @@ export const SETTINGS = {
   SET_NOTIFICATIONS: 'settings:set-notifications',
   SET_AUTOSTART: 'settings:set-autostart',
   SET_HOOK: 'settings:set-hook',
+  SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_WHATSAPP: 'settings:set-whatsapp',
   RESTART: 'settings:restart',
   WA_PAIR: 'settings:whatsapp-pair',

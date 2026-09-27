@@ -1,11 +1,9 @@
 import { BrowserWindow, screen, type Display } from 'electron'
+import { columnBounds, type Side } from '@shared/dock'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 
 const here = dirname(fileURLToPath(import.meta.url))
-
-/** Tall enough for the largest card (approval) plus its shadow. */
-const HEIGHT = 520
 
 /** The display the island lives on: DI_DISPLAY (index) or the primary one. */
 export function islandDisplay(): Display {
@@ -14,20 +12,20 @@ export function islandDisplay(): Display {
   return Number.isInteger(i) && all[i] ? all[i] : screen.getPrimaryDisplay()
 }
 
-/** Pin the window across the top of its display (handles hotplug/resolution). */
-export function placeIslandWindow(win: BrowserWindow): Display {
+/**
+ * Pin the window as a transparent column along one side of its display's work
+ * area (so it never covers the top bar or dock). Handles hotplug/resolution.
+ */
+export function placeIslandWindow(win: BrowserWindow, side: Side): Display {
   const d = islandDisplay()
-  win.setBounds({ x: d.bounds.x, y: d.bounds.y, width: d.bounds.width, height: HEIGHT })
+  win.setBounds(columnBounds(d.workArea, side))
   return d
 }
 
-export function createIslandWindow(): BrowserWindow {
-  const d = islandDisplay()
+export function createIslandWindow(side: Side): BrowserWindow {
+  const b = columnBounds(islandDisplay().workArea, side)
   const win = new BrowserWindow({
-    x: d.bounds.x,
-    y: d.bounds.y,
-    width: d.bounds.width,
-    height: HEIGHT,
+    ...b,
     frame: false,
     transparent: true,
     resizable: false,
@@ -54,6 +52,6 @@ export function createIslandWindow(): BrowserWindow {
   // Never navigate away or open new windows from the island.
   win.webContents.on('will-navigate', (e) => e.preventDefault())
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
-  placeIslandWindow(win)
+  placeIslandWindow(win, side)
   return win
 }

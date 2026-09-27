@@ -111,6 +111,23 @@ export function Settings() {
           on={s.notifications}
           onChange={(v) => general.run(() => window.settings.setNotifications(v))}
         />
+        <div className="toggle-row">
+          <div>
+            <div>Island position</div>
+            <div className="hint">Or drag the island along the edge, or across to the other side</div>
+          </div>
+          <div className="segmented">
+            {(['left', 'right'] as const).map((side) => (
+              <button
+                key={side}
+                className={s.dockSide === side ? 'on' : 'secondary'}
+                onClick={() => general.run(() => window.settings.setDockSide(side))}
+              >
+                {side === 'left' ? 'Left' : 'Right'}
+              </button>
+            ))}
+          </div>
+        </div>
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
         <Toggle
           label="Claude Code approvals"

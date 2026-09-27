@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import type { Activity, SystemState } from '@shared/types'
 import { present } from '@shared/present'
 import { spring, contentFade } from '../anim/spring'
@@ -12,6 +12,8 @@ import { NotificationCard } from './states/NotificationCard'
 import { ControlCenter } from './states/ControlCenter'
 import { MessageCard } from './states/MessageCard'
 import { squirclePath } from './squircle'
+import { useDock } from './useDock'
+import { EDGE_MARGIN, islandTop } from '@shared/dock'
 
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
@@ -23,6 +25,10 @@ export function Island({ activities }: { activities: Activity[] }) {
   const [replying, setReplying] = useState(false)
   const outerRef = useRef<HTMLDivElement>(null)
   const shellRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState({ w: 0, h: 0 })
+  const [areaH, setAreaH] = useState(window.innerHeight)
+  const { side, anchor, dragging, handlers, consumeDragClick } = useDock()
+  const top = islandTop(anchor, size.h, areaH)
 
   useEffect(() => window.island.onSysState(setSys), [])
   // The main process's cursor loop is the source of truth for hover: DOM
@@ -58,24 +64,32 @@ export function Island({ activities }: { activities: Activity[] }) {
     return () => clearTimeout(t)
   }, [panel, hover])
 
-  // Report the hit area whenever the island's layout box changes. The outer
-  // box is never transformed, so its rect is the settled (final) size.
+  // Track the island's settled size (the outer box is never transformed).
   useEffect(() => {
     const outer = outerRef.current
     if (!outer) return
-    const report = () => {
-      const b = outer.getBoundingClientRect()
-      window.island.reportRect({ x: b.x, y: b.y, width: b.width, height: b.height })
-    }
-    const ro = new ResizeObserver(report)
+    const measure = () => setSize({ w: outer.offsetWidth, h: outer.offsetHeight })
+    const onResize = () => setAreaH(window.innerHeight)
+    const ro = new ResizeObserver(measure)
     ro.observe(outer)
-    window.addEventListener('resize', report)
-    report()
+    window.addEventListener('resize', onResize)
+    measure()
     return () => {
       ro.disconnect()
-      window.removeEventListener('resize', report)
+      window.removeEventListener('resize', onResize)
     }
   }, [])
+
+  // Report the hit area: the settled position and size, not the mid-animation one.
+  useLayoutEffect(() => {
+    if (!size.w) return
+    window.island.reportRect({
+      x: side === 'left' ? EDGE_MARGIN : window.innerWidth - EDGE_MARGIN - size.w,
+      y: top,
+      width: size.w,
+      height: size.h,
+    })
+  }, [side, top, size.w, size.h, areaH])
 
   // Squircle clip in the shell's own (untransformed) coordinate space.
   useEffect(() => {
@@ -85,7 +99,7 @@ export function Island({ activities }: { activities: Activity[] }) {
       const w = shell.offsetWidth
       const h = shell.offsetHeight
       if (w > 1 && h > 1) {
-        shell.style.clipPath = `path('${squirclePath(w, h, Math.min(h / 2, 28), 0.7)}')`
+        shell.style.clipPath = `path('${squirclePath(w, h, Math.min(w / 2, h / 2, 26), 0.7)}')`
       }
     })
     ro.observe(shell)
@@ -99,6 +113,7 @@ export function Island({ activities }: { activities: Activity[] }) {
       : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
   const onClick = () => {
+    if (consumeDragClick()) return
     if (p.mode !== 'idle' && !showPanel) {
       if (p.primary.kind === 'notification') return window.island.dismiss(p.primary.id)
       if (p.primary.kind === 'message') return // has its own buttons
@@ -109,19 +124,23 @@ export function Island({ activities }: { activities: Activity[] }) {
   return (
     <div
       ref={outerRef}
-      className="island-outer"
+      className={`island-outer ${side}${dragging ? ' dragging' : ''}`}
+      style={{ top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
+      {...handlers}
     >
       <motion.div ref={shellRef} className="island" layout transition={spring}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
             layout
-            initial={{ opacity: 0, scale: 0.85, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 0.85, filter: 'blur(4px)' }}
+            // Content grows out of / sinks back into the docked edge.
+            style={{ transformOrigin: side === 'left' ? 'left center' : 'right center' }}
+            initial={{ opacity: 0, scale: 0.85, x: side === 'left' ? -10 : 10, filter: 'blur(4px)' }}
+            animate={{ opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
+            exit={{ opacity: 0, scale: 0.85, x: side === 'left' ? -10 : 10, filter: 'blur(4px)' }}
             transition={contentFade}
           >
             {showPanel ? (
@@ -154,13 +173,13 @@ export function Island({ activities }: { activities: Activity[] }) {
 
       <AnimatePresence>
         {!showPanel && p.mode === 'minimal' && (
-          // Buds off the pill's trailing edge and merges back into it.
+          // Buds off the bottom of the capsule and merges back into it.
           <motion.div
             key="detached"
             className="island detached"
-            initial={{ opacity: 0, scale: 0.3, x: -28 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.3, x: -28 }}
+            initial={{ opacity: 0, scale: 0.3, y: -24 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.3, y: -24 }}
             transition={spring}
           >
             <DetachedCircle activity={p.detached} />
