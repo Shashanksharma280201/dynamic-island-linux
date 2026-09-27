@@ -32,7 +32,7 @@ export function avatarGradient(name: string): string {
 }
 
 // Readable on dark glass, for group sender names.
-const NAME_COLORS = ['#ff9f0a', '#64d2ff', '#30d158', '#ff6482', '#bf5af2', '#ffd60a', '#5e9eff', '#ff8a65']
+const NAME_COLORS = ['#ffb340', '#70d7ff', '#4ce07a', '#ff7a95', '#da8fff', '#ffe066', '#7cb4ff', '#ffa07a']
 
 export function nameColor(name: string): string {
   let h = 7

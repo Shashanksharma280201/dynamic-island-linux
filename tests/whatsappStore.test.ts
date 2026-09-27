@@ -1,7 +1,7 @@
 import { vi } from 'vitest'
 vi.mock('electron', () => ({ BrowserWindow: class {} }))
 import { readChatsFromStore, readMessagesFromStore, readChatInfoFromStore } from '../electron/providers/whatsappStore'
-import { chatsFromRaw, messagesFromRaw } from '../electron/providers/whatsapp'
+import { chatsFromRaw, messagesFromRaw, phoneOf } from '../electron/providers/whatsapp'
 
 // A stand-in for WhatsApp Web's in-memory collections, as exposed via window.require.
 const coll = (models: any[]) => ({
@@ -41,13 +41,32 @@ const broken = {
     throw new Error('r')
   },
 }
+// Group senders as WhatsApp now sends them: opaque "@lid" ids.
+const lid = (id: string) => ({ _serialized: id })
+const lids = {
+  id: { _serialized: 'g2@g.us', server: 'g.us' },
+  formattedTitle: 'no trip',
+  isGroup: true,
+  t: 100,
+  msgs: coll([
+    msg('l1', 'saved contact', 10, false, { author: lid('111@lid') }),
+    msg('l2', 'profile name only', 11, false, { author: lid('222@lid') }),
+    msg('l3', 'nobody we know', 12, false, { author: lid('213784077011444@lid') }),
+    msg('l4', 'phone id', 13, false, { author: lid('919876543210@c.us') }),
+  ]),
+}
+const contacts = [
+  { id: { _serialized: '111@lid' }, name: 'Priya Shah', pushname: 'Priya' },
+  { id: { _serialized: '222@lid' }, pushname: 'Rahul' },
+]
 const channel = { id: { _serialized: '123@newsletter' }, formattedTitle: 'News', t: 999, msgs: coll([]) }
 const archived = { id: { _serialized: '2@c.us' }, formattedTitle: 'Old', archive: true, t: 50, msgs: coll([]) }
 
 beforeEach(() => {
   ;(globalThis as any).window = {
     require: (name: string) => {
-      if (name === 'WAWebCollections') return { Chat: coll([group, broken, direct, channel, archived]) }
+      if (name === 'WAWebCollections')
+        return { Chat: coll([group, broken, direct, channel, archived, lids]), Contact: coll(contacts) }
       if (name === 'WAWebChatLoadMessages')
         return {
           loadEarlierMsgs: async ({ chat }: any) => {
@@ -65,9 +84,9 @@ afterEach(() => delete (globalThis as any).window)
 
 test('reads chats directly, newest first, skipping unreadable chats and channels', () => {
   const raw = readChatsFromStore(10)
-  expect(raw.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'Old'])
+  expect(raw.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip', 'Old'])
   const chats = chatsFromRaw(raw, 10)
-  expect(chats.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip']) // archived dropped
+  expect(chats.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip']) // archived dropped
   expect(chats[1]).toMatchObject({ isGroup: true, unread: 2, last: 'Sam: Leaving at 8', time: 200_000 })
   expect(chats[0]).toMatchObject({ last: 'hi', lastFromMe: true })
 })
@@ -83,4 +102,11 @@ test('reads messages, loading earlier ones when few are in memory', async () => 
 test('chat info for incoming-message cards', () => {
   expect(readChatInfoFromStore('g1@g.us')).toEqual({ name: 'Weekend Trip', isGroup: true })
   expect(readChatInfoFromStore('missing@c.us')).toBeNull()
+})
+
+test('group senders are shown by name, never as raw ids', async () => {
+  const msgs = messagesFromRaw(await readMessagesFromStore('g2@g.us', 10), true)
+  expect(msgs.map((m) => m.author)).toEqual(['Priya Shah', 'Rahul', undefined, '+919876543210'])
+  expect(phoneOf('919876543210@c.us')).toBe('+919876543210')
+  expect(phoneOf('213784077011444@lid')).toBeUndefined()
 })

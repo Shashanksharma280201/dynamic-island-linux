@@ -74,7 +74,15 @@ function seed(now: number): Chat[] {
       name: name as string,
       isGroup: isGroup as boolean,
       unread: i % 3 === 0 ? i + 1 : 0,
-      messages: [m(String(text).startsWith('You: '), String(text).replace(/^You: /, ''), (30 + i * 9) * 60 * min)],
+      messages:
+        name === 'Gym Buddies'
+          ? // A busy group with a long history (more than fits on screen).
+            Array.from({ length: 40 }, (_, k) =>
+              k % 5 === 4
+                ? m(true, `On my way (${k})`, (30 + i * 9) * 60 * min + (40 - k) * 7 * min)
+                : m(false, k === 39 ? String(text).replace(/^Aman: /, '') : `Set ${k}: ${'squats deadlifts bench '.repeat(1 + (k % 3))}`.trim(), (30 + i * 9) * 60 * min + (40 - k) * 7 * min, ['Aman', 'Neha', 'Kabir'][k % 3]),
+            )
+          : [m(String(text).startsWith('You: '), String(text).replace(/^You: /, ''), (30 + i * 9) * 60 * min)],
     })),
   ]
 }

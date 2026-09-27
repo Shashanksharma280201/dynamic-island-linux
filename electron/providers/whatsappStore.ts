@@ -24,6 +24,24 @@ export function readChatsFromStore(limit: number): RawChat[] {
   const w = window as any
   const Chat = w.Store?.Chat ?? w.require?.('WAWebCollections')?.Chat
   if (!Chat) throw new Error('WhatsApp Web data is not available yet')
+  // Sender name as WhatsApp shows it: your saved name, else their profile
+  // name, else their phone number. Group senders often come as opaque
+  // "@lid" ids, which must never be shown as if they were numbers.
+  const Contact = w.Store?.Contact ?? w.require?.('WAWebCollections')?.Contact
+  const senderName = (m: any): string | undefined => {
+    const wid = m.author ?? m.from
+    const id: string = wid?._serialized ?? (typeof wid === 'string' ? wid : '')
+    let c: any
+    try {
+      c = m.senderObj ?? (id ? Contact?.get?.(id) : undefined)
+    } catch {
+      c = undefined
+    }
+    const named = c?.name || c?.pushname || m.notifyName || c?.verifiedName || c?.notifyName
+    if (named) return String(named)
+    const phone = c?.phoneNumber?.user ?? (id.endsWith('@c.us') ? id.split('@')[0] : '')
+    return phone ? `+${phone}` : undefined
+  }
   const models: any[] = Chat.getModelsArray?.() ?? Chat.models ?? []
   const out: RawChat[] = []
   for (const c of models) {
@@ -44,7 +62,7 @@ export function readChatsFromStore(limit: number): RawChat[] {
               type: String(m.type || 'chat'),
               body: typeof m.body === 'string' ? m.body : typeof m.caption === 'string' ? m.caption : '',
               fromMe: !!m.id?.fromMe,
-              author: m.notifyName || undefined,
+              author: senderName(m),
             }
           : undefined,
       })
@@ -61,6 +79,24 @@ export async function readMessagesFromStore(chatId: string, limit: number): Prom
   const Chat = w.Store?.Chat ?? w.require?.('WAWebCollections')?.Chat
   const chat = Chat?.get?.(chatId)
   if (!chat) throw new Error('Chat not found')
+  // Sender name as WhatsApp shows it: your saved name, else their profile
+  // name, else their phone number. Group senders often come as opaque
+  // "@lid" ids, which must never be shown as if they were numbers.
+  const Contact = w.Store?.Contact ?? w.require?.('WAWebCollections')?.Contact
+  const senderName = (m: any): string | undefined => {
+    const wid = m.author ?? m.from
+    const id: string = wid?._serialized ?? (typeof wid === 'string' ? wid : '')
+    let c: any
+    try {
+      c = m.senderObj ?? (id ? Contact?.get?.(id) : undefined)
+    } catch {
+      c = undefined
+    }
+    const named = c?.name || c?.pushname || m.notifyName || c?.verifiedName || c?.notifyName
+    if (named) return String(named)
+    const phone = c?.phoneNumber?.user ?? (id.endsWith('@c.us') ? id.split('@')[0] : '')
+    return phone ? `+${phone}` : undefined
+  }
   let msgs: any[] = chat.msgs?.getModelsArray?.() ?? []
   // Only the latest few are in memory; load earlier ones like WhatsApp Web does.
   for (let i = 0; i < 3 && msgs.length < limit; i++) {
@@ -81,7 +117,7 @@ export async function readMessagesFromStore(chatId: string, limit: number): Prom
         body: typeof m.body === 'string' ? m.body : typeof m.caption === 'string' ? m.caption : '',
         fromMe: !!m.id?.fromMe,
         t: Number(m.t) || 0,
-        author: m.notifyName || m.author?.user || undefined,
+        author: senderName(m),
       })
     } catch {
       // unreadable message: skip it

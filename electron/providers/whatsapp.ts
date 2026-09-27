@@ -91,6 +91,15 @@ export function chatsFromRaw(raw: RawChat[], limit: number): ChatSummary[] {
     }))
 }
 
+/**
+ * "+<number>" for a phone-number id ("91987…@c.us"), else undefined: group
+ * senders often come as opaque "@lid" ids that are not phone numbers. Pure.
+ */
+export function phoneOf(id: unknown): string | undefined {
+  const s = typeof id === 'string' ? id : ''
+  return s.endsWith('@c.us') ? `+${s.split('@')[0]}` : undefined
+}
+
 /** Map messages read straight from WhatsApp Web's data. Pure. */
 export function messagesFromRaw(raw: RawMsg[], isGroup: boolean): ChatMessage[] {
   return raw
@@ -216,7 +225,7 @@ export class WwebjsEngine implements WhatsAppEngine {
         .map((m) => ({
           id: m.id?._serialized ?? String(m.timestamp),
           fromMe: !!m.fromMe,
-          author: chat.isGroup && !m.fromMe ? m._data?.notifyName || m.author?.split('@')[0] : undefined,
+          author: chat.isGroup && !m.fromMe ? m._data?.notifyName || phoneOf(m.author) : undefined,
           text: messageText(m.type, m.body),
           time: (m.timestamp ?? 0) * 1000,
         }))
@@ -238,7 +247,7 @@ export class WwebjsEngine implements WhatsAppEngine {
     const isGroup = info?.isGroup ?? chatId.endsWith('@g.us')
     const pushName: string | undefined = msg._data?.notifyName || msg.notifyName
     const sender = isGroup
-      ? pushName || String(msg.author ?? '').split('@')[0] || 'Someone'
+      ? pushName || phoneOf(msg.author) || 'Someone'
       : info?.name || pushName || chatId.split('@')[0]
     return {
       chatId,
