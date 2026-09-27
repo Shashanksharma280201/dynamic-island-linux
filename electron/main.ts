@@ -16,6 +16,7 @@ import { WhatsAppService, WwebjsEngine } from './providers/whatsapp'
 import { FakeWhatsAppEngine } from './providers/whatsappFake'
 import { createIslandWindow, placeIslandWindow } from './window'
 import { Interactivity } from './interactivity'
+import { InputShape, shapeRect } from './inputShape'
 import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
@@ -88,16 +89,44 @@ async function main() {
   store.onChange(pushState)
   const transient = new TransientCards(store)
 
-  // ---- interactivity: renderer rect (CSS px) → physical hit area ----
-  const interactivity = new Interactivity(win)
+  // ---- interactivity: clicks reach the island, everything else passes through ----
+  // Preferred: an X11 input shape (the X server routes clicks; no polling).
+  // Fallback: poll the global cursor and toggle ignore-mouse-events.
   let cssRect: Rect | null = null
-  const updateHitArea = () => {
-    interactivity.setRect(
-      cssRect && toPhysicalRect(cssRect, win.getBounds(), display.scaleFactor, 4),
-    )
+  let dragging = false
+  let shape: InputShape | null = null
+  if (process.env.DI_INPUT !== 'poll') {
+    try {
+      win.setIgnoreMouseEvents(false) // resets Electron's own input region first
+      shape = await InputShape.create(win)
+    } catch (e: any) {
+      console.error('[island] X11 input shape unavailable, falling back to cursor polling:', e?.message ?? e)
+      shape = null
+    }
   }
-  interactivity.onHover((inside) => send(win, IPC.HOVER, inside))
-  interactivity.start()
+  const interactivity = shape ? null : new Interactivity(win)
+  const updateHitArea = () => {
+    if (shape) {
+      if (dragging) shape.full()
+      else shape.set(cssRect ? [shapeRect(cssRect, display.scaleFactor, 4)] : [])
+    } else {
+      interactivity!.setRect(
+        cssRect && toPhysicalRect(cssRect, win.getBounds(), display.scaleFactor, 4),
+      )
+    }
+  }
+  updateHitArea()
+  if (interactivity) {
+    interactivity.onHover((inside) => send(win, IPC.HOVER, inside))
+    interactivity.start()
+  }
+  // Chromium may reset the input region when the window changes; re-apply.
+  win.on('resize', updateHitArea)
+  win.on('move', updateHitArea)
+  console.log(
+    `[island] input: ${shape ? 'x11-shape' : 'cursor-polling'}, session: ${process.env.XDG_SESSION_TYPE || 'unknown'}, ` +
+      `scale: ${display.scaleFactor}, bounds: ${JSON.stringify(win.getBounds())}`,
+  )
   const replace = () => {
     display = placeIslandWindow(win, shownSide)
     updateHitArea()
@@ -258,7 +287,11 @@ async function main() {
       shownSide = side
       replace()
     },
-    onDrag: (dragging) => interactivity.lock(dragging),
+    onDrag: (on) => {
+      dragging = on
+      if (interactivity) interactivity.lock(on)
+      else updateHitArea()
+    },
   })
 
   // A renderer reload (dev HMR, crash recovery) must get the current state.
@@ -299,7 +332,8 @@ async function main() {
   tray.create()
 
   cleanup = async () => {
-    interactivity.stop()
+    interactivity?.stop()
+    shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
     tray?.destroy()

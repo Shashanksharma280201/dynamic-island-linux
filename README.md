@@ -183,7 +183,8 @@ Environment variables (set them before starting the app):
 | --- | --- |
 | `DI_DISPLAY` | Index of the monitor to show the island on (default: primary monitor) |
 | `DI_DEMO` | Demo mode `1`, `2`, `3` or `4` (see above) |
-| `DI_DEBUG` | Log when the island becomes clickable / click-through |
+| `DI_DEBUG` | Log when the island becomes clickable / click-through (polling mode) |
+| `DI_INPUT` | `poll` forces the cursor-polling fallback instead of the X11 input shape |
 | `DYNAMIC_ISLAND_SOCK` | Socket shared with the Claude hook (default `$XDG_RUNTIME_DIR/dynamic-island.sock`, else `/tmp/dynamic-island-<uid>.sock`) |
 | `DYNAMIC_ISLAND_TIMEOUT` | Seconds the Claude hook waits for your answer (default `45`) |
 | `DI_USER_DATA` | Use a different profile folder (settings, WhatsApp login) |
@@ -209,7 +210,7 @@ is available, Settings warns you that they are only obfuscated.
 
 | Problem | Fix |
 | --- | --- |
-| Hovering or clicking the island does nothing | You're probably on Wayland (`echo $XDG_SESSION_TYPE`). Log in with "Ubuntu on Xorg". |
+| Hovering or clicking the island does nothing | Start it from a terminal (`npm start`) and look for the line `[island] input: …, session: …, scale: …`. If `session` is `wayland`, log in with "Ubuntu on Xorg". If it says `cursor-polling`, the X11 input shape couldn't be set; try `DI_INPUT=poll npm start` to force the fallback, and share that line in an issue. |
 | The island has a black box around it | Transparency needs a compositor; GNOME has one built in. On other desktops, enable compositing. |
 | No music shown | The player must support MPRIS. Check with `gdbus call --session --dest org.freedesktop.DBus --object-path /org/freedesktop/DBus --method org.freedesktop.DBus.ListNames` and look for `org.mpris.MediaPlayer2.*`. |
 | A Control Center control is missing | The matching tool isn't installed (`pactl`, `nmcli`, `bluetoothctl`, `brightnessctl`), or there's no such hardware. |
@@ -260,13 +261,14 @@ tests/               unit tests (vitest)
 
 ### How it works
 
-- **Window and clicks.** The app is one transparent, click-through window: a
-  column along the docked screen edge. Electron can't forward mouse events on
-  Linux, so the main process reads the global cursor position over X11 about 25
-  times a second and makes the window clickable only while the cursor is over
-  the island (converted to physical pixels for HiDPI). That same signal drives
-  hover. While you drag the island it stays clickable, and crossing the middle
-  of the screen moves the column to the other edge.
+- **Window and clicks.** The app is one transparent window: a column along the
+  docked screen edge. Its X11 *input shape* (SHAPE extension) is set to just the
+  island's rectangle, so the X server itself sends clicks on the island to the
+  app and everything else straight through to the desktop, with no polling.
+  While you drag, the whole column takes input, and crossing the middle of the
+  screen moves the column to the other edge. If the input shape can't be set,
+  it falls back to reading the cursor position about 25 times a second and
+  toggling click-through.
 - **What to show.** Every source adds "activities" with a priority (approvals
   10, notifications 5, music 1). A pure function in `shared/present.ts` picks the
   presentation: idle, compact, minimal (two activities) or expanded.

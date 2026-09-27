@@ -65,14 +65,30 @@ function hook(input, env = {}) {
     await sleep(500)
     await shot('01-compact')
 
-    // 2. real X pointer over the island → main's cursor loop → hover → expand
+    // 1b. click-through: the X server routes input to the island only over it
+    const xid = await app.evaluate(({ BrowserWindow }) => {
+      const h = BrowserWindow.getAllWindows()[0].getNativeWindowHandle()
+      return String(h.length >= 8 ? h.readBigUInt64LE(0) : h.readUInt32LE(0))
+    })
+    const childAt = (x, y) =>
+      execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'child', Math.round(x * SCALE), Math.round(y * SCALE)])
+        .toString()
+        .trim()
+    const ic = await page.evaluate(() => {
+      const b = document.querySelector('.island-outer').getBoundingClientRect()
+      return { x: window.screenX + b.x + b.width / 2, y: window.screenY + b.y + b.height / 2, col: window.screenX + 40 }
+    })
+    check('input goes to the island over it', childAt(ic.x, ic.y) === xid)
+    check('elsewhere in its column, clicks pass through to the desktop', childAt(ic.col, ic.y + 200) !== xid)
+
+    // 2. real X pointer over the island → hover → expand
     const r = await page.evaluate(() => {
       const b = document.querySelector('.island-outer').getBoundingClientRect()
       return { x: window.screenX + b.x + b.width / 2, y: window.screenY + b.y + b.height / 2 }
     })
     pointer(Math.round(r.x), Math.round(r.y))
     await page.waitForSelector('.card.media', { timeout: 3000 })
-    check('XTest hover expands island (cursor loop + HOVER ipc)', true)
+    check('real pointer hover expands the island', true)
     const title = await page.textContent('.card.media .title')
     check('media title from MPRIS', title === 'Fake Track One', title)
     const times = await page.$$eval('.progress .time', (e) => e.map((x) => x.textContent))
