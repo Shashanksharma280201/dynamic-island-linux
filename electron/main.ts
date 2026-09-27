@@ -306,9 +306,12 @@ async function main() {
   // so it never steals focus from the app you're using.
   const setFocus = (focus: boolean) => {
     if (win.isDestroyed()) return
+    if (focus && win.isFocusable() && win.isFocused()) return // already ours
     win.setFocusable(focus)
     if (focus) win.focus()
     else win.blur()
+    // Electron alone can't focus a dock window on X11; do it at the X level.
+    shape?.keyboard(focus)
   }
 
   wireIpc({

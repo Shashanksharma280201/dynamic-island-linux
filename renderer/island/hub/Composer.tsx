@@ -29,10 +29,13 @@ export function Composer({
   const focused = useRef(false)
 
   const take = () => {
-    if (focused.current) return
-    focused.current = true
-    onTyping(true)
+    if (!focused.current) {
+      focused.current = true
+      onTyping(true)
+    }
+    // Ask every time: focus may have moved to another app since the last click.
     window.island.setFocus(true)
+    ref.current?.focus()
     setTimeout(() => ref.current?.focus(), 50)
   }
   const release = () => {
@@ -73,7 +76,6 @@ export function Composer({
           value={text}
           placeholder={placeholder}
           onPointerDown={take}
-          onFocus={take}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

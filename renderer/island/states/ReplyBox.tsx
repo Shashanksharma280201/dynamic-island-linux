@@ -50,6 +50,7 @@ export function ReplyBox({
           rows={1}
           value={text}
           placeholder={placeholder}
+          onPointerDown={() => window.island.setFocus(true)}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {

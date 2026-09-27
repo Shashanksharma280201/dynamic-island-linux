@@ -8,9 +8,11 @@ import { useEffect, useRef } from 'react'
 export function useKeyboard(onTyping: (on: boolean) => void) {
   const active = useRef(false)
   const take = () => {
-    if (active.current) return
-    active.current = true
-    onTyping(true)
+    if (!active.current) {
+      active.current = true
+      onTyping(true)
+    }
+    // Ask every time: focus may have moved to another app since the last click.
     window.island.setFocus(true)
   }
   const release = () => {

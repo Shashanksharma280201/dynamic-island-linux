@@ -2,6 +2,9 @@
 //   node xtest.cjs X Y            move
 //   node xtest.cjs drag X1 Y1 X2 Y2 [steps]   press at 1, move in steps, release at 2
 //   node xtest.cjs key ctrl+i     press and release a key combo (real X key events)
+//   node xtest.cjs type "hello"   type lowercase letters, digits and spaces (real X key events)
+//   node xtest.cjs click X Y      move there and click the left button
+//   node xtest.cjs focus          print the window that has keyboard focus
 //   node xtest.cjs child X Y      move, then print the top-level window that
 //                                 receives input there (honours input shapes)
 const x11 = require('x11')
@@ -28,10 +31,39 @@ x11.createClient((err, display) => {
       await sleep(100)
       xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
       await sleep(100)
+    } else if (args[0] === 'focus') {
+      X.GetInputFocus((e, f) => {
+        console.log(String(f.focus))
+        X.terminate()
+      })
+      return
+    } else if (args[0] === 'click') {
+      move(Number(args[1]), Number(args[2]))
+      await sleep(300)
+      xt.FakeInput(xt.ButtonPress, 1, 0, root, 0, 0)
+      await sleep(50)
+      xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
+      await sleep(100)
+    } else if (args[0] === 'type') {
+      const min = display.min_keycode
+      const max = display.max_keycode
+      const map = await new Promise((res, rej) =>
+        X.GetKeyboardMapping(min, max - min, (e, m) => (e ? rej(e) : res(m))),
+      )
+      for (const ch of args[1]) {
+        const i = map.findIndex((row) => row[0] === ch.charCodeAt(0))
+        if (i < 0) throw new Error('no keycode for ' + ch)
+        xt.FakeInput(xt.KeyPress, i + min, 0, root, 0, 0)
+        await sleep(15)
+        xt.FakeInput(xt.KeyRelease, i + min, 0, root, 0, 0)
+        await sleep(15)
+      }
+      await sleep(100)
     } else if (args[0] === 'key') {
       // keysyms: letters are their ASCII codes; Control_L = 0xffe3
       const parts = args[1].toLowerCase().split('+')
-      const syms = parts.map((p) => (p === 'ctrl' ? 0xffe3 : p === 'shift' ? 0xffe1 : p.charCodeAt(0)))
+      const named = { ctrl: 0xffe3, shift: 0xffe1, escape: 0xff1b }
+      const syms = parts.map((p) => named[p] ?? p.charCodeAt(0))
       const min = display.min_keycode
       const max = display.max_keycode
       const map = await new Promise((res, rej) =>

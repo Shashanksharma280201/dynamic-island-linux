@@ -283,6 +283,56 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await page.waitForSelector('text=No notes yet', { timeout: 5000 })
     check('deleting a note removes its file', noteFiles().length === 0)
 
+    // ---- Typing with the real keyboard (X key events, not injected into the page) ----
+    // Injected keys skip X keyboard focus; on a real desktop the island must
+    // actually take focus, which dock windows don't get by default.
+    const xt = (...a) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), ...a.map(String)])
+    const realClick = async (sel) => {
+      const b = await app.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getBounds(),
+      )
+      // Wait for the island to stop moving (it re-centres when the panel resizes).
+      const centre = () => page.$eval(sel, (e) => { const r = e.getBoundingClientRect(); return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)] })
+      let r = await centre()
+      for (let i = 0; i < 20; i++) {
+        await sleep(150)
+        const n = await centre()
+        if (n[0] === r[0] && n[1] === r[1]) break
+        r = n
+      }
+      xt('click', b.x + r[0], b.y + r[1])
+    }
+    const realType = async (sel, text) => {
+      await realClick(sel)
+      await sleep(600)
+      xt('type', text)
+      return until(async () => ((await page.inputValue(sel)) ?? '').includes(text), 3000)
+    }
+    await realClick('.rail-btn[aria-label="Chats"]')
+    await page.waitForSelector('.chat-row', { timeout: 5000 })
+    await realClick('.chat-row:has-text("Alice")')
+    await page.waitForSelector('.composer textarea', { timeout: 5000 })
+    check('real keyboard: typing in a chat', await realType('.composer textarea', 'typed for real'))
+    await page.fill('.composer textarea', '')
+    await page.click('.back')
+    await realClick('.rail-btn[aria-label="Mail"]')
+    await page.waitForSelector('.mail-row', { timeout: 10000 })
+    await realClick('.mail-row:has-text("FYI")')
+    await page.waitForSelector('.view-head .pill:has-text("Reply")', { timeout: 5000 })
+    await realClick('.view-head .pill:has-text("Reply")')
+    await page.waitForSelector('.composer textarea')
+    check('real keyboard: typing a mail reply', await realType('.composer textarea', 'mail typed for real'))
+    await page.fill('.composer textarea', '')
+    await page.click('.back')
+    await realClick('.rail-btn[aria-label="Notes"]')
+    await page.waitForSelector('.new-note')
+    await realClick('.new-note')
+    await page.waitForSelector('.note-editor')
+    check('real keyboard: typing a note', await realType('.note-editor', 'note typed for real'))
+    await realClick('.rail-btn[aria-label="Chats"]')
+    await page.waitForSelector('.search input', { timeout: 5000 })
+    check('real keyboard: searching chats', await realType('.search input', 'alice'))
+
     key('ctrl+i')
     check('Ctrl+I closes it again', await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).then(() => true, () => false))
 
