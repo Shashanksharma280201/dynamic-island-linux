@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_DISABLE_SANDBOX: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y xvfb dbus libglib2.0-bin
+      - run: npm ci
+      - run: npm run test:e2e
+      - name: e2e on a simulated HiDPI (2x) display
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- node e2e/run.cjs
+        env:
+          E2E_SCALE: '2'

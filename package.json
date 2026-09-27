@@ -8,8 +8,14 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
+    "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && xvfb-run -a -s \"-screen 0 1920x1080x24\" dbus-run-session -- node e2e/run.cjs",
+    "check": "npm run typecheck && npm test && npm run build",
+    "package": "npm run build && electron-builder --linux AppImage deb",
+    "hook:install": "node hook/install.cjs",
+    "hook:uninstall": "node hook/install.cjs --uninstall"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
@@ -17,17 +23,71 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.0",
     "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
+    "figma-squircle": "^1.1.0",
+    "framer-motion": "^11.11.0",
+    "playwright-core": "^1.56.1",
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
     "typescript": "^5.6.0",
     "vite": "^5.4.0",
     "vitest": "^2.1.0"
   },
   "dependencies": {
     "dbus-next": "^0.10.2",
-    "figma-squircle": "^1.1.0",
-    "framer-motion": "^11.11.0",
-    "react": "^18.3.0",
-    "react-dom": "^18.3.0",
     "x11": "^2.3.0"
+  },
+  "author": {
+    "name": "Shashank Sharma",
+    "email": "shashank.sharma.280201@gmail.com"
+  },
+  "homepage": "https://github.com/shashanksharma280201/dynamic-island-linux",
+  "build": {
+    "appId": "io.github.shashanksharma280201.dynamicisland",
+    "productName": "Dynamic Island",
+    "executableName": "dynamic-island-linux",
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "hook",
+        "to": "hook",
+        "filter": [
+          "*.cjs"
+        ]
+      },
+      {
+        "from": "assets/tray.png",
+        "to": "tray.png"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Utility",
+      "icon": "assets/icon.png",
+      "synopsis": "Mac-style Dynamic Island for Linux",
+      "desktop": {
+        "StartupWMClass": "dynamic-island-linux"
+      }
+    },
+    "deb": {
+      "depends": [
+        "libnotify4",
+        "libxtst6",
+        "libnss3"
+      ]
+    },
+    "artifactName": "${name}-${version}-${arch}.${ext}",
+    "publish": null
   }
 }
