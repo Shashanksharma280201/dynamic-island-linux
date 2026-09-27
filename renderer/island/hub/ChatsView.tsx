@@ -52,7 +52,7 @@ function Conversation({ chat, onBack, onTyping }: { chat: ChatSummary; onBack: (
 export function ChatsView({ sources, onTyping }: { sources: InboxSources; onTyping: (on: boolean) => void }) {
   const [open, setOpen] = useState<ChatSummary | null>(null)
   const ready = sources.whatsapp === 'ready'
-  const { data, error, loading } = useLoad(
+  const { data, error, loading, reload } = useLoad(
     () => (ready ? window.island.inbox.chats() : Promise.resolve([])),
     [ready, open === null],
     onWhatsApp,
@@ -90,7 +90,17 @@ export function ChatsView({ sources, onTyping }: { sources: InboxSources; onTypi
   return (
     <div className="list">
       {!data && loading && <Spinner />}
-      {error && !data && <Empty title="Couldn't load chats" body={error} />}
+      {error && !data && (
+        <Empty
+          title="Couldn't load chats"
+          body={error}
+          action={
+            <button className="pill" onClick={(e) => (e.stopPropagation(), reload())}>
+              Try Again
+            </button>
+          }
+        />
+      )}
       {data && data.length === 0 && <Empty title="No chats yet" />}
       {data?.map((c) => (
         <button key={c.id} className="list-row chat-row" onClick={(e) => (e.stopPropagation(), setOpen(c))}>

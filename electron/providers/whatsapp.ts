@@ -16,6 +16,13 @@ export type WaIncoming = {
 
 export type { WaState } from '@shared/types'
 import type { WaState, ChatSummary, ChatMessage } from '@shared/types'
+import {
+  readChatsFromStore,
+  readMessagesFromStore,
+  readChatInfoFromStore,
+  type RawChat,
+  type RawMsg,
+} from './whatsappStore'
 
 export type EngineEvents = {
   onQr: (qr: string) => void
@@ -63,6 +70,38 @@ export function isRelevant(m: { from?: string; fromMe?: boolean; isStatus?: bool
   if (m.type && ['e2e_notification', 'notification_template', 'call_log', 'protocol', 'revoked'].includes(m.type))
     return false
   return true
+}
+
+/** Map chats read straight from WhatsApp Web's data. Pure. */
+export function chatsFromRaw(raw: RawChat[], limit: number): ChatSummary[] {
+  return raw
+    .filter((c) => !c.archived)
+    .slice(0, limit)
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      isGroup: c.isGroup,
+      unread: c.unread,
+      time: c.t * 1000,
+      last: c.last
+        ? (c.isGroup && c.last.author && !c.last.fromMe ? `${c.last.author}: ` : '') +
+          messageText(c.last.type, c.last.body)
+        : '',
+      lastFromMe: !!c.last?.fromMe,
+    }))
+}
+
+/** Map messages read straight from WhatsApp Web's data. Pure. */
+export function messagesFromRaw(raw: RawMsg[], isGroup: boolean): ChatMessage[] {
+  return raw
+    .filter((m) => isRelevant({ from: 'x', type: m.type }) || m.fromMe)
+    .map((m) => ({
+      id: m.id,
+      fromMe: m.fromMe,
+      author: isGroup && !m.fromMe ? m.author : undefined,
+      text: messageText(m.type, m.body),
+      time: m.t * 1000,
+    }))
 }
 
 let connectPatched = false
@@ -125,22 +164,7 @@ export class WwebjsEngine implements WhatsAppEngine {
     client.on('message', async (msg: any) => {
       if (!isRelevant(msg)) return
       try {
-        const [contact, chat] = await Promise.all([msg.getContact(), msg.getChat()])
-        let avatar: string | undefined
-        try {
-          avatar = (await contact.getProfilePicUrl()) || undefined
-        } catch {
-          // no picture / privacy settings
-        }
-        ev.onMessage({
-          chatId: chat.id._serialized,
-          sender: contact.pushname || contact.name || contact.number || 'Unknown',
-          chatName: chat.isGroup ? chat.name : undefined,
-          isGroup: !!chat.isGroup,
-          text: messageText(msg.type, msg.body),
-          time: (msg.timestamp ?? Date.now() / 1000) * 1000,
-          avatar,
-        })
+        ev.onMessage(await this.describeIncoming(msg))
       } catch (e) {
         console.error('whatsapp message:', e)
       }
@@ -148,38 +172,82 @@ export class WwebjsEngine implements WhatsAppEngine {
     await client.initialize()
   }
 
+  // Chats and messages are read straight from WhatsApp Web's in-memory data
+  // first: whatsapp-web.js's getChats()/getChatById() convert every chat into
+  // a full model (and query group metadata), which fails outright when
+  // WhatsApp Web changes shape. The library's calls are only the fallback.
+
   async listChats(limit: number): Promise<ChatSummary[]> {
-    const chats: any[] = await this.client.getChats()
-    return chats
-      .filter((c) => !c.archived && c.id?._serialized !== 'status@broadcast')
-      .slice(0, limit)
-      .map((c) => {
-        const last = c.lastMessage
-        return {
-          id: c.id._serialized,
-          name: c.name || c.id.user || 'Unknown',
-          isGroup: !!c.isGroup,
-          unread: c.unreadCount || 0,
-          time: (c.timestamp || last?.timestamp || 0) * 1000,
-          last: last ? messageText(last.type, last.body) : '',
-          lastFromMe: !!last?.fromMe,
-        }
-      })
+    try {
+      const raw: RawChat[] = await this.client.pupPage.evaluate(readChatsFromStore, limit * 2)
+      return chatsFromRaw(raw, limit)
+    } catch (direct) {
+      console.error('[whatsapp] direct chat read failed, trying getChats():', direct)
+      const chats: any[] = await this.client.getChats()
+      return chats
+        .filter((c) => !c.archived && c.id?._serialized !== 'status@broadcast')
+        .slice(0, limit)
+        .map((c) => {
+          const last = c.lastMessage
+          return {
+            id: c.id._serialized,
+            name: c.name || c.id.user || 'Unknown',
+            isGroup: !!c.isGroup,
+            unread: c.unreadCount || 0,
+            time: (c.timestamp || last?.timestamp || 0) * 1000,
+            last: last ? messageText(last.type, last.body) : '',
+            lastFromMe: !!last?.fromMe,
+          }
+        })
+    }
   }
 
   async getMessages(chatId: string, limit: number): Promise<ChatMessage[]> {
-    const chat = await this.client.getChatById(chatId)
-    const msgs: any[] = await chat.fetchMessages({ limit })
-    await chat.sendSeen().catch(() => {})
-    return msgs
-      .filter((m) => m.type !== 'e2e_notification' && m.type !== 'notification_template')
-      .map((m) => ({
-        id: m.id?._serialized ?? String(m.timestamp),
-        fromMe: !!m.fromMe,
-        author: chat.isGroup && !m.fromMe ? m._data?.notifyName || m.author?.split('@')[0] : undefined,
-        text: messageText(m.type, m.body),
-        time: (m.timestamp ?? 0) * 1000,
-      }))
+    let result: ChatMessage[]
+    try {
+      const raw: RawMsg[] = await this.client.pupPage.evaluate(readMessagesFromStore, chatId, limit)
+      result = messagesFromRaw(raw, chatId.endsWith('@g.us'))
+    } catch (direct) {
+      console.error('[whatsapp] direct message read failed, trying fetchMessages():', direct)
+      const chat = await this.client.getChatById(chatId)
+      const msgs: any[] = await chat.fetchMessages({ limit })
+      result = msgs
+        .filter((m) => m.type !== 'e2e_notification' && m.type !== 'notification_template')
+        .map((m) => ({
+          id: m.id?._serialized ?? String(m.timestamp),
+          fromMe: !!m.fromMe,
+          author: chat.isGroup && !m.fromMe ? m._data?.notifyName || m.author?.split('@')[0] : undefined,
+          text: messageText(m.type, m.body),
+          time: (m.timestamp ?? 0) * 1000,
+        }))
+    }
+    await this.markRead(chatId).catch(() => {})
+    return result
+  }
+
+  /**
+   * Who sent an incoming message and in which chat. Avoids msg.getChat() /
+   * getContact(), which break when WhatsApp Web changes its internals, and
+   * reads the plain fields instead.
+   */
+  private async describeIncoming(msg: any): Promise<WaIncoming> {
+    const chatId: string = msg.fromMe ? msg.to : msg.from
+    const info = await this.client.pupPage
+      .evaluate(readChatInfoFromStore, chatId)
+      .catch(() => null)
+    const isGroup = info?.isGroup ?? chatId.endsWith('@g.us')
+    const pushName: string | undefined = msg._data?.notifyName || msg.notifyName
+    const sender = isGroup
+      ? pushName || String(msg.author ?? '').split('@')[0] || 'Someone'
+      : info?.name || pushName || chatId.split('@')[0]
+    return {
+      chatId,
+      sender,
+      chatName: isGroup ? info?.name : undefined,
+      isGroup,
+      text: messageText(msg.type, msg.body),
+      time: (msg.timestamp ?? Date.now() / 1000) * 1000,
+    }
   }
 
   async send(chatId: string, text: string): Promise<void> {
@@ -188,8 +256,8 @@ export class WwebjsEngine implements WhatsAppEngine {
   }
 
   async markRead(chatId: string): Promise<void> {
-    const chat = await this.client.getChatById(chatId)
-    await chat.sendSeen()
+    // sendSeen looks the chat up without the (fragile) model conversion.
+    await this.client.sendSeen(chatId)
   }
 
   async pairingCode(phone: string): Promise<string> {
