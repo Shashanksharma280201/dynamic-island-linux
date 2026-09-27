@@ -80,10 +80,15 @@ section > :last-child {
   cursor: pointer;
   font-size: 13.5px;
 }
+.toggle-row.disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 .hint {
   color: var(--muted);
   font-size: 12px;
   margin-top: 1px;
+  overflow-wrap: anywhere;
 }
 .row {
   display: flex;

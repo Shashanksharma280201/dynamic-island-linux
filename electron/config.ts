@@ -19,6 +19,8 @@ export type Config = {
   appearance: Appearance
   /** Global Ctrl+I shortcut to open / close the island panel. */
   shortcut: boolean
+  /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
+  frosted: boolean
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -30,6 +32,7 @@ const DEFAULTS: Config = {
   dock: DEFAULT_DOCK,
   appearance: 'glass',
   shortcut: true,
+  frosted: true,
 }
 
 function server(raw: any): ServerConfig | null {
@@ -65,6 +68,7 @@ export function mergeConfig(raw: unknown): Config {
   if (r.dock) c.dock = parseDock(r.dock)
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
+  if (typeof r.frosted === 'boolean') c.frosted = r.frosted
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {

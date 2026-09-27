@@ -8,5 +8,9 @@ export const INBOX = {
   MAIL_GET: 'inbox:mail-get',
   MAIL_REPLY: 'inbox:mail-reply',
   MAIL_READ: 'inbox:mail-read',
+  NOTES_LIST: 'notes:list',
+  NOTE_GET: 'notes:get',
+  NOTE_SAVE: 'notes:save',
+  NOTE_DELETE: 'notes:delete',
   CHANGED: 'inbox:changed', // main -> renderer: 'whatsapp' | 'mail' | 'sources'
 } as const

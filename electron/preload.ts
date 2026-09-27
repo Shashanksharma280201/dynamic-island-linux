@@ -17,6 +17,8 @@ import type {
   ChatMessage,
   MailSummary,
   MailMessageView,
+  NoteSummary,
+  Note,
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
 import { INBOX } from '../electron/inboxChannels'
@@ -49,6 +51,13 @@ const api = {
   previewSide: (side: Side) => ipcRenderer.send(IPC.DOCK_PREVIEW, side),
   setDragging: (on: boolean) => ipcRenderer.send(IPC.DRAG, on),
   onTogglePanel: (cb: () => void) => on(IPC.TOGGLE_PANEL, cb),
+  onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
+  notes: {
+    list: (): Promise<NoteSummary[]> => ipcRenderer.invoke(INBOX.NOTES_LIST),
+    get: (id: string): Promise<Note> => ipcRenderer.invoke(INBOX.NOTE_GET, id),
+    save: (id: string | undefined, body: string): Promise<string> => ipcRenderer.invoke(INBOX.NOTE_SAVE, id, body),
+    remove: (id: string): Promise<void> => ipcRenderer.invoke(INBOX.NOTE_DELETE, id),
+  },
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),
   inbox: {
@@ -79,6 +88,8 @@ const settings = {
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
+  setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
+  openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

@@ -2,14 +2,26 @@ import { useEffect, useState } from 'react'
 import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
 
-function Toggle({ on, onChange, label, hint }: { on: boolean; onChange: (v: boolean) => void; label: string; hint?: string }) {
+function Toggle({
+  on,
+  onChange,
+  label,
+  hint,
+  disabled,
+}: {
+  on: boolean
+  onChange: (v: boolean) => void
+  label: string
+  hint?: string
+  disabled?: boolean
+}) {
   return (
-    <label className="toggle-row">
+    <label className={`toggle-row${disabled ? ' disabled' : ''}`}>
       <div>
         <div>{label}</div>
         {hint && <div className="hint">{hint}</div>}
       </div>
-      <input className="switch" type="checkbox" checked={on} onChange={(e) => onChange(e.target.checked)} />
+      <input className="switch" type="checkbox" checked={on} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
     </label>
   )
 }
@@ -128,6 +140,19 @@ export function Settings() {
             ))}
           </div>
         </div>
+        {s.appearance === 'glass' && (
+          <Toggle
+            label="Frosted glass"
+            hint={
+              s.frostedAvailable
+                ? 'Blurs a snapshot of the desktop behind the island. The snapshot stays in memory and is never saved'
+                : 'Not available on Wayland'
+            }
+            on={s.frosted && s.frostedAvailable}
+            disabled={!s.frostedAvailable}
+            onChange={(v) => general.run(() => window.settings.setFrosted(v))}
+          />
+        )}
         <div className="toggle-row">
           <div>
             <div>Island position</div>
@@ -163,6 +188,19 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setHook(v))}
         />
         {general.error && <p className="error">{general.error}</p>}
+      </section>
+
+      <section id="notes">
+        <h2>Notes</h2>
+        <div className="toggle-row">
+          <div>
+            <div>Notes folder</div>
+            <div className="hint">Each note is a Markdown file in {s.notesFolder}</div>
+          </div>
+          <button className="secondary" onClick={() => general.run(() => window.settings.openNotesFolder())}>
+            Open Folder
+          </button>
+        </div>
       </section>
 
       <section id="whatsapp">

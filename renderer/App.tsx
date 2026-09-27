@@ -5,6 +5,17 @@ import { Island } from './island/Island'
 export function App() {
   const [list, setList] = useState<Activity[]>([])
   useEffect(() => window.island.onState(setList), [])
+  // Frosted glass: a snapshot of what's behind the island, blurred in CSS.
+  useEffect(
+    () =>
+      window.island.onBackdrop((img) => {
+        const root = document.documentElement
+        if (img) root.style.setProperty('--backdrop', `url("${img}")`)
+        else root.style.removeProperty('--backdrop')
+        root.dataset.frost = img ? 'yes' : 'no'
+      }),
+    [],
+  )
   useEffect(
     () =>
       window.island.onAppearance(({ appearance, blur }) => {

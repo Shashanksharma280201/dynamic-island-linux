@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, shell } from 'electron'
+import { mkdir } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
@@ -35,6 +36,9 @@ type Deps = {
   /** Re-register the global shortcut; returns whether it is active. */
   applyShortcut: () => boolean
   shortcutActive: () => boolean
+  onFrosted: () => void
+  frostedAvailable: boolean
+  notesFolder: string
 }
 
 /** Settings window + the IPC it uses. */
@@ -53,6 +57,9 @@ export class SettingsController {
       dockSide: config.dock.side,
       appearance: config.appearance,
       shortcut: config.shortcut,
+      frosted: config.frosted,
+      frostedAvailable: this.d.frostedAvailable,
+      notesFolder: this.d.notesFolder,
       shortcutActive: this.d.shortcutActive(),
       whatsapp: {
         enabled: config.whatsapp,
@@ -117,6 +124,16 @@ export class SettingsController {
       setAutostart(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_FROSTED, (_e, on) => {
+      config.frosted = on === true
+      this.save()
+      this.d.onFrosted()
+    })
+    ipcMain.handle(SETTINGS.OPEN_NOTES_FOLDER, async () => {
+      await mkdir(this.d.notesFolder, { recursive: true })
+      const err = await shell.openPath(this.d.notesFolder)
+      if (err) throw new Error(err)
     })
     ipcMain.handle(SETTINGS.SET_SHORTCUT, (_e, on) => {
       config.shortcut = on === true

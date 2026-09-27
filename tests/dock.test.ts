@@ -34,3 +34,23 @@ test('islandTop centers on the anchor but stays on screen', () => {
   expect(islandTop(990, 100, 1000)).toBe(890)
   expect(islandTop(500, 2000, 1000)).toBe(10) // taller than the area: pin to top
 })
+
+import { vi } from 'vitest'
+vi.mock('electron', () => ({ desktopCapturer: {} }))
+import { cropRect } from '../electron/backdrop'
+
+test('cropRect maps window bounds into the display capture', () => {
+  expect(cropRect({ x: 1440, y: 27, width: 480, height: 1053 }, { x: 0, y: 0 })).toEqual({
+    x: 1440,
+    y: 27,
+    width: 480,
+    height: 1053,
+  })
+  // second monitor to the right
+  expect(cropRect({ x: 3360, y: 0, width: 480, height: 1080 }, { x: 1920, y: 0 })).toEqual({
+    x: 1440,
+    y: 0,
+    width: 480,
+    height: 1080,
+  })
+})

@@ -34,7 +34,10 @@ function seed(now: number): Chat[] {
       isGroup: true,
       unread: 3,
       messages: [
+        m(false, 'Is everyone in for the trip this weekend?', 26 * 60 * min, 'Priya'),
+        m(true, 'Count me in!', 25 * 60 * min),
         m(false, 'Booked the cabin 🏡', 50 * min, 'Sam'),
+        m(false, 'It has a hot tub', 49 * min, 'Sam'),
         m(false, 'Who is driving?', 40 * min, 'Priya'),
         m(true, 'I can drive', 35 * min),
         m(false, 'Great, leaving at 8', 30 * min, 'Sam'),
@@ -54,6 +57,25 @@ function seed(now: number): Chat[] {
       unread: 0,
       messages: [m(false, 'Sent you the invoice', 26 * 60 * min), m(true, 'Thanks!', 25 * 60 * min)],
     },
+    // A realistic long tail, so the list has to scroll.
+    ...[
+      ['Priya Shah', 'Can you send me the slides from yesterday’s presentation? I want to go through them again tonight', false],
+      ['Family ❤️', 'Dad: Dinner at 8, don’t be late this time!', true],
+      ['Rahul (Work)', 'The deploy went fine, closing the ticket now', false],
+      ['College Friends 2016–2020 Reunion Planning Committee', 'Neha: Poll: which weekend works for everyone?', true],
+      ['Landlord', 'Rent receipt attached', false],
+      ['Gym Buddies', 'Aman: 6am tomorrow?', true],
+      ['Ananya', 'Haha that’s hilarious 😂', false],
+      ['Book Club', 'Next pick is “Project Hail Mary”', true],
+      ['Dentist Clinic', 'Reminder: appointment on Monday 10:30', false],
+      ['Vikram', 'You: See you there', false],
+    ].map(([name, text, isGroup], i) => ({
+      id: `1555001${String(i).padStart(4, '0')}@${isGroup ? 'g' : 'c'}.us`,
+      name: name as string,
+      isGroup: isGroup as boolean,
+      unread: i % 3 === 0 ? i + 1 : 0,
+      messages: [m(String(text).startsWith('You: '), String(text).replace(/^You: /, ''), (30 + i * 9) * 60 * min)],
+    })),
   ]
 }
 

@@ -2,23 +2,13 @@ import { useEffect, useState, type MouseEvent } from 'react'
 import type { MessageData } from '@shared/types'
 import { Badge } from './Badge'
 import { ReplyBox } from './ReplyBox'
+import { Avatar } from '../hub/common'
 import { ChatIcon, MailIcon, XIcon } from '../icons'
 
 const SOURCE = {
   whatsapp: { label: 'WhatsApp', color: 'var(--whatsapp)', Icon: ChatIcon },
   mail: { label: 'Mail', color: 'var(--blue)', Icon: MailIcon },
 } as const
-
-function initials(name: string): string {
-  return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase())
-      .join('') || '?'
-  )
-}
 
 /** WhatsApp chat / new mail, with quick reply and mark-as-read. */
 export function MessageCard({
@@ -70,11 +60,7 @@ export function MessageCard({
       </div>
 
       <div className="row" style={{ gap: 10, alignItems: 'flex-start' }}>
-        {m.avatar ? (
-          <img className="avatar" src={m.avatar} alt="" />
-        ) : (
-          <div className="avatar placeholder">{initials(m.sender)}</div>
-        )}
+        <Avatar name={m.sender} src={m.avatar} />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div className="title ellipsis">{m.sender}</div>
           {m.source === 'mail' && m.title && <div className="subject ellipsis">{m.title}</div>}

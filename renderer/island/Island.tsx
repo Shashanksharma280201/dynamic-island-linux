@@ -9,11 +9,15 @@ import { ApprovalCard } from './states/ApprovalCard'
 import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
-import { Hub, type HubTab } from './hub/Hub'
+import { Hub, savedTab, rememberTab, type HubTab } from './hub/Hub'
+import { Rail } from './hub/Rail'
 import { MessageCard } from './states/MessageCard'
 import { squirclePath } from './squircle'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
+
+/** How far the blurred backdrop extends past each glass piece (see styles.css). */
+const FROST_BLEED = 40
 
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
@@ -24,7 +28,11 @@ export function Island({ activities }: { activities: Activity[] }) {
   const [sys, setSys] = useState<SystemState | null>(null)
   const [replying, setReplying] = useState(false)
   const [typing, setTyping] = useState(false)
-  const [hubTab, setHubTab] = useState<HubTab | undefined>(undefined)
+  const [tab, setTabState] = useState<HubTab>(savedTab)
+  const setTab = (t: HubTab) => {
+    setTabState(t)
+    rememberTab(t)
+  }
   // Opened from the keyboard: stay open until the pointer has visited and left.
   const pinned = useRef(false)
   const outerRef = useRef<HTMLDivElement>(null)
@@ -67,7 +75,6 @@ export function Island({ activities }: { activities: Activity[] }) {
       window.island.onTogglePanel(() => {
         setPanel((open) => {
           pinned.current = !open
-          if (!open) setHubTab(undefined)
           return !open
         })
       }),
@@ -102,6 +109,19 @@ export function Island({ activities }: { activities: Activity[] }) {
       window.removeEventListener('resize', onResize)
     }
   }, [])
+
+  // Frosted glass: tell each glass piece where it sits in the window so its
+  // blurred snapshot lines up with the real screen behind it. Uses final
+  // layout positions (offsetLeft/Top ignore animation transforms).
+  useLayoutEffect(() => {
+    const outer = outerRef.current
+    if (!outer) return
+    const ox = side === 'left' ? EDGE_MARGIN : window.innerWidth - EDGE_MARGIN - outer.offsetWidth
+    outer.querySelectorAll<HTMLElement>(':scope > .island').forEach((el) => {
+      el.style.setProperty('--bgx', `${FROST_BLEED - (ox + el.offsetLeft)}px`)
+      el.style.setProperty('--bgy', `${FROST_BLEED - (top + el.offsetTop)}px`)
+    })
+  })
 
   // Report the hit area: the settled position and size, not the mid-animation one.
   useLayoutEffect(() => {
@@ -142,7 +162,6 @@ export function Island({ activities }: { activities: Activity[] }) {
       if (p.primary.kind === 'message') return // has its own buttons
     }
     if (!isApproval) {
-      setHubTab(undefined)
       setPanel((v) => !v)
     }
   }
@@ -150,7 +169,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   return (
     <div
       ref={outerRef}
-      className={`island-outer ${side}${dragging ? ' dragging' : ''}`}
+      className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' with-rail' : ''}`}
       style={{ top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -170,7 +189,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             transition={contentFade}
           >
             {showPanel ? (
-              <Hub sys={sys} onTyping={setTyping} initialTab={hubTab} />
+              <Hub sys={sys} tab={tab} onTyping={setTyping} />
             ) : p.mode === 'idle' ? (
               <IdlePill />
             ) : p.primary.kind === 'approval' ? (
@@ -188,7 +207,7 @@ export function Island({ activities }: { activities: Activity[] }) {
                 queued={p.queued}
                 onReplying={setReplying}
                 onOpen={() => {
-                  setHubTab(p.primary.kind === 'message' && p.primary.message.source === 'mail' ? 'mail' : 'chats')
+                  setTab(p.primary.kind === 'message' && p.primary.message.source === 'mail' ? 'mail' : 'chats')
                   setPanel(true)
                 }}
               />
@@ -200,6 +219,22 @@ export function Island({ activities }: { activities: Activity[] }) {
           </motion.div>
         </AnimatePresence>
       </motion.div>
+
+      <AnimatePresence>
+        {showPanel && (
+          // Section icons float beside the panel as their own glass pill.
+          <motion.div
+            key="rail"
+            className="island rail-shell"
+            initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
+            transition={spring}
+          >
+            <Rail tab={tab} onTab={setTab} />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {!showPanel && p.mode === 'minimal' && (

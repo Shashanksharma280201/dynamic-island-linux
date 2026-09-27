@@ -109,6 +109,7 @@ export const IPC = {
   DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
   APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur }
   TOGGLE_PANEL: 'island:toggle-panel', // main -> renderer: global shortcut pressed
+  BACKDROP: 'island:backdrop', // main -> renderer: blurred-glass snapshot (data URL) or null
 } as const
 
 import type { Dock } from './dock'
@@ -174,6 +175,16 @@ export type ChatMessage = {
   time: number
 }
 
+export type NoteSummary = {
+  id: string
+  title: string
+  preview: string
+  created: number
+  updated: number
+}
+
+export type Note = NoteSummary & { body: string }
+
 /** What the hub can show: WhatsApp state and configured mail accounts. */
 export type InboxSources = {
   whatsapp: 'off' | 'linking' | 'ready'
@@ -214,6 +225,10 @@ export type SettingsState = {
   dockSide: 'left' | 'right'
   appearance: 'glass' | 'solid'
   shortcut: boolean
+  frosted: boolean
+  /** Frosted snapshots need X11 screen capture (not on Wayland). */
+  frostedAvailable: boolean
+  notesFolder: string
   /** False if another app already owns the shortcut. */
   shortcutActive: boolean
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }

@@ -29,6 +29,8 @@ import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { wireInbox } from './inbox'
+import { NotesStore } from './notes'
+import { Backdrop } from './backdrop'
 import { FakeMailWatcher } from './providers/mailFake'
 import { IPC } from '@shared/types'
 import type { NotificationData, SystemState } from '@shared/types'
@@ -91,6 +93,14 @@ async function main() {
   const pushState = () => send(win, IPC.STATE, store.list())
   store.onChange(pushState)
   const transient = new TransientCards(store)
+  const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
+  // Frosted glass: blurred snapshot of what's behind the island (X11 only).
+  const backdrop = new Backdrop(
+    win,
+    () => display,
+    () => config.frosted && config.appearance === 'glass' && !WAYLAND && process.env.DI_BACKDROP !== 'off',
+    (img) => send(win, IPC.BACKDROP, img),
+  )
   let shortcutActive = false
 
   // ---- interactivity: clicks reach the island, everything else passes through ----
@@ -235,9 +245,13 @@ async function main() {
     onDockSide: (side) => setDock({ ...config.dock, side }),
     applyShortcut: () => applyShortcut(),
     shortcutActive: () => shortcutActive,
+    onFrosted: () => backdrop.refresh(),
+    frostedAvailable: !WAYLAND,
+    notesFolder: notes.folder,
     onAppearance: () => {
       pushAppearance()
       updateHitArea()
+      backdrop.refresh()
     },
   })
   settings.wire()
@@ -246,6 +260,7 @@ async function main() {
     whatsapp,
     mail,
     closeCard: (source, threadId) => hub.closeThread(source, threadId),
+    notes,
   })
   if (DEMO === '4') {
     const demoServer = { host: 'demo.invalid', port: 993, secure: true }
@@ -306,6 +321,8 @@ async function main() {
     onRect: (r) => {
       cssRect = r
       updateHitArea()
+      // A collapsed capsule is narrow; anything wider is a card or the panel.
+      backdrop.setExpanded(!!r && r.width > 80)
     },
     onPanel: (open) => {
       if (sysTimer) clearInterval(sysTimer)
@@ -357,6 +374,7 @@ async function main() {
     return shortcutActive
   }
   applyShortcut()
+  backdrop.start()
   const pushAppearance = () =>
     send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
   win.webContents.on('did-finish-load', () => {
@@ -399,6 +417,7 @@ async function main() {
 
   cleanup = async () => {
     globalShortcut.unregisterAll()
+    backdrop.stop()
     interactivity?.stop()
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)

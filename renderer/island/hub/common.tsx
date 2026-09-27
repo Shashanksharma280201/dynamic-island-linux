@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { avatarGradient, initialsOf } from '@shared/avatar'
 
 /** Strip Electron's "Error invoking remote method" prefix. */
 export function errorText(e: any): string {
@@ -76,13 +77,23 @@ export function BackButton({ onClick, label = 'Back' }: { onClick: () => void; l
 }
 
 export function initials(name: string): string {
+  return initialsOf(name) || '?'
+}
+
+/** Photo if we have one, else coloured initials (a person glyph when the name has no letters). */
+export function Avatar({ name, src, small }: { name: string; src?: string; small?: boolean }) {
+  const cls = `avatar${small ? ' small' : ''}`
+  if (src) return <img className={cls} src={src} alt="" />
+  const text = initialsOf(name)
   return (
-    name
-      .split(/\s+/)
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((w) => w[0]?.toUpperCase())
-      .join('') || '?'
+    <div className={`${cls} placeholder`} style={{ background: avatarGradient(name) }} aria-hidden>
+      {text || (
+        <svg width="55%" height="55%" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="8" r="4.2" />
+          <path d="M3.5 21c.8-4.3 4.2-6.6 8.5-6.6s7.7 2.3 8.5 6.6z" />
+        </svg>
+      )}
+    </div>
   )
 }
 

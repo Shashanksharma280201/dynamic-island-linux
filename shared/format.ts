@@ -60,3 +60,28 @@ export function fullTime(ts: number): string {
   const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
   return `${WEEKDAYS[d.getDay()].slice(0, 3)} ${d.getDate()} ${MONTHS[d.getMonth()]}, ${hm}`
 }
+
+/** "14:05". Pure (local time). */
+export function clockTime(ts: number): string {
+  const d = new Date(ts)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+/** Day divider in a conversation: "Today", "Yesterday", "Wednesday", "12 Mar 2025". Pure. */
+export function dayLabel(ts: number, now: number): string {
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+  const start = today.getTime()
+  if (ts >= start) return 'Today'
+  if (ts >= start - DAY) return 'Yesterday'
+  if (ts >= start - 6 * DAY) return WEEKDAYS[new Date(ts).getDay()]
+  const d = new Date(ts)
+  const sameYear = d.getFullYear() === today.getFullYear()
+  return `${d.getDate()} ${MONTHS[d.getMonth()]}${sameYear ? '' : ` ${d.getFullYear()}`}`
+}
+
+/** Local calendar-day key, for grouping messages by day. Pure. */
+export function dayKey(ts: number): string {
+  const d = new Date(ts)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}

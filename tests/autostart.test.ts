@@ -30,6 +30,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'right', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
+    frosted: true,
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)

@@ -743,11 +743,13 @@ button {
 .list {
   display: flex;
   flex-direction: column;
-  max-height: 440px;
+  max-height: min(520px, calc(100vh - 260px));
   overflow-y: auto;
   margin: 0 -4px;
   padding: 0 4px;
-  scrollbar-width: thin;
+}
+.list > * {
+  flex-shrink: 0;
 }
 .list-row {
   display: flex;
@@ -903,11 +905,10 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 340px;
-  min-height: 120px;
+  max-height: min(460px, calc(100vh - 300px));
+  min-height: 160px;
   overflow-y: auto;
   padding: 4px 2px;
-  scrollbar-width: thin;
 }
 .thread .bubble {
   -webkit-line-clamp: unset;
@@ -921,10 +922,9 @@ button {
   gap: 6px;
 }
 .reader {
-  max-height: 380px;
+  max-height: min(480px, calc(100vh - 280px));
   overflow-y: auto;
   padding: 2px 2px 4px;
-  scrollbar-width: thin;
 }
 .mail-body {
   font-size: 13px;
@@ -983,4 +983,338 @@ button {
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Frosted glass from a snapshot (GNOME/X11): the screen behind the island is
+   captured while it's collapsed, then shown here heavily blurred and tinted.
+   --bgx / --bgy line the snapshot up with the real screen (set by Island).
+   --------------------------------------------------------------------------- */
+:root[data-frost='yes'][data-appearance='glass'] .island {
+  background: transparent;
+}
+:root[data-frost='yes'][data-appearance='glass'] .island::before {
+  content: '';
+  position: absolute;
+  inset: -40px;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(58, 58, 66, 0.34) 0%, rgba(22, 22, 28, 0.5) 45%, rgba(14, 14, 18, 0.58) 100%),
+    var(--backdrop);
+  background-repeat: no-repeat;
+  background-size:
+    100% 100%,
+    100vw 100vh;
+  background-position:
+    0 0,
+    var(--bgx, 0) var(--bgy, 0);
+  filter: blur(22px) saturate(1.9) brightness(1.02);
+}
+.island > * {
+  position: relative;
+  z-index: 1;
+}
+.island::after {
+  z-index: 2;
+}
+/* A little brighter rim reads as glass over the blurred picture. */
+:root[data-frost='yes'][data-appearance='glass'] {
+  --edge: rgba(255, 255, 255, 0.26);
+  --edge-bottom: rgba(255, 255, 255, 0.06);
+}
+
+/* ---------------------------------------------------------------------------
+   Panel with a detached icon rail
+   --------------------------------------------------------------------------- */
+.island-outer.with-rail {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 10px;
+}
+.island-outer.with-rail.left {
+  flex-direction: row-reverse;
+}
+.rail-shell {
+  border-radius: 999px;
+}
+.rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+}
+.rail-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--label-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease,
+    transform 0.12s ease;
+}
+.rail-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--label);
+}
+.rail-btn:active {
+  transform: scale(0.9);
+}
+.rail-btn.on {
+  background: var(--blue);
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(10, 132, 255, 0.45);
+}
+.rail-btn.small {
+  width: 32px;
+  height: 32px;
+}
+.rail-sep {
+  width: 18px;
+  height: 0.5px;
+  background: var(--separator);
+  margin: 2px 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Notes
+   --------------------------------------------------------------------------- */
+.search {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(118, 118, 128, 0.24);
+  border-radius: 10px;
+  padding: 0 10px;
+  color: var(--label-2);
+  height: 32px;
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: 0;
+  outline: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 13px;
+  user-select: text;
+}
+.search input::placeholder {
+  color: var(--label-3);
+}
+.new-note {
+  color: var(--orange);
+}
+.note-row .snippet {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+.note-row + .note-row::before {
+  left: 8px;
+}
+.note-date {
+  text-align: center;
+  margin-top: -4px;
+}
+.note-editor {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 300px;
+  max-height: 420px;
+  resize: none;
+  background: rgba(0, 0, 0, 0.18);
+  border: 0.5px solid var(--separator);
+  border-radius: 14px;
+  padding: 12px 14px;
+  color: var(--label);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.55;
+  outline: none;
+  user-select: text;
+}
+.note-editor:focus {
+  border-color: rgba(255, 159, 10, 0.6);
+}
+.note-editor::first-line {
+  font-weight: 700;
+  font-size: 16px;
+}
+.pill.danger.small {
+  padding: 5px 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Scrollbars: thin and translucent (the native one is a bright white bar)
+   --------------------------------------------------------------------------- */
+.list,
+.thread,
+.reader,
+.note-editor {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   Chats (Messages / WhatsApp style)
+   --------------------------------------------------------------------------- */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px 0;
+}
+.large-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.search-clear {
+  border: 0;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  background: var(--label-3);
+  color: #1c1c1e;
+  font-size: 13px;
+  line-height: 16px;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.chat-row {
+  align-items: center;
+  padding: 8px 8px;
+  min-height: 60px;
+}
+.chat-row .avatar {
+  width: 44px;
+  height: 44px;
+  font-size: 15px;
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+}
+.chat-row + .chat-row::before {
+  left: 62px;
+}
+.chat-row .title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.chat-row .when {
+  font-size: 11.5px;
+  color: var(--label-2);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.chat-row.unread .when {
+  color: var(--whatsapp);
+  font-weight: 600;
+}
+.chat-row .list-bottom {
+  align-items: center;
+  margin-top: 3px;
+}
+.chat-row .preview {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: rgba(235, 235, 245, 0.7);
+}
+.chat-row.unread .preview {
+  color: rgba(255, 255, 255, 0.92);
+}
+.chat-row .you {
+  color: var(--label-2);
+}
+.avatar.placeholder {
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.18);
+}
+
+/* Conversation */
+.chat-head {
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--separator);
+}
+.chat-head .back {
+  width: auto;
+  padding-right: 0;
+}
+.chat-head-text {
+  flex: 1;
+  min-width: 0;
+}
+.chat-head-text .title {
+  font-size: 14px;
+  font-weight: 600;
+}
+.chat-head-text .caption {
+  font-size: 11px;
+}
+.conversation .thread {
+  gap: 6px;
+  padding: 4px 4px 8px;
+}
+.conversation .bubble {
+  position: relative;
+  max-width: 80%;
+  padding: 7px 11px 6px;
+  border-radius: 18px;
+  font-size: 13.5px;
+  line-height: 1.38;
+  word-break: break-word;
+  white-space: pre-wrap;
+  background: rgba(255, 255, 255, 0.14);
+}
+.conversation .bubble.mine {
+  background: linear-gradient(180deg, #2b95ff, #0a7cff);
+}
+.conversation .bubble.cont {
+  margin-top: -3px;
+}
+.conversation .bubble:not(.mine):not(.cont) {
+  border-bottom-left-radius: 6px;
+}
+.conversation .bubble.mine:not(.cont) {
+  border-bottom-right-radius: 6px;
+}
+.conversation .bubble .author {
+  font-size: 11.5px;
+  margin-bottom: 1px;
+}
+.conversation .stamp {
+  float: right;
+  margin: 5px 0 -3px 10px;
+  font-size: 10.5px;
+  color: rgba(235, 235, 245, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+.conversation .bubble.mine .stamp {
+  color: rgba(255, 255, 255, 0.72);
+}
+.day-sep {
+  align-self: center;
+  margin: 8px 0 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+
+/* Secondary text sits over a busy blurred wallpaper when frosted: lift it. */
+:root[data-frost='yes'][data-appearance='glass'] {
+  --label-2: rgba(245, 245, 250, 0.74);
+  --label-3: rgba(245, 245, 250, 0.46);
 }

@@ -8,6 +8,8 @@ export const SETTINGS = {
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',
   SET_SHORTCUT: 'settings:set-shortcut',
+  SET_FROSTED: 'settings:set-frosted',
+  OPEN_NOTES_FOLDER: 'settings:open-notes-folder',
   SET_WHATSAPP: 'settings:set-whatsapp',
   RESTART: 'settings:restart',
   WA_PAIR: 'settings:whatsapp-pair',

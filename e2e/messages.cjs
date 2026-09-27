@@ -184,13 +184,18 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await sleep(2500)
     check('a panel opened from the keyboard stays open without hover', !!(await page.$('.hub')))
 
-    await page.click('.tabs button:has-text("Chats")')
+    check(
+      'the section icons sit in a rail beside the panel',
+      (await page.$$('.rail-btn[aria-label]')).length === 5 && !(await page.$('.tabs')),
+    )
+    await page.click('.rail-btn[aria-label="Chats"]')
     await page.waitForSelector('.chat-row', { timeout: 5000 })
     const chatNames = await page.$$eval('.chat-row .title', (e) => e.map((x) => x.textContent))
     check('Chats tab lists WhatsApp chats', chatNames.includes('Alice') && chatNames.includes('Weekend Trip'), chatNames.join(', '))
     await page.click('.chat-row:has-text("Weekend Trip")')
     await page.waitForSelector('.thread .bubble', { timeout: 5000 })
     check('opening a chat shows its history', (await page.$$('.thread .bubble')).length >= 3)
+    check('the conversation is split by day', (await page.$$eval('.day-sep', (e) => e.map((x) => x.textContent))).join() === 'Yesterday,Today')
     await page.click('.composer textarea')
     await page.keyboard.type('Leaving now')
     await page.keyboard.press('Enter')
@@ -203,8 +208,19 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       await page.waitForSelector('.thread .bubble.mine:has-text("Leaving now")', { timeout: 3000 }).then(() => true, () => false),
     )
     await page.click('.back')
+    await page.waitForSelector('.chat-row')
+    await page.click('.search input')
+    await until(() => page.evaluate(() => document.activeElement?.matches('.search input')))
+    await page.keyboard.type('trip')
+    const filtered = async () => (await page.$$eval('.chat-row .title', (e) => e.map((x) => x.textContent))).join()
+    check(
+      'searching chats filters the list',
+      await until(async () => (await filtered()) === 'Weekend Trip'),
+      await filtered(),
+    )
+    await page.keyboard.press('Escape')
 
-    await page.click('.tabs button:has-text("Mail")')
+    await page.click('.rail-btn[aria-label="Mail"]')
     await page.waitForSelector('.mail-row', { timeout: 10000 })
     const subjects = await page.$$eval('.mail-row .subject', (e) => e.map((x) => x.textContent))
     check('Mail tab lists the inbox, newest first', subjects[0] === 'FYI' && subjects.includes('Quarterly report'), subjects.join(', '))
@@ -221,6 +237,38 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await page.keyboard.press('Enter')
     check('reply from the reader goes out over SMTP', await until(() => smtpGot.length === sentBefore + 1, 8000))
     await shot(page, '14-hub-mail')
+
+    // ---- Notes: new, list, reopen, edit, delete; plain files on disk ----
+    const notesDir = path.join(USER_DATA, 'notes')
+    const noteFiles = () => (fs.existsSync(notesDir) ? fs.readdirSync(notesDir).filter((f) => f.endsWith('.md')) : [])
+    await page.click('.rail-btn[aria-label="Notes"]')
+    await page.waitForSelector('text=No notes yet', { timeout: 5000 })
+    check('Notes starts empty', noteFiles().length === 0)
+    await page.click('.new-note')
+    await page.waitForSelector('.note-editor')
+    check('a new note is focused and ready to type', await until(() => page.evaluate(() => document.activeElement?.classList.contains('note-editor'))))
+    await page.keyboard.type('Groceries\nMilk, eggs')
+    check(
+      'a note is saved as a Markdown file as you type',
+      await until(() => noteFiles().length === 1 && fs.readFileSync(path.join(notesDir, noteFiles()[0]), 'utf8') === 'Groceries\nMilk, eggs'),
+    )
+    await page.click('.back')
+    await page.waitForSelector('.note-row')
+    check('the note is listed by its first line', (await page.textContent('.note-row .title')) === 'Groceries')
+    await page.click('.note-row')
+    await page.waitForSelector('.note-editor')
+    check('reopening a note shows what was written', (await page.inputValue('.note-editor')) === 'Groceries\nMilk, eggs')
+    await page.click('.note-editor')
+    await page.keyboard.press('End')
+    await page.keyboard.type(', bread')
+    check(
+      'edits to an old note are saved',
+      await until(() => fs.readFileSync(path.join(notesDir, noteFiles()[0]), 'utf8').endsWith('eggs, bread')),
+    )
+    await page.click('[aria-label="Delete note"]')
+    await page.click('.pill.danger')
+    await page.waitForSelector('text=No notes yet', { timeout: 5000 })
+    check('deleting a note removes its file', noteFiles().length === 0)
 
     key('ctrl+i')
     check('Ctrl+I closes it again', await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).then(() => true, () => false))

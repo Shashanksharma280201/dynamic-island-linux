@@ -14,14 +14,15 @@ stays fully clickable.
 | --- | --- | --- |
 | **Edge capsule** | A slim black capsule docked to the right (or left) edge of the screen; with music playing it shows the album art above a waveform | Click it (or press **Ctrl+I** anywhere) to open the panel. **Drag it** up or down the edge, or across the screen to dock it on the other side; it snaps to the nearer edge and remembers the spot |
 | **Now Playing** | Album art + animated waveform while music plays in any MPRIS player: Spotify (app or web), YouTube / YouTube Music in Chrome or Firefox, VLC, Rhythmbox, … | Hover to expand: title, artist, progress bar (click it to seek), previous / play-pause / next, shuffle and repeat |
-| **Panel (Controls / Chats / Mail)** | Opens on click or **Ctrl+I**, with a segmented control at the top, and remembers the last tab | Switch between the Control Center, your WhatsApp chats and your mail inbox at any time, not only when something new arrives. **Ctrl+I** again (or moving the pointer away) closes it |
-| **WhatsApp** | New messages pop up as a card per chat. The **Chats** tab lists your recent chats (name, last message, time, unread count) and opens full conversations as bubbles | Reply from the card or from the conversation view, **Mark as Read**, **Open Chats** |
-| **Mail** | New mail pops up as a card. The **Mail** tab lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
+| **Panel (Controls / Chats / Mail / Notes)** | Opens on click or **Ctrl+I**, with a slim column of icons floating beside it (like a detached dock) that remembers the last section | Click an icon to switch between the Control Center, your WhatsApp chats, your mail inbox and your notes at any time, not only when something new arrives. The gear at the bottom opens Settings. **Ctrl+I** again (or moving the pointer away) closes it |
+| **WhatsApp** | New messages pop up as a card per chat. **Chats** lists your recent chats with coloured avatars, a one-line preview, time and unread count, plus a search field. Conversations show bubbles with times, "Today / Yesterday" dividers and coloured sender names in groups | Reply from the card or from the conversation view, search chats, **Mark as Read**, **Open Chats** |
+| **Notes** | Your notes, newest first, with a search field | **+** starts a new note (ready to type), click one to open and edit it, the trash icon deletes it. Notes save automatically as you type, as plain Markdown files on this computer |
+| **Mail** | New mail pops up as a card. **Mail** lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
 | **Control Center** | macOS-style modules: round Wi-Fi / Bluetooth toggles and large Display / Sound sliders | Drag the sliders, click the volume value to mute, toggle Wi-Fi / Bluetooth, open Settings. Closes by itself shortly after the cursor leaves |
-| **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), island position, Ctrl+I shortcut on/off, link WhatsApp, add mail accounts, and the general toggles |
+| **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), frosted glass on/off, island position, open the notes folder, Ctrl+I shortcut on/off, link WhatsApp, add mail accounts, and the general toggles |
 | **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
 
 Other details:
@@ -35,9 +36,13 @@ Other details:
 - The look follows Apple's design language: dark HUD "glass" material with a
   light rim, system colours (blue for the main action), capsule buttons,
   iMessage-style reply field and message bubbles, SF Symbols-style icons, and
-  the Inter typeface (bundled). On KDE Plasma the desktop behind the island is
-  really blurred; GNOME doesn't let apps blur what's behind them, so there the
-  glass is denser to stay readable. Choose **Solid** in Settings for an opaque look.
+  the Inter typeface (bundled).
+- **Frosted glass**: the island blurs what's behind it, like macOS. On KDE
+  Plasma the compositor does this live. Elsewhere on X11 (GNOME, Xfce, …) the
+  island takes a snapshot of the screen area behind it while it is collapsed,
+  every few seconds, and shows it blurred; the snapshot stays in memory and is
+  never saved or sent anywhere. Turn it off with **Frosted glass** in Settings,
+  or choose **Solid** for an opaque look. Not available on Wayland.
 - Cards open inward from the edge the island is docked to and always stay fully
   on screen, even when the island sits near the top or bottom.
 - Cards stay open while you hover them or type a reply, then close by themselves.
@@ -45,8 +50,8 @@ Other details:
   receive Ctrl+I (for example italics in editors). Turn it off in Settings if
   that gets in the way. It works on X11; Wayland doesn't allow global shortcuts
   for apps.
-- The island only takes keyboard focus while you're typing a reply, so it never
-  steals focus from the app you're using.
+- The island only takes keyboard focus while you're typing (a reply, a search,
+  a note), so it never steals focus from the app you're using.
 
 ## Requirements
 
@@ -198,9 +203,13 @@ Environment variables (set them before starting the app):
 | `DI_INPUT` | `poll` forces the cursor-polling fallback instead of the X11 input shape |
 | `DYNAMIC_ISLAND_SOCK` | Socket shared with the Claude hook (default `$XDG_RUNTIME_DIR/dynamic-island.sock`, else `/tmp/dynamic-island-<uid>.sock`) |
 | `DYNAMIC_ISLAND_TIMEOUT` | Seconds the Claude hook waits for your answer (default `45`) |
-| `DI_USER_DATA` | Use a different profile folder (settings, WhatsApp login) |
+| `DI_USER_DATA` | Use a different profile folder (settings, WhatsApp login, notes) |
+| `DI_BACKDROP` | `off` disables the frosted-glass screen snapshot |
 
-Settings are saved in `~/.config/dynamic-island-linux/config.json`. Mail
+Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
+plain Markdown files in `~/.config/dynamic-island-linux/notes/` (one `.md`
+file per note; the first line is its title), so you can back them up, sync
+them or edit them with any editor. Settings has an **Open Folder** button. Mail
 passwords are encrypted with your desktop keyring (GNOME Keyring); if no keyring
 is available, Settings warns you that they are only obfuscated.
 
@@ -216,6 +225,10 @@ is available, Settings warns you that they are only obfuscated.
   whatsapp-web.js setup, other programs running on the same computer could
   connect to it, so don't enable WhatsApp on a shared multi-user machine.
 - Messages and mail are shown on the island and never sent anywhere else.
+- Notes never leave your computer.
+- The frosted-glass snapshot is a small, low-resolution image of the strip of
+  screen behind the island, kept only in memory. It is taken only while the
+  island is collapsed, so the island never captures itself or your open panel.
 
 ## Troubleshooting
 
@@ -264,6 +277,8 @@ electron/            main process
   messages.ts        turns WhatsApp messages / mail into cards, routes replies
   transient.ts       cards that close by themselves (held while hovered or replying)
   settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
+  notes.ts           notes as Markdown files (atomic writes)
+  backdrop.ts        frosted glass: snapshot of the screen behind the island
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
@@ -296,6 +311,13 @@ tests/               unit tests (vitest)
 - **Mail** keeps an IMAP IDLE connection per account and sends replies over SMTP.
 - **Control Center** uses standard command-line tools, and only checks them
   while the panel is open.
+- **Frosted glass** (without KDE): Electron's `desktopCapturer` grabs the
+  screen, the part behind the island's column is cropped and downscaled, and
+  the island draws it under a CSS blur, aligned so it lines up with the real
+  desktop.
+- **Notes** are read and written by the main process in the profile folder;
+  each save writes a temporary file and renames it, so a crash never leaves a
+  half-written note.
 
 ## Limitations
 

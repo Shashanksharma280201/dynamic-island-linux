@@ -1,6 +1,7 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import type { InboxSources } from '@shared/types'
 import type { MailManager } from './mailManager'
+import type { NotesStore } from './notes'
 import type { WhatsAppService } from './providers/whatsapp'
 
 import { INBOX } from './inboxChannels'
@@ -37,6 +38,7 @@ export function wireInbox(
     mail: MailManager
     /** Close a transient card for this conversation, if one is showing. */
     closeCard: (source: 'whatsapp' | 'mail', threadId: string) => void
+    notes: NotesStore
   },
 ): { changed: (what: 'whatsapp' | 'mail' | 'sources') => void } {
   const { whatsapp, mail } = d
@@ -67,6 +69,13 @@ export function wireInbox(
     await mail.reply(`${a}:${u}`, text(body))
     d.closeCard('mail', `${a}:${u}`)
   })
+  ipcMain.handle(INBOX.NOTES_LIST, () => d.notes.list())
+  ipcMain.handle(INBOX.NOTE_GET, (_e, id) => d.notes.get(str(id, 'note', 60)))
+  ipcMain.handle(INBOX.NOTE_SAVE, (_e, id, body) => {
+    if (typeof body !== 'string') throw new Error('Invalid note')
+    return d.notes.save(id ? str(id, 'note', 60) : undefined, body)
+  })
+  ipcMain.handle(INBOX.NOTE_DELETE, (_e, id) => d.notes.remove(str(id, 'note', 60)))
   ipcMain.handle(INBOX.MAIL_READ, (_e, accountId, uid) =>
     mail.markRead(`${str(accountId, 'account')}:${uidOf(uid)}`),
   )

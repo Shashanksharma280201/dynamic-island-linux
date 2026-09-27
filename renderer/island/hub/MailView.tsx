@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { InboxSources, MailSummary } from '@shared/types'
 import { relativeTime, fullTime } from '@shared/format'
-import { BackButton, Empty, Spinner, errorText, initials, useLoad, useNow } from './common'
+import { BackButton, Empty, Spinner, errorText, useLoad, Avatar, useNow } from './common'
 import { Composer } from './Composer'
 import { MailIcon } from '../icons'
 
@@ -29,7 +29,7 @@ function Reader({ mail, onBack, onTyping }: { mail: MailSummary; onBack: () => v
       <div className="reader">
         <div className="headline">{mail.subject}</div>
         <div className="row" style={{ gap: 10, margin: '10px 0 12px' }}>
-          <div className="avatar placeholder small">{initials(mail.from.name)}</div>
+          <Avatar name={mail.from.name || mail.from.address} small />
           <div style={{ minWidth: 0, flex: 1 }}>
             <div className="title ellipsis">{mail.from.name}</div>
             <div className="caption ellipsis">
