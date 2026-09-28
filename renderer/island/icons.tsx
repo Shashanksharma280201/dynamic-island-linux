@@ -223,3 +223,27 @@ export const ChevronDownIcon = () => (
     <path d="m6 9 6 6 6-6" />
   </Svg>
 )
+export const PhoneIcon = () => (
+  <Svg>
+    <rect x="7" y="2.5" width="10" height="19" rx="2.2" />
+    <path d="M11 18.5h2" />
+  </Svg>
+)
+export const SpeakerBoxIcon = () => (
+  <Svg>
+    <rect x="5.5" y="2.5" width="13" height="19" rx="2.2" />
+    <circle cx="12" cy="14.5" r="3.2" />
+    <path d="M12 7h.01" />
+  </Svg>
+)
+export const GlobeIcon = () => (
+  <Svg>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c2.5 2.6 3.7 5.6 3.7 9s-1.2 6.4-3.7 9c-2.5-2.6-3.7-5.6-3.7-9S9.5 5.6 12 3z" />
+  </Svg>
+)
+export const RefreshIcon = () => (
+  <Svg size={16}>
+    <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" />
+  </Svg>
+)

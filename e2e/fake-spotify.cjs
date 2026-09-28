@@ -52,7 +52,7 @@ function coverPng(hex, size = 64) {
 function startFakeSpotify({ port = 0, premium = true } = {}) {
   const log = []
   // premium / devices / token can be changed by a test while running.
-  const s = { log, liked: new Set(['spotify:track:t2']), player: null, activeDevice: false, codes: new Map(), premium, devices: true, token: /^Bearer at-\d$/ }
+  const s = { log, liked: new Set(['spotify:track:t2']), player: null, activeDevice: false, activeId: 'dev1', webPlayer: false, phone: false, codes: new Map(), premium, devices: true, token: /^Bearer at-\d$/ }
   let base = ''
   // Relative here; made absolute when sent (the port is known only after listen).
   const img = (hex) => [{ url: `/img/${hex}.png`, width: 300, height: 300 }, { url: `/img/${hex}.png?s=64`, width: 64, height: 64 }]
@@ -87,6 +87,16 @@ function startFakeSpotify({ port = 0, premium = true } = {}) {
     res.writeHead(status, { 'Content-Type': 'application/json' }).end(JSON.stringify(body).replaceAll('"/img/', `"${base}/img/`))
   }
   const err = (res, status, message, reason) => send(res, status, { error: { status, message, reason } })
+  // Connect devices: this laptop's app, a phone (when "open"), the Web Player
+  // (once a web player page has been loaded, like a browser tab would).
+  const deviceList = () =>
+    [
+      s.devices && { id: 'dev1', name: 'Test Laptop', type: 'Computer' },
+      s.phone && { id: 'ph1', name: 'Pixel 8', type: 'Smartphone' },
+      s.webPlayer && { id: 'web1', name: 'Web Player (Chrome)', type: 'Computer' },
+    ]
+      .filter(Boolean)
+      .map((d) => ({ ...d, is_active: s.activeDevice && s.activeId === d.id, is_restricted: false, volume_percent: 70 }))
   const playerJson = () =>
     s.player && {
       is_playing: s.player.playing,
@@ -94,7 +104,7 @@ function startFakeSpotify({ port = 0, premium = true } = {}) {
       item: byUri.get(s.player.track),
       shuffle_state: s.player.shuffle,
       repeat_state: s.player.repeat,
-      device: { id: 'dev1', name: 'Test Laptop', type: 'Computer', volume_percent: 70 },
+      device: deviceList().find((d) => d.id === s.activeId) ?? { id: 'dev1', name: 'Test Laptop', type: 'Computer', volume_percent: 70 },
       context: s.player.context ? { uri: s.player.context } : null,
     }
   const contextTracks = (ctx) => {
@@ -137,6 +147,12 @@ function startFakeSpotify({ port = 0, premium = true } = {}) {
         }
         if (f.get('grant_type') === 'refresh_token' && f.get('refresh_token') === 'rt-1') return send(res, 200, { access_token: 'at-2', expires_in: 3600 })
         return send(res, 400, { error: 'invalid_grant' })
+      }
+      // ---- Web Player pages (open.spotify.com) ----
+      if (req.method === 'GET' && (p === '/' || /^\/(track|album|playlist|artist|collection)\//.test(p))) {
+        s.webPlayer = true
+        s.webPages = [...(s.webPages ?? []), p]
+        return res.writeHead(200, { 'Content-Type': 'text/html' }).end('<title>Spotify Web Player</title>')
       }
       // ---- Web API ----
       if (!p.startsWith('/v1/')) return send(res, 404, {})
@@ -183,14 +199,25 @@ function startFakeSpotify({ port = 0, premium = true } = {}) {
         })
       }
       if (api === '/me/player' && req.method === 'GET') return s.player ? send(res, 200, playerJson()) : send(res, 204)
-      if (api === '/me/player/devices') return send(res, 200, { devices: s.devices ? [{ id: 'dev1', name: 'Test Laptop', type: 'Computer', is_active: s.activeDevice, is_restricted: false }] : [] })
+      if (api === '/me/player/devices') return send(res, 200, { devices: deviceList() })
+      if (api === '/me/player' && req.method === 'PUT') {
+        const id = json().device_ids?.[0]
+        if (!deviceList().some((d) => d.id === id)) return err(res, 404, 'Device not found')
+        s.activeDevice = true
+        s.activeId = id
+        s.transfers = [...(s.transfers ?? []), id]
+        return send(res, 204)
+      }
       if (!s.premium && api.startsWith('/me/player/')) return err(res, 403, 'Player command failed: Premium required', 'PREMIUM_REQUIRED')
       if (api === '/me/player/play') {
         const b = json()
-        if (!s.activeDevice && q.get('device_id') !== 'dev1') {
+        const dev = q.get('device_id')
+        if (dev && !deviceList().some((d) => d.id === dev)) return err(res, 404, 'Device not found')
+        if (!s.activeDevice && !dev) {
           if (!s.player || (!b.context_uri && !b.uris)) return err(res, 404, 'Player command failed: No active device found', 'NO_ACTIVE_DEVICE')
         }
         s.activeDevice = true
+        if (dev) s.activeId = dev
         if (b.context_uri || b.uris) {
           const list = b.uris ?? contextTracks(b.context_uri)
           s.player = { track: b.offset?.uri ?? list[0], context: b.context_uri ?? null, playing: true, progress: 0, shuffle: s.player?.shuffle ?? false, repeat: s.player?.repeat ?? 'off' }

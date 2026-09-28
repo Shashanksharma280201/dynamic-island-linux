@@ -6,7 +6,10 @@ export const SPOTIFY = {
   HOME: 'spotify:home', // invoke -> SpHome
   PAGE: 'spotify:page', // invoke(uri) -> SpPage
   SEARCH: 'spotify:search', // invoke(q) -> SpSearch
-  PLAY: 'spotify:play', // invoke({ contextUri?, trackUri? })
+  PLAY: 'spotify:play', // invoke({ contextUri?, trackUri? }, deviceId?) -> PlayResult
+  DEVICES: 'spotify:devices', // invoke -> SpDevice[]
+  TRANSFER: 'spotify:transfer', // invoke(deviceId)
+  PLAY_BROWSER: 'spotify:play-browser', // invoke({ contextUri?, trackUri? }): open the Web Player and play there
   CONTROL: 'spotify:control', // invoke(cmd)
   LIKE: 'spotify:like', // invoke(uri, on)
   WATCH: 'spotify:watch', // send(on): the Music tab is showing

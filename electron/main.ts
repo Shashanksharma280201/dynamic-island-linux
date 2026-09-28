@@ -272,6 +272,13 @@ async function main() {
   await media.start().catch((e) => console.error('media provider:', e))
 
   // ---- Spotify (Web API with your own app's Client ID) ----
+  // The Spotify desktop app, if installed (deb/snap/flatpak).
+  const spotifyApp = (): string | null => {
+    if (process.env.DI_SPOTIFY_APP !== undefined) return process.env.DI_SPOTIFY_APP || null
+    const home = homedir()
+    const flatpak = ['/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')]
+    return findExecutable('spotify', ['/snap/bin', ...flatpak]) ?? findExecutable('com.spotify.Client', flatpak)
+  }
   const spotify = new Spotify({
     clientId: () => config.spotify.clientId,
     dataDir: app.getPath('userData'),
@@ -282,16 +289,16 @@ async function main() {
     // No active Spotify device: play in the Spotify app here, starting it if needed.
     openLocally: async (uri) => {
       if (!uri) return false
-      if (await media.openUri(uri)) return true
-      const home = homedir()
-      const bin = findExecutable('spotify', ['/snap/bin', '/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')])
-        ?? findExecutable('com.spotify.Client', ['/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')])
+      if (await media.openUri(uri)) return 'played'
+      const bin = spotifyApp()
       if (!bin) return false
       spawn(bin, [`--uri=${uri}`], { detached: true, stdio: 'ignore' }).unref()
-      return true
+      return 'launched'
     },
+    appInstalled: () => !!spotifyApp(),
     accountsBase: process.env.DI_SPOTIFY_ACCOUNTS || undefined,
     apiBase: process.env.DI_SPOTIFY_API || undefined,
+    webBase: process.env.DI_SPOTIFY_WEB || undefined,
   })
   wireSpotify(spotify)
 

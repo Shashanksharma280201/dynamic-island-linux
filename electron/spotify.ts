@@ -10,7 +10,12 @@ import {
   mapPlayer,
   mapPlaylist,
   mapTrack,
+  mapDevices,
+  pickDevice,
   recentContexts,
+  webPlayerUrl,
+  type PlayResult,
+  type SpDevice,
   type SpCollection,
   type SpHome,
   type SpPage,
@@ -89,10 +94,16 @@ type Deps = {
   clientId: () => string
   dataDir: string
   onChange: (v: SpotifyView) => void
-  /** Play a spotify: URI in the Spotify app on this computer (MPRIS / launch). */
-  openLocally: (uri: string) => Promise<boolean>
+  /**
+   * Play a spotify: URI in the Spotify app on this computer: 'played' when the
+   * running app took it (MPRIS OpenUri), 'launched' when the app was started
+   * (it becomes a device shortly), false when it isn't installed.
+   */
+  openLocally: (uri: string) => Promise<'played' | 'launched' | false>
+  appInstalled: () => boolean
   accountsBase?: string
   apiBase?: string
+  webBase?: string
 }
 
 export class Spotify {
@@ -108,10 +119,13 @@ export class Spotify {
   private playlistCache = new Map<string, SpCollection>()
   private accounts: string
   private api: string
+  private web: string
+  private connecting?: string
 
   constructor(private d: Deps) {
     this.accounts = d.accountsBase ?? 'https://accounts.spotify.com'
     this.api = d.apiBase ?? 'https://api.spotify.com/v1'
+    this.web = d.webBase ?? 'https://open.spotify.com'
     try {
       const raw = JSON.parse(readFileSync(this.file(), 'utf8'))
       this.tokens = JSON.parse(decryptSecret(raw.secret))
@@ -142,6 +156,8 @@ export class Spotify {
       error: this.error,
       user: this.user ? { name: this.user.name, image: this.user.image, premium: this.user.premium } : undefined,
       player: this.player ? { ...this.player, liked: this.player.track ? this.liked.get(this.player.track.uri) : undefined } : this.player,
+      appInstalled: this.d.appInstalled(),
+      connecting: this.connecting,
     }
   }
 
@@ -199,10 +215,7 @@ export class Spotify {
     this.status = 'signing-in'
     this.error = undefined
     this.changed()
-    const url = authorizeUrl(this.accounts, clientId, challenge, state)
-    // Tests follow the redirect themselves instead of opening a browser.
-    if (process.env.DI_SPOTIFY_TEST_LOGIN) void net.fetch(url).catch(() => {})
-    else await shell.openExternal(url)
+    await this.openBrowser(authorizeUrl(this.accounts, clientId, challenge, state))
     try {
       const code = await done
       const t = await this.tokenRequest({
@@ -224,6 +237,12 @@ export class Spotify {
       this.cancelSignIn()
       this.changed()
     }
+  }
+
+  /** Open a page in your browser (tests fetch it instead). */
+  private async openBrowser(url: string): Promise<void> {
+    if (process.env.DI_SPOTIFY_NO_BROWSER) void net.fetch(url).catch(() => {})
+    else await shell.openExternal(url)
   }
 
   private cancelSignIn(): void {
@@ -405,9 +424,13 @@ export class Spotify {
 
   // ---- playback ----
 
-  /** Play a track (inside its playlist / album when given) or a whole collection. */
-  async play(o: { contextUri?: string; trackUri?: string }): Promise<void> {
+  /** Your Spotify Connect devices (phone, computer, web player, speakers). */
+  async devices(): Promise<SpDevice[]> {
     this.ready()
+    return mapDevices(await this.call('GET', '/me/player/devices'))
+  }
+
+  private playBody(o: { contextUri?: string; trackUri?: string }): any {
     const body: any = {}
     if (o.contextUri && o.contextUri !== LIKED.uri) {
       body.context_uri = o.contextUri
@@ -415,17 +438,88 @@ export class Spotify {
     } else if (o.trackUri) {
       body.uris = [o.trackUri]
     }
+    return body
+  }
+
+  /** Wait (polling) for a device to show up, e.g. a Web Player tab or the app starting. */
+  private async waitForDevice(accept: (d: SpDevice, before: Set<string>) => boolean, before: Set<string>, ms: number): Promise<SpDevice | undefined> {
+    const end = Date.now() + ms
+    while (Date.now() < end) {
+      const ds = await this.devices().catch(() => [] as SpDevice[])
+      const hit = ds.find((d) => accept(d, before))
+      if (hit) return hit
+      await new Promise((r) => setTimeout(r, 1500))
+    }
+    return undefined
+  }
+
+  private setConnecting(text?: string): void {
+    this.connecting = text
+    this.changed()
+  }
+
+  /**
+   * Play a track (inside its playlist / album when given) or a whole
+   * collection, on `deviceId` or wherever Spotify is playing. If no device is
+   * open anywhere it tries the Spotify app on this computer, and otherwise
+   * returns needsDevice so the island can ask where to play.
+   */
+  async play(o: { contextUri?: string; trackUri?: string }, deviceId?: string): Promise<PlayResult> {
+    this.ready()
+    const body = this.playBody(o)
+    if (deviceId) {
+      await this.call('PUT', `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, body)
+      await this.refreshPlayer(400)
+      return { ok: true }
+    }
     try {
       await this.call('PUT', '/me/player/play', body)
     } catch (e) {
       if (!(e instanceof SpotifyError) || e.status !== 404) throw e
-      // No active device: use one that's available, or Spotify on this computer.
-      const devices: any[] = (await this.call('GET', '/me/player/devices').catch(() => null))?.devices ?? []
-      const pick = devices.find((d) => d.type === 'Computer' && !d.is_restricted) ?? devices.find((d) => !d.is_restricted)
-      if (pick) await this.call('PUT', `/me/player/play?device_id=${encodeURIComponent(pick.id)}`, body)
-      else if (!(await this.d.openLocally(o.trackUri ?? o.contextUri ?? ''))) throw e
+      // Nothing is active: use a device that's open, or the app on this computer.
+      const pick = pickDevice(await this.devices().catch(() => []))
+      if (pick) return this.play(o, pick.id)
+      const before = new Set<string>()
+      const local = await this.d.openLocally(o.trackUri ?? o.contextUri ?? '')
+      if (local === 'launched') {
+        this.setConnecting('Starting Spotify…')
+        try {
+          const dev = await this.waitForDevice(() => true, before, 20_000)
+          if (dev) return await this.play(o, dev.id)
+        } finally {
+          this.setConnecting()
+        }
+      }
+      if (local !== 'played') return { needsDevice: true }
     }
     await this.refreshPlayer(400)
+    return { ok: true }
+  }
+
+  /** Move playback to a device (Spotify's "Connect to a device"). */
+  async transfer(deviceId: string): Promise<void> {
+    this.ready()
+    await this.call('PUT', '/me/player', { device_ids: [deviceId], play: true })
+    await this.refreshPlayer(500)
+  }
+
+  /**
+   * No device anywhere: open the Spotify Web Player in your browser, wait for
+   * it to connect as a device, then play there.
+   */
+  async playInBrowser(o: { contextUri?: string; trackUri?: string }): Promise<void> {
+    this.ready()
+    const before = new Set((await this.devices().catch(() => [])).map((d) => d.id))
+    await this.openBrowser(webPlayerUrl(this.web, o))
+    this.setConnecting('Opening the Spotify Web Player…')
+    try {
+      const dev = await this.waitForDevice((d, prev) => !prev.has(d.id) || /web player/i.test(d.name), before, 45_000)
+      if (!dev) throw new Error('The Web Player didn\u2019t connect. If the browser tab asks you to log in to Spotify, do that and try again.')
+      if (o.contextUri || o.trackUri) await this.play(o, dev.id)
+      else await this.transfer(dev.id)
+    } finally {
+      this.setConnecting()
+    }
   }
 
   async control(cmd: { type: 'toggle' | 'next' | 'previous' } | { type: 'seek'; ms: number } | { type: 'shuffle'; on: boolean } | { type: 'repeat'; state: SpRepeat } | { type: 'volume'; percent: number }): Promise<void> {

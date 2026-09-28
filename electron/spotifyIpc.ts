@@ -34,12 +34,19 @@ export function wireSpotify(spotify: Spotify): void {
   ipcMain.handle(SPOTIFY.HOME, () => spotify.home())
   ipcMain.handle(SPOTIFY.PAGE, (_e, u) => spotify.page(uri(u)))
   ipcMain.handle(SPOTIFY.SEARCH, (_e, q) => spotify.search(typeof q === 'string' ? q : ''))
-  ipcMain.handle(SPOTIFY.PLAY, (_e, o) =>
-    spotify.play({
-      contextUri: o?.contextUri ? uri(o.contextUri) : undefined,
-      trackUri: o?.trackUri ? uri(o.trackUri) : undefined,
-    }),
-  )
+  const what = (o: any) => ({
+    contextUri: o?.contextUri ? uri(o.contextUri) : undefined,
+    trackUri: o?.trackUri ? uri(o.trackUri) : undefined,
+  })
+  const device = (v: unknown): string | undefined => {
+    if (v === undefined || v === null) return undefined
+    if (typeof v !== 'string' || !/^[\w.-]{1,120}$/.test(v)) throw new Error('Invalid device')
+    return v
+  }
+  ipcMain.handle(SPOTIFY.PLAY, (_e, o, deviceId) => spotify.play(what(o), device(deviceId)))
+  ipcMain.handle(SPOTIFY.DEVICES, () => spotify.devices())
+  ipcMain.handle(SPOTIFY.TRANSFER, (_e, id) => spotify.transfer(device(id)!))
+  ipcMain.handle(SPOTIFY.PLAY_BROWSER, (_e, o) => spotify.playInBrowser(what(o)))
   ipcMain.handle(SPOTIFY.CONTROL, (_e, c) => {
     const t = c?.type
     if (t === 'toggle' || t === 'next' || t === 'previous') return spotify.control({ type: t })

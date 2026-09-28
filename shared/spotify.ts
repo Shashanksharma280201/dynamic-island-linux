@@ -42,6 +42,37 @@ export type SpPlayer = {
   liked?: boolean
 }
 
+/** A Spotify Connect device (phone, computer, web player, speaker…). */
+export type SpDevice = { id: string; name: string; type: string; active: boolean; volume: number | null }
+
+/** Playing needs a device; when none is open the island asks where to play. */
+export type PlayResult = { ok: true } | { needsDevice: true }
+
+export function mapDevices(j: any): SpDevice[] {
+  return (Array.isArray(j?.devices) ? j.devices : [])
+    .filter((d: any) => d && typeof d.id === 'string' && d.id && !d.is_restricted)
+    .map((d: any) => ({
+      id: d.id,
+      name: String(d.name ?? 'Device'),
+      type: String(d.type ?? ''),
+      active: d.is_active === true,
+      volume: typeof d.volume_percent === 'number' ? d.volume_percent : null,
+    }))
+}
+
+/** The best device to play on when you didn't pick one: the active one, then a computer, then any. Pure. */
+export function pickDevice(ds: SpDevice[]): SpDevice | undefined {
+  return ds.find((d) => d.active) ?? ds.find((d) => d.type === 'Computer') ?? ds[0]
+}
+
+/** open.spotify.com page for what you asked to play (opening it starts the Web Player). Pure. */
+export function webPlayerUrl(base: string, o: { contextUri?: string; trackUri?: string }): string {
+  const uri = o.contextUri && o.contextUri !== LIKED.uri ? o.contextUri : o.trackUri
+  if (!uri && o.contextUri === LIKED.uri) return `${base}/collection/tracks`
+  const [, kind, id] = (uri ?? '').split(':')
+  return kind && id && /^[A-Za-z0-9]+$/.test(id) ? `${base}/${kind}/${id}` : base
+}
+
 export type SpotifyStatus = 'needs-client' | 'signed-out' | 'signing-in' | 'ready' | 'error'
 
 export type SpotifyView = {
@@ -49,6 +80,10 @@ export type SpotifyView = {
   error?: string
   user?: { name: string; image?: string; premium: boolean }
   player?: SpPlayer | null
+  /** The Spotify desktop app is installed on this computer. */
+  appInstalled?: boolean
+  /** "Opening the Web Player…" while the island waits for a device to appear. */
+  connecting?: string
 }
 
 export type SpHome = { recent: SpCollection[]; playlists: SpCollection[]; recentTracks: SpTrack[] }

@@ -1,4 +1,4 @@
-import { mapTrack, mapPlaylist, mapAlbum, mapPlayer, pickImage, recentContexts, progressNow, msText, greeting, LIKED } from '../shared/spotify'
+import { mapTrack, mapPlaylist, mapAlbum, mapPlayer, pickImage, recentContexts, progressNow, msText, greeting, LIKED, mapDevices, pickDevice, webPlayerUrl } from '../shared/spotify'
 
 const img = (w: number) => ({ url: `u${w}`, width: w, height: w })
 const TRACK = {
@@ -57,4 +57,27 @@ test('greeting', () => {
   expect(greeting(new Date(2026, 0, 1, 9))).toBe('Good morning')
   expect(greeting(new Date(2026, 0, 1, 14))).toBe('Good afternoon')
   expect(greeting(new Date(2026, 0, 1, 21))).toBe('Good evening')
+})
+
+test('devices: skip restricted ones, prefer the active one, then a computer', () => {
+  const ds = mapDevices({
+    devices: [
+      { id: 'a', name: 'Phone', type: 'Smartphone', is_active: false, volume_percent: 50 },
+      { id: 'b', name: 'TV', type: 'TV', is_active: false, is_restricted: true },
+      { id: 'c', name: 'Laptop', type: 'Computer', is_active: false, volume_percent: null },
+    ],
+  })
+  expect(ds.map((d) => d.id)).toEqual(['a', 'c'])
+  expect(pickDevice(ds)?.id).toBe('c')
+  expect(pickDevice([{ ...ds[0], active: true }, ds[1]])?.id).toBe('a')
+  expect(pickDevice([])).toBeUndefined()
+})
+
+test('Web Player links', () => {
+  const w = 'https://open.spotify.com'
+  expect(webPlayerUrl(w, { contextUri: 'spotify:playlist:p1', trackUri: 'spotify:track:t1' })).toBe(`${w}/playlist/p1`)
+  expect(webPlayerUrl(w, { trackUri: 'spotify:track:t1' })).toBe(`${w}/track/t1`)
+  expect(webPlayerUrl(w, { contextUri: LIKED.uri })).toBe(`${w}/collection/tracks`)
+  expect(webPlayerUrl(w, { trackUri: 'spotify:track:../x' })).toBe(w)
+  expect(webPlayerUrl(w, {})).toBe(w)
 })

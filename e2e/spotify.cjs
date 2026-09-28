@@ -3,7 +3,8 @@
 // setup in Settings, PKCE sign-in, Home / Library / Search / playlists, playing
 // a song inside its playlist, Now Playing controls, likes, token refresh after
 // a restart, the no-device fallback to the Spotify app on this computer, and
-// the Spotify-styled Now Playing card. Run through `npm run test:e2e`.
+// the Spotify-styled Now Playing card, and "Connect to a device" (phone or
+// the Web Player) when Spotify isn't open anywhere. Run through `npm run test:e2e`.
 const { _electron } = require('playwright-core')
 const { spawn, execFileSync } = require('child_process')
 const path = require('path')
@@ -54,7 +55,9 @@ const until = async (fn, ms = 5000) => {
         DI_BACKDROP: 'off',
         DI_SPOTIFY_ACCOUNTS: sp.base,
         DI_SPOTIFY_API: `${sp.base}/v1`,
-        DI_SPOTIFY_TEST_LOGIN: '1',
+        DI_SPOTIFY_NO_BROWSER: '1',
+        DI_SPOTIFY_WEB: sp.base,
+        DI_SPOTIFY_APP: '', // the Spotify app isn't installed here
       },
     })
   let app = await launch()
@@ -181,6 +184,32 @@ const until = async (fn, ms = 5000) => {
     await sleep(350)
     await shot('05-media-card')
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:hover', false))
+
+    // ---- Spotify isn't open anywhere: pick a device or the Web Player ----
+    player.kill()
+    await sleep(800)
+    sp.devices = false
+    sp.activeDevice = false
+    sp.player = null
+    await openMusic()
+    await page.click('.sp-nav button:has-text("Search")')
+    await page.fill('.sp-searchbox input', 'blue')
+    await page.waitForSelector('.sp-search .sp-row', { timeout: 5000 })
+    await page.click('.sp-search .sp-row:has-text("Undertow")')
+    check('with nothing open it offers “Connect to a device”', await page.waitForSelector('.sp-sheet:has-text("Nothing is playing")', { timeout: 6000 }).then(() => true, () => false))
+    check('including the Web Player', (await page.$$('.sp-sheet .sp-device-row.web')).length === 1)
+    sp.phone = true // Spotify opened on the phone
+    check('a phone shows up as soon as Spotify opens on it', await page.waitForSelector('.sp-sheet .sp-device-row:has-text("Pixel 8")', { timeout: 6000 }).then(() => true, () => false))
+    await shot('06-devices')
+    await page.click('.sp-sheet .sp-device-row.web')
+    check('“Play in your browser” opens the song in the Web Player', await until(() => sp.webPages?.includes('/track/t5'), 5000), JSON.stringify(sp.webPages))
+    check('and plays it there once the Web Player connects', await until(() => sp.lastPlay?.device === 'web1' && sp.lastPlay?.uris?.[0] === 'spotify:track:t5', 8000), JSON.stringify(sp.lastPlay))
+    check('the sheet closes', await page.waitForSelector('.sp-sheet', { state: 'detached', timeout: 5000 }).then(() => true, () => false))
+    await page.waitForSelector('.sp-mini-device:has-text("Web Player")', { timeout: 6000 }).catch(() => {})
+    await page.click('.sp-mini [aria-label="Connect to a device"]')
+    await page.waitForSelector('.sp-sheet .sp-device-row.current:has-text("Web Player")', { timeout: 5000 }).catch(() => {})
+    await page.click('.sp-sheet .sp-device-row:has-text("Pixel 8")')
+    check('playback can move to another device', await until(() => sp.transfers?.includes('ph1') && sp.activeId === 'ph1', 5000), JSON.stringify(sp.transfers))
 
     // ---- Restart: still signed in; an expired token is refreshed ----
     await app.close()

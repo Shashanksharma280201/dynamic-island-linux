@@ -4,6 +4,7 @@ import { LIKED, greeting, msText, progressNow } from '@shared/spotify'
 import { Spinner, errorText, useLoad, useNow } from '../hub/common'
 import { SearchField } from '../hub/SearchField'
 import { useArtColor } from './color'
+import { DevicesSheet, type Pending } from './Devices'
 import {
   ChevronDownIcon,
   DeviceIcon,
@@ -362,7 +363,7 @@ function LikeButton({ p, size = 22 }: { p: SpPlayer; size?: number }) {
   )
 }
 
-function NowPlaying({ p, close, contextName }: { p: SpPlayer; close: () => void; contextName?: string }) {
+function NowPlaying({ p, close, contextName, devices }: { p: SpPlayer; close: () => void; contextName?: string; devices: () => void }) {
   const color = useArtColor(p.track?.art ?? p.track?.image)
   const t = p.track
   const ctl = (cmd: { type: string; [k: string]: unknown }) => void window.island.spotify.control(cmd)
@@ -405,16 +406,14 @@ function NowPlaying({ p, close, contextName }: { p: SpPlayer; close: () => void;
           <RepeatIcon one={p.repeat === 'track'} />
         </button>
       </div>
-      {p.device && (
-        <div className="sp-device">
-          <DeviceIcon /> {p.device.name}
-        </div>
-      )}
+      <button className="sp-device" onClick={(e) => (stop(e), devices())} aria-label="Connect to a device">
+        <DeviceIcon /> {p.device ? p.device.name : 'Connect to a device'}
+      </button>
     </div>
   )
 }
 
-function MiniPlayer({ p, onOpen }: { p: SpPlayer; onOpen: () => void }) {
+function MiniPlayer({ p, onOpen, devices }: { p: SpPlayer; onOpen: () => void; devices: () => void }) {
   const color = useArtColor(p.track?.art ?? p.track?.image)
   const now = useNow(1000)
   const dur = p.track?.durationMs ?? 0
@@ -435,6 +434,9 @@ function MiniPlayer({ p, onOpen }: { p: SpPlayer; onOpen: () => void }) {
           )}
         </div>
       </div>
+      <button className="sp-icon-btn" aria-label="Connect to a device" title="Connect to a device" onClick={(e) => (stop(e), devices())}>
+        <DeviceIcon />
+      </button>
       <LikeButton p={p} />
       <button className="sp-icon-btn" aria-label={p.isPlaying ? 'Pause' : 'Play'} onClick={(e) => (stop(e), void window.island.spotify.control({ type: 'toggle' }))}>
         {p.isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
@@ -483,6 +485,7 @@ export function MusicView({ onTyping }: { onTyping: (on: boolean) => void }) {
   const [view, setView] = useState<SpotifyView | null>(null)
   const [stack, setStack] = useState<Page[]>([{ kind: 'home' }])
   const [error, setError] = useState<string | null>(null)
+  const [sheet, setSheet] = useState<{ pending?: Pending; noDevice?: boolean } | null>(null)
   useEffect(() => {
     let live = true
     window.island.spotify.state().then((v) => live && setView(v)).catch(() => {})
@@ -508,11 +511,25 @@ export function MusicView({ onTyping }: { onTyping: (on: boolean) => void }) {
   const back = () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s))
   const root = (p: Page) => setStack([p])
   const open = (uri: string) => go({ kind: 'collection', uri })
-  const play = (o: { contextUri?: string; trackUri?: string }) =>
-    window.island.spotify.play(o).catch((e) => setError(errorText(e)))
+  const play = (o: Pending) =>
+    window.island.spotify
+      .play(o)
+      .then((r) => {
+        // Nothing open anywhere: ask where to play (phone, browser, …).
+        if ('needsDevice' in r) setSheet({ pending: o, noDevice: true })
+      })
+      .catch((e) => setError(errorText(e)))
+  const devicesSheet = sheet && <DevicesSheet view={view} pending={sheet.pending} noDevice={sheet.noDevice} onClose={() => setSheet(null)} />
+  const openDevices = () => setSheet({})
   const p = view.player
 
-  if (page.kind === 'now' && p) return <div className="music"><NowPlaying p={p} close={back} contextName={p.contextUri ? contextNames.get(p.contextUri) : undefined} /></div>
+  if (page.kind === 'now' && p)
+    return (
+      <div className="music">
+        <NowPlaying p={p} close={back} devices={openDevices} contextName={p.contextUri ? contextNames.get(p.contextUri) : undefined} />
+        {devicesSheet}
+      </div>
+    )
 
   const tabs: { kind: 'home' | 'search' | 'library'; label: string; icon: ReactNode }[] = [
     { kind: 'home', label: 'Home', icon: <HomeIcon filled={stack[0].kind === 'home'} /> },
@@ -528,7 +545,8 @@ export function MusicView({ onTyping }: { onTyping: (on: boolean) => void }) {
         {page.kind === 'collection' && <Collection key={page.uri} uri={page.uri} back={back} play={play} player={p} />}
       </div>
       {error && <div className="sp-error toast">{error}</div>}
-      {p?.track && <MiniPlayer p={p} onOpen={() => go({ kind: 'now' })} />}
+      {view.connecting && !sheet && <div className="sp-connecting">{view.connecting}</div>}
+      {p?.track && <MiniPlayer p={p} onOpen={() => go({ kind: 'now' })} devices={openDevices} />}
       <nav className="sp-nav">
         {tabs.map((t) => (
           <button key={t.kind} className={stack[0].kind === t.kind && stack.length === 1 ? 'on' : ''} onClick={(e) => (stop(e), root({ kind: t.kind }))}>
@@ -537,6 +555,7 @@ export function MusicView({ onTyping }: { onTyping: (on: boolean) => void }) {
           </button>
         ))}
       </nav>
+      {devicesSheet}
     </div>
   )
 }

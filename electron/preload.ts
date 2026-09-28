@@ -25,7 +25,7 @@ import { SETTINGS } from '../electron/settingsChannels'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
-import type { SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
+import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
 /** Subscribe and return an unsubscribe function. */
@@ -67,7 +67,11 @@ const api = {
     home: (): Promise<SpHome> => ipcRenderer.invoke(SPOTIFY.HOME),
     page: (uri: string): Promise<SpPage> => ipcRenderer.invoke(SPOTIFY.PAGE, uri),
     search: (q: string): Promise<SpSearch> => ipcRenderer.invoke(SPOTIFY.SEARCH, q),
-    play: (o: { contextUri?: string; trackUri?: string }): Promise<void> => ipcRenderer.invoke(SPOTIFY.PLAY, o),
+    play: (o: { contextUri?: string; trackUri?: string }, deviceId?: string): Promise<PlayResult> =>
+      ipcRenderer.invoke(SPOTIFY.PLAY, o, deviceId),
+    devices: (): Promise<SpDevice[]> => ipcRenderer.invoke(SPOTIFY.DEVICES),
+    transfer: (deviceId: string): Promise<void> => ipcRenderer.invoke(SPOTIFY.TRANSFER, deviceId),
+    playInBrowser: (o: { contextUri?: string; trackUri?: string }): Promise<void> => ipcRenderer.invoke(SPOTIFY.PLAY_BROWSER, o),
     control: (cmd: { type: string; [k: string]: unknown }): Promise<void> => ipcRenderer.invoke(SPOTIFY.CONTROL, cmd),
     like: (uri: string, on: boolean): Promise<void> => ipcRenderer.invoke(SPOTIFY.LIKE, uri, on),
     watch: (on: boolean) => ipcRenderer.send(SPOTIFY.WATCH, on),
