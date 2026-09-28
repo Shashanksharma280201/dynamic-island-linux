@@ -1,4 +1,6 @@
 // Minimal MPRIS player on the session bus for e2e tests.
+// FAKE_PLAYER_NAME (default "fake") and FAKE_PLAYER_ART (an art URL) let it
+// pose as e.g. Spotify's desktop app; OpenUri calls are printed as OPENURI.
 const dbus = require('dbus-next')
 const { Interface, ACCESS_READ, ACCESS_READWRITE } = dbus.interface
 const { Variant } = dbus
@@ -36,6 +38,7 @@ class Player extends Interface {
       'xesam:artist': new Variant('as', ['E2E Band']),
       'mpris:length': new Variant('x', BigInt(180_000_000)),
       'mpris:trackid': new Variant('o', `/org/fake/track${this._track}`),
+      ...(process.env.FAKE_PLAYER_ART ? { 'mpris:artUrl': new Variant('s', process.env.FAKE_PLAYER_ART) } : {}),
     }
   }
   PlayPause() {
@@ -49,6 +52,9 @@ class Player extends Interface {
     console.log('TRACK', this._track)
   }
   Previous() {}
+  OpenUri(uri) {
+    console.log('OPENURI', uri)
+  }
 }
 Player.configureMembers({
   properties: {
@@ -65,13 +71,14 @@ Player.configureMembers({
     Next: { inSignature: '', outSignature: '' },
     Previous: { inSignature: '', outSignature: '' },
     SetPosition: { inSignature: 'ox', outSignature: '' },
+    OpenUri: { inSignature: 's', outSignature: '' },
   },
   signals: { Seeked: { signature: 'x' } },
 })
 
 ;(async () => {
   const bus = dbus.sessionBus()
-  await bus.requestName('org.mpris.MediaPlayer2.fake', 0)
+  await bus.requestName(`org.mpris.MediaPlayer2.${process.env.FAKE_PLAYER_NAME || 'fake'}`, 0)
   bus.export('/org/mpris/MediaPlayer2', new Player())
   console.log('READY')
 })()

@@ -35,6 +35,10 @@ import {
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
 import { ClaudeController, earlyClaudeState } from './claudeIpc'
 import { MODELS, SpeechModels, registerSttScheme } from './stt'
+import { Spotify, REDIRECT_URI } from './spotify'
+import { wireSpotify } from './spotifyIpc'
+import { SPOTIFY } from './spotifyChannels'
+import { spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
 import { homedir } from 'node:os'
 import { TransientCards } from './transient'
@@ -267,6 +271,30 @@ async function main() {
   })
   await media.start().catch((e) => console.error('media provider:', e))
 
+  // ---- Spotify (Web API with your own app's Client ID) ----
+  const spotify = new Spotify({
+    clientId: () => config.spotify.clientId,
+    dataDir: app.getPath('userData'),
+    onChange: (v) => {
+      if (!win.isDestroyed()) win.webContents.send(SPOTIFY.CHANGED, v)
+      settings?.changed()
+    },
+    // No active Spotify device: play in the Spotify app here, starting it if needed.
+    openLocally: async (uri) => {
+      if (!uri) return false
+      if (await media.openUri(uri)) return true
+      const home = homedir()
+      const bin = findExecutable('spotify', ['/snap/bin', '/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')])
+        ?? findExecutable('com.spotify.Client', ['/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')])
+      if (!bin) return false
+      spawn(bin, [`--uri=${uri}`], { detached: true, stdio: 'ignore' }).unref()
+      return true
+    },
+    accountsBase: process.env.DI_SPOTIFY_ACCOUNTS || undefined,
+    apiBase: process.env.DI_SPOTIFY_API || undefined,
+  })
+  wireSpotify(spotify)
+
   // ---- notifications (with GNotification buttons) ----
   const invokes = new Map<string, GtkInvoke>()
   const invoker = new GtkActionInvoker()
@@ -354,6 +382,13 @@ async function main() {
       claudeUi?.push()
     },
     pickClaudeFolder: (parent) => claudeUi!.pickFolder(parent),
+    spotify: () => {
+      const v = spotify.view()
+      return { clientId: config.spotify.clientId, redirectUri: REDIRECT_URI, status: v.status, user: v.user?.name, premium: v.user?.premium, error: v.error }
+    },
+    spotifySignIn: () => spotify.signIn(),
+    spotifySignOut: () => spotify.signOut(),
+    onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onAppearance: () => {
       pushAppearance()
@@ -362,6 +397,7 @@ async function main() {
     },
   })
   settings.wire()
+  void spotify.start() // after Settings exists: it reports status there
 
   claudeUi = new ClaudeController({
     win,
@@ -558,6 +594,7 @@ async function main() {
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
     claudeCode.dispose()
+    spotify.stop()
     tray?.destroy()
     invoker.stop()
     await Promise.allSettled([

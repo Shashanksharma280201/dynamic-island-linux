@@ -284,7 +284,9 @@ export function Island({ activities }: { activities: Activity[] }) {
             className="island rail-shell"
             initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
+            // A short fixed fade out: the rail must be gone promptly, or its
+            // (invisible) box keeps the island's clickable area large.
+            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16, transition: { duration: 0.16 } }}
             transition={spring}
           >
             <Rail tab={tab} onTab={setTab} usage={claude?.usage} />

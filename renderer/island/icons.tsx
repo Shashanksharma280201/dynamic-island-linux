@@ -184,3 +184,42 @@ export const ComposeIcon = () => (
     <path d="M17.6 3.6a2 2 0 0 1 2.8 2.8L12.5 14.3 9 15l.7-3.5z" />
   </Svg>
 )
+/** Spotify's mark: three arcs in a circle (drawn, not the logo file). */
+export const SpotifyIcon = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <circle cx="12" cy="12" r="10" fill="currentColor" />
+    <path
+      d="M7 9.4c3.3-1 7.3-.7 10.1.9M7.6 12.5c2.8-.8 6-.5 8.4.8M8.2 15.4c2.2-.6 4.6-.4 6.5.6"
+      fill="none"
+      stroke="var(--sp-cutout, #000)"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+    />
+  </svg>
+)
+export const HeartIcon = ({ filled = false, size = 20 }: { filled?: boolean; size?: number }) => (
+  <Svg size={size} fill={filled}>
+    <path d="M12 20.3s-7.5-4.6-9.2-9.4C1.6 7.4 3.8 4.2 7.1 4.2c2 0 3.5 1.1 4.9 2.9 1.4-1.8 2.9-2.9 4.9-2.9 3.3 0 5.5 3.2 4.3 6.7-1.7 4.8-9.2 9.4-9.2 9.4z" />
+  </Svg>
+)
+export const HomeIcon = ({ filled = false }: { filled?: boolean }) => (
+  <Svg fill={filled}>
+    <path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-4.5v-6h-5v6H5a1 1 0 0 1-1-1z" />
+  </Svg>
+)
+export const LibraryIcon = () => (
+  <Svg>
+    <path d="M5 4v16M10 4v16M15 5l4.5 15" />
+  </Svg>
+)
+export const DeviceIcon = () => (
+  <Svg size={14}>
+    <rect x="3" y="5" width="18" height="12" rx="2" />
+    <path d="M8 21h8" />
+  </Svg>
+)
+export const ChevronDownIcon = () => (
+  <Svg>
+    <path d="m6 9 6 6 6-6" />
+  </Svg>
+)

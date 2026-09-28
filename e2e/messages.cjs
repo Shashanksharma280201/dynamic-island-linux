@@ -186,7 +186,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
 
     check(
       'the section icons sit in a rail beside the panel',
-      (await page.$$('.rail-btn[aria-label]')).length === 6 && !(await page.$('.tabs')),
+      (await page.$$('.rail-btn[aria-label]')).length === 7 && !(await page.$('.tabs')),
     )
     await page.click('.rail-btn[aria-label="Chats"]')
     await page.waitForSelector('.chat-row', { timeout: 5000 })

@@ -24,6 +24,8 @@ import type {
 import { SETTINGS } from '../electron/settingsChannels'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
+import { SPOTIFY } from '../electron/spotifyChannels'
+import type { SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
 /** Subscribe and return an unsubscribe function. */
@@ -56,6 +58,20 @@ const api = {
   onTogglePanel: (cb: () => void) => on(IPC.TOGGLE_PANEL, cb),
   onFocusLost: (cb: () => void) => on(IPC.FOCUS_LOST, cb),
   onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
+  /** Artwork as a data URL (to sample its colours). */
+  imageData: (url: string): Promise<string | null> => ipcRenderer.invoke(SPOTIFY.IMAGE, url),
+  spotify: {
+    state: (): Promise<SpotifyView> => ipcRenderer.invoke(SPOTIFY.STATE),
+    onChange: (cb: (v: SpotifyView) => void) => on(SPOTIFY.CHANGED, cb),
+    signIn: (): Promise<void> => ipcRenderer.invoke(SPOTIFY.SIGN_IN),
+    home: (): Promise<SpHome> => ipcRenderer.invoke(SPOTIFY.HOME),
+    page: (uri: string): Promise<SpPage> => ipcRenderer.invoke(SPOTIFY.PAGE, uri),
+    search: (q: string): Promise<SpSearch> => ipcRenderer.invoke(SPOTIFY.SEARCH, q),
+    play: (o: { contextUri?: string; trackUri?: string }): Promise<void> => ipcRenderer.invoke(SPOTIFY.PLAY, o),
+    control: (cmd: { type: string; [k: string]: unknown }): Promise<void> => ipcRenderer.invoke(SPOTIFY.CONTROL, cmd),
+    like: (uri: string, on: boolean): Promise<void> => ipcRenderer.invoke(SPOTIFY.LIKE, uri, on),
+    watch: (on: boolean) => ipcRenderer.send(SPOTIFY.WATCH, on),
+  },
   claude: {
     state: (): Promise<ClaudeView> => ipcRenderer.invoke(CLAUDE.STATE),
     onChange: (cb: (v: ClaudeView) => void) => on(CLAUDE.CHANGED, cb),
@@ -111,6 +127,9 @@ const settings = {
     ipcRenderer.invoke(SETTINGS.SET_CLAUDE, patch),
   pickClaudeFolder: (): Promise<string | null> => ipcRenderer.invoke(SETTINGS.PICK_CLAUDE_FOLDER),
   setUsageBridge: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_USAGE_BRIDGE, on),
+  setSpotifyClient: (clientId: string) => ipcRenderer.invoke(SETTINGS.SET_SPOTIFY_CLIENT, clientId),
+  spotifySignIn: () => ipcRenderer.invoke(SETTINGS.SPOTIFY_SIGN_IN),
+  spotifySignOut: () => ipcRenderer.invoke(SETTINGS.SPOTIFY_SIGN_OUT),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

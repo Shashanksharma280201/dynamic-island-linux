@@ -21,4 +21,7 @@ export const SETTINGS = {
   SET_CLAUDE: 'settings:set-claude', // patch of the Claude Code options
   PICK_CLAUDE_FOLDER: 'settings:pick-claude-folder',
   SET_USAGE_BRIDGE: 'settings:set-usage-bridge',
+  SET_SPOTIFY_CLIENT: 'settings:set-spotify-client',
+  SPOTIFY_SIGN_IN: 'settings:spotify-sign-in',
+  SPOTIFY_SIGN_OUT: 'settings:spotify-sign-out',
 } as const

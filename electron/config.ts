@@ -23,6 +23,8 @@ export type Config = {
   frosted: boolean
   /** Claude Code commands from the island (voice or typed). */
   claude: ClaudeConfig
+  /** Spotify: the Client ID of your own Spotify app ('' = not set up). */
+  spotify: { clientId: string }
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -72,6 +74,7 @@ const DEFAULTS: Config = {
   shortcut: true,
   frosted: true,
   claude: CLAUDE_DEFAULTS,
+  spotify: { clientId: '' },
 }
 
 function server(raw: any): ServerConfig | null {
@@ -101,10 +104,13 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS } }
+  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' } }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
+  if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
+    c.spotify = { clientId: r.spotify.clientId }
+  }
   if (r.dock) c.dock = parseDock(r.dock)
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut

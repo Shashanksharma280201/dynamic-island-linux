@@ -129,6 +129,76 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
   )
 }
 
+function SpotifySection({ s }: { s: SettingsState }) {
+  const sp = s.spotify
+  const { run, error, busy } = useAction()
+  const [id, setId] = useState(sp.clientId)
+  const [copied, setCopied] = useState(false)
+  useEffect(() => setId(sp.clientId), [sp.clientId])
+  const connected = sp.status === 'ready'
+  return (
+    <section id="spotify">
+      <h2>Spotify</h2>
+      <div className="toggle-row">
+        <div>
+          <div>
+            {connected
+              ? `Connected as ${sp.user}${sp.premium === false ? ' (Free)' : ''}`
+              : sp.status === 'signing-in'
+                ? 'Waiting for you to log in in your browser…'
+                : 'Not connected'}
+          </div>
+          <div className="hint">
+            {connected
+              ? 'Browse, search and play from the Music tab on the island.'
+              : 'Your library, search and playback control on the island, in Spotify\u2019s own style.'}
+          </div>
+        </div>
+        {connected ? (
+          <button className="secondary" onClick={() => run(() => window.settings.spotifySignOut())}>
+            Disconnect
+          </button>
+        ) : (
+          <button disabled={!sp.clientId || busy || sp.status === 'signing-in'} onClick={() => run(() => window.settings.spotifySignIn())}>
+            Connect
+          </button>
+        )}
+      </div>
+      {!connected && (
+        <ol className="hint steps">
+          <li>
+            Open <b>developer.spotify.com/dashboard</b>, log in, and click <b>Create app</b>.
+          </li>
+          <li>
+            Give it any name and description. Under <b>Redirect URIs</b> add{' '}
+            <code>{sp.redirectUri}</code>{' '}
+            <button
+              className="link"
+              onClick={() => {
+                void navigator.clipboard.writeText(sp.redirectUri).then(() => setCopied(true))
+              }}
+            >
+              {copied ? 'Copied' : 'Copy'}
+            </button>{' '}
+            and tick <b>Web API</b>. Save.
+          </li>
+          <li>
+            Open the app&apos;s <b>Settings</b>, copy its <b>Client ID</b> and paste it below, then press Connect.
+          </li>
+          <li>Spotify asks that the app&apos;s owner has Premium, and allows up to 5 people per app.</li>
+        </ol>
+      )}
+      <div className="row">
+        <input className="grow" placeholder="Client ID" value={id} spellCheck={false} onChange={(e) => setId(e.target.value.trim())} />
+        <button className="secondary" disabled={id === sp.clientId} onClick={() => run(() => window.settings.setSpotifyClient(id))}>
+          Use Client ID
+        </button>
+      </div>
+      {(error || sp.error) && <p className="error">{error || sp.error}</p>}
+    </section>
+  )
+}
+
 /** Runs an async settings call, surfacing errors inline. */
 export function useAction() {
   const [error, setError] = useState<string | null>(null)
@@ -304,6 +374,8 @@ export function Settings() {
       </section>
 
       {s.claude && <ClaudeSection s={s} hookInstalled={s.hookInstalled} />}
+
+      {s.spotify && <SpotifySection s={s} />}
 
       <section id="notes">
         <h2>Notes</h2>

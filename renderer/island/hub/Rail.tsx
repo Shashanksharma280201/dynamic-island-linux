@@ -3,11 +3,12 @@ import type { InboxUnread } from '@shared/types'
 import { currentWindow, type ClaudeUsage, type UsageWindow } from '@shared/claude'
 import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
-import { SlidersIcon, ChatIcon, MailIcon, NoteIcon, GearIcon, SparkIcon } from '../icons'
+import { SlidersIcon, ChatIcon, MailIcon, NoteIcon, GearIcon, SparkIcon, SpotifyIcon } from '../icons'
 
 const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'controls', label: 'Controls', icon: <SlidersIcon /> },
   { id: 'claude', label: 'Claude', icon: <SparkIcon /> },
+  { id: 'music', label: 'Music', icon: <SpotifyIcon /> },
   { id: 'chats', label: 'Chats', icon: <ChatIcon /> },
   { id: 'mail', label: 'Mail', icon: <MailIcon /> },
   { id: 'notes', label: 'Notes', icon: <NoteIcon /> },

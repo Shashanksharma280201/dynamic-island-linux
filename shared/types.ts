@@ -30,6 +30,8 @@ export type MediaState = {
   /** Undefined when the player doesn't support it. */
   shuffle?: boolean
   loop?: LoopStatus
+  /** Which app is playing (MPRIS name, e.g. "spotify", "chromium"). */
+  player?: string
 }
 
 export type LoopStatus = 'None' | 'Track' | 'Playlist'
@@ -242,6 +244,7 @@ export type SettingsState = {
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
   mail: MailAccountView[]
   claude: ClaudeSettings
+  spotify: { clientId: string; redirectUri: string; status: string; user?: string; premium?: boolean; error?: string }
 }
 
 export type ClaudeSettings = {

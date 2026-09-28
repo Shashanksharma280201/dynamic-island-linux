@@ -44,6 +44,10 @@ type Deps = {
   onClaude: () => void
   pickClaudeFolder: (parent: BrowserWindow) => Promise<string | null>
   setUsageBridge: (on: boolean) => Promise<unknown>
+  spotify: () => SettingsState['spotify']
+  spotifySignIn: () => Promise<void>
+  spotifySignOut: () => void
+  onSpotifyClient: () => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -73,6 +77,7 @@ export class SettingsController {
       },
       mail: config.mail.map(({ secret: _s, ...a }) => ({ ...a, status: mail.status(a.id) })),
       claude: this.d.claude(),
+      spotify: this.d.spotify(),
     }
   }
 
@@ -152,6 +157,17 @@ export class SettingsController {
       this.d.onClaude()
       this.changed()
     })
+    ipcMain.handle(SETTINGS.SET_SPOTIFY_CLIENT, (_e, id) => {
+      const v = typeof id === 'string' ? id.trim() : ''
+      if (!/^[A-Za-z0-9]{0,64}$/.test(v)) throw new Error('That doesn\u2019t look like a Spotify Client ID')
+      if (v !== config.spotify.clientId) {
+        config.spotify.clientId = v
+        this.save()
+        this.d.onSpotifyClient()
+      }
+    })
+    ipcMain.handle(SETTINGS.SPOTIFY_SIGN_IN, () => this.d.spotifySignIn())
+    ipcMain.handle(SETTINGS.SPOTIFY_SIGN_OUT, () => this.d.spotifySignOut())
     ipcMain.handle(SETTINGS.PICK_CLAUDE_FOLDER, () => (this.win ? this.d.pickClaudeFolder(this.win) : null))
     ipcMain.handle(SETTINGS.SET_USAGE_BRIDGE, async (_e, on) => {
       await this.d.setUsageBridge(on === true)

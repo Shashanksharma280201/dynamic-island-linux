@@ -22,6 +22,7 @@ It's a generic project: anyone on Linux can install it, and every integration
 | **Notes** | Your notes, newest first, with a search field | **+** starts a new note (ready to type), click one to open and edit it, the trash icon deletes it. Notes save automatically as you type, as plain Markdown files on this computer |
 | **Mail** | New mail pops up as a card. **Mail** lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
+| **Spotify** | The **Music** tab, styled like Spotify: Home (greeting, Liked Songs and what you played recently, your playlists), Search, Your Library, playlist and album pages whose header takes the cover's colour, a mini player and a full Now Playing screen. While Spotify plays, the pop-out Now Playing card uses Spotify's colours too | Play any song inside its playlist or album, like / unlike, shuffle, repeat, seek, next / previous. If nothing is playing anywhere it uses one of your Spotify devices, or tells the Spotify app on this computer to play |
 | **Claude: plan limits** | Your 5-hour session and weekly usage as two meters, with when each resets. A heads-up card when you pass 80% and 95% | Works with Claude Pro and Max. Turn on **Show my plan limits** in Settings (or the button in the Claude tab) |
 | **Claude: talk or type to Claude Code** | The **Claude** tab: a conversation with Claude Code in the project folder you pick. Animated orbs show what it's doing: listening, working out what you said, thinking, searching, editing, writing | Tap the mic (or press **Ctrl+Alt+Space** anywhere), say what you want, and stop talking: it's transcribed on your computer and sent to Claude Code. Or type it. Follow-ups continue the same conversation; **Stop** ends a run; the ✎ button starts a new conversation. When the panel is closed, a small orb on the capsule shows Claude working and a card pops up with the answer |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
@@ -139,6 +140,26 @@ the island asks you with **Allow** / **Don't Allow**, even if you haven't
 installed the approvals hook. In Settings you can let it edit files without
 asking (**Allow edits**), or use Claude Code's **Auto** mode.
 
+### 4c. Connect Spotify (optional)
+
+Spotify only lets apps you register yourself use its Web API, so there's a
+one-time setup (about a minute). Open Settings → **Spotify** and follow the
+steps shown there:
+
+1. Go to [developer.spotify.com/dashboard](https://developer.spotify.com/dashboard),
+   log in and click **Create app**.
+2. Any name and description. Add the Redirect URI
+   `http://127.0.0.1:43117/callback` and tick **Web API**. Save.
+3. Copy the app's **Client ID** into Settings and press **Connect**. Your
+   browser opens to log in to Spotify; after that the Music tab is ready.
+
+Good to know (Spotify's rules since February 2026): the app's owner needs
+Spotify **Premium**, an app can have up to 5 users, Spotify only lists the
+songs of playlists you made or collaborate on (others can still be played as a
+whole), and search returns up to 10 results per type. No password or client
+secret is involved (OAuth with PKCE); your sign-in is stored encrypted with
+your desktop keyring.
+
 ### 5. Connect WhatsApp (optional)
 
 1. Open **Settings…** from the tray menu and turn on **Show WhatsApp messages and
@@ -232,6 +253,7 @@ Environment variables (set them before starting the app):
 | `DI_BACKDROP` | `off` disables the frosted-glass screen snapshot |
 | `DI_CLAUDE_BIN` | Path of the `claude` command (otherwise found on `PATH` and in the usual install folders) |
 | `DI_STT_MODELS_DIR` | Folder with ready Whisper models (`<org>/<name>/…`), used instead of downloading |
+| `DI_SPOTIFY_API`, `DI_SPOTIFY_ACCOUNTS` | Point Spotify at another server (the tests use a local stand-in) |
 | `DI_STT_MODEL` | Use this Whisper model id instead of the one picked in Settings |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
@@ -254,6 +276,10 @@ is available, Settings warns you that they are only obfuscated.
   connect to it, so don't enable WhatsApp on a shared multi-user machine.
 - Messages and mail are shown on the island and never sent anywhere else.
 - Notes never leave your computer.
+- **Spotify**: the island talks to Spotify directly with your own app's Client
+  ID. Your Spotify sign-in (tokens) is stored encrypted with the desktop
+  keyring in the island's profile folder; Settings → Spotify → Disconnect
+  deletes it.
 - **Voice** is transcribed on your computer with Whisper (via
   [transformers.js](https://github.com/huggingface/transformers.js), running as
   WebAssembly inside the island). Audio is never saved or uploaded. The only
@@ -281,6 +307,9 @@ is available, Settings warns you that they are only obfuscated.
 | Ctrl+I does nothing | Another app may already own Ctrl+I (Settings then says so), or you're on Wayland. You can still click the island. |
 | WhatsApp shows "Disconnected" | The island was unlinked from your phone. Toggle WhatsApp off and on and scan the QR again. |
 | Mail account shows a red dot | Read the error shown next to the account. Usually it is a wrong password: use an app password, not your normal one. |
+| Spotify: "INVALID_CLIENT: Invalid redirect URI" | The Redirect URI in your Spotify app must be exactly `http://127.0.0.1:43117/callback` (not `localhost`). |
+| Spotify: "Controlling playback needs Spotify Premium" | Spotify only allows playback control for Premium accounts. |
+| Spotify: nothing plays | Open Spotify on this computer or your phone once, so there's a device to play on. |
 | "Claude Code isn't installed" | The island couldn't find `claude`. Check `which claude` in a terminal and enter that path in Settings → Claude Code. |
 | Claude says it isn't logged in | Run `claude` in a terminal once and log in; the island uses the same login. |
 | No plan limits shown | Turn on **Show my plan limits**, then send any message in Claude Code (limits arrive with Claude's first reply). They're only available on Claude Pro / Max, not with an API key. |
@@ -306,7 +335,10 @@ messaging: a scripted fake WhatsApp, a real local IMAP + SMTP server for mail,
 typing replies on the keyboard, and the settings window. A third suite tests
 the Claude features: plan limits through the real status line script, commands
 typed with the real keyboard and run by a fake `claude`, approvals, Stop, the
-capsule orb and answer card, and Settings. To include voice (synthesized speech
+capsule orb and answer card, and Settings. A fourth suite tests Spotify
+against a local stand-in for Spotify's sign-in and Web API: setup, PKCE
+sign-in, browsing, playing inside a playlist, Now Playing controls, likes, the
+no-device fallback and token refresh. To include voice (synthesized speech
 through a fake microphone into real Whisper), install `espeak-ng` and point
 `E2E_STT_MODELS` at a folder containing `Xenova/whisper-tiny`; otherwise that
 part is skipped. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
@@ -330,6 +362,7 @@ electron/            main process
   claudeCode.ts      runs Claude Code (claude -p, stream-json) for island commands
   claudeIpc.ts       the Claude tab's IPC and the Ctrl+Alt+Space shortcut
   stt.ts             speech models: download once, serve over island-model://
+  spotify.ts         Spotify Web API: PKCE sign-in, library, search, playback
   backdrop.ts        frosted glass: snapshot of the screen behind the island
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)

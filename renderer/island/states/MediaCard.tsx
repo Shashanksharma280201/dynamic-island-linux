@@ -1,7 +1,8 @@
 import { useEffect, useState, type MouseEvent } from 'react'
 import type { MediaState, MediaCmd } from '@shared/types'
 import { currentPosition, formatTime } from '@shared/format'
-import { PlayIcon, PauseIcon, PrevIcon, NextIcon, ShuffleIcon, RepeatIcon } from '../icons'
+import { PlayIcon, PauseIcon, PrevIcon, NextIcon, ShuffleIcon, RepeatIcon, SpotifyIcon } from '../icons'
+import { useArtColor } from '../music/color'
 
 function Progress({ media }: { media: MediaState }) {
   const [now, setNow] = useState(Date.now())
@@ -43,8 +44,16 @@ export function MediaCard({ media }: { media: MediaState }) {
     e.stopPropagation()
     window.island.sendMediaCmd(c)
   }
+  // Spotify gets Spotify's look: a gradient from the album art, green accents.
+  const spotify = media.player === 'spotify'
+  const tint = useArtColor(spotify ? media.artUrl : undefined)
   return (
-    <div className="card media">
+    <div className={`card media${spotify ? ' spotify' : ''}`} style={spotify ? ({ ['--sp-tint' as any]: tint } as any) : undefined}>
+      {spotify && (
+        <div className="media-source">
+          <SpotifyIcon size={14} /> Spotify
+        </div>
+      )}
       <div className="row" style={{ gap: 12 }}>
         {media.artUrl ? <img className="art" src={media.artUrl} alt="" /> : <div className="art" />}
         <div style={{ flex: 1, minWidth: 0 }}>

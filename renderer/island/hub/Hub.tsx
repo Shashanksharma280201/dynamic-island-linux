@@ -4,13 +4,14 @@ import { ChatsView } from './ChatsView'
 import { MailView } from './MailView'
 import { NotesView } from './NotesView'
 import { ClaudePanel } from './ClaudePanel'
+import { MusicView } from '../music/MusicView'
 import type { ClaudeView } from '@shared/claude'
 import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 
-export type HubTab = 'controls' | 'claude' | 'chats' | 'mail' | 'notes'
+export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes'
 
-export const HUB_TABS: HubTab[] = ['controls', 'claude', 'chats', 'mail', 'notes']
+export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes']
 
 export function savedTab(): HubTab {
   try {
@@ -61,6 +62,7 @@ export function Hub({
       {tab === 'mail' && sources && <MailView sources={sources} onTyping={onTyping} />}
       {tab === 'notes' && <NotesView onTyping={onTyping} />}
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
+      {tab === 'music' && <MusicView onTyping={onTyping} />}
     </div>
   )
 }

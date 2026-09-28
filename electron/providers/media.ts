@@ -210,6 +210,7 @@ export class MediaProvider {
       const status = await this.prop(active, 'PlaybackStatus')
       const canControl = await this.prop(active, 'CanControl', true)
       const s = parseMprisMetadata(meta, status, canControl)
+      s.player = active.slice(PREFIX.length).split('.')[0]
       s.artUrl = await this.resolveArt(s.artUrl)
       s.canSeek = (await this.prop(active, 'CanSeek', false)) === true && !!s.trackId
       const shuffle = await this.prop(active, 'Shuffle', null)
@@ -257,6 +258,22 @@ export class MediaProvider {
       this.schedule(true)
     } catch {
       // player may not support the command; ignore
+    }
+  }
+
+  /**
+   * Ask the Spotify desktop app on this computer to play a spotify: URI
+   * (MPRIS OpenUri). False when it isn't running.
+   */
+  async openUri(uri: string): Promise<boolean> {
+    try {
+      const name = (await this.listPlayers()).find((n) => /^org\.mpris\.MediaPlayer2\.spotify/.test(n))
+      if (!name) return false
+      await (await this.getProxy(name)).player.OpenUri(uri)
+      this.schedule(true)
+      return true
+    } catch {
+      return false
     }
   }
 
