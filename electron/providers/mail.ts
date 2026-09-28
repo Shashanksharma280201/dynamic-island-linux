@@ -252,6 +252,14 @@ export class MailAccountWatcher {
     return { mail, text, to }
   }
 
+  /** How many messages in INBOX are unread. */
+  unreadCount(): Promise<number> {
+    return this.queue(async () => {
+      const found = await this.usable().search({ seen: false }, { uid: true })
+      return Array.isArray(found) ? found.length : 0
+    })
+  }
+
   /** The newest messages in INBOX, newest first. */
   listRecent(limit = 30): Promise<MailSummary[]> {
     return this.queue(async () => {

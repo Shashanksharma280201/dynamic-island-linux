@@ -5,7 +5,7 @@ import type { MessageBackend } from './messages'
 /** What the manager needs from an account watcher (a fake one backs demo mode). */
 export type MailWatcher = Pick<
   MailAccountWatcher,
-  'start' | 'stop' | 'listRecent' | 'getMessage' | 'reply' | 'markRead'
+  'start' | 'stop' | 'listRecent' | 'getMessage' | 'reply' | 'markRead' | 'unreadCount'
 >
 
 type Entry = { account: MailAccount; watcher: MailWatcher; status: MailStatus }
@@ -78,6 +78,13 @@ export class MailManager implements MessageBackend {
       if (failed) throw failed.reason
     }
     return ok.sort((a, b) => b.date - a.date).slice(0, limit)
+  }
+
+  /** Unread messages across all accounts (null when no account can say). */
+  async unreadCount(): Promise<number | null> {
+    const counts = await Promise.allSettled([...this.entries.values()].map((e) => e.watcher.unreadCount()))
+    const ok = counts.filter((r): r is PromiseFulfilledResult<number> => r.status === 'fulfilled')
+    return ok.length ? ok.reduce((n, r) => n + r.value, 0) : null
   }
 
   async getMessage(accountId: string, uid: number): Promise<MailMessageView> {

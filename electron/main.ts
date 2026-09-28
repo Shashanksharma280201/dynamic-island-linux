@@ -471,8 +471,8 @@ async function main() {
       transient.hold(id, hold)
     },
     onFocus: setFocus,
-    onReply: (m) => void hub.reply(m.id, m.text),
-    onMessageAction: (m) => void hub.markRead(m.id),
+    onReply: (m) => void hub.reply(m.id, m.text).finally(() => inbox?.changed('unread')),
+    onMessageAction: (m) => void hub.markRead(m.id).finally(() => inbox?.changed('unread')),
     onNotifAction: ({ id, key }) => {
       const inv = invokes.get(id)
       const button = inv?.buttons[Number(key)]

@@ -12,5 +12,6 @@ export const INBOX = {
   NOTE_GET: 'notes:get',
   NOTE_SAVE: 'notes:save',
   NOTE_DELETE: 'notes:delete',
-  CHANGED: 'inbox:changed', // main -> renderer: 'whatsapp' | 'mail' | 'sources'
+  CHANGED: 'inbox:changed', // main -> renderer: 'whatsapp' | 'mail' | 'sources' | 'unread'
+  UNREAD: 'inbox:unread', // invoke -> InboxUnread
 } as const

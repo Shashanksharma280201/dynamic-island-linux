@@ -13,6 +13,7 @@ import type {
   Dock,
   Side,
   InboxSources,
+  InboxUnread,
   ChatSummary,
   ChatMessage,
   MailSummary,
@@ -87,7 +88,8 @@ const api = {
       ipcRenderer.invoke(INBOX.MAIL_REPLY, accountId, uid, text),
     mailRead: (accountId: string, uid: number): Promise<void> =>
       ipcRenderer.invoke(INBOX.MAIL_READ, accountId, uid),
-    onChanged: (cb: (what: 'whatsapp' | 'mail' | 'sources') => void) => on(INBOX.CHANGED, cb),
+    onChanged: (cb: (what: 'whatsapp' | 'mail' | 'sources' | 'unread') => void) => on(INBOX.CHANGED, cb),
+    unread: (): Promise<InboxUnread> => ipcRenderer.invoke(INBOX.UNREAD),
   },
 }
 

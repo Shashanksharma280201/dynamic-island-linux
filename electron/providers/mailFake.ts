@@ -41,6 +41,10 @@ export class FakeMailWatcher implements MailWatcher {
 
   async stop(): Promise<void> {}
 
+  async unreadCount(): Promise<number> {
+    return this.box.filter((m) => m.unread).length
+  }
+
   async listRecent(limit: number): Promise<MailSummary[]> {
     return this.box.slice(0, limit).map(({ text: _t, to: _to, ...s }) => ({ ...s }))
   }

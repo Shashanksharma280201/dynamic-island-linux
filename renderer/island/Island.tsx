@@ -287,7 +287,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
             transition={spring}
           >
-            <Rail tab={tab} onTab={setTab} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} />
           </motion.div>
         )}
       </AnimatePresence>

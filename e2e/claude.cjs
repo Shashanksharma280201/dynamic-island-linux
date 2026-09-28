@@ -149,6 +149,8 @@ function speechWav(text, file) {
     check('Claude tab shows session and weekly limits', /Session83%Resets in 2 h 1\d min/.test(meters[0] ?? '') && /Week41%Resets \w{3} \d\d:\d\d/.test(meters[1] ?? ''), JSON.stringify(meters))
     check('limits show which model and when', /Opus 5 · updated just now/.test(await page.textContent('.limits-foot')))
     check('the project folder is shown', (await page.textContent('.folder-chip')).includes('my-project'))
+    const rings = await page.$$eval('.rail-btn[aria-label="Claude"] .ring-fill', (cs) => cs.map((c) => `${c.getAttribute('class')}:${c.dataset.pct}`))
+    check('the Claude icon shows session and weekly usage as rings', rings.join() === 'ring-fill session high:83,ring-fill week ok:41', rings.join())
     await shot('02-claude-tab')
 
     // ---- A typed command, with the real keyboard ----

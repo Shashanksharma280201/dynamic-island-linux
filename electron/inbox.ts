@@ -1,5 +1,5 @@
 import { ipcMain, type BrowserWindow } from 'electron'
-import type { InboxSources } from '@shared/types'
+import type { InboxSources, InboxUnread } from '@shared/types'
 import type { MailManager } from './mailManager'
 import type { NotesStore } from './notes'
 import type { WhatsAppService } from './providers/whatsapp'
@@ -40,14 +40,30 @@ export function wireInbox(
     closeCard: (source: 'whatsapp' | 'mail', threadId: string) => void
     notes: NotesStore
   },
-): { changed: (what: 'whatsapp' | 'mail' | 'sources') => void } {
+): { changed: (what: 'whatsapp' | 'mail' | 'sources' | 'unread') => void } {
   const { whatsapp, mail } = d
+  const changed = (what: 'whatsapp' | 'mail' | 'sources' | 'unread') => {
+    if (!win.isDestroyed()) win.webContents.send(INBOX.CHANGED, what)
+  }
   ipcMain.handle(INBOX.SOURCES, () => inboxSources(whatsapp, mail))
+  ipcMain.handle(INBOX.UNREAD, async (): Promise<InboxUnread> => {
+    const chats =
+      whatsapp.current.state === 'ready'
+        ? await whatsapp
+            .listChats(60)
+            .then((cs) => cs.reduce((n, c) => n + Math.max(0, c.unread), 0))
+            .catch(() => null)
+        : null
+    const mails = mail.accounts().length ? await mail.unreadCount().catch(() => null) : null
+    return { chats, mail: mails }
+  })
   ipcMain.handle(INBOX.CHATS, () => whatsapp.listChats(40))
   ipcMain.handle(INBOX.CHAT, async (_e, chatId) => {
     const id = str(chatId, 'chat')
     d.closeCard('whatsapp', id)
-    return whatsapp.getMessages(id, 40)
+    const msgs = await whatsapp.getMessages(id, 40)
+    changed('unread') // opening a chat marks it read
+    return msgs
   })
   ipcMain.handle(INBOX.CHAT_SEND, async (_e, chatId, body) => {
     const id = str(chatId, 'chat')
@@ -61,7 +77,9 @@ export function wireInbox(
     const a = str(accountId, 'account')
     const u = uidOf(uid)
     d.closeCard('mail', `${a}:${u}`)
-    return mail.getMessage(a, u)
+    const m = await mail.getMessage(a, u)
+    changed('unread') // opening a mail marks it read
+    return m
   })
   ipcMain.handle(INBOX.MAIL_REPLY, async (_e, accountId, uid, body) => {
     const a = str(accountId, 'account')
@@ -76,12 +94,11 @@ export function wireInbox(
     return d.notes.save(id ? str(id, 'note', 60) : undefined, body)
   })
   ipcMain.handle(INBOX.NOTE_DELETE, (_e, id) => d.notes.remove(str(id, 'note', 60)))
-  ipcMain.handle(INBOX.MAIL_READ, (_e, accountId, uid) =>
-    mail.markRead(`${str(accountId, 'account')}:${uidOf(uid)}`),
-  )
+  ipcMain.handle(INBOX.MAIL_READ, async (_e, accountId, uid) => {
+    await mail.markRead(`${str(accountId, 'account')}:${uidOf(uid)}`)
+    changed('unread')
+  })
   return {
-    changed: (what) => {
-      if (!win.isDestroyed()) win.webContents.send(INBOX.CHANGED, what)
-    },
+    changed,
   }
 }

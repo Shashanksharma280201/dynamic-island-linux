@@ -1606,3 +1606,75 @@ button {
   opacity: 0.45;
   cursor: default;
 }
+
+/* Rail: unread badges and the Claude usage ring */
+.rail-btn {
+  position: relative;
+}
+.rail-badge {
+  position: absolute;
+  top: -3px;
+  right: -5px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 2px rgba(28, 28, 30, 0.92);
+  pointer-events: none;
+}
+.usage-ring {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+.usage-ring circle {
+  fill: none;
+  stroke-linecap: round;
+  transition: stroke-dasharray 0.5s ease, stroke 0.3s ease;
+}
+.ring-track {
+  stroke: rgba(255, 255, 255, 0.1);
+}
+.ring-track.session {
+  stroke-width: 2.4;
+}
+.ring-track.week {
+  stroke-width: 1.8;
+}
+.ring-fill.session {
+  stroke-width: 2.4;
+  stroke: #f0a483;
+}
+.ring-fill.week {
+  stroke-width: 1.8;
+  stroke: #ffd6c2;
+  opacity: 0.8;
+}
+.ring-fill.high {
+  stroke: var(--orange);
+  opacity: 1;
+}
+.ring-fill.full {
+  stroke: var(--red);
+  opacity: 1;
+}
+.rail-btn.on .ring-track {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+.rail-btn.on .ring-fill.session.ok {
+  stroke: #fff;
+}
+.rail-btn.on .ring-fill.week.ok {
+  stroke: rgba(255, 255, 255, 0.75);
+}

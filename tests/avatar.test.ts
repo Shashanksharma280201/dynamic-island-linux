@@ -40,3 +40,13 @@ test('limit reset and last-updated wording', async () => {
   expect(agoText(now - 3 * 3600_000, now)).toBe('3 h ago')
   expect(agoText(now - 86400_000, now)).toBe('1 day ago')
 })
+
+test('rail badge text', async () => {
+  ;(globalThis as any).window ??= { addEventListener() {} }
+  const { badgeText } = await import('../renderer/island/hub/Rail')
+  expect(badgeText(0)).toBe('')
+  expect(badgeText(null)).toBe('')
+  expect(badgeText(7)).toBe('7')
+  expect(badgeText(99)).toBe('99')
+  expect(badgeText(250)).toBe('99+')
+})

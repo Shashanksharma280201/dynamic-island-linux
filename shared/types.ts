@@ -221,6 +221,9 @@ export type MailAccountView = {
   status?: MailStatus
 }
 
+/** Unread counts for the section icons; null when that source isn't set up. */
+export type InboxUnread = { chats: number | null; mail: number | null }
+
 export type SettingsState = {
   notifications: boolean
   autostart: boolean
