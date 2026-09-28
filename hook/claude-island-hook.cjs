@@ -59,6 +59,8 @@ process.stdin.on('end', () => {
     toolInput: hook.tool_input,
     cwd: hook.cwd,
     suggestions,
+    // Started from the island (no terminal to answer in).
+    fromIsland: process.env.DYNAMIC_ISLAND_RUN === '1' || undefined,
   }
 
   setTimeout(() => {

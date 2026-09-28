@@ -85,3 +85,27 @@ export function dayKey(ts: number): string {
   const d = new Date(ts)
   return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
 }
+
+/** When a limit resets: "in 14 min", "in 2 h 14 min", or "Fri 09:00" beyond a day. Pure. */
+export function resetText(ts: number, now: number): string {
+  const ms = ts - now
+  if (ms <= 0) return 'now'
+  const min = Math.ceil(ms / 60_000)
+  if (min < 60) return `in ${min} min`
+  if (ms < DAY) {
+    const h = Math.floor(min / 60)
+    const m = min % 60
+    return m ? `in ${h} h ${m} min` : `in ${h} h`
+  }
+  return `${WEEKDAYS[new Date(ts).getDay()].slice(0, 3)} ${clockTime(ts)}`
+}
+
+/** "just now", "5 min ago", "3 h ago", "2 days ago". Pure. */
+export function agoText(ts: number, now: number): string {
+  const s = Math.max(0, (now - ts) / 1000)
+  if (s < 60) return 'just now'
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`
+  if (s < 86400) return `${Math.floor(s / 3600)} h ago`
+  const d = Math.floor(s / 86400)
+  return `${d} day${d === 1 ? '' : 's'} ago`
+}

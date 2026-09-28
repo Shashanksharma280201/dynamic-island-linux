@@ -4,9 +4,12 @@ A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule o
 the edge of your screen (right side by default, drag it anywhere along the left or
 right edge) that morphs with spring physics to show what's going
 on (music, WhatsApp messages, new mail, Claude Code permission prompts,
-notifications), lets you **reply right from the island**, and opens a mini
-Control Center when you click it. Everywhere outside the island, your desktop
-stays fully clickable.
+notifications), lets you **reply right from the island**, **talk to Claude Code**
+and see your **Claude plan limits**, and opens a mini Control Center when you
+click it. Everywhere outside the island, your desktop stays fully clickable.
+
+It's a generic project: anyone on Linux can install it, and every integration
+(Claude Code, WhatsApp, mail) is optional.
 
 ## Features
 
@@ -19,6 +22,8 @@ stays fully clickable.
 | **Notes** | Your notes, newest first, with a search field | **+** starts a new note (ready to type), click one to open and edit it, the trash icon deletes it. Notes save automatically as you type, as plain Markdown files on this computer |
 | **Mail** | New mail pops up as a card. **Mail** lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
+| **Claude: plan limits** | Your 5-hour session and weekly usage as two meters, with when each resets. A heads-up card when you pass 80% and 95% | Works with Claude Pro and Max. Turn on **Show my plan limits** in Settings (or the button in the Claude tab) |
+| **Claude: talk or type to Claude Code** | The **Claude** tab: a conversation with Claude Code in the project folder you pick. Animated orbs show what it's doing: listening, working out what you said, thinking, searching, editing, writing | Tap the mic (or press **Ctrl+Alt+Space** anywhere), say what you want, and stop talking: it's transcribed on your computer and sent to Claude Code. Or type it. Follow-ups continue the same conversation; **Stop** ends a run; the ✎ button starts a new conversation. When the panel is closed, a small orb on the capsule shows Claude working and a card pops up with the answer |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
 | **Control Center** | macOS-style modules: round Wi-Fi / Bluetooth toggles and large Display / Sound sliders | Drag the sliders, click the volume value to mute, toggle Wi-Fi / Bluetooth, open Settings. Closes by itself shortly after the cursor leaves |
@@ -59,7 +64,10 @@ Other details:
   runs, but clicking the island only works partially (see [Limitations](#limitations)).
   To switch: log out, click the gear icon on the login screen, pick
   **"Ubuntu on Xorg"**. Check your current session with `echo $XDG_SESSION_TYPE`.
-- **Node.js 18 or newer** and npm, to build from source and for the Claude Code hook.
+- **Node.js 18 or newer** and npm, to build from source.
+- Optional, for the Claude features: [Claude Code](https://code.claude.com)
+  installed (the `claude` command) and logged in once in a terminal. Plan
+  limits need a Claude Pro or Max subscription. Voice needs a microphone.
 - Optional, for the Control Center (usually preinstalled on Ubuntu):
   `pactl` (volume), `nmcli` (Wi-Fi), `bluetoothctl` (Bluetooth), and GNOME's
   brightness service or `brightnessctl` (brightness).
@@ -113,6 +121,23 @@ permission, the island expands with the request. To remove it:
 The hook **fails open**: if the island isn't running, or you don't answer within
 45 seconds, Claude shows its normal terminal prompt as usual. It never blocks
 Claude. More detail in [`hook/README.md`](hook/README.md).
+
+### 4b. Talk to Claude Code and see your limits (optional)
+
+1. Make sure `claude` works in a terminal and you're logged in.
+2. Open the island (click it or **Ctrl+I**) and pick the **✳ Claude** icon.
+3. Click the folder chip at the top to choose the project Claude should work in.
+4. Tap the mic and say what you want, for example "run the tests and fix any
+   failures". The first time, the speech model (about 40 to 80 MB) is
+   downloaded; after that everything runs on your computer. Or type instead.
+5. Click **Show My Limits** once to see your session and weekly usage. This adds
+   a tiny status line to Claude Code that reports usage to the island; a
+   status line you already had keeps working and comes back if you turn it off.
+
+When Claude needs permission for something (running a command, editing a file),
+the island asks you with **Allow** / **Don't Allow**, even if you haven't
+installed the approvals hook. In Settings you can let it edit files without
+asking (**Allow edits**), or use Claude Code's **Auto** mode.
 
 ### 5. Connect WhatsApp (optional)
 
@@ -205,6 +230,9 @@ Environment variables (set them before starting the app):
 | `DYNAMIC_ISLAND_TIMEOUT` | Seconds the Claude hook waits for your answer (default `45`) |
 | `DI_USER_DATA` | Use a different profile folder (settings, WhatsApp login, notes) |
 | `DI_BACKDROP` | `off` disables the frosted-glass screen snapshot |
+| `DI_CLAUDE_BIN` | Path of the `claude` command (otherwise found on `PATH` and in the usual install folders) |
+| `DI_STT_MODELS_DIR` | Folder with ready Whisper models (`<org>/<name>/…`), used instead of downloading |
+| `DI_STT_MODEL` | Use this Whisper model id instead of the one picked in Settings |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
 plain Markdown files in `~/.config/dynamic-island-linux/notes/` (one `.md`
@@ -226,6 +254,15 @@ is available, Settings warns you that they are only obfuscated.
   connect to it, so don't enable WhatsApp on a shared multi-user machine.
 - Messages and mail are shown on the island and never sent anywhere else.
 - Notes never leave your computer.
+- **Voice** is transcribed on your computer with Whisper (via
+  [transformers.js](https://github.com/huggingface/transformers.js), running as
+  WebAssembly inside the island). Audio is never saved or uploaded. The only
+  network use is downloading the model from Hugging Face the first time.
+- Commands you give Claude are run by your own Claude Code (`claude -p`) in the
+  folder you chose, with your normal Claude Code settings and permissions.
+- **Plan limits** come from the data Claude Code gives status line scripts
+  (`rate_limits`) and from Claude Code's own output; the island never reads
+  your Claude login.
 - The frosted-glass snapshot is a small, low-resolution image of the strip of
   screen behind the island, kept only in memory. It is taken only while the
   island is collapsed, so the island never captures itself or your open panel.
@@ -244,6 +281,12 @@ is available, Settings warns you that they are only obfuscated.
 | Ctrl+I does nothing | Another app may already own Ctrl+I (Settings then says so), or you're on Wayland. You can still click the island. |
 | WhatsApp shows "Disconnected" | The island was unlinked from your phone. Toggle WhatsApp off and on and scan the QR again. |
 | Mail account shows a red dot | Read the error shown next to the account. Usually it is a wrong password: use an app password, not your normal one. |
+| "Claude Code isn't installed" | The island couldn't find `claude`. Check `which claude` in a terminal and enter that path in Settings → Claude Code. |
+| Claude says it isn't logged in | Run `claude` in a terminal once and log in; the island uses the same login. |
+| No plan limits shown | Turn on **Show my plan limits**, then send any message in Claude Code (limits arrive with Claude's first reply). They're only available on Claude Pro / Max, not with an API key. |
+| The mic does nothing / "No microphone found" | Check the input device in GNOME Settings → Sound. The first use downloads the speech model, so it needs internet once. |
+| Speech is transcribed badly | Switch Settings → Claude Code → Speech recognition to **Accurate**, and speak close to the mic. |
+| Ctrl+Alt+Space does nothing | Another app owns it (Settings says so). Use the mic button instead. |
 | Can't type in the reply box | Your window manager refused keyboard focus for the island. Please open an issue with your desktop environment. |
 
 ## Development
@@ -260,7 +303,13 @@ It drives the real Electron app: a fake music player (including seek, shuffle
 and repeat), real Claude hook round-trips, real pointer movement, notifications
 and GNotification buttons, the Control Center and `--quit`. A second suite tests
 messaging: a scripted fake WhatsApp, a real local IMAP + SMTP server for mail,
-typing replies on the keyboard, and the settings window. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
+typing replies on the keyboard, and the settings window. A third suite tests
+the Claude features: plan limits through the real status line script, commands
+typed with the real keyboard and run by a fake `claude`, approvals, Stop, the
+capsule orb and answer card, and Settings. To include voice (synthesized speech
+through a fake microphone into real Whisper), install `espeak-ng` and point
+`E2E_STT_MODELS` at a folder containing `Xenova/whisper-tiny`; otherwise that
+part is skipped. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
 on every push and pull request.
 
 ### Project layout
@@ -278,6 +327,9 @@ electron/            main process
   transient.ts       cards that close by themselves (held while hovered or replying)
   settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
   notes.ts           notes as Markdown files (atomic writes)
+  claudeCode.ts      runs Claude Code (claude -p, stream-json) for island commands
+  claudeIpc.ts       the Claude tab's IPC and the Ctrl+Alt+Space shortcut
+  stt.ts             speech models: download once, serve over island-model://
   backdrop.ts        frosted glass: snapshot of the screen behind the island
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
@@ -315,6 +367,17 @@ tests/               unit tests (vitest)
   screen, the part behind the island's column is cropped and downscaled, and
   the island draws it under a CSS blur, aligned so it lines up with the real
   desktop.
+- **Claude commands** start `claude -p "<what you said>" --output-format
+  stream-json` in your project folder and resume the same session for
+  follow-ups. Its streamed events drive the orb and the live reply. Approvals
+  come back through the same hook as terminal sessions.
+- **Voice**: the island records 16 kHz audio, stops when you've been quiet for
+  about 1.4 s, trims the silence and runs Whisper in a Web Worker
+  (onnxruntime-web, WebAssembly, several threads).
+- **Plan limits**: a small status line script (`hook/claude-island-status.cjs`)
+  receives Claude Code's `rate_limits` and forwards them over the island's
+  socket, then prints your previous status line.
+- **Orbs** are [thinking-orbs](https://libraries.dev/orbs) by Jakub Antalik (MIT).
 - **Notes** are read and written by the main process in the profile folder;
   each save writes a temporary file and renames it, so a crash never leaves a
   half-written note.
@@ -336,3 +399,6 @@ tests/               unit tests (vitest)
   365 accounts that only allow OAuth sign-in aren't supported yet.
 - The WhatsApp integration is tested automatically against a scripted fake;
   the real WhatsApp Web connection has to be tried with a real phone.
+- Claude runs are tested automatically against a fake `claude` that speaks the
+  same streaming protocol; voice is tested with synthesized speech.
+- Voice understands English (the Whisper `.en` models).

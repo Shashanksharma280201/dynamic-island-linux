@@ -26,6 +26,108 @@ function Toggle({
   )
 }
 
+function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+  return (
+    <div className="segmented">
+      {options.map((o) => (
+        <button key={o.value} className={value === o.value ? 'on' : 'secondary'} onClick={() => onChange(o.value)}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const PERMISSIONS = [
+  { value: 'default' as const, label: 'Ask me', hint: 'Claude asks on the island before running commands or editing files.' },
+  { value: 'acceptEdits' as const, label: 'Allow edits', hint: 'File edits go ahead; commands still ask on the island.' },
+  { value: 'auto' as const, label: 'Auto', hint: 'Claude Code’s classifier approves safe actions and asks about the rest.' },
+]
+
+function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: boolean }) {
+  const { run, error } = useAction()
+  const c = s.claude
+  const [path, setPath] = useState(c.binaryOverride)
+  useEffect(() => setPath(c.binaryOverride), [c.binaryOverride])
+  const perm = PERMISSIONS.find((p) => p.value === c.permissionMode) ?? PERMISSIONS[0]
+  return (
+    <section id="claude">
+      <h2>Claude Code</h2>
+      <div className="toggle-row">
+        <div>
+          <div>{c.binary ? 'Claude Code found' : 'Claude Code not found'}</div>
+          <div className="hint">
+            {c.binary
+              ? c.binary
+              : 'Install Claude Code and log in once in a terminal, or enter the path to the claude command.'}
+          </div>
+        </div>
+      </div>
+      <div className="row">
+        <input
+          className="grow"
+          placeholder="Path to claude (leave empty to find it automatically)"
+          value={path}
+          onChange={(e) => setPath(e.target.value)}
+        />
+        <button className="secondary" disabled={path === c.binaryOverride} onClick={() => run(() => window.settings.setClaude({ binary: path }))}>
+          Use Path
+        </button>
+      </div>
+      <div className="toggle-row">
+        <div>
+          <div>Project folder</div>
+          <div className="hint">Where your spoken or typed commands run: {c.cwd}</div>
+        </div>
+        <button className="secondary" onClick={() => run(() => window.settings.pickClaudeFolder())}>
+          Choose…
+        </button>
+      </div>
+      <div className="toggle-row">
+        <div>
+          <div>Permissions for island commands</div>
+          <div className="hint">{perm.hint}</div>
+        </div>
+        <Segmented value={c.permissionMode} options={PERMISSIONS} onChange={(v) => run(() => window.settings.setClaude({ permissionMode: v }))} />
+      </div>
+      <Toggle
+        label="Show my plan limits"
+        hint="Adds a small status line to Claude Code that also sends your 5-hour and weekly usage to the island. A status line you already have keeps working."
+        on={c.usageBridge}
+        onChange={(v) => run(() => window.settings.setUsageBridge(v))}
+      />
+      <Toggle
+        label="Approvals on the island for every Claude Code session"
+        hint="Installs a PermissionRequest hook in ~/.claude/settings.json. Commands started from the island always ask here."
+        on={hookInstalled}
+        onChange={(v) => run(() => window.settings.setHook(v))}
+      />
+      <Toggle
+        label="Talk shortcut Ctrl+Alt+Space"
+        hint={
+          c.voiceShortcut && !c.voiceShortcutActive
+            ? 'Another app is already using Ctrl+Alt+Space, so it could not be registered'
+            : 'Press it anywhere to start talking to Claude; press again (or stop talking) to send'
+        }
+        on={c.voiceShortcut}
+        onChange={(v) => run(() => window.settings.setClaude({ voiceShortcut: v }))}
+      />
+      <div className="toggle-row">
+        <div>
+          <div>Speech recognition</div>
+          <div className="hint">Whisper runs on this computer. The model is downloaded once from Hugging Face the first time you talk.</div>
+        </div>
+        <Segmented
+          value={c.sttModel}
+          options={c.sttModels.map((m) => ({ value: m.value, label: m.value === 'tiny' ? 'Fast' : 'Accurate' }))}
+          onChange={(v) => run(() => window.settings.setClaude({ sttModel: v }))}
+        />
+      </div>
+      {error && <p className="error">{error}</p>}
+    </section>
+  )
+}
+
 /** Runs an async settings call, surfacing errors inline. */
 export function useAction() {
   const [error, setError] = useState<string | null>(null)
@@ -181,14 +283,10 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setShortcut(v))}
         />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
-        <Toggle
-          label="Claude Code approvals"
-          hint="Installs a PermissionRequest hook in ~/.claude/settings.json"
-          on={s.hookInstalled}
-          onChange={(v) => general.run(() => window.settings.setHook(v))}
-        />
         {general.error && <p className="error">{general.error}</p>}
       </section>
+
+      <ClaudeSection s={s} hookInstalled={s.hookInstalled} />
 
       <section id="notes">
         <h2>Notes</h2>

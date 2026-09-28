@@ -21,9 +21,47 @@ export type Config = {
   shortcut: boolean
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
+  /** Claude Code commands from the island (voice or typed). */
+  claude: ClaudeConfig
 }
 
 export type Appearance = 'glass' | 'solid'
+
+export type PermissionMode = 'default' | 'acceptEdits' | 'auto'
+export type SttModel = 'tiny' | 'base'
+
+export type ClaudeConfig = {
+  /** Project folder commands run in ('' = home folder). */
+  cwd: string
+  /** How much Claude may do without asking (asks go to the island). */
+  permissionMode: PermissionMode
+  /** Global shortcut to start / stop talking to Claude. */
+  voiceShortcut: boolean
+  /** Speech recognition model size. */
+  sttModel: SttModel
+  /** Path to the claude command ('' = find it automatically). */
+  binary: string
+}
+
+const CLAUDE_DEFAULTS: ClaudeConfig = {
+  cwd: '',
+  permissionMode: 'default',
+  voiceShortcut: true,
+  sttModel: 'base',
+  binary: '',
+}
+
+/** Validate the claude section of the config. Pure. */
+export function parseClaudeConfig(raw: any): ClaudeConfig {
+  const c = { ...CLAUDE_DEFAULTS }
+  if (!raw || typeof raw !== 'object') return c
+  if (typeof raw.cwd === 'string') c.cwd = raw.cwd
+  if (['default', 'acceptEdits', 'auto'].includes(raw.permissionMode)) c.permissionMode = raw.permissionMode
+  if (typeof raw.voiceShortcut === 'boolean') c.voiceShortcut = raw.voiceShortcut
+  if (raw.sttModel === 'tiny' || raw.sttModel === 'base') c.sttModel = raw.sttModel
+  if (typeof raw.binary === 'string') c.binary = raw.binary
+  return c
+}
 
 const DEFAULTS: Config = {
   notifications: true,
@@ -33,6 +71,7 @@ const DEFAULTS: Config = {
   appearance: 'glass',
   shortcut: true,
   frosted: true,
+  claude: CLAUDE_DEFAULTS,
 }
 
 function server(raw: any): ServerConfig | null {
@@ -62,9 +101,10 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK } }
+  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS } }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
+  c.claude = parseClaudeConfig(r.claude)
   if (r.dock) c.dock = parseDock(r.dock)
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut

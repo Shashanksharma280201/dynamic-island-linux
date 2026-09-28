@@ -36,6 +36,8 @@ export function present(list: Activity[], opts: { expanded: boolean }): Presenta
     primary.kind === 'approval' ||
     primary.kind === 'notification' ||
     primary.kind === 'message' ||
+    // Claude's answer shows as a card; while working it stays a small orb.
+    (primary.kind === 'claude' && !['starting', 'thinking', 'tool', 'writing'].includes(primary.run.phase)) ||
     opts.expanded
   )
     return { mode: 'expanded', primary, queued }

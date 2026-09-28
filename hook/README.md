@@ -58,3 +58,22 @@ Add to `~/.claude/settings.json`, using the absolute path of your checkout:
   else `/tmp/dynamic-island-<uid>.sock`).
 - `DYNAMIC_ISLAND_TIMEOUT`: seconds to wait for an answer (default 45).
 - `DYNAMIC_ISLAND_DEBUG_LOG`: append hook invocations to this file for troubleshooting.
+
+# Plan-limits status line
+
+`claude-island-status.cjs` is a Claude Code
+[status line](https://code.claude.com/docs/en/statusline) script. Claude Code
+runs it with session data on stdin, which includes your subscription's
+`rate_limits` (5-hour session and 7-day usage). The script forwards those to the
+island over the same socket, then prints your previous status line (or a short
+one of its own: `Opus 5 · session 24% · week 41%`).
+
+```bash
+node hook/statusline.cjs              # install
+node hook/statusline.cjs --uninstall  # remove, and put your old status line back
+```
+
+Your previous `statusLine` is saved in
+`~/.claude/dynamic-island-statusline.json` and restored on uninstall. Like the
+approval hook, it never blocks: if the island isn't running, it just prints the
+status line.

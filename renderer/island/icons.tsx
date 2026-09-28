@@ -156,3 +156,31 @@ export const SearchIcon = () => (
     <path d="m20 20-4.2-4.2" />
   </Svg>
 )
+/** Claude's spark: a soft eight-ray star. */
+export const SparkIcon = () => (
+  <Svg>
+    <path d="M12 3v5M12 16v5M3 12h5M16 12h5M5.6 5.6l3.5 3.5M14.9 14.9l3.5 3.5M5.6 18.4l3.5-3.5M14.9 9.1l3.5-3.5" />
+  </Svg>
+)
+export const MicIcon = ({ size = 20 }: { size?: number }) => (
+  <Svg size={size}>
+    <rect x="9" y="3" width="6" height="11" rx="3" />
+    <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21" />
+  </Svg>
+)
+export const StopIcon = () => (
+  <Svg fill>
+    <rect x="6" y="6" width="12" height="12" rx="2.5" />
+  </Svg>
+)
+export const FolderIcon = () => (
+  <Svg>
+    <path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.2h7a2 2 0 0 1 2 2v7.8a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />
+  </Svg>
+)
+export const ComposeIcon = () => (
+  <Svg>
+    <path d="M12 4H6.5A2.5 2.5 0 0 0 4 6.5v11A2.5 2.5 0 0 0 6.5 20h11a2.5 2.5 0 0 0 2.5-2.5V12" />
+    <path d="M17.6 3.6a2 2 0 0 1 2.8 2.8L12.5 14.3 9 15l.7-3.5z" />
+  </Svg>
+)

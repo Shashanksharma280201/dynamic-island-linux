@@ -22,6 +22,8 @@ import type {
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
 import { INBOX } from '../electron/inboxChannels'
+import { CLAUDE } from '../electron/claudeChannels'
+import type { ClaudeView } from '@shared/claude'
 
 /** Subscribe and return an unsubscribe function. */
 function on<T>(channel: string, cb: (v: T) => void): () => void {
@@ -53,6 +55,18 @@ const api = {
   onTogglePanel: (cb: () => void) => on(IPC.TOGGLE_PANEL, cb),
   onFocusLost: (cb: () => void) => on(IPC.FOCUS_LOST, cb),
   onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
+  claude: {
+    state: (): Promise<ClaudeView> => ipcRenderer.invoke(CLAUDE.STATE),
+    onChange: (cb: (v: ClaudeView) => void) => on(CLAUDE.CHANGED, cb),
+    ask: (text: string): Promise<void> => ipcRenderer.invoke(CLAUDE.ASK, text),
+    stop: (): Promise<void> => ipcRenderer.invoke(CLAUDE.STOP),
+    newConversation: (): Promise<void> => ipcRenderer.invoke(CLAUDE.NEW),
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke(CLAUDE.PICK_FOLDER),
+    setUsageBridge: (on: boolean): Promise<void> => ipcRenderer.invoke(CLAUDE.SET_BRIDGE, on),
+    setApprovals: (on: boolean): Promise<void> => ipcRenderer.invoke(CLAUDE.SET_APPROVALS, on),
+    ensureSpeechModel: (): Promise<void> => ipcRenderer.invoke(CLAUDE.STT_ENSURE),
+    onVoice: (cb: () => void) => on(CLAUDE.VOICE, cb),
+  },
   notes: {
     list: (): Promise<NoteSummary[]> => ipcRenderer.invoke(INBOX.NOTES_LIST),
     get: (id: string): Promise<Note> => ipcRenderer.invoke(INBOX.NOTE_GET, id),
@@ -91,6 +105,10 @@ const settings = {
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
   openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),
+  setClaude: (patch: Partial<{ permissionMode: string; voiceShortcut: boolean; sttModel: string; binary: string }>) =>
+    ipcRenderer.invoke(SETTINGS.SET_CLAUDE, patch),
+  pickClaudeFolder: (): Promise<string | null> => ipcRenderer.invoke(SETTINGS.PICK_CLAUDE_FOLDER),
+  setUsageBridge: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_USAGE_BRIDGE, on),
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),

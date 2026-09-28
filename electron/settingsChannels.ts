@@ -18,4 +18,7 @@ export const SETTINGS = {
   MAIL_TEST: 'settings:mail-test',
   MAIL_SAVE: 'settings:mail-save',
   MAIL_REMOVE: 'settings:mail-remove',
+  SET_CLAUDE: 'settings:set-claude', // patch of the Claude Code options
+  PICK_CLAUDE_FOLDER: 'settings:pick-claude-folder',
+  SET_USAGE_BRIDGE: 'settings:set-usage-bridge',
 } as const

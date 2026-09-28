@@ -3,7 +3,7 @@ import { mkdir } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import type { SettingsState } from '@shared/types'
+import type { ClaudeSettings, SettingsState } from '@shared/types'
 import { saveConfig, parseMailAccount, type Config, type StoredMailAccount } from './config'
 import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
@@ -39,6 +39,11 @@ type Deps = {
   onFrosted: () => void
   frostedAvailable: boolean
   notesFolder: string
+  claude: () => ClaudeSettings
+  /** Claude options changed (re-register shortcut, update the island). */
+  onClaude: () => void
+  pickClaudeFolder: (parent: BrowserWindow) => Promise<string | null>
+  setUsageBridge: (on: boolean) => Promise<unknown>
 }
 
 /** Settings window + the IPC it uses. */
@@ -67,6 +72,7 @@ export class SettingsController {
         status: whatsapp.current,
       },
       mail: config.mail.map(({ secret: _s, ...a }) => ({ ...a, status: mail.status(a.id) })),
+      claude: this.d.claude(),
     }
   }
 
@@ -134,6 +140,23 @@ export class SettingsController {
       await mkdir(this.d.notesFolder, { recursive: true })
       const err = await shell.openPath(this.d.notesFolder)
       if (err) throw new Error(err)
+    })
+    ipcMain.handle(SETTINGS.SET_CLAUDE, (_e, patch) => {
+      const c = config.claude
+      const p = patch && typeof patch === 'object' ? patch : {}
+      if (['default', 'acceptEdits', 'auto'].includes(p.permissionMode)) c.permissionMode = p.permissionMode
+      if (typeof p.voiceShortcut === 'boolean') c.voiceShortcut = p.voiceShortcut
+      if (p.sttModel === 'tiny' || p.sttModel === 'base') c.sttModel = p.sttModel
+      if (typeof p.binary === 'string' && p.binary.length < 500) c.binary = p.binary.trim()
+      this.save()
+      this.d.onClaude()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.PICK_CLAUDE_FOLDER, () => (this.win ? this.d.pickClaudeFolder(this.win) : null))
+    ipcMain.handle(SETTINGS.SET_USAGE_BRIDGE, async (_e, on) => {
+      await this.d.setUsageBridge(on === true)
+      this.d.onClaude()
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_SHORTCUT, (_e, on) => {
       config.shortcut = on === true

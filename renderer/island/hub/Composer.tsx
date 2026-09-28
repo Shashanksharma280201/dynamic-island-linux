@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useKeyboard } from './useKeyboard'
 
 const SendIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -26,33 +27,17 @@ export function Composer({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const ref = useRef<HTMLTextAreaElement>(null)
-  const focused = useRef(false)
+  const kb = useKeyboard(onTyping)
 
   const take = () => {
-    if (!focused.current) {
-      focused.current = true
-      onTyping(true)
-    }
-    // Ask every time: focus may have moved to another app since the last click.
-    window.island.setFocus(true)
+    kb.take()
     ref.current?.focus()
     setTimeout(() => ref.current?.focus(), 50)
   }
-  const release = () => {
-    if (!focused.current) return
-    focused.current = false
-    onTyping(false)
-    window.island.setFocus(false)
-  }
+  const release = kb.release
 
   useEffect(() => {
     if (autoFocus) take()
-    // You clicked into another app: stop "typing" so the island can close.
-    window.addEventListener('blur', release)
-    return () => {
-      window.removeEventListener('blur', release)
-      release()
-    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

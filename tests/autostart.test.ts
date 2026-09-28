@@ -31,6 +31,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     appearance: 'glass',
     shortcut: true,
     frosted: true,
+    claude: { cwd: '', permissionMode: 'default', voiceShortcut: true, sttModel: 'base', binary: '' },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)
@@ -39,6 +40,9 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     notifications: false,
     whatsapp: true,
   })
+  expect(
+    mergeConfig({ claude: { cwd: '/p', permissionMode: 'yolo', sttModel: 'tiny'  } }).claude,
+  ).toEqual({ ...d.claude, cwd: '/p', sttModel: 'tiny' })
 })
 
 const ACC = {

@@ -26,3 +26,17 @@ test('day labels and clock times', () => {
   expect(clockTime(new Date(2026, 0, 1, 7, 5).getTime())).toBe('07:05')
   expect(dayKey(new Date(2026, 0, 1, 1).getTime())).toBe(dayKey(new Date(2026, 0, 1, 23).getTime()))
 })
+
+test('limit reset and last-updated wording', async () => {
+  const { resetText, agoText } = await import('../shared/format')
+  const now = new Date(2026, 8, 28, 10, 0).getTime()
+  expect(resetText(now + 14 * 60_000, now)).toBe('in 14 min')
+  expect(resetText(now + 134 * 60_000, now)).toBe('in 2 h 14 min')
+  expect(resetText(now + 120 * 60_000, now)).toBe('in 2 h')
+  expect(resetText(new Date(2026, 9, 2, 9, 0).getTime(), now)).toBe('Fri 09:00')
+  expect(resetText(now - 1, now)).toBe('now')
+  expect(agoText(now - 20_000, now)).toBe('just now')
+  expect(agoText(now - 5 * 60_000, now)).toBe('5 min ago')
+  expect(agoText(now - 3 * 3600_000, now)).toBe('3 h ago')
+  expect(agoText(now - 86400_000, now)).toBe('1 day ago')
+})

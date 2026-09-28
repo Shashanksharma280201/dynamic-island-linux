@@ -1,3 +1,4 @@
+import type { ClaudeRun } from './claude'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -6,6 +7,8 @@ export type ToolRequest = {
   cwd?: string
   /** Claude's `permission_suggestions` (rules offered for "always allow"). */
   suggestions?: unknown[]
+  /** Asked by a command started from the island (there's no terminal to answer in). */
+  fromIsland?: boolean
 }
 
 export type Decision = 'allow' | 'deny' | 'ask'
@@ -71,6 +74,7 @@ export type Activity =
   | (Base & { kind: 'approval'; request: ToolRequest })
   | (Base & { kind: 'notification'; notification: NotificationData })
   | (Base & { kind: 'message'; message: MessageData })
+  | (Base & { kind: 'claude'; run: ClaudeRun })
 
 export type SystemState = {
   volume: number // 0-100
@@ -234,4 +238,20 @@ export type SettingsState = {
   shortcutActive: boolean
   whatsapp: { enabled: boolean; needsRestart: boolean; status: WaState }
   mail: MailAccountView[]
+  claude: ClaudeSettings
+}
+
+export type ClaudeSettings = {
+  /** The claude command found (or set), null if Claude Code isn't installed. */
+  binary: string | null
+  /** Path you typed in Settings ('' = find it automatically). */
+  binaryOverride: string
+  cwd: string
+  permissionMode: 'default' | 'acceptEdits' | 'auto'
+  voiceShortcut: boolean
+  /** The talk shortcut, when it could be registered. */
+  voiceShortcutActive: string | null
+  sttModel: 'tiny' | 'base'
+  sttModels: { value: 'tiny' | 'base'; label: string }[]
+  usageBridge: boolean
 }

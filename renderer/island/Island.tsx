@@ -12,6 +12,9 @@ import { NotificationCard } from './states/NotificationCard'
 import { Hub, savedTab, rememberTab, type HubTab } from './hub/Hub'
 import { Rail } from './hub/Rail'
 import { MessageCard } from './states/MessageCard'
+import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
+import { useVoice } from './voice/useVoice'
+import type { ClaudeView } from '@shared/claude'
 import { squirclePath } from './squircle'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
@@ -43,6 +46,45 @@ export function Island({ activities }: { activities: Activity[] }) {
   const top = islandTop(anchor, size.h, areaH)
 
   useEffect(() => window.island.onSysState(setSys), [])
+
+  // Claude Code + voice live here so switching tabs never cuts you off.
+  const [claude, setClaude] = useState<ClaudeView | null>(null)
+  useEffect(() => {
+    let live = true
+    // Retry: the main process may still be starting its services.
+    const load = (n: number) =>
+      window.island.claude
+        .state()
+        .then((v) => live && setClaude(v))
+        .catch(() => live && n > 0 && setTimeout(() => load(n - 1), 700))
+    load(15)
+    const off = window.island.claude.onChange(setClaude)
+    return () => {
+      live = false
+      off()
+    }
+  }, [])
+  const voice = useVoice(claude)
+  const voiceRef = useRef(voice)
+  voiceRef.current = voice
+  const openClaude = () => {
+    setTab('claude')
+    setPanel(true)
+  }
+  // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
+  useEffect(
+    () =>
+      window.island.claude.onVoice(() => {
+        setTabState('claude')
+        rememberTab('claude')
+        setPanel((open) => {
+          if (!open) pinned.current = true
+          return true
+        })
+        voiceRef.current.toggle()
+      }),
+    [],
+  )
   // The main process's cursor loop is the source of truth for hover: DOM
   // mouseleave is not delivered once the window turns click-through.
   useEffect(() => window.island.onHover(setHover), [])
@@ -56,10 +98,12 @@ export function Island({ activities }: { activities: Activity[] }) {
 
   // Keep a notification / message open while it's hovered or being answered.
   const transientId =
-    p.mode !== 'idle' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
+    p.mode !== 'idle' &&
+    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done')
       ? p.primary.id
       : null
-  const holding = hover || replying
+  // Only while the card is actually on screen (not hidden behind the panel).
+  const holding = (hover || replying) && !showPanel
   useEffect(() => {
     if (!transientId || !holding) return
     window.island.hold(transientId, true)
@@ -89,10 +133,11 @@ export function Island({ activities }: { activities: Activity[] }) {
 
   // Auto-close the panel once the cursor has left for a moment (not while typing).
   useEffect(() => {
-    if (!panel || hover || typing || pinned.current) return
+    // Also stays open while you're talking to Claude.
+    if (!panel || hover || typing || voice.phase !== 'idle' || pinned.current) return
     const t = setTimeout(() => setPanel(false), PANEL_CLOSE_MS)
     return () => clearTimeout(t)
-  }, [panel, hover, typing])
+  }, [panel, hover, typing, voice.phase])
 
   // Track the island's settled size (the outer box is never transformed).
   useEffect(() => {
@@ -160,6 +205,10 @@ export function Island({ activities }: { activities: Activity[] }) {
     if (p.mode !== 'idle' && !showPanel) {
       if (p.primary.kind === 'notification') return window.island.dismiss(p.primary.id)
       if (p.primary.kind === 'message') return // has its own buttons
+      if (p.primary.kind === 'claude') {
+        if (p.mode === 'expanded') return // card has its own buttons
+        return openClaude()
+      }
     }
     if (!isApproval) {
       setPanel((v) => !v)
@@ -189,7 +238,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             transition={contentFade}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTyping={setTyping} />
+              <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} />
             ) : p.mode === 'idle' ? (
               <IdlePill />
             ) : p.primary.kind === 'approval' ? (
@@ -211,6 +260,12 @@ export function Island({ activities }: { activities: Activity[] }) {
                   setPanel(true)
                 }}
               />
+            ) : p.primary.kind === 'claude' ? (
+              p.mode === 'expanded' ? (
+                <ClaudeCard id={p.primary.id} run={p.primary.run} onOpen={openClaude} />
+              ) : (
+                <CompactClaude run={p.primary.run} />
+              )
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
             ) : (

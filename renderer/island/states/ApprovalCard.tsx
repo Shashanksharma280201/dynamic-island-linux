@@ -34,13 +34,15 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
         </div>
       )}
       <div className="actions">
-        <button
-          className="plain muted"
-          title="Dismiss here and answer in Claude's terminal prompt"
-          onClick={(e) => decide(e, { decision: 'ask' })}
-        >
-          Answer in terminal
-        </button>
+        {!request.fromIsland && (
+          <button
+            className="plain muted"
+            title="Dismiss here and answer in Claude's terminal prompt"
+            onClick={(e) => decide(e, { decision: 'ask' })}
+          >
+            Answer in terminal
+          </button>
+        )}
         <span className="spacer" />
         <button className="pill deny" onClick={(e) => decide(e, { decision: 'deny' })}>
           Don't Allow

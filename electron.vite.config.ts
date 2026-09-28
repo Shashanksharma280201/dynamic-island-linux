@@ -3,8 +3,11 @@ import react from '@vitejs/plugin-react'
 import { resolve } from 'node:path'
 
 // Production-only CSP (the dev server needs an inline React-refresh preamble).
+// Voice: Whisper runs as WebAssembly in a worker; the model and the
+// onnxruntime files come from the app itself over island-model://.
 const CSP =
-  "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; " +
+  "default-src 'self'; script-src 'self' 'wasm-unsafe-eval' island-model:; " +
+  "worker-src 'self' blob:; connect-src 'self' island-model:; style-src 'self' 'unsafe-inline'; " +
   "img-src 'self' data: https: http:"
 const csp: Plugin = {
   name: 'island-csp',

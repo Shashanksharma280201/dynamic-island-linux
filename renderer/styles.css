@@ -1321,3 +1321,288 @@ button {
   --label-2: rgba(245, 245, 250, 0.74);
   --label-3: rgba(245, 245, 250, 0.46);
 }
+
+/* ---------------------------------------------------------------------------
+   Claude: plan limits, conversation, voice
+   --------------------------------------------------------------------------- */
+:root {
+  --claude: #e8845f;
+}
+.clamp4 {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.orb {
+  display: block;
+  flex-shrink: 0;
+}
+.claude-mark {
+  color: var(--claude);
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.claude-capsule {
+  padding: 12px 6px;
+}
+.card.claude-card {
+  width: 360px;
+}
+.claude-card .claude-mark {
+  width: 20px;
+  text-align: center;
+}
+.claude-card-body {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.claude-card-text {
+  flex: 1;
+  min-width: 0;
+}
+.claude-prompt {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.claude-status {
+  font-size: 12px;
+  color: var(--label-2);
+  margin-top: 2px;
+}
+.claude-status.done {
+  color: var(--green, #30d158);
+}
+.claude-status.error {
+  color: var(--red);
+}
+.claude-reply {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.42;
+  color: rgba(255, 255, 255, 0.88);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.claude-reply.error {
+  color: #ff8a80;
+}
+
+.claude-panel {
+  gap: 10px;
+}
+.claude-head {
+  align-items: center;
+  gap: 6px;
+}
+.folder-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 150px;
+  color: var(--label);
+}
+.folder-chip svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--claude);
+}
+
+/* Plan limits */
+.limits {
+  background: rgba(255, 255, 255, 0.06);
+  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.meters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 14px;
+}
+.meter-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.meter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+.meter-pct {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.meter-bar {
+  margin: 6px 0 4px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.meter-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f0a483, var(--claude));
+  transition: width 0.4s ease;
+}
+.meter.high .meter-bar > span {
+  background: var(--orange);
+}
+.meter.full .meter-bar > span {
+  background: var(--red);
+}
+.meter.full .meter-pct {
+  color: #ff8a80;
+  font-size: 12.5px;
+}
+.meter-reset {
+  font-size: 11px;
+}
+.limits-foot {
+  margin-top: 8px;
+  font-size: 11px;
+}
+.empty-limits {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.empty-limits .caption {
+  flex: 1;
+  line-height: 1.35;
+}
+.meter-bar.download {
+  width: 200px;
+}
+
+/* Conversation */
+.claude-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Fixed height: the panel (and the Stop button) stay put while Claude streams. */
+  height: clamp(140px, calc(100vh - 440px), 320px);
+  overflow-y: auto;
+  padding: 2px 2px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+.claude-thread > * {
+  flex-shrink: 0;
+}
+.claude-turn {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.claude-turn .bubble.mine {
+  align-self: flex-end;
+  max-width: 85%;
+  display: block;
+  -webkit-line-clamp: unset;
+  border-radius: 16px;
+  border-bottom-right-radius: 6px;
+  padding: 7px 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.claude-answer {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  max-width: 94%;
+}
+.claude-answer .claude-mark {
+  margin-top: 3px;
+}
+.claude-answer-text {
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+  min-width: 0;
+}
+.claude-answer.failed .claude-answer-text {
+  color: #ff8a80;
+}
+.claude-answer.live .claude-status {
+  margin: 1px 0 3px;
+}
+.claude-live-reply {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Voice */
+.voice-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 10px 8px;
+  text-align: center;
+}
+.voice-caption {
+  max-width: 280px;
+  line-height: 1.4;
+}
+.voice-caption b {
+  color: var(--label);
+  font-weight: 600;
+}
+.heard {
+  text-align: center;
+  font-style: italic;
+  margin-top: -4px;
+}
+.claude-input {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.claude-input .status.error {
+  margin-top: 0;
+  cursor: pointer;
+}
+.claude-field {
+  align-items: center;
+}
+.round-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.14);
+  transition: background 0.15s ease, box-shadow 0.08s linear;
+}
+.round-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.round-btn.mic.on {
+  background: #ff9f0a;
+  color: #1c1c1e;
+}
+.round-btn.stop {
+  background: var(--red);
+}
+.round-btn.stop svg {
+  width: 13px;
+  height: 13px;
+}
+.round-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}

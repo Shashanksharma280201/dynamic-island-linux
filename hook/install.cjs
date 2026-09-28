@@ -45,9 +45,13 @@ function applyInstall(settings, hookCmd) {
   return s
 }
 
-/** Shell command that runs the hook; the path is quoted so spaces are safe. */
-function hookCommand(hookPath) {
-  return `node ${JSON.stringify(hookPath)}`
+/**
+ * Shell command that runs the hook; the path is quoted so spaces are safe.
+ * `runner` is how to run Node scripts on this machine (node, or the island's
+ * own Electron in Node mode when Node isn't installed).
+ */
+function hookCommand(hookPath, runner) {
+  return `${runner || 'node'} ${JSON.stringify(hookPath)}`
 }
 
 function main() {
@@ -73,7 +77,7 @@ function main() {
     fs.mkdirSync(dir, { recursive: true })
   }
 
-  const hookCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook.cjs'))
+  const hookCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook.cjs'), process.env.DI_NODE_RUNNER)
   const next = uninstall ? applyUninstall(current) : applyInstall(current, hookCmd)
   fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2) + '\n')
   console.log(

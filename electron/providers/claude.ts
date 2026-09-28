@@ -2,6 +2,7 @@ import net from 'node:net'
 import { chmod, unlink } from 'node:fs/promises'
 import { encode, createDecoder } from '@shared/protocol'
 import type { ToolRequest, DecisionMsg } from '@shared/types'
+import { parseUsage, type ClaudeUsage } from '@shared/claude'
 
 /** Validate an untrusted request from the socket. Pure. */
 export function parseRequest(raw: any): ToolRequest | null {
@@ -16,6 +17,7 @@ export function parseRequest(raw: any): ToolRequest | null {
       raw.toolInput && typeof raw.toolInput === 'object' ? raw.toolInput : undefined,
     cwd: typeof raw.cwd === 'string' ? raw.cwd : undefined,
     suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : undefined,
+    fromIsland: raw.fromIsland === true || undefined,
   }
 }
 
@@ -42,6 +44,7 @@ export class ClaudeServer {
   private pending = new Map<string, net.Socket>()
   private reqCb: ((req: ToolRequest) => void) | null = null
   private cancelCb: ((id: string) => void) | null = null
+  private usageCb: ((u: ClaudeUsage) => void) | null = null
 
   constructor(private socketPath: string) {}
 
@@ -51,6 +54,11 @@ export class ClaudeServer {
 
   onCancel(cb: (id: string) => void): void {
     this.cancelCb = cb
+  }
+
+  /** Plan usage reported by the status line bridge. */
+  onUsage(cb: (u: ClaudeUsage) => void): void {
+    this.usageCb = cb
   }
 
   async start(): Promise<void> {
@@ -63,6 +71,11 @@ export class ClaudeServer {
       const ids = new Set<string>()
       socket.on('data', (chunk) => {
         for (const m of decode(chunk) as any[]) {
+          if (m.type === 'usage') {
+            const u = parseUsage(m.usage, Date.now())
+            if (u) this.usageCb?.(u)
+            continue
+          }
           if (m.type !== 'request') continue
           const req = parseRequest(m.request)
           if (!req) continue

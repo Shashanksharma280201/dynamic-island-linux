@@ -23,7 +23,20 @@ import { IslandTray } from './tray'
 import { loadConfig, saveConfig } from './config'
 import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
-import { isHookInstalled, setHookInstalled } from './hookSetup'
+import {
+  findExecutable,
+  hookDir,
+  isHookInstalled,
+  isUsageBridgeInstalled,
+  nodeRunner,
+  setHookInstalled,
+  setUsageBridgeInstalled,
+} from './hookSetup'
+import { ClaudeCode, claudeSearchDirs } from './claudeCode'
+import { ClaudeController, earlyClaudeState } from './claudeIpc'
+import { MODELS, SpeechModels, registerSttScheme } from './stt'
+import { usageAlerts, type ClaudeRun } from '@shared/claude'
+import { homedir } from 'node:os'
 import { TransientCards } from './transient'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
@@ -66,6 +79,17 @@ if (WA_CDP) {
   app.commandLine.appendSwitch('remote-debugging-port', '0')
 }
 
+// Private scheme that serves the speech model to the island (must be set up before 'ready').
+registerSttScheme()
+// Lets speech recognition use several CPU cores (WebAssembly threads).
+app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer')
+// Tests feed a WAV file as the microphone.
+if (process.env.DI_FAKE_MIC) {
+  app.commandLine.appendSwitch('use-fake-device-for-media-stream')
+  app.commandLine.appendSwitch('use-fake-ui-for-media-stream')
+  app.commandLine.appendSwitch('use-file-for-fake-audio-capture', process.env.DI_FAKE_MIC)
+}
+
 let cleanup: (() => Promise<void>) | null = null
 
 function cdpUrl(): string {
@@ -77,6 +101,21 @@ async function main() {
   const config = bootConfig
   const store = new ActivityStore()
   const win = createIslandWindow(config.dock.side)
+  const claudeStateReady = earlyClaudeState()
+  // The island may use the microphone (talking to Claude); nothing else.
+  win.webContents.session.setPermissionRequestHandler((wc, permission, cb, details) => {
+    const audioOnly = permission === 'media' && (details as any).mediaTypes?.every((t: string) => t === 'audio')
+    cb(wc === win.webContents && audioOnly)
+  })
+  win.webContents.session.setPermissionCheckHandler((wc, permission) => wc === win.webContents && permission === 'media')
+  const speech = new SpeechModels(
+    join(app.getPath('userData'), 'models'),
+    () => claudeUi?.push(),
+    process.env.DI_STT_BASE_URL || undefined,
+    process.env.DI_STT_MODELS_DIR || undefined,
+  )
+  speech.serve()
+  let claudeUi: ClaudeController | null = null
   let display: Display = placeIslandWindow(win, config.dock.side)
   // The side actually shown: config.dock.side, or a preview while dragging.
   let shownSide: Side = config.dock.side
@@ -169,6 +208,55 @@ async function main() {
   })
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
   claude.onCancel((id) => store.remove(id))
+  claude.onUsage((u) => claudeCode.setUsage(u))
+
+  // ---- Claude Code commands from the island (voice / typed) ----
+  const findClaude = (): string | null => {
+    const set = process.env.DI_CLAUDE_BIN || config.claude.binary
+    if (set) return set
+    return findExecutable('claude', claudeSearchDirs(homedir()))
+  }
+  const alertsSeen = new Set<string>()
+  const claudeCode = new ClaudeCode({
+    config: () => config.claude,
+    findBinary: findClaude,
+    // Runs from the island ask on the island even without the global hook.
+    hookCommand: () =>
+      isHookInstalled() ? undefined : `${nodeRunner()} ${JSON.stringify(join(hookDir(), 'claude-island-hook.cjs'))}`,
+    approvalsInstalled: isHookInstalled,
+    usageBridgeInstalled: isUsageBridgeInstalled,
+    socketPath: SOCK,
+    dataDir: app.getPath('userData'),
+    onChange: (s) => {
+      claudeUi?.push()
+      const run = s.run
+      if (run && (run.phase === 'starting' || run.phase === 'thinking' || run.phase === 'tool' || run.phase === 'writing')) {
+        if (transient.has('claude-done')) transient.dismiss('claude-done')
+        store.upsert({ kind: 'claude', id: 'claude-run', priority: 2, run })
+      }
+    },
+    onUsage: (u) => {
+      for (const a of usageAlerts(u, alertsSeen, Date.now())) {
+        alertsSeen.add(a.key)
+        const w = u[a.window]
+        const when = w?.resetsAt ? new Date(w.resetsAt).toLocaleString([], { weekday: a.window === 'sevenDay' ? 'short' : undefined, hour: 'numeric', minute: '2-digit' }) : ''
+        showNotificationLater({
+          app: 'Claude',
+          summary: `${a.window === 'fiveHour' ? 'Session' : 'Weekly'} limit ${Math.round(a.pct)}% used`,
+          body: when ? `Resets ${when}.` : '',
+          urgency: a.threshold >= 95 ? 'critical' : 'normal',
+        })
+      }
+    },
+    onFinished: (run: ClaudeRun) => {
+      store.remove('claude-run')
+      // A card with the answer, which closes by itself (hover keeps it).
+      if (run.phase !== 'stopped') {
+        transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
+      }
+    },
+  })
+  let showNotificationLater: (n: NotificationData) => void = () => {}
   await claude.start().catch((e) => console.error('claude server:', e.message ?? e))
 
   // ---- media ----
@@ -190,6 +278,7 @@ async function main() {
     const priority = n.urgency === 'critical' ? 6 : 5
     transient.show({ kind: 'notification', id, priority, notification: n }, displayMs(n))
   }
+  showNotificationLater = (n) => showNotification(n)
   const notifications = new NotificationMonitor()
   notifications.onNotify((n, invoke) => {
     if (config.notifications) showNotification(n, invoke)
@@ -249,6 +338,23 @@ async function main() {
     onFrosted: () => backdrop.refresh(),
     frostedAvailable: !WAYLAND,
     notesFolder: notes.folder,
+    claude: () => ({
+      binary: findClaude(),
+      binaryOverride: config.claude.binary,
+      cwd: claudeCode.cwd(),
+      permissionMode: config.claude.permissionMode,
+      voiceShortcut: config.claude.voiceShortcut,
+      voiceShortcutActive: claudeUi?.voiceShortcut ?? null,
+      sttModel: config.claude.sttModel,
+      sttModels: (['tiny', 'base'] as const).map((value) => ({ value, label: MODELS[value].label })),
+      usageBridge: isUsageBridgeInstalled(),
+    }),
+    onClaude: () => {
+      claudeUi?.applyVoiceShortcut()
+      claudeUi?.push()
+    },
+    pickClaudeFolder: (parent) => claudeUi!.pickFolder(parent),
+    setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onAppearance: () => {
       pushAppearance()
       updateHitArea()
@@ -256,6 +362,24 @@ async function main() {
     },
   })
   settings.wire()
+
+  claudeUi = new ClaudeController({
+    win,
+    config,
+    claude: claudeCode,
+    speech,
+    saveConfig: () => saveConfig(config),
+    setUsageBridge: setUsageBridgeInstalled,
+    setApprovals: async (on) => {
+      await setHookInstalled(on)
+      tray?.refresh()
+    },
+    onSettingsChanged: () => settings?.changed(),
+  })
+  claudeUi.wire()
+  claudeUi.applyVoiceShortcut()
+  claudeStateReady(claudeUi)
+  claudeUi.push()
 
   inbox = wireInbox(win, {
     whatsapp,
@@ -388,6 +512,7 @@ async function main() {
   const pushAppearance = () =>
     send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
   win.webContents.on('did-finish-load', () => {
+    claudeUi?.push()
     pushState()
     pushDock()
     pushAppearance()
@@ -432,6 +557,7 @@ async function main() {
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
+    claudeCode.dispose()
     tray?.destroy()
     invoker.stop()
     await Promise.allSettled([

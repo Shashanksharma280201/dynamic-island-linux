@@ -1,0 +1,7 @@
+{
+  "name": "onnxruntime-node",
+  "version": "0.0.0-island-stub",
+  "description": "Empty stand-in: the island runs Whisper with onnxruntime-web in its renderer and never loads the Node build (which downloads ~300 MB at install).",
+  "main": "index.js",
+  "license": "MIT"
+}
