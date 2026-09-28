@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
+import { SettingsProblem } from './Problem'
 
 function Toggle({
   on,
@@ -200,11 +201,26 @@ function WhatsAppStatus({ s }: { s: WaState }) {
 
 export function Settings() {
   const [s, setS] = useState<SettingsState | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const general = useAction()
 
   useEffect(() => {
-    window.settings.get().then(setS)
-    return window.settings.onChange(setS)
+    if (!window.settings) return setLoadError('The settings bridge is missing.')
+    // Retry briefly: the island may still be starting its services.
+    let live = true
+    const load = (n: number) =>
+      window.settings
+        .get()
+        .then((v) => live && setS(v))
+        .catch((e) =>
+          n > 0 ? setTimeout(() => live && load(n - 1), 700) : live && setLoadError(String(e?.message ?? e)),
+        )
+    load(10)
+    const off = window.settings.onChange(setS)
+    return () => {
+      live = false
+      off()
+    }
   }, [])
 
   useEffect(() => {
@@ -212,6 +228,7 @@ export function Settings() {
     if (id && s) document.getElementById(id)?.scrollIntoView()
   }, [s !== null])
 
+  if (loadError) return <SettingsProblem detail={loadError} />
   if (!s) return <main>Loading…</main>
 
   return (
@@ -286,7 +303,7 @@ export function Settings() {
         {general.error && <p className="error">{general.error}</p>}
       </section>
 
-      <ClaudeSection s={s} hookInstalled={s.hookInstalled} />
+      {s.claude && <ClaudeSection s={s} hookInstalled={s.hookInstalled} />}
 
       <section id="notes">
         <h2>Notes</h2>

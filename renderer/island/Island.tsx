@@ -50,6 +50,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Claude Code + voice live here so switching tabs never cuts you off.
   const [claude, setClaude] = useState<ClaudeView | null>(null)
   useEffect(() => {
+    if (!window.island.claude) return // an older island process is running
     let live = true
     // Retry: the main process may still be starting its services.
     const load = (n: number) =>
@@ -74,7 +75,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
   useEffect(
     () =>
-      window.island.claude.onVoice(() => {
+      window.island.claude?.onVoice(() => {
         setTabState('claude')
         rememberTab('claude')
         setPanel((open) => {
