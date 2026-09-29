@@ -196,6 +196,18 @@ accounts; each card then shows which account it's for.
 Tick **Start at login** in the tray menu. This writes
 `~/.config/autostart/dynamic-island-linux.desktop`; untick it to remove.
 
+### Updating it
+
+```bash
+git pull
+npm install   # only needed when dependencies changed
+npm start
+```
+
+`npm start` rebuilds the island and replaces the one that's already running
+(for example the one started at login), so there's no need to log out or
+restart. For an installed package, run `dynamic-island-linux --replace`.
+
 ### Stopping it
 
 - Click **Quit** in the tray menu, or

@@ -711,14 +711,15 @@ function runDemo(
 
 // ---- lifecycle ----
 const wantsQuit = process.argv.includes('--quit')
-if (!app.requestSingleInstanceLock()) {
-  // Another island is running; it handles `--quit` via second-instance.
-  app.exit(0)
-} else if (wantsQuit) {
-  app.exit(0) // nothing running to quit
-} else {
+// `--replace` (what `npm start` passes): close the running island and take
+// its place, so a rebuilt island shows up without logging out.
+const wantsReplace = process.argv.includes('--replace') && !wantsQuit
+
+function run(): void {
   app.on('second-instance', (_e, argv) => {
-    if (argv.includes('--quit')) app.quit()
+    // Ignore the `--quit` we sent to the island we replaced (it may arrive late).
+    if (argv.includes(`--replaced-by=${process.pid}`)) return
+    if (argv.includes('--quit') || argv.includes('--replace')) app.quit()
   })
   app.whenReady().then(main)
   app.on('window-all-closed', () => {
@@ -734,4 +735,31 @@ if (!app.requestSingleInstanceLock()) {
     })
   })
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => app.quit())
+}
+
+if (app.requestSingleInstanceLock()) {
+  if (wantsQuit) app.exit(0) // nothing running to quit
+  else run()
+} else if (wantsReplace) {
+  // The running island got our `--replace` and is closing. Islands from
+  // before `--replace` existed only know `--quit`, so send that too.
+  const passOn = process.argv.filter((a) => a === '--no-sandbox')
+  spawn(process.execPath, [...(app.isPackaged ? [] : [app.getAppPath()]), ...passOn, '--quit', `--replaced-by=${process.pid}`], {
+    detached: true,
+    stdio: 'ignore',
+  }).unref()
+  // Then wait for its lock.
+  const until = Date.now() + 15000
+  const retry = setInterval(() => {
+    if (app.requestSingleInstanceLock()) {
+      clearInterval(retry)
+      run()
+    } else if (Date.now() > until) {
+      console.error('[island] the running island did not close; try `--quit` first')
+      app.exit(1)
+    }
+  }, 300)
+} else {
+  // Another island is running; it handles `--quit` via second-instance.
+  app.exit(0)
 }

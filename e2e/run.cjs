@@ -281,13 +281,22 @@ function hook(input, env = {}) {
     check('drag test error', false, e.message)
   }
 
-  // 11. single instance: `--quit` from a second launch closes the first
-  const exited = new Promise((r) => app.process().on('exit', () => r(true)))
-  spawn(ELECTRON, [ROOT, '--no-sandbox', '--quit'], { cwd: ROOT, stdio: 'ignore', env: { ...process.env, DI_USER_DATA: USER_DATA } })
-  const quit = await Promise.race([exited, sleep(8000).then(() => false)])
+  // 11. single instance: `--replace` (npm start) takes over from the running
+  // island, then `--quit` from another launch closes it.
+  const env = { ...process.env, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK }
+  const replaced = new Promise((r) => app.process().on('exit', () => r(true)))
+  const next = spawn(ELECTRON, [ROOT, '--no-sandbox', '--replace'], { cwd: ROOT, stdio: 'ignore', env })
+  const nextExit = new Promise((r) => next.on('exit', () => r(true)))
+  check('a new launch with --replace closes the running island', await Promise.race([replaced, sleep(10000).then(() => false)]))
+  let tookOver = false
+  for (let end = Date.now() + 15000; !tookOver && Date.now() < end; await sleep(200)) tookOver = fs.existsSync(SOCK)
+  await sleep(1500)
+  check('and takes its place', tookOver && next.exitCode === null)
+  spawn(ELECTRON, [ROOT, '--no-sandbox', '--quit'], { cwd: ROOT, stdio: 'ignore', env })
+  const quit = await Promise.race([nextExit, sleep(8000).then(() => false)])
   check('second instance with --quit stops the island', quit)
   check('socket removed on quit', quit && !fs.existsSync(SOCK))
-  if (!quit) await app.close()
+  if (!quit) next.kill()
   player.kill()
   const errs = logs.join('').split('\n').filter((l) => /error|Uncaught/i.test(l))
   console.log('app log errors:', errs.length ? errs.slice(0, 10).join('\n') : 'none')
