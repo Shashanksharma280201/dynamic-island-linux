@@ -233,9 +233,11 @@ export function Island({ activities }: { activities: Activity[] }) {
             layout
             // Content grows out of / sinks back into the docked edge.
             style={{ transformOrigin: side === 'left' ? 'left center' : 'right center' }}
-            initial={{ opacity: 0, scale: 0.85, x: side === 'left' ? -10 : 10, filter: 'blur(4px)' }}
-            animate={{ opacity: 1, scale: 1, x: 0, filter: 'blur(0px)' }}
-            exit={{ opacity: 0, scale: 0.85, x: side === 'left' ? -10 : 10, filter: 'blur(4px)' }}
+            // Opacity and transform only: a blur filter repaints the whole
+            // panel every frame and stutters on big content like Chats.
+            initial={{ opacity: 0, scale: 0.92, x: side === 'left' ? -8 : 8 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            exit={{ opacity: 0, scale: 0.92, x: side === 'left' ? -8 : 8 }}
             transition={contentFade}
           >
             {showPanel ? (

@@ -10,12 +10,17 @@ export function errorText(e: any): string {
  * Load data from the main process, reload when `reloadOn` fires, and expose
  * loading / error state. Keeps showing the previous data while reloading.
  */
+/** Last loaded value per cache key: reopening a view shows it straight away. */
+const loadCache = new Map<string, unknown>()
+
 export function useLoad<T>(
   load: () => Promise<T>,
   deps: unknown[],
   reloadOn?: (reload: () => void) => () => void,
+  /** Start from the last value loaded under this key (then refresh it). */
+  cacheKey?: string,
 ) {
-  const [data, setData] = useState<T | null>(null)
+  const [data, setData] = useState<T | null>(() => (cacheKey ? ((loadCache.get(cacheKey) as T) ?? null) : null))
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [nonce, setNonce] = useState(0)
@@ -26,6 +31,7 @@ export function useLoad<T>(
     load()
       .then((d) => {
         if (!live) return
+        if (cacheKey) loadCache.set(cacheKey, d)
         setData(d)
         setError(null)
       })

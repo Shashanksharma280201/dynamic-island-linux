@@ -219,6 +219,7 @@ function speechWav(text, file) {
     xt(10, 10)
     await page.evaluate(() => window.island.claude.ask('something slow in the background'))
     check('a running command shows an orb on the capsule', await page.waitForSelector('.claude-capsule .orb', { timeout: 5000 }).then(() => true, () => false))
+    await sleep(600) // let the previous card finish leaving
     await shot('06-capsule-orb')
     check(
       'the answer pops up as a card when done',

@@ -78,6 +78,7 @@ export function ChatsView({ sources, onTyping }: { sources: InboxSources; onTypi
     () => (ready ? window.island.inbox.chats() : Promise.resolve([])),
     [ready, open === null],
     onWhatsApp,
+    ready ? 'chats' : undefined,
   )
   const now = useNow()
   const shown = useMemo(() => {

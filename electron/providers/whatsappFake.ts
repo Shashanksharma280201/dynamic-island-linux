@@ -129,6 +129,9 @@ export class FakeWhatsAppEngine implements WhatsAppEngine {
   }
 
   async listChats(limit: number): Promise<ChatSummary[]> {
+    // Real WhatsApp Web takes a moment to list chats: tests can mimic that.
+    const slow = Number(process.env.DI_FAKE_WA_LIST_MS) || 0
+    if (slow) await new Promise((r) => setTimeout(r, slow))
     return this.chats.slice(0, limit).map((c) => {
       const last = c.messages[c.messages.length - 1]
       return {

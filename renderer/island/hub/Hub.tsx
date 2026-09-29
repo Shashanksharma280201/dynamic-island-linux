@@ -54,6 +54,7 @@ export function Hub({
       window.island.inbox.onChanged((w) => {
         if (w === 'sources') reload()
       }),
+    'sources',
   )
   return (
     <div className={`card panel hub ${tab}`} onClick={(e) => e.stopPropagation()}>

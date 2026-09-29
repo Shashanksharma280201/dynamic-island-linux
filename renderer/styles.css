@@ -654,16 +654,16 @@ button {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 10px 7px;
+  gap: 12px;
+  padding: 12px 8px;
   cursor: grab;
 }
 .capsule.idle {
-  padding: 16px 6px;
+  padding: 20px 8px;
 }
 .capsule .grip {
-  width: 4px;
-  height: 30px;
+  width: 5px;
+  height: 40px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.28);
 }
@@ -671,9 +671,9 @@ button {
   cursor: grabbing;
 }
 .compact-art {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
   object-fit: cover;
 }
 .compact-art.placeholder {
@@ -1345,7 +1345,7 @@ button {
   flex-shrink: 0;
 }
 .claude-capsule {
-  padding: 12px 6px;
+  padding: 12px 8px;
 }
 .card.claude-card {
   width: 360px;
@@ -1682,6 +1682,27 @@ button {
 /* ---------------------------------------------------------------------------
    Music: Spotify, in Spotify's style
    --------------------------------------------------------------------------- */
+/* Chats and Mail keep one height: the panel doesn't jump while they load. */
+.card.panel.hub.chats,
+.card.panel.hub.mail {
+  height: clamp(380px, calc(100vh - 200px), 560px);
+}
+.hub.chats > .view,
+.hub.chats > .empty,
+.hub.mail > .view,
+.hub.mail > .empty,
+.hub.chats .view > .list,
+.hub.chats .view > .thread,
+.hub.mail > .list,
+.hub.mail .view > .reader {
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+.hub.chats > .empty,
+.hub.mail > .empty {
+  justify-content: center;
+}
 .card.panel.hub.music {
   padding: 0;
   overflow: hidden;

@@ -10,7 +10,7 @@ export function CompactMedia({ media }: { media: MediaState }) {
       ) : (
         <div className="compact-art placeholder" />
       )}
-      <Waveform playing={media.playing} />
+      <Waveform playing={media.playing} size={22} />
     </div>
   )
 }

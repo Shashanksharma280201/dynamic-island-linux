@@ -92,6 +92,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       DI_USER_DATA: USER_DATA,
       DI_WHATSAPP_ENGINE: 'fake',
       DI_FAKE_WA_READY_MS: '1500',
+      DI_FAKE_WA_LIST_MS: '400', // listing chats takes a moment, like the real thing
       DI_DEMO_LOG: WA_LOG,
       DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
     },
@@ -188,8 +189,22 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       'the section icons sit in a rail beside the panel',
       (await page.$$('.rail-btn[aria-label]')).length === 7 && !(await page.$('.tabs')),
     )
+    // Record the Chats panel's height every frame while it opens and loads.
+    await page.evaluate(() => {
+      const hs = (window.__chatHeights = [])
+      const end = performance.now() + 1500
+      const tick = () => {
+        const hub = document.querySelector('.card.panel.hub.chats')
+        if (hub) hs.push(hub.offsetHeight)
+        if (performance.now() < end) requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    })
     await page.click('.rail-btn[aria-label="Chats"]')
     await page.waitForSelector('.chat-row', { timeout: 5000 })
+    await sleep(1600)
+    const chatHeights = [...new Set(await page.evaluate(() => window.__chatHeights))]
+    check('Chats opens at its full size instead of growing as it loads', chatHeights.length === 1, chatHeights.join(', '))
     const chatNames = await page.$$eval('.chat-row .title', (e) => e.map((x) => x.textContent))
     check('Chats tab lists WhatsApp chats', chatNames.includes('Alice') && chatNames.includes('Weekend Trip'), chatNames.join(', '))
     const badgeOf = (label) => page.$eval(`.rail-btn[aria-label="${label}"]`, (b) => Number(b.querySelector('.rail-badge')?.textContent || 0))

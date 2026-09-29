@@ -30,7 +30,7 @@ export function runStatus(r: ClaudeRun): string {
 export function CompactClaude({ run }: { run: ClaudeRun }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
-      <Orb mood={orbFor(run.phase, run.tool?.name)} size={20} label={runStatus(run)} />
+      <Orb mood={orbFor(run.phase, run.tool?.name)} size={32} label={runStatus(run)} />
     </div>
   )
 }

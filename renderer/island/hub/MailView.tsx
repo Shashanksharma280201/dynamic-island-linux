@@ -70,6 +70,7 @@ export function MailView({ sources, onTyping }: { sources: InboxSources; onTypin
     () => (has ? window.island.inbox.mailList(account) : Promise.resolve([])),
     [has, account, open === null],
     onMail,
+    has ? `mail:${account ?? 'all'}` : undefined,
   )
   const now = useNow()
 
