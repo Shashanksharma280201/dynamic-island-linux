@@ -200,13 +200,16 @@ Tick **Start at login** in the tray menu. This writes
 
 ```bash
 git pull
-npm install   # only needed when dependencies changed
-npm start
+npm install       # only needed when dependencies changed
+npm run restart
 ```
 
-`npm start` rebuilds the island and replaces the one that's already running
-(for example the one started at login), so there's no need to log out or
-restart. For an installed package, run `dynamic-island-linux --replace`.
+`npm run restart` rebuilds the island and replaces the one that's already
+running (for example the one started at login), so there's no need to log out
+or restart the computer. It runs in the background: you can close the
+terminal. `npm start` does the same but stays attached to the terminal, which
+is handy for seeing its logs. For an installed package, run
+`dynamic-island-linux --replace`.
 
 ### Stopping it
 
