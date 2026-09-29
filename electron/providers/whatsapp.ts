@@ -15,7 +15,7 @@ export type WaIncoming = {
 }
 
 export type { WaState } from '@shared/types'
-import type { WaState, ChatSummary, ChatMessage } from '@shared/types'
+import type { WaState, ChatSummary, ChatMessage, ChatMedia, ChatMediaKind } from '@shared/types'
 import {
   readChatsFromStore,
   readMessagesFromStore,
@@ -36,12 +36,17 @@ export interface WhatsAppEngine {
   start(ev: EngineEvents): Promise<void>
   listChats(limit: number): Promise<ChatSummary[]>
   getMessages(chatId: string, limit: number): Promise<ChatMessage[]>
+  /** Download a message's photo / video / file. */
+  getMedia(chatId: string, msgId: string): Promise<WaMediaFile>
   send(chatId: string, text: string): Promise<void>
   markRead(chatId: string): Promise<void>
   pairingCode(phone: string): Promise<string>
   logout(): Promise<void>
   stop(): Promise<void>
 }
+
+/** A downloaded attachment: base64 data. */
+export type WaMediaFile = { mime: string; data: string; name?: string }
 
 const MEDIA_LABEL: Record<string, string> = {
   image: '📷 Photo',
@@ -55,12 +60,76 @@ const MEDIA_LABEL: Record<string, string> = {
   multi_vcard: '👤 Contacts',
 }
 
+/**
+ * True for a long run of base64: WhatsApp Web keeps a media message's preview
+ * image in its `body`, which must never be shown as text. Pure.
+ */
+export function looksLikeBase64(s: string): boolean {
+  return s.length >= 64 && !/\s/.test(s) && /^[A-Za-z0-9+/]+={0,2}$/.test(s)
+}
+
 /** Text shown for a WhatsApp message of a given type. Pure. */
 export function messageText(type: string, body: string | undefined): string {
   const label = MEDIA_LABEL[type]
-  const b = (body ?? '').trim()
+  let b = (body ?? '').trim()
+  if (label && looksLikeBase64(b)) b = ''
   if (!label) return b
   return b && type !== 'sticker' && type !== 'location' ? `${label}: ${b}` : label
+}
+
+const MEDIA_KIND: Record<string, ChatMediaKind> = {
+  image: 'image',
+  video: 'video',
+  gif: 'video',
+  audio: 'audio',
+  ptt: 'voice',
+  document: 'document',
+  sticker: 'sticker',
+}
+
+/** The kind of attachment a WhatsApp message type carries, if any. Pure. */
+export function mediaKind(type: string): ChatMediaKind | undefined {
+  return MEDIA_KIND[type]
+}
+
+/** data: URL for a preview WhatsApp stores as base64 (JPEG, PNG or WebP). Pure. */
+export function thumbUrl(b64: string | undefined): string | undefined {
+  if (!b64 || !looksLikeBase64(b64) || b64.length > 400_000) return undefined
+  const mime = b64.startsWith('iVBOR') ? 'image/png' : b64.startsWith('UklGR') ? 'image/webp' : 'image/jpeg'
+  return `data:${mime};base64,${b64}`
+}
+
+/** Attachment details from a raw message. Pure. */
+export function mediaOf(m: {
+  type: string
+  thumb?: string
+  mime?: string
+  name?: string
+  size?: number
+  duration?: number
+  width?: number
+  height?: number
+}): ChatMedia | undefined {
+  const kind = mediaKind(m.type)
+  if (!kind) return undefined
+  const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : undefined)
+  return {
+    kind,
+    thumb: thumbUrl(m.thumb),
+    mime: m.mime || undefined,
+    name: m.name || undefined,
+    size: num(m.size),
+    duration: num(m.duration),
+    width: num(m.width),
+    height: num(m.height),
+  }
+}
+
+/** A message's caption: the text only, never the preview image in `body`. Pure. */
+function captionOf(type: string, body: string): string {
+  if (!mediaKind(type)) return messageText(type, body)
+  const b = body.trim()
+  return looksLikeBase64(b) ? '' : b
 }
 
 /** Messages the island ignores (status updates, own messages, system events). Pure. */
@@ -108,8 +177,9 @@ export function messagesFromRaw(raw: RawMsg[], isGroup: boolean): ChatMessage[] 
       id: m.id,
       fromMe: m.fromMe,
       author: isGroup && !m.fromMe ? m.author : undefined,
-      text: messageText(m.type, m.body),
+      text: captionOf(m.type, m.caption ?? m.body),
       time: m.t * 1000,
+      media: mediaOf(m),
     }))
 }
 
@@ -226,8 +296,18 @@ export class WwebjsEngine implements WhatsAppEngine {
           id: m.id?._serialized ?? String(m.timestamp),
           fromMe: !!m.fromMe,
           author: chat.isGroup && !m.fromMe ? m._data?.notifyName || phoneOf(m.author) : undefined,
-          text: messageText(m.type, m.body),
+          text: captionOf(m.type, m.body ?? ''),
           time: (m.timestamp ?? 0) * 1000,
+          media: mediaOf({
+            type: m.type,
+            thumb: m._data?.body,
+            mime: m._data?.mimetype,
+            name: m._data?.filename,
+            size: m._data?.size,
+            duration: Number(m.duration) || m._data?.duration,
+            width: m._data?.width,
+            height: m._data?.height,
+          }),
         }))
     }
     await this.markRead(chatId).catch(() => {})
@@ -257,6 +337,15 @@ export class WwebjsEngine implements WhatsAppEngine {
       text: messageText(msg.type, msg.body),
       time: (msg.timestamp ?? Date.now() / 1000) * 1000,
     }
+  }
+
+  async getMedia(_chatId: string, msgId: string): Promise<WaMediaFile> {
+    // whatsapp-web.js's own download (decrypts in the page). It only needs the
+    // message id, so skip getMessageById()'s fragile full-model conversion.
+    const { Message } = require('whatsapp-web.js')
+    const media = await Message.prototype.downloadMedia.call({ hasMedia: true, id: { _serialized: msgId }, client: this.client })
+    if (!media?.data) throw new Error('This media is no longer available on your phone')
+    return { mime: media.mimetype || 'application/octet-stream', data: media.data, name: media.filename || undefined }
   }
 
   async send(chatId: string, text: string): Promise<void> {
@@ -357,6 +446,28 @@ export class WhatsAppService {
 
   async markRead(chatId: string): Promise<void> {
     return this.need().markRead(chatId)
+  }
+
+  private media = new Map<string, WaMediaFile>()
+  private mediaBytes = 0
+
+  /** Download an attachment (the last ~60 MB are kept in memory). */
+  async getMedia(chatId: string, msgId: string): Promise<WaMediaFile> {
+    const hit = this.media.get(msgId)
+    if (hit) {
+      this.media.delete(msgId) // most recently used last
+      this.media.set(msgId, hit)
+      return hit
+    }
+    const f = await this.need().getMedia(chatId, msgId)
+    this.media.set(msgId, f)
+    this.mediaBytes += f.data.length
+    for (const [k, v] of this.media) {
+      if (this.mediaBytes <= 60_000_000 || this.media.size <= 1) break
+      this.media.delete(k)
+      this.mediaBytes -= v.data.length
+    }
+    return f
   }
 
   async pairingCode(phone: string): Promise<string> {

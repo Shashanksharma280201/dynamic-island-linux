@@ -4,6 +4,8 @@ export const INBOX = {
   CHATS: 'inbox:chats',
   CHAT: 'inbox:chat',
   CHAT_SEND: 'inbox:chat-send',
+  CHAT_MEDIA: 'inbox:chat-media', // invoke(chatId, msgId) -> ChatMediaFile
+  CHAT_MEDIA_OPEN: 'inbox:chat-media-open', // invoke(chatId, msgId): save to Downloads and open
   MAIL_LIST: 'inbox:mail-list',
   MAIL_GET: 'inbox:mail-get',
   MAIL_REPLY: 'inbox:mail-reply',

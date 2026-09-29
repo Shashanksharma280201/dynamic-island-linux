@@ -16,6 +16,7 @@ import type {
   InboxUnread,
   ChatSummary,
   ChatMessage,
+  ChatMediaFile,
   MailSummary,
   MailMessageView,
   NoteSummary,
@@ -100,6 +101,9 @@ const api = {
     sources: (): Promise<InboxSources> => ipcRenderer.invoke(INBOX.SOURCES),
     chats: (): Promise<ChatSummary[]> => ipcRenderer.invoke(INBOX.CHATS),
     chat: (id: string): Promise<ChatMessage[]> => ipcRenderer.invoke(INBOX.CHAT, id),
+    chatMedia: (chatId: string, msgId: string): Promise<ChatMediaFile> => ipcRenderer.invoke(INBOX.CHAT_MEDIA, chatId, msgId),
+    /** Save to Downloads and open it; resolves to the saved file. */
+    openChatMedia: (chatId: string, msgId: string): Promise<string> => ipcRenderer.invoke(INBOX.CHAT_MEDIA_OPEN, chatId, msgId),
     sendChat: (id: string, text: string): Promise<void> => ipcRenderer.invoke(INBOX.CHAT_SEND, id, text),
     mailList: (accountId?: string): Promise<MailSummary[]> => ipcRenderer.invoke(INBOX.MAIL_LIST, accountId),
     mailGet: (accountId: string, uid: number): Promise<MailMessageView> =>

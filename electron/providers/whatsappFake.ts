@@ -1,6 +1,77 @@
 import { appendFileSync } from 'node:fs'
-import type { EngineEvents, WhatsAppEngine } from './whatsapp'
+import { deflateSync } from 'node:zlib'
+import type { EngineEvents, WhatsAppEngine, WaMediaFile } from './whatsapp'
 import type { ChatSummary, ChatMessage } from '@shared/types'
+
+// ---- generated media: a sunset-ish PNG photo and a short WAV voice note ----
+function png(w: number, h: number, px: (x: number, y: number) => [number, number, number]): Buffer {
+  const crcT = Array.from({ length: 256 }, (_, n) => {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    return c >>> 0
+  })
+  const crc = (b: Buffer) => {
+    let c = 0xffffffff
+    for (const x of b) c = crcT[(c ^ x) & 0xff] ^ (c >>> 8)
+    return (c ^ 0xffffffff) >>> 0
+  }
+  const chunk = (type: string, data: Buffer) => {
+    const td = Buffer.concat([Buffer.from(type), data])
+    const out = Buffer.alloc(12 + data.length)
+    out.writeUInt32BE(data.length, 0)
+    td.copy(out, 4)
+    out.writeUInt32BE(crc(td), 8 + data.length)
+    return out
+  }
+  const raw = Buffer.alloc((w * 3 + 1) * h)
+  for (let y = 0; y < h; y++)
+    for (let x = 0; x < w; x++) {
+      const [r, g, b] = px(x, y)
+      const i = y * (w * 3 + 1) + 1 + x * 3
+      raw[i] = r
+      raw[i + 1] = g
+      raw[i + 2] = b
+    }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr[8] = 8
+  ihdr[9] = 2
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))])
+}
+const sunset = (w: number, h: number) =>
+  png(w, h, (x, y) => {
+    const t = y / h
+    const sun = Math.hypot(x - w * 0.62, y - h * 0.55) < h * 0.12
+    if (sun) return [255, 236, 170]
+    if (t > 0.62) return [40 + (x % 7), 60 + t * 40, 35] // field
+    return [250 - t * 60, 150 - t * 60, 90 + t * 60]
+  }).toString('base64')
+function wav(seconds: number): string {
+  const rate = 8000
+  const n = rate * seconds
+  const b = Buffer.alloc(44 + n * 2)
+  b.write('RIFF', 0)
+  b.writeUInt32LE(36 + n * 2, 4)
+  b.write('WAVEfmt ', 8)
+  b.writeUInt32LE(16, 16)
+  b.writeUInt16LE(1, 20)
+  b.writeUInt16LE(1, 22)
+  b.writeUInt32LE(rate, 24)
+  b.writeUInt32LE(rate * 2, 28)
+  b.writeUInt16LE(2, 32)
+  b.writeUInt16LE(16, 34)
+  b.write('data', 36)
+  b.writeUInt32LE(n * 2, 40)
+  for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin((i / rate) * 2 * Math.PI * 440) * 3000), 44 + i * 2)
+  return b.toString('base64')
+}
+/** Full-size attachments by message id (thumbnails are in the messages). */
+const FAKE_MEDIA: Record<string, WaMediaFile> = {
+  'media-photo': { mime: 'image/png', data: sunset(480, 360) },
+  'media-voice': { mime: 'audio/wav', data: wav(2) },
+  'media-doc': { mime: 'text/plain', data: Buffer.from('Day 1: drive up\nDay 2: hike\n').toString('base64'), name: 'Trip plan.txt' },
+}
 
 // 1x1 green PNG, stands in for the QR code.
 const FAKE_QR =
@@ -65,7 +136,7 @@ function seed(now: number): Chat[] {
       ['College Friends 2016–2020 Reunion Planning Committee', 'Neha: Poll: which weekend works for everyone?', true],
       ['Landlord', 'Rent receipt attached', false],
       ['Gym Buddies', 'Aman: 6am tomorrow?', true],
-      ['Ananya', 'Haha that’s hilarious 😂', false],
+      ['Ananya', 'Haha that’s hilarious 😂', false], // + a photo, voice note and file (below)
       ['Book Club', 'Next pick is “Project Hail Mary”', true],
       ['Dentist Clinic', 'Reminder: appointment on Monday 10:30', false],
       ['Vikram', 'You: See you there', false],
@@ -82,7 +153,20 @@ function seed(now: number): Chat[] {
                 ? m(true, `On my way (${k})`, (30 + i * 9) * 60 * min + (40 - k) * 7 * min)
                 : m(false, k === 39 ? String(text).replace(/^Aman: /, '') : `Set ${k}: ${'squats deadlifts bench '.repeat(1 + (k % 3))}`.trim(), (30 + i * 9) * 60 * min + (40 - k) * 7 * min, ['Aman', 'Neha', 'Kabir'][k % 3]),
             )
-          : [m(String(text).startsWith('You: '), String(text).replace(/^You: /, ''), (30 + i * 9) * 60 * min)],
+          : [
+              ...(name === 'Ananya'
+                ? [
+                    {
+                      ...m(false, 'The view from the cabin!', (31 + i * 9) * 60 * min),
+                      id: 'media-photo',
+                      media: { kind: 'image' as const, thumb: `data:image/png;base64,${sunset(48, 36)}`, mime: 'image/png', width: 480, height: 360 },
+                    },
+                    { ...m(false, '', (31 + i * 9) * 60 * min - min), id: 'media-voice', media: { kind: 'voice' as const, mime: 'audio/wav', duration: 2 } },
+                    { ...m(true, '', (31 + i * 9) * 60 * min - 2 * min), id: 'media-doc', media: { kind: 'document' as const, name: 'Trip plan.txt', mime: 'text/plain', size: 30 } },
+                  ]
+                : []),
+              m(String(text).startsWith('You: '), String(text).replace(/^You: /, ''), (30 + i * 9) * 60 * min),
+            ],
     })),
   ]
 }
@@ -150,6 +234,14 @@ export class FakeWhatsAppEngine implements WhatsAppEngine {
     const c = this.chat(chatId)
     c.unread = 0
     return c.messages.slice(-limit)
+  }
+
+  async getMedia(chatId: string, msgId: string): Promise<WaMediaFile> {
+    this.chat(chatId)
+    const f = FAKE_MEDIA[msgId]
+    if (!f) throw new Error('This media is no longer available on your phone')
+    this.log({ op: 'media', chatId, msgId })
+    return f
   }
 
   async send(chatId: string, text: string): Promise<void> {

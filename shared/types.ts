@@ -174,13 +174,36 @@ export type ChatSummary = {
   avatar?: string
 }
 
+export type ChatMediaKind = 'image' | 'video' | 'audio' | 'voice' | 'document' | 'sticker'
+
+/** A photo, video, voice note, file… attached to a chat message. */
+export type ChatMedia = {
+  kind: ChatMediaKind
+  /** Small preview (data: URL) WhatsApp keeps with the message. */
+  thumb?: string
+  mime?: string
+  /** File name (documents). */
+  name?: string
+  /** Bytes. */
+  size?: number
+  /** Seconds (video, audio, voice). */
+  duration?: number
+  width?: number
+  height?: number
+}
+
 export type ChatMessage = {
   id: string
   fromMe: boolean
   author?: string
+  /** The message, or a media message's caption (may be empty). */
   text: string
   time: number
+  media?: ChatMedia
 }
+
+/** A downloaded attachment. */
+export type ChatMediaFile = { mime: string; url: string; name?: string }
 
 export type NoteSummary = {
   id: string

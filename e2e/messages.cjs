@@ -93,6 +93,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       DI_WHATSAPP_ENGINE: 'fake',
       DI_FAKE_WA_READY_MS: '1500',
       DI_FAKE_WA_LIST_MS: '400', // listing chats takes a moment, like the real thing
+      DI_DOWNLOADS: path.join(TMP, 'downloads'), // saved attachments (and don't open them)
       DI_DEMO_LOG: WA_LOG,
       DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
     },
@@ -250,6 +251,31 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       return last.getBoundingClientRect().bottom <= t.getBoundingClientRect().bottom + 1
     })
     check('it opens at the newest message', lastVisible)
+    await page.click('.back')
+    await page.waitForSelector('.chat-row')
+
+    // ---- Media: photos, voice notes and files ----
+    await page.click('.chat-row:has-text("Ananya")')
+    await page.waitForSelector('.thread .wa-visual', { timeout: 5000 })
+    const thread = await page.textContent('.thread')
+    check('a photo shows as a picture with its caption, not as encoded text', !/[A-Za-z0-9+/]{60,}/.test(thread) && thread.includes('The view from the cabin!'))
+    check('the photo preview is shown right away', await page.$eval('.wa-visual img', (i) => i.complete && i.naturalWidth > 0))
+    await shot(page, '15-whatsapp-media')
+    await page.click('.wa-visual')
+    check(
+      'tapping it opens the full-size photo',
+      await page.waitForFunction(() => document.querySelector('.wa-viewer-body img')?.naturalWidth === 480, null, { timeout: 5000 }).then(() => true, () => false),
+    )
+    await shot(page, '16-whatsapp-photo')
+    await page.keyboard.press('Escape')
+    await page.waitForSelector('.wa-viewer', { state: 'detached', timeout: 3000 })
+    await page.click('.wa-voice-btn')
+    check('a voice note downloads and plays', await until(() => waLog().includes('"msgId":"media-voice"'), 5000) && (await page.waitForSelector('.wa-voice-btn[aria-label="Pause"]', { timeout: 5000 }).then(() => true, () => false)))
+    await page.click('.wa-voice-btn')
+    await page.click('.wa-doc')
+    const savedDoc = path.join(TMP, 'downloads', 'Trip plan.txt')
+    check('a document is saved to Downloads', await until(() => fs.existsSync(savedDoc), 5000) && fs.readFileSync(savedDoc, 'utf8').startsWith('Day 1'))
+    check('and says so', await page.waitForSelector('.wa-doc:has-text("Saved to Downloads")', { timeout: 3000 }).then(() => true, () => false))
     await page.click('.back')
     await page.waitForSelector('.chat-row')
     await page.click('.search input')

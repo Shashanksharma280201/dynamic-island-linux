@@ -247,3 +247,14 @@ export const RefreshIcon = () => (
     <path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" />
   </Svg>
 )
+export const DocIcon = ({ size = 22 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5M9 13h6M9 17h4" />
+  </Svg>
+)
+export const DownloadIcon = () => (
+  <Svg size={16}>
+    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+  </Svg>
+)

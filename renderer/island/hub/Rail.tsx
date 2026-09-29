@@ -3,15 +3,23 @@ import type { InboxUnread } from '@shared/types'
 import { currentWindow, type ClaudeUsage, type UsageWindow } from '@shared/claude'
 import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
-import { SlidersIcon, ChatIcon, MailIcon, NoteIcon, GearIcon, SparkIcon, SpotifyIcon } from '../icons'
+import {
+  ClaudeAppIcon,
+  ControlsAppIcon,
+  MailAppIcon,
+  NotesAppIcon,
+  SettingsAppIcon,
+  SpotifyAppIcon,
+  WhatsAppIcon,
+} from './AppIcons'
 
 const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
-  { id: 'controls', label: 'Controls', icon: <SlidersIcon /> },
-  { id: 'claude', label: 'Claude', icon: <SparkIcon /> },
-  { id: 'music', label: 'Music', icon: <SpotifyIcon /> },
-  { id: 'chats', label: 'Chats', icon: <ChatIcon /> },
-  { id: 'mail', label: 'Mail', icon: <MailIcon /> },
-  { id: 'notes', label: 'Notes', icon: <NoteIcon /> },
+  { id: 'controls', label: 'Controls', icon: <ControlsAppIcon /> },
+  { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
+  { id: 'music', label: 'Music', icon: <SpotifyAppIcon /> },
+  { id: 'chats', label: 'Chats', icon: <WhatsAppIcon /> },
+  { id: 'mail', label: 'Mail', icon: <MailAppIcon /> },
+  { id: 'notes', label: 'Notes', icon: <NotesAppIcon /> },
 ]
 
 /** Badge text: nothing for 0, "99+" past 99. Pure. */
@@ -122,7 +130,7 @@ export function Rail({ tab, onTab, usage }: { tab: HubTab; onTab: (t: HubTab) =>
       })}
       <span className="rail-sep" />
       <button className="rail-btn small" title="Settings" aria-label="Settings" onClick={() => window.island.openSettings()}>
-        <GearIcon />
+        <SettingsAppIcon />
       </button>
     </div>
   )

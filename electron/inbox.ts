@@ -1,5 +1,7 @@
-import { ipcMain, type BrowserWindow } from 'electron'
-import type { InboxSources, InboxUnread } from '@shared/types'
+import { app, ipcMain, shell, type BrowserWindow } from 'electron'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { extname, join } from 'node:path'
+import type { ChatMediaFile, InboxSources, InboxUnread } from '@shared/types'
 import type { MailManager } from './mailManager'
 import type { NotesStore } from './notes'
 import type { WhatsAppService } from './providers/whatsapp'
@@ -21,6 +23,37 @@ const text = (v: unknown): string => {
   const t = typeof v === 'string' ? v.trim() : ''
   if (!t || t.length > 4000) throw new Error('Enter a message')
   return t
+}
+
+const EXT: Record<string, string> = {
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'video/mp4': '.mp4',
+  'audio/ogg': '.ogg',
+  'audio/mpeg': '.mp3',
+  'audio/mp4': '.m4a',
+  'audio/wav': '.wav',
+  'application/pdf': '.pdf',
+  'text/plain': '.txt',
+}
+
+/** A safe file name for a downloaded attachment. Pure. */
+export function attachmentName(name: string | undefined, mime: string, when = new Date()): string {
+  const clean = (name ?? '').replace(/[/\\\0]/g, '_').replace(/^\.+/, '').trim().slice(0, 150)
+  if (clean) return clean
+  const stamp = when.toISOString().slice(0, 19).replace('T', ' ').replace(/:/g, '.')
+  return `WhatsApp ${stamp}${EXT[mime.split(';')[0]] ?? ''}`
+}
+
+/** `dir/name`, or `dir/name (2)` … if that exists. */
+function freePath(dir: string, name: string): string {
+  const ext = extname(name)
+  const base = name.slice(0, name.length - ext.length)
+  let p = join(dir, name)
+  for (let i = 2; existsSync(p); i++) p = join(dir, `${base} (${i})${ext}`)
+  return p
 }
 
 export function inboxSources(whatsapp: WhatsAppService, mail: MailManager): InboxSources {
@@ -64,6 +97,20 @@ export function wireInbox(
     const msgs = await whatsapp.getMessages(id, 40)
     changed('unread') // opening a chat marks it read
     return msgs
+  })
+  ipcMain.handle(INBOX.CHAT_MEDIA, async (_e, chatId, msgId): Promise<ChatMediaFile> => {
+    const f = await whatsapp.getMedia(str(chatId, 'chat'), str(msgId, 'message', 300))
+    return { mime: f.mime, url: `data:${f.mime};base64,${f.data}`, name: f.name }
+  })
+  // Save an attachment to Downloads and open it with the usual app.
+  ipcMain.handle(INBOX.CHAT_MEDIA_OPEN, async (_e, chatId, msgId): Promise<string> => {
+    const f = await whatsapp.getMedia(str(chatId, 'chat'), str(msgId, 'message', 300))
+    const dir = process.env.DI_DOWNLOADS || app.getPath('downloads')
+    mkdirSync(dir, { recursive: true })
+    const file = freePath(dir, attachmentName(f.name, f.mime))
+    writeFileSync(file, Buffer.from(f.data, 'base64'))
+    if (!process.env.DI_DOWNLOADS) void shell.openPath(file)
+    return file
   })
   ipcMain.handle(INBOX.CHAT_SEND, async (_e, chatId, body) => {
     const id = str(chatId, 'chat')

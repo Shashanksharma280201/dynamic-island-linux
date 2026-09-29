@@ -1308,6 +1308,230 @@ button {
 .conversation .bubble.mine .stamp {
   color: rgba(255, 255, 255, 0.72);
 }
+
+/* ---- WhatsApp media ---- */
+.view.conversation {
+  position: relative;
+}
+.conversation .bubble.has-media {
+  padding: 3px 3px 5px;
+  white-space: normal;
+}
+.conversation .bubble.has-media .author {
+  padding: 3px 8px 2px;
+}
+.conversation .bubble.has-media .bubble-text {
+  display: block;
+  padding: 5px 8px 0;
+  white-space: pre-wrap;
+}
+.conversation .bubble.has-media .stamp {
+  margin-right: 7px;
+}
+.conversation .bubble.sticker {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+.wa-visual {
+  position: relative;
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 15px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: zoom-in;
+}
+.wa-visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wa-visual.video {
+  cursor: pointer;
+}
+.wa-visual-empty {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+}
+.wa-play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(6px);
+}
+.wa-badge {
+  position: absolute;
+  left: 8px;
+  bottom: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.wa-sticker {
+  display: block;
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+}
+.wa-sticker.placeholder {
+  height: auto;
+  color: var(--label-2);
+  font-size: 12px;
+}
+.wa-voice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 210px;
+  padding: 5px 8px 0 5px;
+}
+.wa-voice-btn {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.16);
+  cursor: pointer;
+}
+.wa-voice-btn .spinner {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+.wa-voice-main {
+  flex: 1;
+  min-width: 0;
+}
+.wa-voice-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  overflow: hidden;
+}
+.wa-voice-track span {
+  display: block;
+  height: 100%;
+  background: currentColor;
+  transition: width 0.2s linear;
+}
+.wa-voice-time {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  opacity: 0.7;
+  font-variant-numeric: tabular-nums;
+}
+.wa-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 230px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wa-doc:hover {
+  background: rgba(0, 0, 0, 0.28);
+}
+.wa-doc-icon {
+  flex: none;
+  width: 34px;
+  height: 40px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.14);
+}
+.wa-doc-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wa-doc-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.wa-doc-sub {
+  font-size: 11.5px;
+  opacity: 0.7;
+}
+.wa-viewer {
+  position: absolute;
+  inset: -10px;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  border-radius: inherit;
+}
+.wa-viewer-bar {
+  display: flex;
+  align-items: center;
+  padding: 10px;
+}
+.wa-viewer-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  position: relative;
+}
+.wa-viewer-body img,
+.wa-viewer-body video {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: 10px;
+  object-fit: contain;
+}
+.wa-viewer-thumb {
+  filter: blur(8px);
+  opacity: 0.6;
+  width: 80%;
+}
+.wa-viewer-body .spinner {
+  position: absolute;
+}
+.wa-viewer-error {
+  color: #ffb4ab;
+  font-size: 13px;
+  text-align: center;
+  max-width: 260px;
+}
+.wa-viewer-caption {
+  padding: 10px 14px 14px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: #fff;
+}
 .day-sep {
   align-self: center;
   margin: 8px 0 4px;
@@ -1672,14 +1896,19 @@ button {
   stroke: var(--red);
   opacity: 1;
 }
-.rail-btn.on .ring-track {
-  stroke: rgba(255, 255, 255, 0.28);
+/* App icons: coloured tiles; the open section gets a lit backdrop. */
+.app-icon {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  transition: transform 0.15s ease;
 }
-.rail-btn.on .ring-fill.session.ok {
-  stroke: #fff;
+.rail-btn:hover .app-icon {
+  transform: scale(1.06);
 }
-.rail-btn.on .ring-fill.week.ok {
-  stroke: rgba(255, 255, 255, 0.75);
+.rail-btn.on,
+.rail-btn[aria-label='Music'].on {
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.22);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1710,19 +1939,6 @@ button {
   padding: 0;
   overflow: hidden;
   background: #121212;
-}
-.rail-btn[aria-label='Music'] {
-  color: #1ed760;
-  --sp-cutout: rgba(28, 28, 30, 1);
-}
-.rail-btn[aria-label='Music'].on {
-  background: #1ed760;
-  color: #000;
-  box-shadow: 0 4px 14px rgba(30, 215, 96, 0.4);
-  --sp-cutout: #1ed760;
-}
-.rail-btn[aria-label='Music'].on svg circle {
-  fill: #000;
 }
 .music {
   --sp-green: #1ed760;
@@ -2486,4 +2702,7 @@ button.sp-device {
 .card.media.spotify .transport .on,
 .card.media.spotify .transport .active {
   color: #1ed760;
+}
+.wa-viewer-bar .sp-icon-btn {
+  color: #fff;
 }

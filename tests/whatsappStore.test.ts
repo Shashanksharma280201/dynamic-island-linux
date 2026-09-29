@@ -59,6 +59,20 @@ const contacts = [
   { id: { _serialized: '111@lid' }, name: 'Priya Shah', pushname: 'Priya' },
   { id: { _serialized: '222@lid' }, pushname: 'Rahul' },
 ]
+// Media as WhatsApp Web keeps it: `body` is the preview (base64 JPEG).
+const JPEG = '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL'
+const pics = {
+  id: { _serialized: '3@c.us', server: 'c.us' },
+  formattedTitle: 'Ananya',
+  t: 20,
+  msgs: coll([
+    msg('p1', JPEG, 10, false, { type: 'image', directPath: '/v/x', mimetype: 'image/jpeg', width: 1600, height: 1200 }),
+    msg('p2', JPEG, 11, false, { type: 'image', directPath: '/v/y', caption: 'The view!', mimetype: 'image/jpeg' }),
+    msg('p3', '', 12, true, { type: 'ptt', directPath: '/v/z', mimetype: 'audio/ogg; codecs=opus', duration: '7' }),
+    msg('p4', '', 13, false, { type: 'document', directPath: '/v/w', filename: 'Trip.pdf', size: 52000, mimetype: 'application/pdf' }),
+    msg('p5', JPEG, 20, false, { type: 'image', directPath: '/v/v' }),
+  ]),
+}
 const channel = { id: { _serialized: '123@newsletter' }, formattedTitle: 'News', t: 999, msgs: coll([]) }
 const archived = { id: { _serialized: '2@c.us' }, formattedTitle: 'Old', archive: true, t: 50, msgs: coll([]) }
 
@@ -66,7 +80,7 @@ beforeEach(() => {
   ;(globalThis as any).window = {
     require: (name: string) => {
       if (name === 'WAWebCollections')
-        return { Chat: coll([group, broken, direct, channel, archived, lids]), Contact: coll(contacts) }
+        return { Chat: coll([group, broken, direct, channel, archived, lids, pics]), Contact: coll(contacts) }
       if (name === 'WAWebChatLoadMessages')
         return {
           loadEarlierMsgs: async ({ chat }: any) => {
@@ -84,9 +98,9 @@ afterEach(() => delete (globalThis as any).window)
 
 test('reads chats directly, newest first, skipping unreadable chats and channels', () => {
   const raw = readChatsFromStore(10)
-  expect(raw.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip', 'Old'])
+  expect(raw.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip', 'Old', 'Ananya'])
   const chats = chatsFromRaw(raw, 10)
-  expect(chats.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip']) // archived dropped
+  expect(chats.map((c) => c.name)).toEqual(['Alice', 'Weekend Trip', 'no trip', 'Ananya']) // archived dropped
   expect(chats[1]).toMatchObject({ isGroup: true, unread: 2, last: 'Sam: Leaving at 8', time: 200_000 })
   expect(chats[0]).toMatchObject({ last: 'hi', lastFromMe: true })
 })
@@ -109,4 +123,16 @@ test('group senders are shown by name, never as raw ids', async () => {
   expect(msgs.map((m) => m.author)).toEqual(['Priya Shah', 'Rahul', undefined, '+919876543210'])
   expect(phoneOf('919876543210@c.us')).toBe('+919876543210')
   expect(phoneOf('213784077011444@lid')).toBeUndefined()
+})
+
+test('media: captions only, never the preview data; thumbnails and file details kept', async () => {
+  const msgs = messagesFromRaw(await readMessagesFromStore('3@c.us', 10), false)
+  expect(msgs.map((m) => m.text)).toEqual(['', 'The view!', '', '', ''])
+  expect(msgs[0].media).toMatchObject({ kind: 'image', thumb: `data:image/jpeg;base64,${JPEG}`, width: 1600, height: 1200 })
+  expect(msgs[2].media).toMatchObject({ kind: 'voice', duration: 7 })
+  expect(msgs[3].media).toMatchObject({ kind: 'document', name: 'Trip.pdf', size: 52000, mime: 'application/pdf' })
+  expect(msgs.every((m) => !m.text.includes('/9j/'))).toBe(true)
+  // The chat list preview of a captionless photo is just "Photo".
+  const chat = chatsFromRaw(readChatsFromStore(10), 10).find((c) => c.id === '3@c.us')
+  expect(chat?.last).toBe('📷 Photo')
 })

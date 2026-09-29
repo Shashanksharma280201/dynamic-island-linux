@@ -109,3 +109,11 @@ export function agoText(ts: number, now: number): string {
   const d = Math.floor(s / 86400)
   return `${d} day${d === 1 ? '' : 's'} ago`
 }
+
+/** "340 KB", "2.4 MB". Pure. */
+export function fileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  const mb = bytes / (1024 * 1024)
+  return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`
+}

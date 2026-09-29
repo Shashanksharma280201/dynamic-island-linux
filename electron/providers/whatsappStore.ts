@@ -18,7 +18,23 @@ export type RawChat = {
   last?: { type: string; body: string; fromMe: boolean; author?: string }
 }
 
-export type RawMsg = { id: string; type: string; body: string; fromMe: boolean; t: number; author?: string }
+export type RawMsg = {
+  id: string
+  type: string
+  body: string
+  fromMe: boolean
+  t: number
+  author?: string
+  /** Media messages: the caption, and the preview WhatsApp keeps in `body`. */
+  caption?: string
+  thumb?: string
+  mime?: string
+  name?: string
+  size?: number
+  duration?: number
+  width?: number
+  height?: number
+}
 
 export function readChatsFromStore(limit: number): RawChat[] {
   const w = window as any
@@ -60,7 +76,15 @@ export function readChatsFromStore(limit: number): RawChat[] {
         last: m
           ? {
               type: String(m.type || 'chat'),
-              body: typeof m.body === 'string' ? m.body : typeof m.caption === 'string' ? m.caption : '',
+              // A media message's body is its preview image: use the caption.
+              body:
+                typeof m.caption === 'string' || m.directPath || m.mediaData
+                  ? typeof m.caption === 'string'
+                    ? m.caption
+                    : ''
+                  : typeof m.body === 'string'
+                    ? m.body
+                    : '',
               fromMe: !!m.id?.fromMe,
               author: senderName(m),
             }
@@ -111,13 +135,33 @@ export async function readMessagesFromStore(chatId: string, limit: number): Prom
   const out: RawMsg[] = []
   for (const m of msgs.slice(-limit)) {
     try {
+      const media = !!(m.directPath || m.mediaData)
+      const num = (v: any) => (typeof v === 'number' ? v : Number(v) || undefined)
       out.push({
         id: m.id?._serialized ?? String(m.t),
         type: String(m.type || 'chat'),
-        body: typeof m.body === 'string' ? m.body : typeof m.caption === 'string' ? m.caption : '',
+        body: !media && typeof m.body === 'string' ? m.body : '',
         fromMe: !!m.id?.fromMe,
         t: Number(m.t) || 0,
         author: senderName(m),
+        ...(media
+          ? {
+              caption: typeof m.caption === 'string' ? m.caption : '',
+              // The preview WhatsApp shows before downloading (base64 JPEG).
+              thumb:
+                typeof m.body === 'string' && m.body.length < 400000
+                  ? m.body
+                  : typeof m.mediaData?.preview === 'string'
+                    ? m.mediaData.preview
+                    : undefined,
+              mime: typeof m.mimetype === 'string' ? m.mimetype : undefined,
+              name: typeof m.filename === 'string' ? m.filename : undefined,
+              size: num(m.size),
+              duration: num(m.duration),
+              width: num(m.width),
+              height: num(m.height),
+            }
+          : {}),
       })
     } catch {
       // unreadable message: skip it

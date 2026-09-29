@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import type { ChatSummary, InboxSources } from '@shared/types'
+import type { ChatMessage, ChatSummary, InboxSources } from '@shared/types'
+import { MediaViewer, MessageMedia } from './ChatMedia'
 import { relativeTime, clockTime, dayKey, dayLabel } from '@shared/format'
 import { nameColor } from '@shared/avatar'
 import { Avatar as ChatAvatar, BackButton, Empty, Spinner, useLoad, useNow } from './common'
@@ -16,6 +17,7 @@ function Conversation({ chat, onBack, onTyping }: { chat: ChatSummary; onBack: (
   const { data, error, loading, reload } = useLoad(() => window.island.inbox.chat(chat.id), [chat.id], onWhatsApp)
   const scroller = useRef<HTMLDivElement>(null)
   const now = useNow()
+  const [viewing, setViewing] = useState<ChatMessage | null>(null)
 
   // Stay pinned to the newest message, like Messages.
   useEffect(() => {
@@ -45,13 +47,16 @@ function Conversation({ chat, onBack, onTyping }: { chat: ChatSummary; onBack: (
           return (
             <Fragment key={m.id}>
               {newDay && m.time > 0 && <div className="day-sep">{dayLabel(m.time, now)}</div>}
-              <div className={`bubble${m.fromMe ? ' mine' : ''}${sameSender ? ' cont' : ''}`}>
+              <div
+                className={`bubble${m.fromMe ? ' mine' : ''}${sameSender ? ' cont' : ''}${m.media ? ` has-media ${m.media.kind}` : ''}`}
+              >
                 {m.author && !m.fromMe && !sameSender && (
                   <span className="author" style={{ color: nameColor(m.author) }}>
                     {m.author}
                   </span>
                 )}
-                <span className="bubble-text">{m.text || <i className="secondary">(no text)</i>}</span>
+                {m.media && <MessageMedia chatId={chat.id} m={m as ChatMessage & { media: NonNullable<ChatMessage['media']> }} onView={setViewing} />}
+                {(m.text || !m.media) && <span className="bubble-text">{m.text || <i className="secondary">(no text)</i>}</span>}
                 {m.time > 0 && <span className="stamp">{clockTime(m.time)}</span>}
               </div>
             </Fragment>
@@ -66,6 +71,7 @@ function Conversation({ chat, onBack, onTyping }: { chat: ChatSummary; onBack: (
           reload()
         }}
       />
+      {viewing && <MediaViewer chatId={chat.id} m={viewing} onClose={() => setViewing(null)} />}
     </div>
   )
 }

@@ -4,6 +4,9 @@ import {
   WhatsAppService,
   messageText,
   isRelevant,
+  looksLikeBase64,
+  thumbUrl,
+  mediaOf,
   type WhatsAppEngine,
   type EngineEvents,
 } from '../electron/providers/whatsapp'
@@ -13,6 +16,21 @@ test('messageText labels media', () => {
   expect(messageText('image', 'look')).toBe('📷 Photo: look')
   expect(messageText('ptt', '')).toBe('🎤 Voice message')
   expect(messageText('sticker', 'x')).toBe('Sticker')
+  // WhatsApp Web's preview image in `body` never shows as text.
+  expect(messageText('image', '/9j/' + 'A'.repeat(200))).toBe('📷 Photo')
+  expect(messageText('chat', 'a normal message with words')).toBe('a normal message with words')
+})
+
+test('media helpers', () => {
+  expect(looksLikeBase64('A'.repeat(80))).toBe(true)
+  expect(looksLikeBase64('short')).toBe(false)
+  expect(looksLikeBase64('word '.repeat(20))).toBe(false)
+  expect(thumbUrl('iVBOR' + 'A'.repeat(80))).toMatch(/^data:image\/png;base64,/)
+  expect(thumbUrl('/9j/' + 'A'.repeat(80))).toMatch(/^data:image\/jpeg;base64,/)
+  expect(thumbUrl('not an image')).toBeUndefined()
+  expect(mediaOf({ type: 'chat' })).toBeUndefined()
+  expect(mediaOf({ type: 'gif', duration: 3 })).toMatchObject({ kind: 'video', duration: 3 })
+  expect(mediaOf({ type: 'ptt', size: -1 })).toEqual({ kind: 'voice', thumb: undefined, mime: undefined, name: undefined, size: undefined, duration: undefined, width: undefined, height: undefined })
 })
 
 test('isRelevant filters own, status and system messages', () => {
@@ -38,6 +56,9 @@ class FakeEngine implements WhatsAppEngine {
   }
   async getMessages() {
     return [{ id: 'm1', fromMe: false, text: 'hi', time: 1 }]
+  }
+  async getMedia() {
+    return { mime: 'image/png', data: 'AAAA' }
   }
   async markRead() {}
   async pairingCode() {
