@@ -33,7 +33,6 @@
     "electron": "^33.0.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
-    "figma-squircle": "^1.1.0",
     "framer-motion": "^11.11.0",
     "hoodiecrow-imap": "^2.1.0",
     "playwright-core": "^1.56.1",
