@@ -17,18 +17,23 @@ export function SearchField({
   const kb = useKeyboard(onTyping)
   const input = useRef<HTMLInputElement>(null)
   return (
-    <div className="search" onClick={(e) => e.stopPropagation()}>
+    <div
+      className="search"
+      onClick={(e) => e.stopPropagation()}
+      // Anywhere in the box starts typing, not just on the text itself.
+      onPointerDown={(e) => {
+        kb.take()
+        if (e.target !== input.current) e.preventDefault()
+        // Focus again once the window has become focusable.
+        setTimeout(() => input.current?.focus(), 50)
+      }}
+    >
       <SearchIcon />
       <input
         ref={input}
         value={value}
         placeholder={placeholder}
         aria-label={placeholder}
-        onPointerDown={() => {
-          kb.take()
-          // Focus again once the window has become focusable.
-          setTimeout(() => input.current?.focus(), 50)
-        }}
         onFocus={kb.take}
         onBlur={kb.release}
         onChange={(e) => onChange(e.target.value)}

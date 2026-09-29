@@ -205,6 +205,16 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await sleep(1600)
     const chatHeights = [...new Set(await page.evaluate(() => window.__chatHeights))]
     check('Chats opens at its full size instead of growing as it loads', chatHeights.length === 1, chatHeights.join(', '))
+    const searchH = await page.$eval('.hub .search', (e) => e.getBoundingClientRect().height)
+    check('the chat search box is one line tall', searchH <= 40, `${searchH}px`)
+    await page.click('.hub .search', { position: { x: 6, y: 6 } })
+    check(
+      'clicking anywhere in the search box starts typing',
+      await until(() => page.evaluate(() => document.activeElement?.matches('.hub .search input')), 2000),
+    )
+    await page.keyboard.press('Escape')
+    const room = await page.evaluate(() => window.innerWidth - document.querySelector('.island-outer').offsetWidth - 10)
+    check('the window leaves room for the panel’s shadow (no hard edge)', room >= 100, `${room}px`)
     const chatNames = await page.$$eval('.chat-row .title', (e) => e.map((x) => x.textContent))
     check('Chats tab lists WhatsApp chats', chatNames.includes('Alice') && chatNames.includes('Weekend Trip'), chatNames.join(', '))
     const badgeOf = (label) => page.$eval(`.rail-btn[aria-label="${label}"]`, (b) => Number(b.querySelector('.rail-badge')?.textContent || 0))

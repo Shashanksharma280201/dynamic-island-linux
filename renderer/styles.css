@@ -1100,6 +1100,9 @@ button {
   color: var(--label-2);
   height: 32px;
 }
+.view > .search {
+  flex: none;
+}
 .search input {
   flex: 1;
   min-width: 0;

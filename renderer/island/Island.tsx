@@ -15,7 +15,6 @@ import { MessageCard } from './states/MessageCard'
 import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
 import { useVoice } from './voice/useVoice'
 import type { ClaudeView } from '@shared/claude'
-import { squirclePath } from './squircle'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
 
@@ -39,7 +38,6 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Opened from the keyboard: stay open until the pointer has visited and left.
   const pinned = useRef(false)
   const outerRef = useRef<HTMLDivElement>(null)
-  const shellRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [areaH, setAreaH] = useState(window.innerHeight)
   const { side, anchor, dragging, handlers, consumeDragClick } = useDock()
@@ -180,21 +178,6 @@ export function Island({ activities }: { activities: Activity[] }) {
     })
   }, [side, top, size.w, size.h, areaH])
 
-  // Squircle clip in the shell's own (untransformed) coordinate space.
-  useEffect(() => {
-    const shell = shellRef.current
-    if (!shell) return
-    const ro = new ResizeObserver(() => {
-      const w = shell.offsetWidth
-      const h = shell.offsetHeight
-      if (w > 1 && h > 1) {
-        shell.style.clipPath = `path('${squirclePath(w, h, Math.min(w / 2, h / 2, 26), 0.7)}')`
-      }
-    })
-    ro.observe(shell)
-    return () => ro.disconnect()
-  }, [])
-
   const key = showPanel
     ? 'panel'
     : p.mode === 'idle'
@@ -226,7 +209,10 @@ export function Island({ activities }: { activities: Activity[] }) {
       onClick={onClick}
       {...handlers}
     >
-      <motion.div ref={shellRef} className="island" layout transition={spring}>
+      {/* Rounded with border-radius set here, not a clip shape: the layout
+          animation resizes with a scale transform, and Framer Motion corrects
+          border-radius for it, so the corners stay round while it grows. */}
+      <motion.div className="island" layout transition={spring} style={{ borderRadius: 26 }}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}

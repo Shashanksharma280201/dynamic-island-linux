@@ -8,8 +8,10 @@ export type Dock = { side: Side; y: number }
 
 export const DEFAULT_DOCK: Dock = { side: 'right', y: 0.3 }
 
-/** Width of the transparent window column the island lives in (widest card + shadow). */
-export const COLUMN_WIDTH = 480
+/** Width of the transparent window column the island lives in: the widest
+ * panel plus its icon rail (~430px) with room for the drop shadow to fade out
+ * before the window edge (it would be cut off in a straight line). */
+export const COLUMN_WIDTH = 560
 
 /** Gap between the island and the screen edge / top / bottom, in px. */
 export const EDGE_MARGIN = 10
