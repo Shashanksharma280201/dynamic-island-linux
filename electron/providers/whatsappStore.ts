@@ -181,3 +181,77 @@ export function readChatInfoFromStore(chatId: string): { name: string; isGroup: 
     isGroup: !!(c.isGroup ?? c.id?.server === 'g.us'),
   }
 }
+
+export type RawMedia = { data: string; mimetype: string; filename?: string }
+
+/**
+ * Download and decrypt one message's attachment inside WhatsApp Web; returns
+ * base64. First asks WhatsApp's download manager for the file directly (what
+ * WhatsApp Web itself does), then, if that fails (old media whose link has
+ * expired), lets WhatsApp re-fetch it and reads the copy it keeps.
+ */
+export async function downloadMediaInPage(msgId: string): Promise<RawMedia> {
+  const w = window as any
+  const Coll = w.require('WAWebCollections')
+  const msg = Coll.Msg.get(msgId) || (await Coll.Msg.getMessagesById([msgId]))?.messages?.[0]
+  if (!msg) throw new Error('Message not found')
+  const toBase64 = (data: Blob | ArrayBuffer): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const r = new FileReader()
+      r.onload = () => resolve(String(r.result).replace(/^data:[^,]*,/, ''))
+      r.onerror = () => reject(r.error)
+      r.readAsDataURL(data instanceof Blob ? data : new Blob([data]))
+    })
+  const mimetype: string = msg.mimetype || msg.mediaData?.mimetype || 'application/octet-stream'
+  const done = async (data: Blob | ArrayBuffer): Promise<RawMedia> => ({
+    data: await toBase64(data),
+    mimetype,
+    filename: typeof msg.filename === 'string' ? msg.filename : undefined,
+  })
+  const qpl = {
+    addAnnotations() {
+      return this
+    },
+    addPoint() {
+      return this
+    },
+  }
+  const direct = () =>
+    w.require('WAWebDownloadManager').downloadManager.downloadAndMaybeDecrypt({
+      directPath: msg.directPath,
+      encFilehash: msg.encFilehash,
+      filehash: msg.filehash,
+      mediaKey: msg.mediaKey,
+      mediaKeyTimestamp: msg.mediaKeyTimestamp,
+      type: msg.type,
+      signal: new AbortController().signal,
+      downloadQpl: qpl,
+    })
+  const kept = async (): Promise<Blob | null> => {
+    const b = msg.mediaData?.mediaBlob
+    if (!b) return null
+    if (b instanceof Blob) return b
+    return (await b.forceToBlob?.()) ?? null
+  }
+  let first: unknown
+  try {
+    const hit = await kept()
+    if (hit) return await done(hit)
+    return await done(await direct())
+  } catch (e) {
+    first = e
+  }
+  // Let WhatsApp resolve the media (re-requests expired links), then retry.
+  if (msg.mediaData?.mediaStage !== 'RESOLVED') {
+    await msg.downloadMedia({ downloadEvenIfExpensive: true, rmrReason: 1, isUserInitiated: true })
+  }
+  const stage = String(msg.mediaData?.mediaStage ?? '')
+  if (stage.includes('ERROR') || stage === 'REUPLOADING') throw new Error('This media is no longer available on your phone')
+  const hit = await kept()
+  if (hit) return done(hit)
+  try {
+    return await done(await direct())
+  } catch {
+    throw first instanceof Error ? first : new Error(String(first))
+  }
+}

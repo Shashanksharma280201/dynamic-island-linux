@@ -32,10 +32,12 @@ export const MODEL_FILES = [
 ]
 
 
-/** Call before app 'ready'. */
-export function registerSttScheme(): void {
+/** Call before app 'ready'. Electron allows one registration, so other
+ * private schemes are passed in and registered together. */
+export function registerSttScheme(extra: Electron.CustomScheme[] = []): void {
   protocol.registerSchemesAsPrivileged([
     { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
+    ...extra,
   ])
 }
 

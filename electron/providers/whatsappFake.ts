@@ -1,4 +1,4 @@
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, existsSync, readFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 import type { EngineEvents, WhatsAppEngine, WaMediaFile } from './whatsapp'
 import type { ChatSummary, ChatMessage } from '@shared/types'
@@ -161,6 +161,11 @@ function seed(now: number): Chat[] {
                       id: 'media-photo',
                       media: { kind: 'image' as const, thumb: `data:image/png;base64,${sunset(48, 36)}`, mime: 'image/png', width: 480, height: 360 },
                     },
+                    {
+                      ...m(false, '', (31 + i * 9) * 60 * min - 30_000),
+                      id: 'media-video',
+                      media: { kind: 'video' as const, thumb: `data:image/png;base64,${sunset(48, 36)}`, mime: 'video/webm', duration: 1, width: 320, height: 240 },
+                    },
                     { ...m(false, '', (31 + i * 9) * 60 * min - min), id: 'media-voice', media: { kind: 'voice' as const, mime: 'audio/wav', duration: 2 } },
                     { ...m(true, '', (31 + i * 9) * 60 * min - 2 * min), id: 'media-doc', media: { kind: 'document' as const, name: 'Trip plan.txt', mime: 'text/plain', size: 30 } },
                   ]
@@ -238,7 +243,12 @@ export class FakeWhatsAppEngine implements WhatsAppEngine {
 
   async getMedia(chatId: string, msgId: string): Promise<WaMediaFile> {
     this.chat(chatId)
-    const f = FAKE_MEDIA[msgId]
+    // Tests can supply a real video file (DI_FAKE_WA_VIDEO).
+    const video = process.env.DI_FAKE_WA_VIDEO
+    const f =
+      msgId === 'media-video' && video && existsSync(video)
+        ? { mime: 'video/webm', data: readFileSync(video).toString('base64') }
+        : FAKE_MEDIA[msgId]
     if (!f) throw new Error('This media is no longer available on your phone')
     this.log({ op: 'media', chatId, msgId })
     return f

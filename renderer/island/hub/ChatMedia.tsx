@@ -6,24 +6,39 @@ import { DocIcon, DownloadIcon, PauseIcon, PlayIcon, XIcon } from '../icons'
 
 const stop = (e: MouseEvent) => e.stopPropagation()
 
+// One download per attachment, shared by the bubble and the viewer.
+const downloads = new Map<string, Promise<ChatMediaFile>>()
+const done = new Map<string, ChatMediaFile>()
+function fetchMedia(chatId: string, msgId: string): Promise<ChatMediaFile> {
+  let p = downloads.get(msgId)
+  if (!p) {
+    p = window.island.inbox.chatMedia(chatId, msgId).then((f) => (done.set(msgId, f), f))
+    p.catch(() => downloads.delete(msgId)) // let a later tap retry
+    downloads.set(msgId, p)
+  }
+  return p
+}
+
 /** Downloads (once) a message's attachment. */
 function useMediaFile(chatId: string, msgId: string, auto: boolean) {
-  const [file, setFile] = useState<ChatMediaFile | null>(null)
+  const [file, setFile] = useState<ChatMediaFile | null>(() => done.get(msgId) ?? null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const live = useRef(true)
+  useEffect(() => () => void (live.current = false), [])
   const load = async (): Promise<ChatMediaFile | null> => {
     if (file) return file
     setLoading(true)
     setError(null)
     try {
-      const f = await window.island.inbox.chatMedia(chatId, msgId)
-      setFile(f)
+      const f = await fetchMedia(chatId, msgId)
+      if (live.current) setFile(f)
       return f
     } catch (e) {
-      setError(errorText(e))
+      if (live.current) setError(errorText(e))
       return null
     } finally {
-      setLoading(false)
+      if (live.current) setLoading(false)
     }
   }
   useEffect(() => {
@@ -31,6 +46,23 @@ function useMediaFile(chatId: string, msgId: string, auto: boolean) {
   }, [auto]) // eslint-disable-line react-hooks/exhaustive-deps
   return { file, error, loading, load }
 }
+
+/** True once the element has scrolled into view (and stays true). */
+function useSeen<T extends Element>(): [React.RefObject<T>, boolean] {
+  const ref = useRef<T>(null)
+  const [seen, setSeen] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (!el || seen) return
+    const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && setSeen(true), { rootMargin: '200px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [seen])
+  return [ref, seen]
+}
+
+/** Photos load in full quality on their own (like WhatsApp), up to this size. */
+const AUTO_PHOTO_BYTES = 12 * 1024 * 1024
 
 /** Width x height for a preview, keeping the photo's shape. Pure. */
 export function previewSize(m: ChatMedia, maxW = 220, maxH = 260): { width: number; height: number } {
@@ -44,12 +76,26 @@ export function previewSize(m: ChatMedia, maxW = 220, maxH = 260): { width: numb
   return { width: Math.round(Math.max(90, width)), height: Math.round(Math.max(60, height)) }
 }
 
-/** Photo, video or GIF in a bubble: the preview WhatsApp sent, tap to view. */
-function Visual({ m, onView }: { m: ChatMessage & { media: ChatMedia }; onView: () => void }) {
+/**
+ * Photo, video or GIF in a bubble, tap to view. Shows WhatsApp's small
+ * preview at once; photos then load in full quality when scrolled to.
+ */
+function Visual({ chatId, m, onView }: { chatId: string; m: ChatMessage & { media: ChatMedia }; onView: () => void }) {
   const size = previewSize(m.media)
+  const [ref, seen] = useSeen<HTMLButtonElement>()
+  const photo = m.media.kind === 'image' && (!m.media.size || m.media.size <= AUTO_PHOTO_BYTES)
+  const { file } = useMediaFile(chatId, m.id, photo && seen)
+  const [sharp, setSharp] = useState(false)
   return (
-    <button className={`wa-visual ${m.media.kind}`} style={size} onClick={(e) => (stop(e), onView())} aria-label={m.media.kind === 'video' ? 'Play video' : 'View photo'}>
-      {m.media.thumb ? <img src={m.media.thumb} alt="" /> : <span className="wa-visual-empty" />}
+    <button
+      ref={ref}
+      className={`wa-visual ${m.media.kind}`}
+      style={size}
+      onClick={(e) => (stop(e), onView())}
+      aria-label={m.media.kind === 'video' ? 'Play video' : 'View photo'}
+    >
+      {m.media.thumb ? <img className="wa-preview" src={m.media.thumb} alt="" /> : !sharp && <span className="wa-visual-empty" />}
+      {file && <img className={`wa-full${sharp ? ' shown' : ''}`} src={file.url} alt="" onLoad={() => setSharp(true)} />}
       {m.media.kind === 'video' && (
         <>
           <span className="wa-play">
@@ -76,6 +122,7 @@ function Voice({ chatId, m }: { chatId: string; m: ChatMessage & { media: ChatMe
   const [playing, setPlaying] = useState(false)
   const [pos, setPos] = useState(0)
   const [dur, setDur] = useState(m.media.duration ?? 0)
+  const [voiceError, setVoiceError] = useState<string | null>(null)
   useEffect(() => () => audio.current?.pause(), [])
   const toggle = async (e: MouseEvent) => {
     stop(e)
@@ -89,13 +136,14 @@ function Voice({ chatId, m }: { chatId: string; m: ChatMessage & { media: ChatMe
       a.onplay = () => setPlaying(true)
       a.onpause = () => setPlaying(false)
       a.onended = () => (setPlaying(false), setPos(0))
+      a.onerror = () => (setPlaying(false), setVoiceError('This voice message can\u2019t play here'))
       audio.current = a
     }
     void audio.current.play()
   }
   const pct = dur ? Math.min(100, (pos / dur) * 100) : 0
   return (
-    <div className="wa-voice">
+    <div className="wa-voice" data-pos={pos.toFixed(2)}>
       <button className="wa-voice-btn" onClick={(e) => void toggle(e)} aria-label={playing ? 'Pause' : 'Play voice message'}>
         {loading ? <Spinner /> : playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
       </button>
@@ -103,7 +151,7 @@ function Voice({ chatId, m }: { chatId: string; m: ChatMessage & { media: ChatMe
         <div className="wa-voice-track">
           <span style={{ width: `${pct}%` }} />
         </div>
-        <span className="wa-voice-time">{error ? error : formatTime(playing || pos ? pos : dur)}</span>
+        <span className="wa-voice-time">{error ?? voiceError ?? formatTime(playing || pos ? pos : dur)}</span>
       </div>
     </div>
   )
@@ -151,7 +199,7 @@ export function MessageMedia({ chatId, m, onView }: { chatId: string; m: ChatMes
   switch (m.media.kind) {
     case 'image':
     case 'video':
-      return <Visual m={m} onView={() => onView(m)} />
+      return <Visual chatId={chatId} m={m} onView={() => onView(m)} />
     case 'sticker':
       return <Sticker chatId={chatId} m={m} />
     case 'voice':
@@ -166,6 +214,7 @@ export function MessageMedia({ chatId, m, onView }: { chatId: string; m: ChatMes
 export function MediaViewer({ chatId, m, onClose }: { chatId: string; m: ChatMessage; onClose: () => void }) {
   const { file, error } = useMediaFile(chatId, m.id, true)
   const [saved, setSaved] = useState<string | null>(null)
+  const [cantPlay, setCantPlay] = useState(false)
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -192,9 +241,11 @@ export function MediaViewer({ chatId, m, onClose }: { chatId: string; m: ChatMes
         </button>
       </div>
       <div className="wa-viewer-body" onClick={stop}>
-        {file ? (
+        {file && cantPlay ? (
+          <div className="wa-viewer-error">This video can&apos;t play here. Use Open to watch it in your video player.</div>
+        ) : file ? (
           video ? (
-            <video src={file.url} controls autoPlay />
+            <video src={file.url} controls autoPlay playsInline onError={() => setCantPlay(true)} />
           ) : (
             <img src={file.url} alt={m.text || 'Photo'} />
           )
@@ -203,7 +254,10 @@ export function MediaViewer({ chatId, m, onClose }: { chatId: string; m: ChatMes
         ) : (
           <>
             {m.media?.thumb && <img className="wa-viewer-thumb" src={m.media.thumb} alt="" />}
-            <Spinner />
+            <div className="wa-viewer-loading">
+              <Spinner />
+              <span>{video ? 'Downloading video…' : 'Loading photo…'}</span>
+            </div>
           </>
         )}
       </div>

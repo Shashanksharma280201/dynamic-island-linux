@@ -83,6 +83,14 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     }),
   )
 
+  // A real one-second video (320x240 WebM), recorded from a canvas.
+  const VIDEO = path.join(TMP, 'clip.webm')
+  {
+    const b = await _electron.launch({ executablePath: ELECTRON, args: [path.join(__dirname, 'record-clip.cjs'), '--no-sandbox'], env: { ...process.env, CLIP_OUT: VIDEO } }).catch(() => null)
+    if (b) {
+      await b.waitForEvent('close', { timeout: 20000 }).catch(() => b.close())
+    }
+  }
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
@@ -94,6 +102,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       DI_FAKE_WA_READY_MS: '1500',
       DI_FAKE_WA_LIST_MS: '400', // listing chats takes a moment, like the real thing
       DI_DOWNLOADS: path.join(TMP, 'downloads'), // saved attachments (and don't open them)
+      DI_FAKE_WA_VIDEO: VIDEO, // a real (tiny) video for the video message
       DI_DEMO_LOG: WA_LOG,
       DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
     },
@@ -259,9 +268,25 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await page.waitForSelector('.thread .wa-visual', { timeout: 5000 })
     const thread = await page.textContent('.thread')
     check('a photo shows as a picture with its caption, not as encoded text', !/[A-Za-z0-9+/]{60,}/.test(thread) && thread.includes('The view from the cabin!'))
-    check('the photo preview is shown right away', await page.$eval('.wa-visual img', (i) => i.complete && i.naturalWidth > 0))
+    check('the photo preview is shown right away', await page.$eval('.wa-visual.image .wa-preview', (i) => i.complete && i.naturalWidth > 0))
+    check(
+      'then the photo loads in full quality by itself',
+      await page.waitForFunction(() => document.querySelector('.wa-visual.image .wa-full.shown')?.naturalWidth === 480, null, { timeout: 8000 }).then(() => true, () => false),
+    )
     await shot(page, '15-whatsapp-media')
-    await page.click('.wa-visual')
+    await page.click('.wa-visual.video')
+    check(
+      'a video plays in the viewer (streamed from the island)',
+      await page
+        .waitForFunction(() => {
+          const v = document.querySelector('.wa-viewer-body video')
+          return v && v.src.startsWith('island-media://') && v.readyState >= 2 && v.videoWidth === 320
+        }, null, { timeout: 10000 })
+        .then(() => true, () => false),
+    )
+    await page.keyboard.press('Escape')
+    await page.waitForSelector('.wa-viewer', { state: 'detached', timeout: 3000 })
+    await page.click('.wa-visual.image')
     check(
       'tapping it opens the full-size photo',
       await page.waitForFunction(() => document.querySelector('.wa-viewer-body img')?.naturalWidth === 480, null, { timeout: 5000 }).then(() => true, () => false),
@@ -270,7 +295,11 @@ const b64 = (s) => Buffer.from(s).toString('base64')
     await page.keyboard.press('Escape')
     await page.waitForSelector('.wa-viewer', { state: 'detached', timeout: 3000 })
     await page.click('.wa-voice-btn')
-    check('a voice note downloads and plays', await until(() => waLog().includes('"msgId":"media-voice"'), 5000) && (await page.waitForSelector('.wa-voice-btn[aria-label="Pause"]', { timeout: 5000 }).then(() => true, () => false)))
+    check(
+      'a voice note downloads and plays',
+      (await until(() => waLog().includes('"msgId":"media-voice"'), 5000)) &&
+        (await page.waitForFunction(() => Number(document.querySelector('.wa-voice')?.dataset.pos) > 0.2, null, { timeout: 6000 }).then(() => true, () => false)),
+    )
     await page.click('.wa-voice-btn')
     await page.click('.wa-doc')
     const savedDoc = path.join(TMP, 'downloads', 'Trip plan.txt')

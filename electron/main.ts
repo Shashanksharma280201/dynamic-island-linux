@@ -45,7 +45,7 @@ import { TransientCards } from './transient'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
-import { wireInbox } from './inbox'
+import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
 import { NotesStore } from './notes'
 import { Backdrop } from './backdrop'
 import { FakeMailWatcher } from './providers/mailFake'
@@ -84,7 +84,7 @@ if (WA_CDP) {
 }
 
 // Private scheme that serves the speech model to the island (must be set up before 'ready').
-registerSttScheme()
+registerSttScheme([MEDIA_SCHEME_PRIVILEGES])
 // Lets speech recognition use several CPU cores (WebAssembly threads).
 app.commandLine.appendSwitch('enable-features', 'SharedArrayBuffer')
 // Tests feed a WAV file as the microphone.
@@ -119,6 +119,8 @@ async function main() {
     process.env.DI_STT_MODELS_DIR || undefined,
   )
   speech.serve()
+  let waForMedia: WhatsAppService | null = null
+  serveMedia(() => waForMedia)
   let claudeUi: ClaudeController | null = null
   let display: Display = placeIslandWindow(win, config.dock.side)
   // The side actually shown: config.dock.side, or a preview while dragging.
@@ -424,6 +426,7 @@ async function main() {
   claudeStateReady(claudeUi)
   claudeUi.push()
 
+  waForMedia = whatsapp
   inbox = wireInbox(win, {
     whatsapp,
     mail,

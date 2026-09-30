@@ -1,4 +1,4 @@
-import { app, ipcMain, shell, type BrowserWindow } from 'electron'
+import { app, ipcMain, protocol, shell, type BrowserWindow } from 'electron'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { extname, join } from 'node:path'
 import type { ChatMediaFile, InboxSources, InboxUnread } from '@shared/types'
@@ -56,6 +56,79 @@ function freePath(dir: string, name: string): string {
   return p
 }
 
+/** Private scheme WhatsApp attachments are served on (streams, seeks). */
+export const MEDIA_SCHEME = 'island-media'
+export const MEDIA_SCHEME_PRIVILEGES: Electron.CustomScheme = {
+  scheme: MEDIA_SCHEME,
+  // corsEnabled: the island page (file://) may only load it cross-origin.
+  privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true },
+}
+
+/** island-media://wa/<chat>/<message>. Pure. */
+export function mediaUrl(chatId: string, msgId: string): string {
+  return `${MEDIA_SCHEME}://wa/${encodeURIComponent(chatId)}/${encodeURIComponent(msgId)}`
+}
+
+/** The chat and message ids in a media URL, or null. Pure. */
+export function parseMediaUrl(url: string): { chatId: string; msgId: string } | null {
+  try {
+    const u = new URL(url)
+    const parts = u.pathname.split('/').filter(Boolean)
+    if (u.protocol !== `${MEDIA_SCHEME}:` || u.host !== 'wa' || parts.length !== 2) return null
+    const [chatId, msgId] = parts.map(decodeURIComponent)
+    return chatId && msgId && chatId.length <= 200 && msgId.length <= 300 ? { chatId, msgId } : null
+  } catch {
+    return null
+  }
+}
+
+/** Byte range asked for by a Range header, clamped to the file. Pure. */
+export function byteRange(header: string | null, size: number): { start: number; end: number } | null {
+  const m = /^bytes=(\d*)-(\d*)$/.exec(header?.trim() ?? '')
+  if (!m || size <= 0 || (!m[1] && !m[2])) return null
+  let start: number
+  let end: number
+  if (!m[1]) {
+    start = Math.max(0, size - Number(m[2]))
+    end = size - 1
+  } else {
+    start = Number(m[1])
+    end = m[2] ? Math.min(Number(m[2]), size - 1) : size - 1
+  }
+  return start <= end && start < size ? { start, end } : null
+}
+
+/**
+ * Serve WhatsApp attachments to the island. Call after app 'ready' but before
+ * the island page loads: a page only knows the schemes handled when it loaded.
+ */
+export function serveMedia(whatsapp: () => WhatsAppService | null): void {
+  protocol.handle(MEDIA_SCHEME, async (req) => {
+    const ids = parseMediaUrl(req.url)
+    const wa = whatsapp()
+    if (!ids || !wa) return new Response('Not found', { status: 404 })
+    let f
+    try {
+      f = await wa.getMedia(ids.chatId, ids.msgId)
+    } catch (e: any) {
+      return new Response(e?.message ?? 'Download failed', { status: 502 })
+    }
+    const size = f.data.length
+    const r = byteRange(req.headers.get('range'), size)
+    const headers: Record<string, string> = {
+      'Content-Type': f.mime,
+      'Accept-Ranges': 'bytes',
+      'Access-Control-Allow-Origin': '*',
+    }
+    if (!r) return new Response(new Uint8Array(f.data), { status: 200, headers: { ...headers, 'Content-Length': String(size) } })
+    const body = f.data.subarray(r.start, r.end + 1)
+    return new Response(new Uint8Array(body), {
+      status: 206,
+      headers: { ...headers, 'Content-Length': String(body.length), 'Content-Range': `bytes ${r.start}-${r.end}/${size}` },
+    })
+  })
+}
+
 export function inboxSources(whatsapp: WhatsAppService, mail: MailManager): InboxSources {
   const s = whatsapp.current.state
   return {
@@ -98,9 +171,12 @@ export function wireInbox(
     changed('unread') // opening a chat marks it read
     return msgs
   })
+  // Download (so errors show), then hand out an address that streams it.
   ipcMain.handle(INBOX.CHAT_MEDIA, async (_e, chatId, msgId): Promise<ChatMediaFile> => {
-    const f = await whatsapp.getMedia(str(chatId, 'chat'), str(msgId, 'message', 300))
-    return { mime: f.mime, url: `data:${f.mime};base64,${f.data}`, name: f.name }
+    const c = str(chatId, 'chat')
+    const m = str(msgId, 'message', 300)
+    const f = await whatsapp.getMedia(c, m)
+    return { mime: f.mime, url: mediaUrl(c, m), name: f.name }
   })
   // Save an attachment to Downloads and open it with the usual app.
   ipcMain.handle(INBOX.CHAT_MEDIA_OPEN, async (_e, chatId, msgId): Promise<string> => {
@@ -108,7 +184,7 @@ export function wireInbox(
     const dir = process.env.DI_DOWNLOADS || app.getPath('downloads')
     mkdirSync(dir, { recursive: true })
     const file = freePath(dir, attachmentName(f.name, f.mime))
-    writeFileSync(file, Buffer.from(f.data, 'base64'))
+    writeFileSync(file, f.data)
     if (!process.env.DI_DOWNLOADS) void shell.openPath(file)
     return file
   })

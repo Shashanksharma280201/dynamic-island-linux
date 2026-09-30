@@ -17,11 +17,13 @@ export type WaIncoming = {
 export type { WaState } from '@shared/types'
 import type { WaState, ChatSummary, ChatMessage, ChatMedia, ChatMediaKind } from '@shared/types'
 import {
+  downloadMediaInPage,
   readChatsFromStore,
   readMessagesFromStore,
   readChatInfoFromStore,
   type RawChat,
   type RawMsg,
+  type RawMedia,
 } from './whatsappStore'
 
 export type EngineEvents = {
@@ -47,6 +49,8 @@ export interface WhatsAppEngine {
 
 /** A downloaded attachment: base64 data. */
 export type WaMediaFile = { mime: string; data: string; name?: string }
+/** The same, decoded (what the service hands out and caches). */
+export type WaMedia = { mime: string; data: Buffer; name?: string }
 
 const MEDIA_LABEL: Record<string, string> = {
   image: '📷 Photo',
@@ -340,12 +344,21 @@ export class WwebjsEngine implements WhatsAppEngine {
   }
 
   async getMedia(_chatId: string, msgId: string): Promise<WaMediaFile> {
-    // whatsapp-web.js's own download (decrypts in the page). It only needs the
-    // message id, so skip getMessageById()'s fragile full-model conversion.
-    const { Message } = require('whatsapp-web.js')
-    const media = await Message.prototype.downloadMedia.call({ hasMedia: true, id: { _serialized: msgId }, client: this.client })
-    if (!media?.data) throw new Error('This media is no longer available on your phone')
-    return { mime: media.mimetype || 'application/octet-stream', data: media.data, name: media.filename || undefined }
+    // Decrypted inside WhatsApp Web; give up after a while rather than spin.
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Downloading took too long. Check your phone is online and try again.')), 90_000)
+    })
+    try {
+      const m: RawMedia = await Promise.race([this.client.pupPage.evaluate(downloadMediaInPage, msgId), timeout])
+      if (!m?.data) throw new Error('This media is no longer available on your phone')
+      return { mime: m.mimetype || 'application/octet-stream', data: m.data, name: m.filename || undefined }
+    } catch (e: any) {
+      console.error('[whatsapp] media download failed:', msgId, e?.message ?? e)
+      throw e instanceof Error ? e : new Error(String(e))
+    } finally {
+      clearTimeout(timer)
+    }
   }
 
   async send(chatId: string, text: string): Promise<void> {
@@ -448,26 +461,37 @@ export class WhatsAppService {
     return this.need().markRead(chatId)
   }
 
-  private media = new Map<string, WaMediaFile>()
+  private media = new Map<string, WaMedia>()
   private mediaBytes = 0
+  private pending = new Map<string, Promise<WaMedia>>()
 
-  /** Download an attachment (the last ~60 MB are kept in memory). */
-  async getMedia(chatId: string, msgId: string): Promise<WaMediaFile> {
+  /** Download an attachment (the last ~150 MB are kept in memory). */
+  async getMedia(chatId: string, msgId: string): Promise<WaMedia> {
     const hit = this.media.get(msgId)
     if (hit) {
       this.media.delete(msgId) // most recently used last
       this.media.set(msgId, hit)
       return hit
     }
-    const f = await this.need().getMedia(chatId, msgId)
-    this.media.set(msgId, f)
-    this.mediaBytes += f.data.length
-    for (const [k, v] of this.media) {
-      if (this.mediaBytes <= 60_000_000 || this.media.size <= 1) break
-      this.media.delete(k)
-      this.mediaBytes -= v.data.length
-    }
-    return f
+    // One download per attachment, however many ask for it at once.
+    const running = this.pending.get(msgId)
+    if (running) return running
+    const job = this.need()
+      .getMedia(chatId, msgId)
+      .then((f): WaMedia => {
+        const m = { mime: f.mime, data: Buffer.from(f.data, 'base64'), name: f.name }
+        this.media.set(msgId, m)
+        this.mediaBytes += m.data.length
+        for (const [k, v] of this.media) {
+          if (this.mediaBytes <= 150_000_000 || this.media.size <= 1) break
+          this.media.delete(k)
+          this.mediaBytes -= v.data.length
+        }
+        return m
+      })
+      .finally(() => this.pending.delete(msgId))
+    this.pending.set(msgId, job)
+    return job
   }
 
   async pairingCode(phone: string): Promise<string> {
