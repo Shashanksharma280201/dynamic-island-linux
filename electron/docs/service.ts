@@ -199,7 +199,7 @@ export class DocsService {
   outLabel(): string {
     const dir = this.d.outDir()
     const home = this.d.home()
-    return dir.startsWith(home + sep) ? `~${dir.slice(home.length)}` : dir
+    return dir.startsWith(home + sep) ? `~${dir.slice(home.length).split(sep).join('/')}` : dir
   }
 
   /** The output folder, created if needed. */

@@ -86,7 +86,9 @@ export function claudeArgs(o: {
  * with Node directly instead. Pure, apart from reading the shim.
  */
 export function launchOf(binary: string, platform: string = process.platform, read = (f: string) => readFileSync(f, 'utf8')): { command: string; args: string[]; node: boolean } {
-  if (platform !== 'win32' || !/\.(cmd|bat)$/i.test(binary)) return { command: binary, args: [], node: false }
+  if (platform !== 'win32') return { command: binary, args: [], node: false }
+  if (/\.(c|m)?js$/i.test(binary)) return { command: process.execPath, args: [binary], node: true }
+  if (!/\.(cmd|bat)$/i.test(binary)) return { command: binary, args: [], node: false }
   const m = /%~?dp0%?\\([^"%]+?\.(?:c?js|mjs))"/i.exec(read(binary))
   if (!m) throw new Error(`Can't start ${binary}: install Claude Code with its own installer (claude.exe), or point Settings at it.`)
   return { command: process.execPath, args: [join(dirname(binary), m[1])], node: true }

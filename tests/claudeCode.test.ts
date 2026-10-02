@@ -124,4 +124,5 @@ test('on Windows an npm .cmd shim runs its script with Node, never through cmd.e
   expect(l.command).toBe(process.execPath)
   expect(l.args[0].replace(/\\/g, '/')).toBe('/npm/node_modules/@anthropic-ai/claude-code/cli.js')
   expect(() => launchOf('/npm/odd.cmd', 'win32', () => 'echo hi')).toThrow('install Claude Code with its own installer')
+  expect(launchOf('C:\\x\\cli.js', 'win32')).toEqual({ command: process.execPath, args: ['C:\\x\\cli.js'], node: true })
 })

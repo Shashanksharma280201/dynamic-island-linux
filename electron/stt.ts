@@ -43,8 +43,9 @@ export function registerSttScheme(extra: Electron.CustomScheme[] = []): void {
 
 /** Resolve `rel` inside `root`, refusing anything that escapes it. Pure. */
 export function safeJoin(root: string, rel: string): string | null {
-  const p = resolve(root, normalize(decodeURIComponent(rel)).replace(/^([/\\])+/, ''))
-  return p === root || p.startsWith(root.endsWith(sep) ? root : root + sep) ? p : null
+  const base = resolve(root)
+  const p = resolve(base, normalize(decodeURIComponent(rel)).replace(/^([/\\])+/, ''))
+  return p === base || p.startsWith(base.endsWith(sep) ? base : base + sep) ? p : null
 }
 
 function ortDir(): string {
