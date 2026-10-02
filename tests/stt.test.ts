@@ -1,14 +1,15 @@
 import { vi } from 'vitest'
 vi.mock('electron', () => ({ app: {}, net: {}, protocol: {} }))
+import { resolve } from 'node:path'
 import { safeJoin, MODELS, MODEL_FILES } from '../electron/stt'
 
 test('files are only served from inside their folder', () => {
-  expect(safeJoin('/models/a', 'onnx/x.onnx')).toBe('/models/a/onnx/x.onnx')
-  expect(safeJoin('/models/a', '/config.json')).toBe('/models/a/config.json')
+  expect(safeJoin('/models/a', 'onnx/x.onnx')).toBe(resolve('/models/a/onnx/x.onnx'))
+  expect(safeJoin('/models/a', '/config.json')).toBe(resolve('/models/a/config.json'))
   expect(safeJoin('/models/a', '../b/secret')).toBeNull()
   expect(safeJoin('/models/a', '%2e%2e/%2e%2e/etc/passwd')).toBeNull()
   expect(safeJoin('/models/a', 'x/../../a2/y')).toBeNull()
-  expect(safeJoin('/models/a', '')).toBe('/models/a')
+  expect(safeJoin('/models/a', '')).toBe(resolve('/models/a'))
 })
 
 test('English Whisper models with quantized weights', () => {
