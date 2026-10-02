@@ -2759,3 +2759,13 @@ button.sp-device {
   flex: none;
   overflow: visible;
 }
+
+/* The agent asking first */
+.agent-ask .card-head {
+  align-items: center;
+}
+.agent-ask-body {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 13px;
+}

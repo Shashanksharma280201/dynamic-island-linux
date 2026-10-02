@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { CharacterConfig, CharacterId } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
+import type { PackageId, PackageTab } from '@shared/packages'
 import { IPC } from '@shared/types'
 import type {
   Activity,
@@ -101,6 +102,7 @@ const api = {
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
+  onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
   inbox: {
     sources: (): Promise<InboxSources> => ipcRenderer.invoke(INBOX.SOURCES),
     chats: (): Promise<ChatSummary[]> => ipcRenderer.invoke(INBOX.CHATS),
@@ -136,6 +138,7 @@ const settings = {
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
+  setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
   openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),

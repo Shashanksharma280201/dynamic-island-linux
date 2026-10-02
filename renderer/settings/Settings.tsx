@@ -3,6 +3,7 @@ import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
 import { CharacterSection } from './CharacterSection'
 import { AiSection } from './AiSection'
+import { PackagesSection } from './PackagesSection'
 import { SettingsProblem } from './Problem'
 
 function Toggle({
@@ -309,6 +310,7 @@ export function Settings() {
 
       <CharacterSection s={s} />
       <AiSection s={s} />
+      <PackagesSection s={s} />
 
       <section id="general">
         <h2>General</h2>

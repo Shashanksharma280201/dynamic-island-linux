@@ -1,4 +1,5 @@
 import { parseCharacter } from '@shared/character'
+import { PACKAGES } from '@shared/packages'
 import { PROVIDERS, baseUrlFor, modelFor, providerInfo, validBaseUrl, type ProviderId } from '@shared/ai'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdir } from 'node:fs/promises'
@@ -54,6 +55,7 @@ type Deps = {
   /** The AI provider, model or key changed. */
   onAi: (previous: ProviderId) => void
   listModels: (provider: ProviderId) => Promise<string[]>
+  onPackages: () => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -85,6 +87,7 @@ export class SettingsController {
       claude: this.d.claude(),
       spotify: this.d.spotify(),
       character: config.character,
+      packages: config.packages,
       ai: {
         provider: config.ai.provider,
         providers: PROVIDERS.map((p) => ({ id: p.id, model: modelFor(config.ai, p.id), baseUrl: baseUrlFor(config.ai, p.id), hasKey: !!config.ai.keys[p.id] })),
@@ -230,6 +233,14 @@ export class SettingsController {
       else delete config.ai.keys[provider]
       this.save()
       this.d.onAi(config.ai.provider)
+    })
+    ipcMain.handle(SETTINGS.SET_PACKAGE, (_e, id, on) => {
+      const p = PACKAGES.find((x) => x.id === id)
+      if (!p || p.required) throw new Error('That package can’t be turned off.')
+      const rest = config.packages.disabled.filter((x) => x !== p.id)
+      config.packages = { disabled: on === true ? rest : [...rest, p.id] }
+      this.save()
+      this.d.onPackages()
     })
     ipcMain.handle(SETTINGS.AI_MODELS, (_e, provider) => {
       if (!isProvider(provider)) throw new Error('Invalid provider')

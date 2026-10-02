@@ -19,6 +19,10 @@ import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
 import { useCharacter } from './character/Character'
+import type { PackageTab } from '@shared/packages'
+
+/** A tab whose package is turned off. */
+const tabOff = (t: HubTab, on: PackageTab[]) => (['notes', 'chats', 'mail', 'music'] as string[]).includes(t) && !on.includes(t as PackageTab)
 
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
@@ -51,6 +55,13 @@ export function Island({ activities }: { activities: Activity[] }) {
     side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
 
   useEffect(() => window.island.onSysState(setSys), [])
+
+  // Tabs of the packages that are turned on (Settings → Packages).
+  const [pkgTabs, setPkgTabs] = useState<PackageTab[] | null>(null)
+  useEffect(() => window.island.onPackages?.(setPkgTabs), [])
+  useEffect(() => {
+    if (pkgTabs && tabOff(tab, pkgTabs)) setTab('controls')
+  }, [pkgTabs, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Claude Code + voice live here so switching tabs never cuts you off.
   const [claude, setClaude] = useState<ClaudeView | null>(null)
@@ -299,7 +310,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16, transition: { duration: 0.16 } }}
             transition={spring}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? (['notes', 'chats', 'mail', 'music'] as const).filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>
         )}
       </AnimatePresence>

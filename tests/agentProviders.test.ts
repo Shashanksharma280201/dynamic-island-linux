@@ -1,6 +1,10 @@
 import { createRequire } from 'node:module'
 import { runTurn, echoContent, mergeToolCallDeltas, supportsFallback, friendlyError, listModels, rejectsTools } from '../electron/agent/providers'
-import { builtinTools, checkInput, runTool } from '../electron/agent/tools'
+import { checkInput, runTool } from '../electron/agent/tools'
+import { packageTools } from '../electron/packages/tools'
+
+/** Basics + Notes, with the other packages off. */
+const builtinTools = (o: { notes: any }) => packageTools({ disabled: ['chats', 'mail', 'music'] }, { notes: o.notes } as any)
 import { contextFrom } from '../electron/agent/agent'
 
 const require = createRequire(import.meta.url)

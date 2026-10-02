@@ -33,8 +33,10 @@ import {
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
+import type { MediaState } from '@shared/types'
 import { ApiAgent } from './agent/agent'
-import { builtinTools } from './agent/tools'
+import { packageTools } from './packages/tools'
+import { enabledTabs } from '@shared/packages'
 import { friendlyError, listModels } from './agent/providers'
 import { agentSystemPrompt } from './agent/prompt'
 import { baseUrlFor, modelFor, providerInfo, setupProblem } from '@shared/ai'
@@ -243,6 +245,40 @@ async function main() {
       transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
     }
   }
+  // The agent asks before acting for you (sending a message, a reply…),
+  // with the same card Claude Code's permission requests use.
+  const agentApprovals = (() => {
+    const pending = new Map<string, (ok: boolean) => void>()
+    let seq = 0
+    return {
+      ask(o: { tool: string; title: string; body: string; signal: AbortSignal }): Promise<boolean> {
+        const id = `agent-ask-${++seq}`
+        return new Promise<boolean>((resolve) => {
+          const done = (ok: boolean) => {
+            if (!pending.delete(id)) return
+            clearTimeout(timer)
+            store.remove(id)
+            resolve(ok)
+          }
+          const timer = setTimeout(() => done(false), 3 * 60_000)
+          pending.set(id, done)
+          o.signal.addEventListener('abort', () => done(false), { once: true })
+          store.upsert({
+            kind: 'approval',
+            id,
+            priority: 10,
+            request: { id, toolName: o.tool, inputSummary: o.title, fromIsland: true, ask: { app: config.character.name, title: o.title, body: o.body } },
+          })
+        })
+      },
+      /** True if this decision was for the agent. */
+      decide(id: string, ok: boolean): boolean {
+        const done = pending.get(id)
+        done?.(ok)
+        return !!done
+      },
+    }
+  })()
   const claudeCode = new ClaudeCode({
     config: () => config.claude,
     findBinary: findClaude,
@@ -286,7 +322,21 @@ async function main() {
         baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
       }
     },
-    tools: () => builtinTools({ notes }),
+    // Called per question, after every service below exists.
+    tools: () =>
+      packageTools(config.packages, {
+        notes,
+        whatsapp: {
+          ready: () => whatsapp.current.state === 'ready',
+          listChats: (n) => whatsapp.listChats(n),
+          getMessages: (id, n) => whatsapp.getMessages(id, n),
+          send: (id, text) => whatsapp.send(id, text),
+        },
+        mail,
+        media: { now: () => nowPlaying, command: (c) => media.command(c) },
+        spotify,
+      }),
+    askUser: (o) => agentApprovals.ask(o),
     system: () => agentSystemPrompt(config.character),
     onChange: (s) => {
       // Only the active engine's runs reach the island.
@@ -300,7 +350,9 @@ async function main() {
 
   // ---- media ----
   const media = new MediaProvider()
+  let nowPlaying: MediaState | null = null
   media.onChange((s) => {
+    nowPlaying = s
     if (!s) store.remove('media')
     else store.upsert({ kind: 'media', id: 'media', priority: 1, media: s })
   })
@@ -433,6 +485,7 @@ async function main() {
     onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onCharacter: () => pushCharacter(),
+    onPackages: () => pushPackages(),
     onAi: (previous) => {
       // Switching away from a provider mid-answer stops that answer.
       if (previous !== config.ai.provider) {
@@ -548,6 +601,7 @@ async function main() {
 
   wireIpc({
     onDecision: (m) => {
+      if (agentApprovals.decide(m.id, m.decision === 'allow')) return
       claude.resolve(m)
       store.remove(m.id)
     },
@@ -615,16 +669,19 @@ async function main() {
   const pushAppearance = () =>
     send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
   const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
+  const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   win.webContents.on('did-finish-load', () => {
     claudeUi?.push()
     pushState()
     pushDock()
     pushAppearance()
     pushCharacter()
+    pushPackages()
     send(win, IPC.RECT_REQUEST, null)
   })
   pushAppearance()
   pushCharacter()
+  pushPackages()
   pushDock()
   win.webContents.on('render-process-gone', () => {
     if (!win.isDestroyed()) win.webContents.reload()

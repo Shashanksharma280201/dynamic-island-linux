@@ -3,7 +3,8 @@
 // both streaming, with tool calls. Records every request in s.log.
 //
 // Scripted by the prompt: "remember …" saves a note (tool call), "notes?"
-// searches notes (tool call), "slow" waits 6 s, anything else is echoed.
+// searches notes (tool call), "tell <name> <text>" sends a WhatsApp message
+// (tool call that asks first), "slow" waits 6 s, anything else is echoed.
 // The model "no-tools" rejects requests that include tools (like some local
 // models); the key "bad-key" is rejected.
 const http = require('http')
@@ -32,8 +33,12 @@ function startFakeAi() {
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
     if (result !== null) {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
+      if (/^Sent to/.test(result)) return { text: 'Sent it!' }
+      if (/did not allow/.test(result)) return { text: 'Okay, I didn’t send it.' }
       return { text: `Here’s what I found: ${result.split('\n').find((l) => l.startsWith('title:'))?.slice(7) ?? result.slice(0, 80)}` }
     }
+    const tell = /^tell (\w+) (.+)/i.exec(prompt)
+    if (tell) return { text: '', tool: { name: 'chats_send', input: { chat: tell[1], text: tell[2] } } }
     const m = /remember (?:to )?(.+)/i.exec(prompt)
     if (m) return { text: 'Sure, saving that.', tool: { name: 'notes_create', input: { text: m[1] } } }
     if (/notes\?/i.test(prompt)) return { text: '', tool: { name: 'notes_search', input: { query: '' } } }

@@ -1,5 +1,6 @@
 import type { CharacterConfig } from './character'
 import type { AiSettings, ProviderId } from './ai'
+import type { PackageId, PackageTab, PackagesConfig } from './packages'
 import type { ClaudeRun } from './claude'
 export type ToolRequest = {
   id: string
@@ -11,6 +12,8 @@ export type ToolRequest = {
   suggestions?: unknown[]
   /** Asked by a command started from the island (there's no terminal to answer in). */
   fromIsland?: boolean
+  /** The island's own agent asking before it acts for you (not Claude Code). */
+  ask?: { app: string; title: string; body: string }
 }
 
 export type Decision = 'allow' | 'deny' | 'ask'
@@ -121,6 +124,7 @@ export const IPC = {
   FOCUS_LOST: 'island:focus-lost', // main -> renderer: keyboard focus moved to another app
   BACKDROP: 'island:backdrop', // main -> renderer: blurred-glass snapshot (data URL) or null
   CHARACTER: 'island:character', // main -> renderer: CharacterConfig
+  PACKAGES: 'island:packages', // main -> renderer: PackageTab[] (rail tabs of enabled packages)
 } as const
 
 import type { Dock } from './dock'
@@ -274,6 +278,7 @@ export type SettingsState = {
   spotify: { clientId: string; redirectUri: string; status: string; user?: string; premium?: boolean; error?: string }
   character: CharacterConfig
   ai: AiSettings
+  packages: PackagesConfig
 }
 
 export type ClaudeSettings = {

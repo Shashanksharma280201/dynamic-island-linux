@@ -14,6 +14,8 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'island-agent-'))
 const OUT = process.env.SHOTS || path.join(TMP, 'shots')
 const USER_DATA = path.join(TMP, 'profile')
 const ELECTRON = path.join(ROOT, 'node_modules/electron/dist/electron')
+const WA_LOG = path.join(TMP, 'whatsapp.log')
+const waLog = () => (fs.existsSync(WA_LOG) ? fs.readFileSync(WA_LOG, 'utf8') : '')
 fs.mkdirSync(OUT, { recursive: true })
 fs.mkdirSync(USER_DATA, { recursive: true })
 
@@ -33,13 +35,22 @@ const until = async (fn, ms = 5000) => {
   const ai = await startFakeAi()
   fs.writeFileSync(
     path.join(USER_DATA, 'config.json'),
-    JSON.stringify({ dock: { side: 'right', y: 0.35 }, character: { id: 'bolt', name: 'Sparky' }, ai: { provider: 'anthropic' } }),
+    JSON.stringify({ dock: { side: 'right', y: 0.35 }, character: { id: 'bolt', name: 'Sparky' }, ai: { provider: 'anthropic' }, whatsapp: true }),
   )
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'), DI_BACKDROP: 'off', DI_AI_BASE_URL: ai.base },
+    env: {
+      ...process.env,
+      DI_USER_DATA: USER_DATA,
+      DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
+      DI_BACKDROP: 'off',
+      DI_AI_BASE_URL: ai.base,
+      DI_WHATSAPP_ENGINE: 'fake',
+      DI_FAKE_WA_READY_MS: '300',
+      DI_DEMO_LOG: WA_LOG,
+    },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -90,6 +101,42 @@ const until = async (fn, ms = 5000) => {
     check('it called Claude with your key, the tools and its character', calls[0]?.headers['x-api-key'] === 'sk-ant-test-123' && calls[0].body.tools.some((t) => t.name === 'notes_create') && calls[0].body.system.includes('You are Sparky'))
     check('the tool result went back to the model', calls[1]?.body.messages.at(-1).content[0].type === 'tool_result')
     await shot('03-answer')
+
+    // ---- Packages: acting for you only after you allow it ----
+    await page.fill('.claude-field textarea', 'tell Alice I am running late')
+    await page.press('.claude-field textarea', 'Enter')
+    check('before sending a message the agent asks you', await page.waitForSelector('.card.agent-ask:has-text("Send to Alice on WhatsApp")', { timeout: 8000 }).then(() => true, () => false))
+    check('showing exactly what it will send', (await page.textContent('.agent-ask-body')) === 'I am running late')
+    check('with the character waiting for you', !!(await page.$('.agent-ask .character[data-mood="attention"]')))
+    check('nothing is sent before you answer', !waLog().includes('running late'))
+    await sleep(800)
+    await shot('04-asks-first')
+    await page.click('.agent-ask button.allow')
+    await waitDone()
+    check('Allow sends it', /"op":"send","chatId":"15550001111@c.us","text":"I am running late"/.test(waLog()), waLog().split('\n').slice(-3).join(' '))
+    check('and the agent says so', (await view()).run?.reply === 'Sent it!', (await view()).run?.reply)
+    await ask('tell Alice never mind')
+    await page.waitForSelector('.card.agent-ask', { timeout: 8000 })
+    await page.click('.agent-ask button.deny')
+    await waitDone()
+    check('Don’t Allow sends nothing', !waLog().includes('never mind') && (await view()).run?.reply === 'Okay, I didn’t send it.', (await view()).run?.reply)
+    if (!(await page.$('.hub'))) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { timeout: 5000 })
+
+    // Settings → Packages
+    await settings.evaluate(() => document.getElementById('packages')?.scrollIntoView())
+    check('Settings lists the packages', (await settings.$$eval('#packages .package-name', (e) => e.map((x) => x.textContent))).join() === 'Basics · always on,Notes,WhatsApp,Mail,Music')
+    check('and which tools ask first', (await settings.textContent('#packages [data-package="chats"]')).includes('Send a message · asks first'))
+    await settings.screenshot({ path: `${OUT}/05-packages.png` })
+    await settings.click('#packages input[aria-label="WhatsApp package"]')
+    check('turning WhatsApp off hides its tab', await page.waitForSelector('.rail-btn[aria-label="Chats"]', { state: 'detached', timeout: 4000 }).then(() => true, () => false))
+    check('and is saved', await until(() => cfg().packages?.disabled?.includes('chats'), 3000))
+    ai.log.length = 0
+    await ask('hello')
+    await waitDone()
+    check('and takes its tools away from the agent', !ai.log[0]?.body.tools.some((t) => t.name.startsWith('chats_')) && ai.log[0]?.body.tools.some((t) => t.name === 'mail_list'))
+    await settings.click('#packages input[aria-label="WhatsApp package"]')
+    check('turning it back on brings the tab back', await page.waitForSelector('.rail-btn[aria-label="Chats"]', { timeout: 4000 }).then(() => true, () => false))
 
     // ---- Switch to an OpenAI-compatible provider ----
     await settings.selectOption('#ai select', 'openai')

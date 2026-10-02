@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 import type { ProviderKind } from '@shared/ai'
-import { runTool, type AgentTool } from './tools'
+import { runTool, type AgentTool, type Approver } from './tools'
 
 /** A finished exchange, as plain text (works with any provider). */
 export type TextTurn = { user: string; assistant: string }
@@ -24,6 +24,8 @@ export type TurnRequest = {
   history: TextTurn[]
   prompt: string
   tools: AgentTool[]
+  /** Asks the user before tools that act for them. */
+  approve?: Approver
   signal: AbortSignal
   events: TurnEvents
 }
@@ -101,7 +103,7 @@ async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
     for (const c of calls) {
       const tool = r.tools.find((t) => t.name === c.name)
       r.events.onTool(c.name, tool?.label((c.input ?? {}) as Record<string, unknown>) ?? c.name)
-      const out = await runTool(r.tools, c.name, c.input)
+      const out = await runTool(r.tools, c.name, c.input, r.approve)
       steps++
       results.push({ type: 'tool_result', tool_use_id: c.id, content: out.output, ...(out.ok ? {} : { is_error: true }) })
     }
@@ -193,7 +195,7 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
       }
       const tool = r.tools.find((t) => t.name === c.name)
       r.events.onTool(c.name, tool?.label((input ?? {}) as Record<string, unknown>) ?? c.name)
-      const out = input === undefined ? { ok: false, output: `Invalid JSON in the arguments: ${c.args.slice(0, 500)}` } : await runTool(r.tools, c.name, input)
+      const out = input === undefined ? { ok: false, output: `Invalid JSON in the arguments: ${c.args.slice(0, 500)}` } : await runTool(r.tools, c.name, input, r.approve)
       steps++
       messages.push({ role: 'tool', tool_call_id: c.id, content: out.output })
     }

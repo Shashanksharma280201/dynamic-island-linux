@@ -6,6 +6,9 @@ import type { ProviderInfo } from '@shared/ai'
 import { friendlyError, runTurn, type TextTurn } from './providers'
 import type { AgentTool } from './tools'
 
+/** Ask the user to allow a tool that acts for them (an approval card). */
+export type AskUser = (o: { tool: string; title: string; body: string; signal: AbortSignal }) => Promise<boolean>
+
 /** What the agent needs to know about the AI it's talking to right now. */
 export type AgentTarget = {
   provider: ProviderInfo
@@ -19,6 +22,7 @@ type Deps = {
   /** Current provider, model and key, or an error message if not set up. */
   target: () => AgentTarget | string
   tools: () => AgentTool[]
+  askUser: AskUser
   system: () => string
   onChange: (s: ClaudeState) => void
   onFinished: (run: ClaudeRun) => void
@@ -128,6 +132,15 @@ export class ApiAgent {
       history: contextFrom(this.turns),
       prompt: text,
       tools: this.d.tools(),
+      approve: async (tool, input) => {
+        const ask = await tool.asks!(input)
+        const before = this.run?.tool
+        // The character looks up at you while it waits.
+        update({ phase: 'tool', tool: { name: 'approval', detail: `Waiting for your OK: ${ask.title}` } })
+        const ok = await this.d.askUser({ tool: tool.name, ...ask, signal: abort.signal })
+        update({ tool: before })
+        return ok
+      },
       signal: abort.signal,
       events: {
         onMessageStart: () => {

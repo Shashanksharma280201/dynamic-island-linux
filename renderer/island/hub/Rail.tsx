@@ -99,12 +99,12 @@ function usageTitle(usage?: ClaudeUsage): string {
 }
 
 /** Detached glass pill of section icons beside the panel. */
-export function Rail({ tab, onTab, usage }: { tab: HubTab; onTab: (t: HubTab) => void; usage?: ClaudeUsage }) {
+export function Rail({ tab, onTab, usage, hidden = [] }: { tab: HubTab; onTab: (t: HubTab) => void; usage?: ClaudeUsage; hidden?: HubTab[] }) {
   const unread = useUnread()
   const badge = (id: HubTab) => (id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : '')
   return (
     <div className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
-      {ITEMS.map((it) => {
+      {ITEMS.filter((it) => !hidden.includes(it.id)).map((it) => {
         const b = badge(it.id)
         const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : null
         const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} unread` : it.label

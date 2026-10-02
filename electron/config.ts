@@ -5,6 +5,7 @@ import type { MailAccount, ServerConfig } from './providers/mail'
 import { DEFAULT_DOCK, parseDock, type Dock } from '@shared/dock'
 import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { parseAiConfig, type AiConfig } from '@shared/ai'
+import { parsePackages, type PackagesConfig } from '@shared/packages'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -31,6 +32,8 @@ export type Config = {
   character: CharacterConfig
   /** Which AI the agent uses (Claude Code, or an API provider with your key). */
   ai: AiConfig
+  /** Packages you turned off. */
+  packages: PackagesConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -83,6 +86,7 @@ const DEFAULTS: Config = {
   spotify: { clientId: '' },
   character: parseCharacter(null),
   ai: parseAiConfig(null),
+  packages: parsePackages(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -112,12 +116,13 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null) }
+  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
   c.character = parseCharacter(r.character)
   c.ai = parseAiConfig(r.ai)
+  c.packages = parsePackages(r.packages)
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }
