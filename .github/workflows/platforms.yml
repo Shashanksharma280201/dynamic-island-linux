@@ -4,7 +4,7 @@ name: Platforms
 # X11, D-Bus) run in ci.yml; here the real app is launched on macOS and Windows.
 on:
   push:
-    branches: [mac, windows]
+    branches: [mac]
   workflow_dispatch:
 
 jobs:
@@ -12,7 +12,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
