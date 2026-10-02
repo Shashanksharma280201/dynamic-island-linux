@@ -8,8 +8,218 @@ notifications), lets you **reply right from the island**, **talk to Claude Code*
 and see your **Claude plan limits**, and opens a mini Control Center when you
 click it. Everywhere outside the island, your desktop stays fully clickable.
 
-It's a generic project: anyone on Linux can install it, and every integration
-(Claude Code, WhatsApp, mail) is optional.
+It's a generic project: anyone can install it on Linux, and the `mac` and
+`windows` branches run it on macOS and Windows too (see [Install](#install)).
+Every integration (Claude Code, WhatsApp, mail) is optional.
+
+## Install
+
+Pick your computer's system below and run its commands in order, one at a
+time. Each system has its own branch of this repository: `main` is the Linux
+version, and the `mac` and `windows` branches have everything on `main` plus
+what that system needs. The commands below fetch the right branch for you.
+
+| Your computer | Branch | Steps |
+|---|---|---|
+| Linux: Ubuntu or another GNOME desktop on X11 | `main` | [Install on Linux](#install-on-linux) |
+| macOS 11 Big Sur or newer, Apple silicon or Intel | `mac` | [Install on macOS](#install-on-macos) |
+| Windows 10 or 11, 64-bit | `windows` | [Install on Windows](#install-on-windows) |
+
+Everything works without any accounts. Claude Code, WhatsApp, mail, Spotify
+and the AI assistant are all optional and set up later from the island's
+Settings.
+
+### Install on Linux
+
+Open a terminal (`Ctrl+Alt+T` on Ubuntu).
+
+**1. Install Git and Node.js 22** (skip if `node -v` already prints v18 or newer):
+
+```bash
+sudo apt update && sudo apt install -y git curl
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+node -v
+```
+
+**2. Get the code and its parts** (a few minutes the first time):
+
+```bash
+git clone -b main https://github.com/shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+```
+
+**3. Try it:**
+
+```bash
+npm start
+```
+
+The island appears on the right edge of the screen. Close it with `Ctrl+C` in
+the terminal, or **Quit** in its tray menu (top right).
+
+**4. Install it as an app** so it's in your app launcher:
+
+```bash
+npm run package
+sudo apt install ./dist/dynamic-island-linux-*-amd64.deb
+dynamic-island-linux &
+```
+
+**5. Start it at login:** click the island's tray icon (top right) and tick
+**Start at login**.
+
+On Wayland, the island shows but clicks only partly work: at the login screen,
+click the gear icon and choose **Ubuntu on Xorg**. More options (AppImage,
+Claude Code, demos) are in [Quick start](#quick-start).
+
+### Install on macOS
+
+Open **Terminal** (Applications → Utilities → Terminal).
+
+**1. Install Git** (macOS asks to install the command line tools; click
+**Install**, then wait for it to finish. If it says they're already installed,
+go on):
+
+```bash
+xcode-select --install
+```
+
+**2. Install Node.js 22:** download the **macOS Installer (.pkg)** for the LTS
+version from [nodejs.org/en/download](https://nodejs.org/en/download) and open
+it. (With Homebrew, `brew install node` works too.) Then check it in a **new**
+Terminal window:
+
+```bash
+node -v
+```
+
+**3. Get the code and its parts** (a few minutes the first time):
+
+```bash
+git clone -b mac https://github.com/shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+```
+
+**4. Try it:**
+
+```bash
+npm start
+```
+
+The island appears on the right edge of the screen and its icon in the menu
+bar (top right). Close it with `Ctrl+C` in Terminal, or **Quit** in the menu
+bar icon.
+
+**5. Install it as an app:**
+
+```bash
+npm run package
+open dist/*.dmg
+```
+
+Drag **Dynamic Island** onto **Applications** in the window that opens, then
+open it from Launchpad or the Applications folder. If you copied the app from
+another Mac and macOS says it can't check it, open **System Settings →
+Privacy & Security** and click **Open Anyway** (once).
+
+**6. Start it at login:** click the island's menu bar icon and tick **Start at
+login**.
+
+The first time, macOS asks to let Dynamic Island control **Spotify** or
+**Music** (for Now Playing) and to use the **microphone** (only when you talk
+to the assistant). Click **OK** / **Allow**.
+
+### Install on Windows
+
+Open **Command Prompt**: press the Windows key, type `cmd`, press Enter. (Use
+Command Prompt rather than PowerShell; PowerShell can block `npm` with a
+"running scripts is disabled" error.)
+
+**1. Install Git and Node.js 22** (skip any you already have):
+
+```bat
+winget install --id Git.Git -e
+winget install --id OpenJS.NodeJS.LTS -e
+```
+
+Close Command Prompt and open a **new** one, so it finds them, and check:
+
+```bat
+git --version
+node -v
+```
+
+(No `winget`? Download Git from [git-scm.com](https://git-scm.com/download/win)
+and the Node.js LTS **Windows Installer (.msi)** from
+[nodejs.org/en/download](https://nodejs.org/en/download), and keep the
+default options.)
+
+**2. Get the code and its parts** (a few minutes the first time):
+
+```bat
+git clone -b windows https://github.com/shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+```
+
+**3. Try it:**
+
+```bat
+npm start
+```
+
+The island appears on the right edge of the screen and its icon in the
+taskbar's notification area (bottom right; it may be under the **^** arrow).
+Close it with `Ctrl+C` in Command Prompt, or **Quit** in that icon's menu.
+
+**4. Install it as an app:**
+
+```bat
+npm run package
+explorer dist
+```
+
+In the folder that opens, double-click **dynamic-island-linux-…-x64.exe** and
+follow the installer. If Windows SmartScreen says it protected your PC, click
+**More info**, then **Run anyway** (the installer you built isn't signed).
+Open **Dynamic Island** from the Start menu afterwards.
+
+**5. Start it at login:** click the island's icon in the notification area and
+tick **Start at login**.
+
+### After installing (all systems)
+
+**Update to the latest version** (in the `dynamic-island` folder):
+
+```bash
+git pull
+npm install
+npm run restart
+```
+
+`npm run restart` rebuilds the island and swaps the running one for it. If you
+installed it as an app, run `npm run package` again and install the new
+package over the old one.
+
+**Use Claude Code with the island** (optional): install
+[Claude Code](https://code.claude.com), run `claude` once in a terminal to log
+in, then in the `dynamic-island` folder:
+
+```bash
+npm run hook:install
+```
+
+Claude Code's permission prompts now show on the island. `npm run
+hook:uninstall` removes it again.
+
+**Uninstall:** Quit from the tray / menu bar icon, then on Linux run `sudo apt
+remove dynamic-island-linux`, on macOS drag Dynamic Island from Applications
+to the Trash, and on Windows use **Settings → Apps → Installed apps →
+Dynamic Island → Uninstall**. Delete the `dynamic-island` folder to remove the
+code.
 
 ## Features
 
