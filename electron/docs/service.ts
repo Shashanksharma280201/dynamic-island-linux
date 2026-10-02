@@ -40,15 +40,23 @@ export class DocsService {
   private saved: Saved[] = []
   private meta = new Map<string, { size: number; pages?: number; mtime: number }>()
   private seq = 0
+  private lastAt = 0
 
   constructor(private d: DocsDeps) {
     try {
       const j = JSON.parse(readFileSync(this.file('docs-workspace.json'), 'utf8'))
       if (Array.isArray(j.saved)) this.saved = j.saved.filter((s: any) => s && typeof s.path === 'string' && typeof s.id === 'string')
       this.seq = Number(j.seq) || this.saved.length
+      this.lastAt = Math.max(0, ...this.saved.map((x) => Number(x.at) || 0))
     } catch {
       // first run
     }
+  }
+
+  /** Now, but always later than the last file added (so the order is exact). */
+  private now(): number {
+    this.lastAt = Math.max(Date.now(), this.lastAt + 1)
+    return this.lastAt
   }
 
   private file(name: string) {
@@ -87,7 +95,9 @@ export class DocsService {
   /** Every file, newest first. */
   async list(): Promise<DocEntry[]> {
     const all = await Promise.all(this.saved.map((s) => this.describe(s)))
-    return all.sort((a, b) => b.at - a.at)
+    // Newest first; the later id first when added in the same millisecond.
+    const seq = (e: DocEntry) => Number(e.id.slice(1))
+    return all.sort((a, b) => b.at - a.at || seq(b) - seq(a))
   }
 
   /** Add files (from a drop or the file picker). Unsupported ones are skipped with a reason. */
@@ -115,11 +125,11 @@ export class DocsService {
       }
       const existing = this.saved.find((s) => s.path === path)
       if (existing) {
-        existing.at = Date.now()
+        existing.at = this.now()
         added.push(await this.describe(existing))
         continue
       }
-      const s: Saved = { id: `d${++this.seq}`, path, origin: 'added', at: Date.now() }
+      const s: Saved = { id: `d${++this.seq}`, path, origin: 'added', at: this.now() }
       this.saved.push(s)
       added.push(await this.describe(s))
     }
@@ -210,7 +220,7 @@ export class DocsService {
     const dir = await this.ensureOutDir()
     const path = freshPath(dir, name, ext)
     await writeFile(path, bytes, { flag: 'wx' }) // never overwrite
-    const s: Saved = { id: `d${++this.seq}`, path, origin: 'made', at: Date.now() }
+    const s: Saved = { id: `d${++this.seq}`, path, origin: 'made', at: this.now() }
     this.saved.push(s)
     this.trim()
     this.persist()
@@ -369,7 +379,7 @@ export class DocsService {
     const instruction = r.instruction.trim().slice(0, 2000)
     if (!name || !instruction) throw new Error('A recipe needs a name and what to do.')
     const list = this.recipes()
-    const id = r.id && list.some((x) => x.id === r.id) ? r.id : `r${Date.now().toString(36)}`
+    const id = r.id && list.some((x) => x.id === r.id) ? r.id : `r${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
     const next = [...list.filter((x) => x.id !== id), { id, name, instruction }]
     mkdirSync(this.d.dataDir, { recursive: true })
     writeFileSync(this.file('docs-recipes.json'), JSON.stringify(next, null, 2))

@@ -3,11 +3,13 @@ import { ControlCenter } from '../states/ControlCenter'
 import { ChatsView } from './ChatsView'
 import { MailView } from './MailView'
 import { NotesView } from './NotesView'
+import { DocsView, type DocsIncoming } from './DocsView'
 import { ClaudePanel } from './ClaudePanel'
 import { MusicView } from '../music/MusicView'
 import type { ClaudeView } from '@shared/claude'
 import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
+import { DocsAppIcon } from './AppIcons'
 
 export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs'
 
@@ -40,12 +42,18 @@ export function Hub({
   onTyping,
   claude,
   voice,
+  incoming,
+  dropping,
 }: {
   sys: SystemState | null
   tab: HubTab
   onTyping: (on: boolean) => void
   claude: ClaudeView | null
   voice: Voice
+  /** Files just dropped on the island (for the Documents tab). */
+  incoming?: DocsIncoming | null
+  /** Files are being dragged over the island. */
+  dropping?: boolean
 }) {
   const { data: sources } = useLoad<InboxSources>(
     () => window.island.inbox.sources(),
@@ -64,6 +72,18 @@ export function Hub({
       {tab === 'notes' && <NotesView onTyping={onTyping} />}
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
       {tab === 'music' && <MusicView onTyping={onTyping} />}
+      {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}
+      {dropping && <DropZone />}
+    </div>
+  )
+}
+
+/** Shown over the panel while files are dragged onto the island. */
+function DropZone() {
+  return (
+    <div className="drop-zone" aria-hidden>
+      <DocsAppIcon />
+      <div className="title">Drop to add to Documents</div>
     </div>
   )
 }

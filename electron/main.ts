@@ -156,7 +156,6 @@ async function main() {
     const flatpak = ['/var/lib/flatpak/exports/bin', join(homedir(), '.local/share/flatpak/exports/bin')]
     return findExecutable('soffice', ['/usr/bin', '/usr/local/bin']) ?? findExecutable('libreoffice', ['/snap/bin']) ?? findExecutable('org.libreoffice.LibreOffice', flatpak)
   }
-  let docsIpc: { changed: () => void } | null = null
   const docs = new DocsService({
     dataDir: app.getPath('userData'),
     outDir: () => process.env.DI_DOCS_OUT || join(app.getPath('documents'), 'Dynamic Island'),
@@ -170,8 +169,9 @@ async function main() {
     trash: (p) => shell.trashItem(p),
     // Tracked changes in Word show who made them: the character.
     author: () => config.character.name,
-    onChange: () => docsIpc?.changed(),
+    onChange: () => docsIpc.changed(),
   })
+  const docsIpc = wireDocs(win, docs, { libreOffice: () => !!soffice() })
   // Frosted glass: blurred snapshot of what's behind the island (X11 only).
   const backdrop = new Backdrop(
     win,
@@ -561,7 +561,6 @@ async function main() {
   claudeStateReady(claudeUi)
   claudeUi.push()
 
-  docsIpc = wireDocs(win, docs, { libreOffice: () => !!soffice() })
   waForMedia = whatsapp
   inbox = wireInbox(win, {
     whatsapp,

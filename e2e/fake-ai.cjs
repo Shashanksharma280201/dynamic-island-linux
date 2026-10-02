@@ -5,6 +5,9 @@
 // Scripted by the prompt: "remember …" saves a note (tool call), "notes?"
 // searches notes (tool call), "tell <name> <text>" sends a WhatsApp message
 // (tool call that asks first), "slow" waits 6 s, anything else is echoed.
+// With "(Files: … (id d3) …)" from the Documents tab: "grammar" corrects a
+// Word file, "merge" merges the PDFs, "summar…" reads it, "trash" moves it
+// to the Trash (asks first).
 // The model "no-tools" rejects requests that include tools (like some local
 // models); the key "bad-key" is rejected.
 const http = require('http')
@@ -35,7 +38,18 @@ function startFakeAi() {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
       if (/^Sent to/.test(result)) return { text: 'Sent it!' }
       if (/did not allow/.test(result)) return { text: 'Okay, I didn’t send it.' }
+      if (/^(Saved|Made) /.test(result)) return { text: `Done. ${result.split('\n')[0]}` }
+      if (/^Moved /.test(result)) return { text: 'Moved it to the Trash.' }
+      if (/^Failed: /.test(result)) return { text: `Sorry: ${result.slice(8)}` }
+      if (/^.+ \(id d\d+\) · /.test(result)) return { text: `Summary: ${result.split('\n\n')[1]?.replace(/\s+/g, ' ').slice(0, 80)}` }
       return { text: `Here’s what I found: ${result.split('\n').find((l) => l.startsWith('title:'))?.slice(7) ?? result.slice(0, 80)}` }
+    }
+    const ids = [...prompt.matchAll(/\(id (d\d+)\)/g)].map((x) => x[1])
+    if (ids.length) {
+      if (/grammar|spelling/i.test(prompt)) return { text: '', tool: { name: 'docx_edit', input: { file: ids[0], edits: [{ find: 'teh rent', replace: 'the rent' }] } } }
+      if (/merge/i.test(prompt)) return { text: '', tool: { name: 'pdf_merge', input: { files: ids } } }
+      if (/summar/i.test(prompt)) return { text: '', tool: { name: 'docs_read', input: { file: ids[0] } } }
+      if (/trash/i.test(prompt)) return { text: '', tool: { name: 'docs_trash', input: { file: ids[0] } } }
     }
     const tell = /^tell (\w+) (.+)/i.exec(prompt)
     if (tell) return { text: '', tool: { name: 'chats_send', input: { chat: tell[1], text: tell[2] } } }

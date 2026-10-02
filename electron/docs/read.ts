@@ -6,8 +6,8 @@ import { kindOf, parsePages, pagesLabel, type DocKind } from './files'
 
 const require = createRequire(import.meta.url)
 
-/** Most text handed to the agent in one go (about 15k tokens). */
-export const MAX_READ_CHARS = 60_000
+/** Most text handed to the agent in one go (about 11k tokens; under the 50k cap on a tool result). */
+export const MAX_READ_CHARS = 45_000
 
 type PdfJs = typeof import('pdfjs-dist/legacy/build/pdf.mjs')
 let pdfjsP: Promise<PdfJs> | null = null

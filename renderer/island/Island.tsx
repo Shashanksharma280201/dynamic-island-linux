@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
 import type { Rect } from '@shared/hitbox'
 import { present } from '@shared/present'
@@ -20,9 +20,29 @@ import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
 import { useCharacter } from './character/Character'
 import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
+import type { DocsAdded } from '@shared/docs'
+import type { DocsIncoming } from './hub/DocsView'
+import { DocsAppIcon } from './hub/AppIcons'
+import { errorText } from './hub/common'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
+
+/** Files dragged over the island (and not, say, text). */
+const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
+
+/** What the collapsed island turns into while files are dragged over it. */
+function DropCard() {
+  return (
+    <div className="card drop-card">
+      <DocsAppIcon />
+      <div>
+        <div className="title">Drop to add to Documents</div>
+        <div className="caption">PDFs, Word, Excel, slides or text</div>
+      </div>
+    </div>
+  )
+}
 
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
@@ -62,6 +82,54 @@ export function Island({ activities }: { activities: Activity[] }) {
   useEffect(() => {
     if (pkgTabs && tabOff(tab, pkgTabs)) setTab('controls')
   }, [pkgTabs, tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Drop files on the island to add them to Documents (when it's turned on).
+  const docsOn = !!window.island.docs && (!pkgTabs || pkgTabs.includes('docs'))
+  const [dropping, setDropping] = useState(false)
+  const [incoming, setIncoming] = useState<DocsIncoming | null>(null)
+  const lastOver = useRef(0)
+  const dropFiles = async (files: File[]) => {
+    const paths = files.map((f) => window.island.docs.pathFor(f)).filter(Boolean)
+    let r: DocsAdded
+    try {
+      r = paths.length ? await window.island.docs.add(paths) : { added: [], skipped: files.map((f) => ({ path: f.name, why: 'not a file on this computer' })) }
+    } catch (e) {
+      r = { added: [], skipped: [{ path: 'The files', why: errorText(e) }] }
+    }
+    setIncoming({ ids: r.added.map((f) => f.id), skipped: r.skipped, at: Date.now() })
+    setTab('docs')
+    pinned.current = true // the pointer was busy dragging: stay open until it visits
+    setPanel(true)
+  }
+  const dropHandlers = docsOn
+    ? {
+        onDragEnter: (e: DragEvent) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          lastOver.current = performance.now()
+          setDropping(true)
+        },
+        onDragOver: (e: DragEvent) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          e.dataTransfer.dropEffect = 'copy'
+          lastOver.current = performance.now()
+          setDropping(true)
+        },
+        // Moving between parts of the island leaves one and enters (then drags
+        // over) the next; only a leave with nothing after it is really leaving.
+        onDragLeave: () => {
+          const at = performance.now()
+          setTimeout(() => lastOver.current < at && setDropping(false), 80)
+        },
+        onDrop: (e: DragEvent) => {
+          if (!hasFiles(e)) return
+          e.preventDefault()
+          setDropping(false)
+          void dropFiles(Array.from(e.dataTransfer.files))
+        },
+      }
+    : {}
 
   // Claude Code + voice live here so switching tabs never cuts you off.
   const [claude, setClaude] = useState<ClaudeView | null>(null)
@@ -151,10 +219,10 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Auto-close the panel once the cursor has left for a moment (not while typing).
   useEffect(() => {
     // Also stays open while you're talking to Claude.
-    if (!panel || hover || typing || voice.phase !== 'idle' || pinned.current) return
+    if (!panel || hover || typing || dropping || voice.phase !== 'idle' || pinned.current) return
     const t = setTimeout(() => setPanel(false), PANEL_CLOSE_MS)
     return () => clearTimeout(t)
-  }, [panel, hover, typing, voice.phase])
+  }, [panel, hover, typing, dropping, voice.phase])
 
   // Track the island's settled size (the outer box is never transformed).
   useEffect(() => {
@@ -208,7 +276,9 @@ export function Island({ activities }: { activities: Activity[] }) {
 
   const key = showPanel
     ? 'panel'
-    : p.mode === 'idle'
+    : dropping
+      ? 'drop'
+      : p.mode === 'idle'
       ? 'idle'
       : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
@@ -236,6 +306,7 @@ export function Island({ activities }: { activities: Activity[] }) {
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
       {...handlers}
+      {...dropHandlers}
     >
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
@@ -255,7 +326,9 @@ export function Island({ activities }: { activities: Activity[] }) {
             transition={contentFade}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} />
+              <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+            ) : dropping ? (
+              <DropCard />
             ) : p.mode === 'idle' ? (
               <IdlePill />
             ) : p.primary.kind === 'approval' ? (

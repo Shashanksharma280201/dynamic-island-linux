@@ -1,6 +1,7 @@
 // Drive the real X pointer (XTest) in root coordinates:
 //   node xtest.cjs X Y            move
 //   node xtest.cjs drag X1 Y1 X2 Y2 [steps]   press at 1, move in steps, release at 2
+//   node xtest.cjs dnd X1 Y1 X2 Y2   drag and drop between apps (XDND): slower, hovers before letting go
 //   node xtest.cjs key ctrl+i     press and release a key combo (real X key events)
 //   node xtest.cjs type "hello"   type lowercase letters, digits and spaces (real X key events)
 //   node xtest.cjs click X Y      move there and click the left button
@@ -32,6 +33,31 @@ x11.createClient((err, display) => {
       await sleep(100)
       xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
       await sleep(100)
+    } else if (args[0] === 'dnd') {
+      // Press, move past the drag threshold so the source starts a drag, then
+      // travel in small steps (each one an XDND position), hover, let go.
+      const [x1, y1, x2, y2] = args.slice(1).map(Number)
+      move(x1, y1)
+      await sleep(300)
+      xt.FakeInput(xt.ButtonPress, 1, 0, root, 0, 0)
+      await sleep(100)
+      for (let i = 1; i <= 6; i++) {
+        move(x1 + i * 4, y1 + i * 2)
+        await sleep(40)
+      }
+      await sleep(400)
+      const steps = 40
+      for (let i = 1; i <= steps; i++) {
+        move(x1 + 24 + ((x2 - x1 - 24) * i) / steps, y1 + 12 + ((y2 - y1 - 12) * i) / steps)
+        await sleep(30)
+      }
+      for (let i = 0; i < 10; i++) {
+        move(x2 + (i % 2 ? 2 : -2), y2)
+        await sleep(80)
+      }
+      await sleep(300)
+      xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
+      await sleep(500)
     } else if (args[0] === 'steal') {
       // Another app takes the keyboard: map a small window and focus it.
       const wid = X.AllocID()

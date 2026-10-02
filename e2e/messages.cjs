@@ -197,7 +197,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
 
     check(
       'the section icons sit in a rail beside the panel',
-      (await page.$$('.rail-btn[aria-label]')).length === 7 && !(await page.$('.tabs')),
+      (await page.$$('.rail-btn[aria-label]')).length === 8 && !(await page.$('.tabs')),
     )
     // Record the Chats panel's height every frame while it opens and loads.
     await page.evaluate(() => {

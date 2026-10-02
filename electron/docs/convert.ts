@@ -7,8 +7,9 @@ import { pdfPageTexts } from './read'
 import { markdownToDocx, markdownToHtml, rowsToHtml, rowsToMarkdown, textToDocx, wrapHtml } from './create'
 import { parseCsv, rowsToXlsx, toCsv, xlsxRows } from './sheet'
 
-export type ConvertTarget = 'pdf' | 'docx' | 'xlsx' | 'csv' | 'txt' | 'md'
-export const CONVERT_TARGETS: ConvertTarget[] = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md']
+import { canConvert, type ConvertTarget } from '@shared/docs'
+
+export { canConvert, CONVERT_TARGETS, type ConvertTarget } from '@shared/docs'
 
 export type ConvertDeps = {
   /** Print an HTML page to PDF (an offscreen Electron window). */
@@ -19,34 +20,21 @@ export type ConvertDeps = {
 
 export type Converted = { bytes: Uint8Array; ext: ConvertTarget; note?: string }
 
-/** Which conversions exist (from → to), for the agent and the quick actions. Pure. */
-export function canConvert(from: DocKind, to: ConvertTarget, hasLibreOffice: boolean): boolean {
-  if (from === to) return false
-  switch (to) {
-    case 'pdf':
-      return from === 'pptx' ? hasLibreOffice : true
-    case 'docx':
-      return from !== 'pptx' || hasLibreOffice
-    case 'xlsx':
-      return from === 'csv'
-    case 'csv':
-      return from === 'xlsx'
-    case 'txt':
-    case 'md':
-      return true
-  }
-}
-
 /** Convert an Office file with LibreOffice into a temporary folder; returns the bytes. */
 async function viaLibreOffice(soffice: string, path: string, to: 'pdf' | 'docx'): Promise<Uint8Array> {
   const dir = await mkdtemp(join(tmpdir(), 'island-convert-'))
   try {
     // Its own profile, so it works even while LibreOffice is open.
     const profile = `-env:UserInstallation=file://${join(dir, 'profile')}`
-    await new Promise<void>((resolve, reject) =>
-      execFile(soffice, [profile, '--headless', '--norestore', '--convert-to', to, '--outdir', dir, path], { timeout: 120_000 }, (e) => (e ? reject(e) : resolve())),
+    const said = await new Promise<string>((resolve, reject) =>
+      execFile(soffice, [profile, '--headless', '--norestore', '--convert-to', to, '--outdir', dir, path], { timeout: 120_000 }, (e, out, err) =>
+        e ? reject(e) : resolve(`${out}\n${err}`),
+      ),
     )
-    return new Uint8Array(await readFile(join(dir, `${stem(path)}.${to}`)))
+    // It reports some failures (like a missing Writer) only in its output.
+    const made = await readFile(join(dir, `${stem(path)}.${to}`)).catch(() => null)
+    if (!made) throw new Error(said.split('\n').find((l) => /error/i.test(l))?.replace(/^Error:\s*/i, '') || 'no file was made')
+    return new Uint8Array(made)
   } catch (e: any) {
     throw new Error(`LibreOffice couldn’t convert it (${String(e?.message ?? e).split('\n')[0].slice(0, 160)}).`)
   } finally {
@@ -115,16 +103,32 @@ export async function convertDocument(path: string, to: ConvertTarget, d: Conver
       }
     }
     case 'pdf': {
-      if ((from === 'docx' || from === 'pptx' || from === 'xlsx') && soffice) return { bytes: await viaLibreOffice(soffice, path, 'pdf'), ext: 'pdf' }
+      // LibreOffice makes an exact copy; if it can't (say only part of it is
+      // installed), Word and Excel files are still made the simple way.
+      let failed = ''
+      if ((from === 'docx' || from === 'pptx' || from === 'xlsx') && soffice) {
+        try {
+          return { bytes: await viaLibreOffice(soffice, path, 'pdf'), ext: 'pdf' }
+        } catch (e: any) {
+          if (from === 'pptx') throw e
+          failed = `${e.message} `
+        }
+      }
       if (from === 'docx') {
         const mammoth = (await import('mammoth')).default
         // Images left out: the page is printed with no network or files.
         const r = await mammoth.convertToHtml({ buffer: Buffer.from(bytes) }, { convertImage: (mammoth.images as any).imgElement(() => Promise.resolve({ src: '' })) } as any)
-        return { bytes: await d.printPdf(wrapHtml(r.value, title)), ext: 'pdf', note: 'Made without LibreOffice: layout is simplified and images left out. Install LibreOffice for an exact copy.' }
+        return {
+          bytes: await d.printPdf(wrapHtml(r.value, title)),
+          ext: 'pdf',
+          note: failed
+            ? `${failed}Made the simple way instead: layout is simplified and images left out.`
+            : 'Made without LibreOffice: layout is simplified and images left out. Install LibreOffice for an exact copy.',
+        }
       }
       if (from === 'xlsx' || from === 'csv') {
         const rows = from === 'xlsx' ? await xlsxRows(bytes) : parseCsv(Buffer.from(bytes).toString('utf8'))
-        return { bytes: await d.printPdf(rowsToHtml(rows, title)), ext: 'pdf' }
+        return { bytes: await d.printPdf(rowsToHtml(rows, title)), ext: 'pdf', note: failed ? `${failed}Made as a simple table instead.` : undefined }
       }
       if (from === 'md') return { bytes: await d.printPdf(markdownToHtml(Buffer.from(bytes).toString('utf8'), title)), ext: 'pdf' }
       // Plain text: keep its lines as they are.

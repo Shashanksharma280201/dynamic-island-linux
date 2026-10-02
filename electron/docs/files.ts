@@ -1,8 +1,9 @@
 import { existsSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
 
-/** The kinds of files the Documents package works with. */
-export type DocKind = 'pdf' | 'docx' | 'xlsx' | 'csv' | 'pptx' | 'md' | 'txt'
+import type { DocKind } from '@shared/docs'
+
+export { KIND_LABEL, sizeLabel, type DocKind } from '@shared/docs'
 
 const EXT: Record<string, DocKind> = {
   '.pdf': 'pdf',
@@ -18,16 +19,6 @@ const EXT: Record<string, DocKind> = {
 /** The document kind of a file name, or null if it isn't one we handle. Pure. */
 export function kindOf(path: string): DocKind | null {
   return EXT[extname(path).toLowerCase()] ?? null
-}
-
-export const KIND_LABEL: Record<DocKind, string> = {
-  pdf: 'PDF',
-  docx: 'Word',
-  xlsx: 'Excel',
-  csv: 'CSV',
-  pptx: 'PowerPoint',
-  md: 'Markdown',
-  txt: 'Text',
 }
 
 /** Largest file we'll open (bigger ones are likely scans or videos in disguise). */
@@ -117,9 +108,3 @@ export function pagesLabel(indexes: number[]): string {
   return ranges.join(', ')
 }
 
-/** "340 KB". Pure. */
-export function sizeLabel(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(bytes < 10 * 1024 * 1024 ? 1 : 0)} MB`
-}

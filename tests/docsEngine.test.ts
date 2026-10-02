@@ -1,4 +1,4 @@
-import { mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
+import { chmodSync, mkdtempSync, writeFileSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
@@ -213,4 +213,19 @@ test('conversions', async () => {
   await expect(convertDocument(file('s.pptx', 'x'), 'pdf', deps)).rejects.toThrow('needs LibreOffice')
   await expect(convertDocument(csvPath, 'csv', deps)).rejects.toThrow('already a CSV')
   expect(existsSync(csvPath) && readFileSync(csvPath, 'utf8')).toBe('Item,Qty\nPens,10\n') // originals untouched
+})
+
+test('when LibreOffice can’t open a file, Word and Excel are converted the simple way', async () => {
+  // Like a LibreOffice with only its core installed: it says so and exits 0.
+  const soffice = file('soffice', '#!/bin/sh\necho "Error: source file could not be loaded" >&2\nexit 0\n')
+  chmodSync(soffice, 0o755)
+  const printed: string[] = []
+  const deps = { printPdf: async (html: string) => (printed.push(html), pdf(1, 'Printed')), soffice: () => soffice }
+  const w = await convertDocument(file('lo.docx', await markdownToDocx('# Lease\n\nPay the rent.')), 'pdf', deps)
+  expect(w.note).toBe('LibreOffice couldn’t convert it (source file could not be loaded). Made the simple way instead: layout is simplified and images left out.')
+  expect(printed[0]).toContain('Pay the rent.')
+  const x = await convertDocument(file('lo.xlsx', await rowsToXlsx([['Item'], ['Pens']])), 'pdf', deps)
+  expect(x.note).toBe('LibreOffice couldn’t convert it (source file could not be loaded). Made as a simple table instead.')
+  // PowerPoint has no simple way.
+  await expect(convertDocument(file('lo.pptx', 'x'), 'pdf', deps)).rejects.toThrow('LibreOffice couldn’t convert it (source file could not be loaded).')
 })

@@ -232,3 +232,13 @@ test('the agent’s document tools', async () => {
   expect(list.split('\n')[0]).toBe('Contract (corrected, tracked changes).docx (id d9) · Word · made here')
   expect(readdirSync(s.out).length).toBeGreaterThan(5)
 })
+
+test('a long document is read in parts, and the agent is told so', async () => {
+  const s = await setup()
+  const long = join(s.home, 'Long.txt')
+  writeFileSync(long, 'word '.repeat(12_000)) // 60,000 characters
+  const tools = packageTools({ disabled: ['notes', 'chats', 'mail', 'music'] }, { docs: s.docs } as any)
+  const r = await runTool(tools, 'docs_read', { file: long })
+  expect(r.output).toContain('The text was cut off here because it’s long')
+  expect(r.output.length).toBeLessThan(50_000)
+})

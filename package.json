@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "npm run build && xvfb-run -a -s \"-screen 0 1920x1080x24\" dbus-run-session -- sh -c \"node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs\"",
+    "test:e2e": "npm run build && xvfb-run -a -s \"-screen 0 1920x1080x24\" dbus-run-session -- sh -c \"node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs && node e2e/docs.cjs\"",
     "check": "npm run typecheck && npm test && npm run build",
     "package": "npm run build && electron-builder --linux AppImage deb",
     "hook:install": "node hook/install.cjs",

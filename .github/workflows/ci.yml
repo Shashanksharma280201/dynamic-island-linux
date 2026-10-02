@@ -33,6 +33,6 @@ jobs:
       - run: npm ci
       - run: npm run test:e2e
       - name: e2e on a simulated HiDPI (2x) display
-        run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- sh -c "node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- sh -c "node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs && node e2e/docs.cjs"
         env:
           E2E_SCALE: '2'
