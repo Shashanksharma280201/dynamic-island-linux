@@ -40,6 +40,9 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'tasks', label: 'Follow-ups' },
 ]
 
+/** The agent's changes you closed the bar for (kept while the island runs). */
+let dismissedChanges: string | null = null
+
 const savedTab = (): Tab => {
   try {
     const t = localStorage.getItem('crm-tab') as Tab | null
@@ -85,7 +88,8 @@ export function CrmView({ claude, onTyping }: { claude: ClaudeView | null; onTyp
   const [stack, setStack] = useState<CrmScreen[]>(() => [{ kind: savedTab() }])
   const screen = stack[stack.length - 1]
   const [toast, setToast] = useState<{ text: string; batch?: string; error?: boolean; show?: string } | null>(null)
-  const [dismissed, setDismissed] = useState<string | null>(null)
+  const [dismissed, setDismissedState] = useState<string | null>(dismissedChanges)
+  const setDismissed = (id: string) => setDismissedState((dismissedChanges = id))
   const [menu, setMenu] = useState(false)
   const { data: overview, reload } = useLoad<CrmOverview>(
     () => window.island.crm.overview(),
