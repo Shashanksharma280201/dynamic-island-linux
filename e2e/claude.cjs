@@ -214,6 +214,27 @@ function speechWav(text, file) {
     check('and the next command starts a new session', !runs()[n]?.args.includes('--resume'))
     await until(async () => /Done: fresh start/.test(await threadText()), 8000)
 
+    // ---- Claude Code uses the island's tools (MCP) ----
+    check('each run gets the island’s tools', runs().at(-1)?.args.includes('--mcp-config') && runs().at(-1)?.args.includes('mcp__island'))
+    const islandAsk = async (tool, input) => {
+      await page.fill('.claude-field textarea', `use island tool ${tool} ${JSON.stringify(input)}`)
+      await page.press('.claude-field textarea', 'Enter')
+    }
+    await islandAsk('notes_create', { text: 'Pick up the dry cleaning' })
+    check('Claude Code can save a note through the island', await until(async () => /Island said: Saved the note/.test(await threadText()), 8000), (await threadText()).slice(-120))
+    const noteDir = path.join(USER_DATA, 'notes')
+    check('and the note is really there', fs.existsSync(noteDir) && fs.readdirSync(noteDir).some((f) => fs.readFileSync(path.join(noteDir, f), 'utf8') === 'Pick up the dry cleaning'))
+    await idle()
+    await islandAsk('crm_add_contact', { name: 'Asha Rao', company: 'Globex' })
+    check('and run the CRM', await until(async () => /Island said: Added Asha Rao \(c1\)/.test(await threadText()), 8000))
+    await idle()
+    await islandAsk('crm_delete', { what: 'contact', id: 'Asha Rao' })
+    check('acting for you still asks on the island first', await page.waitForSelector('.card.agent-ask:has-text("Delete Asha Rao from the CRM")', { timeout: 8000 }).then(() => true, () => false))
+    await page.click('.agent-ask button.deny')
+    check('and Don’t Allow stops it', await until(async () => /did not allow/.test(await threadText()), 8000))
+    check('so Asha is still there', JSON.parse(fs.readFileSync(path.join(USER_DATA, 'crm', 'crm.json'), 'utf8')).contacts.some((c) => c.name === 'Asha Rao'))
+    await idle()
+
     // ---- While the panel is closed: orb on the capsule, then the answer card ----
     xt('key', 'ctrl+i')
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })

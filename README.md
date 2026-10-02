@@ -145,6 +145,15 @@ the island asks you with **Allow** / **Don't Allow**, even if you haven't
 installed the approvals hook. In Settings you can let it edit files without
 asking (**Allow edits**), or use Claude Code's **Auto** mode.
 
+Claude Code also gets **the island's own tools**: the packages you turned on
+in Settings → Packages (your notes, chats, mail, music, documents and CRM).
+So "add Rahul from Acme to my CRM and remind me to call him Friday" or "merge
+the PDFs I dropped on the island" work with Claude Code too. They're offered
+to each run as an MCP server inside the island, reachable only from this
+computer with a secret key the island makes when it starts; anything that acts for you (sending
+a message, deleting from the CRM, moving a file to the Trash) still asks you on
+the island first.
+
 ### 4b+. Use any AI: Claude, ChatGPT, Gemini, DeepSeek, OpenRouter or Ollama (optional)
 
 The agent in the **Claude** tab (with your character's face and name) can run
@@ -409,6 +418,9 @@ is available, Settings warns you that they are only obfuscated.
   network use is downloading the model from Hugging Face the first time.
 - Commands you give Claude are run by your own Claude Code (`claude -p`) in the
   folder you chose, with your normal Claude Code settings and permissions.
+- The island's tools are offered to those runs over MCP on `127.0.0.1` only,
+  behind a random key the island makes when it starts and passes only to the
+  runs it starts; other programs can't use them. `DI_MCP=off` turns this off.
 - **Plan limits** come from the data Claude Code gives status line scripts
   (`rate_limits`) and from Claude Code's own output; the island never reads
   your Claude login.

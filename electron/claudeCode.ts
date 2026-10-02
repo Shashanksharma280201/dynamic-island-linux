@@ -13,6 +13,7 @@ import {
   type ClaudeUsage,
 } from '@shared/claude'
 import type { ClaudeConfig } from './config'
+import { MCP_NAME } from './agent/mcpServer'
 
 /** Where the claude command usually lives when it isn't on the app's PATH. */
 export function claudeSearchDirs(home: string): string[] {
@@ -26,6 +27,11 @@ export function claudeSearchDirs(home: string): string[] {
     '/usr/bin',
   ]
 }
+
+const TOOLS_NOTE =
+  `You also have the island's own tools (mcp__${MCP_NAME}__…) for the user's notes, WhatsApp chats, mail, music, ` +
+  'documents (PDF, Word, Excel) and CRM (people, deals, follow-ups): use them for those instead of looking for files. ' +
+  'Tools that act for the user ask them on the island first; just call them.'
 
 const SYSTEM_NOTE =
   'The user is talking to you from a small desktop widget (the Dynamic Island). ' +
@@ -43,6 +49,8 @@ export function claudeArgs(o: {
   sessionId?: string
   permissionMode: ClaudeConfig['permissionMode']
   hookCommand?: string
+  /** The island's MCP server (its packages' tools), for --mcp-config. */
+  mcpConfig?: string
 }): string[] {
   const args = [
     '-p',
@@ -52,7 +60,7 @@ export function claudeArgs(o: {
     '--verbose',
     '--include-partial-messages',
     '--append-system-prompt',
-    SYSTEM_NOTE,
+    o.mcpConfig ? `${SYSTEM_NOTE} ${TOOLS_NOTE}` : SYSTEM_NOTE,
   ]
   if (o.sessionId) args.push('--resume', o.sessionId)
   if (o.permissionMode !== 'default') args.push('--permission-mode', o.permissionMode)
@@ -64,6 +72,9 @@ export function claudeArgs(o: {
       }),
     )
   }
+  // The island's tools are allowed without a prompt: the ones that act for
+  // the user ask on the island themselves.
+  if (o.mcpConfig) args.push('--allowedTools', `mcp__${MCP_NAME}`, '--mcp-config', o.mcpConfig)
   return args
 }
 
@@ -84,6 +95,8 @@ type Deps = {
   findBinary: () => string | null
   /** Command to run the approvals hook for this run, or undefined if installed globally. */
   hookCommand: () => string | undefined
+  /** Called as each run starts: the island's tools for it (--mcp-config), if any. */
+  mcpConfig?: () => string | undefined
   approvalsInstalled: () => boolean
   usageBridgeInstalled: () => boolean
   socketPath: string
@@ -206,6 +219,7 @@ export class ClaudeCode {
       sessionId: this.sessionId,
       permissionMode: this.d.config().permissionMode,
       hookCommand: this.d.hookCommand(),
+      mcpConfig: this.d.mcpConfig?.(),
     })
     const env: NodeJS.ProcessEnv = { ...process.env, DYNAMIC_ISLAND_SOCK: this.d.socketPath, DYNAMIC_ISLAND_RUN: '1' }
     delete env.ELECTRON_RUN_AS_NODE

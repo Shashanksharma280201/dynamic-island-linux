@@ -35,6 +35,7 @@ import {
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
 import type { MediaState } from '@shared/types'
 import { ApiAgent } from './agent/agent'
+import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
 import { enabledPackages, enabledTabs } from '@shared/packages'
 import { friendlyError, listModels } from './agent/providers'
@@ -312,6 +313,17 @@ async function main() {
     }
   })()
   const claudeCode = new ClaudeCode({
+    // A fresh set of tools for each run (its CRM changes undo together).
+    mcpConfig: () => {
+      if (process.env.DI_MCP === 'off') return undefined
+      mcpRun?.abort()
+      const run = (mcpRun = new AbortController())
+      islandMcp.use(islandTools(), async (tool, input) => {
+        const ask = await tool.asks!(input)
+        return agentApprovals.ask({ tool: tool.name, ...ask, signal: run.signal })
+      })
+      return islandMcp.config() ?? undefined
+    },
     config: () => config.claude,
     findBinary: findClaude,
     // Runs from the island ask on the island even without the global hook.
@@ -335,27 +347,14 @@ async function main() {
         })
       }
     },
-    onFinished: (run: ClaudeRun) => agentFinished(run),
-  })
-  // The island's own agent, for every provider other than Claude Code.
-  const apiAgent = new ApiAgent({
-    dataDir: app.getPath('userData'),
-    target: () => {
-      const ai = config.ai
-      const problem = setupProblem(ai)
-      if (problem) return problem
-      const provider = providerInfo(ai.provider)
-      const stored = ai.keys[ai.provider]
-      return {
-        provider,
-        model: modelFor(ai),
-        apiKey: stored ? decryptSecret(stored) : '',
-        // Tests point every provider at a local stand-in.
-        baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
-      }
+    onFinished: (run: ClaudeRun) => {
+      mcpRun?.abort() // an island tool still waiting for your OK is moot now
+      agentFinished(run)
     },
-    // Called per question, after every service below exists.
-    tools: () =>
+  })
+  // The tools of the packages that are on (Settings → Packages), for one
+  // answer: the island's own agent and Claude Code both use them.
+  const islandTools = () =>
       packageTools(config.packages, {
         notes,
         whatsapp: {
@@ -379,7 +378,29 @@ async function main() {
             outLabel: () => docs.outLabel(),
           },
         },
-      }),
+      })
+  // ...and for Claude Code, as an MCP server it's handed with each run.
+  const islandMcp = new IslandMcp()
+  let mcpRun: AbortController | null = null
+  // The island's own agent, for every provider other than Claude Code.
+  const apiAgent = new ApiAgent({
+    dataDir: app.getPath('userData'),
+    target: () => {
+      const ai = config.ai
+      const problem = setupProblem(ai)
+      if (problem) return problem
+      const provider = providerInfo(ai.provider)
+      const stored = ai.keys[ai.provider]
+      return {
+        provider,
+        model: modelFor(ai),
+        apiKey: stored ? decryptSecret(stored) : '',
+        // Tests point every provider at a local stand-in.
+        baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
+      }
+    },
+    // Called per question, after every service below exists.
+    tools: () => islandTools(),
     askUser: (o) => agentApprovals.ask(o),
     system: () => agentSystemPrompt(config.character),
     onChange: (s) => {
@@ -391,6 +412,7 @@ async function main() {
   })
   let showNotificationLater: (n: NotificationData) => void = () => {}
   await claude.start().catch((e) => console.error('claude server:', e.message ?? e))
+  await islandMcp.start().catch((e) => console.error('island tools for Claude Code:', e.message ?? e))
 
   // ---- media ----
   const media = new MediaProvider()
@@ -784,6 +806,8 @@ async function main() {
     crm.flush()
     claudeCode.dispose()
     apiAgent.dispose()
+    mcpRun?.abort()
+    islandMcp.stop()
     spotify.stop()
     tray?.destroy()
     invoker.stop()

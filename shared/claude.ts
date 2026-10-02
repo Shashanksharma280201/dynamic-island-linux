@@ -1,3 +1,4 @@
+import { PACKAGES } from './packages'
 import type { AssistantInfo } from './ai'
 const base = (p: unknown) => String(p ?? '').split('/').filter(Boolean).pop() ?? ''
 const clip = (s: string, n = 60) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
@@ -36,6 +37,11 @@ export function toolDetail(name: string, input: any): string {
     case 'TaskUpdate':
       return 'Planning'
     default:
+      if (name.startsWith('mcp__island__')) {
+        // The island's own tools: say what they do ("Find people").
+        const t = PACKAGES.flatMap((p) => p.tools).find((x) => x.name === name.slice('mcp__island__'.length))
+        return t ? t.summary : `Using ${name.slice('mcp__island__'.length).replace(/_/g, ' ')}`
+      }
       return name.startsWith('mcp__') ? `Using ${name.split('__')[1] ?? 'a connector'}` : `Using ${name}`
   }
 }
