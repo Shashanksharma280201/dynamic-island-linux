@@ -166,3 +166,36 @@ export function money(value: number | undefined, currency: string): string {
     return `${value} ${currency}`
   }
 }
+
+/** A deal with what happened around it. */
+export type CrmDealPage = { deal: DealSummary; activities: Activity[]; tasks: TaskSummary[] }
+
+/** What a contact form sends (lists as typed). */
+export type ContactForm = {
+  name: string
+  company?: string
+  title?: string
+  emails?: string[]
+  phones?: string[]
+  tags?: string[]
+  status?: ContactStatus | ''
+  address?: string
+  website?: string
+  birthday?: string
+  about?: string
+}
+
+export type DealForm = {
+  title?: string
+  contactId?: string | null
+  value?: number | null
+  currency?: string
+  stage?: DealStage
+  expectedClose?: string | null
+  notes?: string
+}
+
+export type TaskForm = { title?: string; due?: string | null; done?: boolean; contactId?: string; dealId?: string }
+
+/** What importing did. */
+export type CrmImported = { added: number; updated: number; skipped: number; batch: string; file: string }

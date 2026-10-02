@@ -192,7 +192,7 @@ test('looking for documents by name in the usual folders (not hidden ones)', asy
 
 test('the agent’s document tools', async () => {
   const s = await setup()
-  const tools = packageTools({ disabled: ['notes', 'chats', 'mail', 'music'] }, { docs: s.docs } as any)
+  const tools = packageTools({ disabled: ['notes', 'chats', 'mail', 'music', 'crm'] }, { docs: s.docs } as any)
   const run = (name: string, input: unknown, approve?: () => Promise<boolean>) => runTool(tools, name, input, approve && (async () => approve()))
 
   expect((await run('docs_list', {})).output).toContain('The Documents workspace is empty.')
@@ -237,7 +237,7 @@ test('a long document is read in parts, and the agent is told so', async () => {
   const s = await setup()
   const long = join(s.home, 'Long.txt')
   writeFileSync(long, 'word '.repeat(12_000)) // 60,000 characters
-  const tools = packageTools({ disabled: ['notes', 'chats', 'mail', 'music'] }, { docs: s.docs } as any)
+  const tools = packageTools({ disabled: ['notes', 'chats', 'mail', 'music', 'crm'] }, { docs: s.docs } as any)
   const r = await runTool(tools, 'docs_read', { file: long })
   expect(r.output).toContain('The text was cut off here because it’s long')
   expect(r.output.length).toBeLessThan(50_000)

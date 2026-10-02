@@ -11,9 +11,9 @@ import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 import { DocsAppIcon } from './AppIcons'
 
-export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs'
+export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes', 'docs']
+export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {

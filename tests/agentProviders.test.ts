@@ -4,7 +4,7 @@ import { checkInput, runTool } from '../electron/agent/tools'
 import { packageTools } from '../electron/packages/tools'
 
 /** Basics + Notes, with the other packages off. */
-const builtinTools = (o: { notes: any }) => packageTools({ disabled: ['chats', 'mail', 'music', 'docs'] }, { notes: o.notes } as any)
+const builtinTools = (o: { notes: any }) => packageTools({ disabled: ['chats', 'mail', 'music', 'docs', 'crm'] }, { notes: o.notes } as any)
 import { contextFrom } from '../electron/agent/agent'
 
 const require = createRequire(import.meta.url)

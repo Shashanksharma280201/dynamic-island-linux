@@ -272,3 +272,71 @@ test('due dates and money for people', () => {
   expect(money(undefined, 'USD')).toBe('')
   expect(existsSync('/nonexistent')).toBe(false)
 })
+
+test('the agent’s CRM tools', async () => {
+  const { packageTools } = await import('../electron/packages/tools')
+  const { runTool } = await import('../electron/agent/tools')
+  const s = setup()
+  const saved: { name: string; text: string }[] = []
+  const csv = join(s.dir, 'people.csv')
+  writeFileSync(csv, 'Name,Email,Company\nPriya Nair,priya@studio.in,Studio P\nRahul Sharma,rahul@acme.com,\n')
+  const vcf = join(s.dir, 'phone.vcf')
+  writeFileSync(vcf, 'BEGIN:VCARD\nFN:Kiran Rao\nTEL:+91 90000 00000\nEND:VCARD\n')
+  const files = {
+    resolve: async (ref: string) => {
+      if (ref !== 'people.csv') throw new Error(`No file “${ref}” in Documents.`)
+      return { path: csv, name: 'people.csv', kind: 'csv' as const }
+    },
+    homeFile: (ref: string) => (ref === '~/phone.vcf' ? vcf : null),
+    save: async (bytes: Uint8Array, name: string, ext: string) => (saved.push({ name: `${name}.${ext}`, text: Buffer.from(bytes).toString() }), { id: 'd9', name: `${name}.${ext}` } as any),
+    outLabel: () => '~/Documents/Dynamic Island',
+  }
+  // A new batch per answer, like the app does per question.
+  const answer = () => packageTools({ disabled: ['notes', 'chats', 'mail', 'music', 'docs'] }, { crm: { store: s.store, batch: s.store.begin('agent'), files, now: () => new Date(s.clock.now) } } as any)
+  const run = (tools: any, name: string, input: unknown, approve?: () => Promise<boolean>) => runTool(tools, name, input, approve && (async () => approve()))
+
+  let t = answer()
+  expect((await run(t, 'crm_find', {})).output).toBe('The CRM is empty. Add people with crm_add_contact (or crm_import).')
+  expect((await run(t, 'crm_add_contact', { name: 'Rahul Sharma', company: 'Acme', emails: ['rahul@acme.com'], tags: ['expo'], fields: [{ name: 'LinkedIn', value: 'in/rahul' }] })).output).toBe('Added Rahul Sharma (c1).')
+  expect((await run(t, 'crm_update_contact', { contact: 'rahul@acme.com', add_tags: ['vip'], status: 'lead' })).output).toBe('Updated Rahul Sharma.')
+  expect((await run(t, 'crm_log', { contact: 'Rahul', kind: 'call', text: 'Wants a quote for the website', when: '2026-10-01T15:00' })).output).toBe('Logged (a1) on Rahul Sharma’s timeline.')
+  expect((await run(t, 'crm_log', { text: 'x' })).output).toBe('Failed: Say whose timeline it goes on (contact or deal).')
+  expect((await run(t, 'crm_add_task', { title: 'Send the quote', contact: 'c1', due: '2026-10-02T17:00' })).output).toBe('Added follow-up t1: “Send the quote”, due 2026-10-02 17:00 (Rahul Sharma).')
+  expect((await run(t, 'crm_add_deal', { title: 'Website', contact: 'c1', value: 12500, stage: 'proposal' })).output).toMatch(/^Added deal deal1: deal1 · Website · Proposal · .*12,500.* · Rahul Sharma · Acme\.$/)
+  expect((await run(t, 'crm_tasks', { show: 'today' })).output).toBe('It’s 2026-10-02 10:00 now.\nt1 · Send the quote · due 2026-10-02 17:00 · Rahul Sharma')
+  expect((await run(t, 'crm_deals', {})).output).toMatch(/^Proposal: 1 \(.*12,500.*\)\ndeal1 · Website/)
+  const page = (await run(t, 'crm_contact', { contact: 'c1' })).output
+  expect(page).toContain('c1 · Rahul Sharma · Acme · Lead · tags: expo, vip')
+  expect(page).toContain('Emails: rahul@acme.com')
+  expect(page).toContain('LinkedIn: in/rahul')
+  expect(page).toContain('Emails: rahul@acme.com\nLinkedIn: in/rahul\nAdded 2026-10-02\n\nOpen follow-ups:\n- t1 · Send the quote · due 2026-10-02 17:00\n\nDeals:\n- deal1 · Website · Proposal')
+  expect(page).toContain('Timeline (newest first):\n- 2026-10-01 15:00 · Call: Wants a quote for the website')
+  expect((await run(t, 'crm_find', { query: 'zed' })).output).toBe('Nobody matches.')
+  expect((await run(t, 'crm_contact', { contact: 'zed' })).output).toBe('Failed: No contact called “zed”. Use crm_find to look, or crm_add_contact to add them.')
+
+  // Next answer: tick off, win the deal, then undo just that.
+  t = answer()
+  expect((await run(t, 'crm_update_task', { task: 'quote', done: true })).output).toBe('Done: “Send the quote”.')
+  expect((await run(t, 'crm_update_deal', { deal: 'website', stage: 'won' })).output).toMatch(/^Updated: deal1 · Website · Won/)
+  t = answer()
+  expect((await run(t, 'crm_undo', {})).output).toBe('Undid 2 changes: Done: “Send the quote”; Moved “Website” to Won.')
+  expect(s.store.deal('deal1')?.stage).toBe('proposal')
+  expect(s.store.all().tasks[0].done).toBe(false)
+
+  // Deleting asks first, saying what goes with it.
+  let asked: any
+  const ask = runTool(t, 'crm_delete', { what: 'contact', id: 'Rahul Sharma' }, async (tool, input) => ((asked = await tool.asks!(input)), false))
+  expect((await ask).output).toContain('did not allow')
+  expect(asked).toEqual({ title: 'Delete Rahul Sharma from the CRM', body: 'Their 1 timeline entry and 1 follow-up go too. Their deals stay. You can undo it in the CRM tab.' })
+  expect(s.store.contact('c1')).toBeDefined()
+  expect((await run(t, 'crm_delete', { what: 'task', id: 't1' }, async () => true)).output).toBe('Deleted the follow-up “Send the quote”.')
+
+  // Import from Documents (CSV) and from a phone's vCard; export as CSV.
+  t = answer()
+  expect((await run(t, 'crm_import', { file: 'people.csv' })).output).toBe('Imported from people.csv: 1 added, 0 filled in. The user can undo it in the CRM tab.')
+  expect((await run(t, 'crm_import', { file: '~/phone.vcf' })).output).toBe('Imported from phone.vcf: 1 added, 0 filled in. The user can undo it in the CRM tab.')
+  expect((await run(t, 'crm_import', { file: 'nope.csv' })).output).toBe('Failed: No file “nope.csv” in Documents.')
+  expect(s.store.search().map((c) => c.name).sort()).toEqual(['Kiran Rao', 'Priya Nair', 'Rahul Sharma'])
+  expect((await run(t, 'crm_export', { what: 'contacts' })).output).toBe('Saved CRM contacts 2026-10-02.csv (Documents id d9) in ~/Documents/Dynamic Island.')
+  expect(saved[0].text.split('\n')[0]).toBe('Name,Company,Title,Status,Email,Phone,Tags,Address,Website,Birthday,Notes,LinkedIn,Added')
+})

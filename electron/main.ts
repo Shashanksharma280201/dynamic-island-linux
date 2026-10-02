@@ -36,7 +36,7 @@ import { ClaudeCode, claudeSearchDirs } from './claudeCode'
 import type { MediaState } from '@shared/types'
 import { ApiAgent } from './agent/agent'
 import { packageTools } from './packages/tools'
-import { enabledTabs } from '@shared/packages'
+import { enabledPackages, enabledTabs } from '@shared/packages'
 import { friendlyError, listModels } from './agent/providers'
 import { agentSystemPrompt } from './agent/prompt'
 import { baseUrlFor, modelFor, providerInfo, setupProblem } from '@shared/ai'
@@ -54,7 +54,10 @@ import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
 import { NotesStore } from './notes'
-import { DocsService } from './docs/service'
+import { DocsService, homeFile } from './docs/service'
+import { CrmStore } from './crm/store'
+import { wireCrm } from './crmIpc'
+import { dueLabel } from '@shared/crm'
 import { printHtmlToPdf } from './docs/print'
 import { wireDocs } from './docsIpc'
 import { Backdrop } from './backdrop'
@@ -172,6 +175,9 @@ async function main() {
     onChange: () => docsIpc.changed(),
   })
   const docsIpc = wireDocs(win, docs, { libreOffice: () => !!soffice() })
+  // ---- CRM: people, deals and follow-ups, on this computer ----
+  const crm = new CrmStore({ dir: join(app.getPath('userData'), 'crm'), onChange: (c) => crmIpc.changed(c) })
+  const crmIpc = wireCrm(win, crm, { saveFile: (bytes, name, ext) => docs.save(bytes, name, ext) })
   // Frosted glass: blurred snapshot of what's behind the island (X11 only).
   const backdrop = new Backdrop(
     win,
@@ -362,6 +368,17 @@ async function main() {
         media: { now: () => nowPlaying, command: (c) => media.command(c) },
         spotify,
         docs,
+        crm: {
+          store: crm,
+          // One batch per answer: its changes undo in one go.
+          batch: crm.begin('agent'),
+          files: {
+            resolve: (ref) => docs.resolve(ref),
+            homeFile: (ref) => homeFile(homedir(), ref),
+            save: (bytes, name, ext) => docs.save(bytes, name, ext),
+            outLabel: () => docs.outLabel(),
+          },
+        },
       }),
     askUser: (o) => agentApprovals.ask(o),
     system: () => agentSystemPrompt(config.character),
@@ -433,6 +450,20 @@ async function main() {
     if (config.notifications) showNotification(n, invoke)
   })
   await notifications.start().catch((e) => console.error('notifications:', e))
+
+  // ---- CRM follow-ups: a card on the island when one is due ----
+  const CRM_ICON = `data:image/svg+xml;utf8,${encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ad8e6"/><stop offset="1" stop-color="#0a95a8"/></linearGradient></defs><rect width="28" height="28" rx="7.5" fill="url(#g)"/><rect x="5" y="7" width="18" height="14" rx="2.5" fill="#fff"/><circle cx="10.5" cy="12.3" r="2.3" fill="#12a3b5"/><path d="M7.1 18.3c.5-2 1.8-3.1 3.4-3.1s2.9 1.1 3.4 3.1z" fill="#12a3b5"/><path d="M15.6 11.6h4.8M15.6 14.3h4.8M15.6 17h3.2" stroke="#8fdde6" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  )}`
+  const remindFollowUps = () => {
+    if (!enabledPackages(config.packages).includes('crm')) return
+    const due = crm.dueForReminder()
+    for (const t of due.slice(0, 3))
+      showNotification({ app: 'CRM · Follow-up', icon: CRM_ICON, summary: t.title, body: [t.contactName, dueLabel(t.due, new Date())].filter(Boolean).join(' · '), urgency: 'normal' })
+    if (due.length > 3) showNotification({ app: 'CRM · Follow-ups', icon: CRM_ICON, summary: `${due.length - 3} more follow-ups are due`, body: 'See them in the CRM tab.', urgency: 'normal' })
+  }
+  setTimeout(remindFollowUps, 5000)
+  const crmTimer = setInterval(remindFollowUps, 60_000)
 
   // ---- messages: WhatsApp + mail ----
   const hub = new MessageHub(transient)
@@ -748,6 +779,8 @@ async function main() {
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
+    clearInterval(crmTimer)
+    crm.flush()
     claudeCode.dispose()
     apiAgent.dispose()
     spotify.stop()

@@ -2,7 +2,24 @@ import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CharacterConfig, CharacterId } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
 import type { PackageId, PackageTab } from '@shared/packages'
-import type { DocAction, DocActionResult, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
+import type { DocAction, DocActionResult, DocEntry, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
+import type {
+  Activity as CrmActivity,
+  Contact,
+  ContactForm,
+  ContactPage,
+  ContactSummary,
+  CrmChanges,
+  CrmDealPage,
+  CrmImported,
+  CrmOverview,
+  Deal,
+  DealForm,
+  DealSummary,
+  Task,
+  TaskForm,
+  TaskSummary,
+} from '@shared/crm'
 import { IPC } from '@shared/types'
 import type {
   Activity,
@@ -31,6 +48,7 @@ import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
 import { DOCS } from '../electron/docsChannels'
+import { CRM } from '../electron/crmChannels'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
@@ -115,6 +133,26 @@ const api = {
     removeRecipe: (id: string): Promise<DocRecipe[]> => ipcRenderer.invoke(DOCS.RECIPE_REMOVE, id),
     /** Where a file dropped on the island lives ('' if it isn't a file on disk). */
     pathFor: (f: File): string => webUtils.getPathForFile(f),
+  },
+  crm: {
+    overview: (): Promise<CrmOverview> => ipcRenderer.invoke(CRM.OVERVIEW),
+    /** Something changed; with the agent's changes when it was the agent. */
+    onChanged: (cb: (agent: CrmChanges | null) => void) => on(CRM.CHANGED, cb),
+    contacts: (query: string, status?: string): Promise<ContactSummary[]> => ipcRenderer.invoke(CRM.CONTACTS, query, status),
+    contact: (id: string): Promise<ContactPage> => ipcRenderer.invoke(CRM.CONTACT, id),
+    saveContact: (id: string | null, f: ContactForm): Promise<Contact> => ipcRenderer.invoke(CRM.SAVE_CONTACT, id, f),
+    log: (a: { contactId?: string; dealId?: string; kind: string; text: string }): Promise<CrmActivity> => ipcRenderer.invoke(CRM.LOG, a),
+    tasks: (filter: string): Promise<TaskSummary[]> => ipcRenderer.invoke(CRM.TASKS, filter),
+    saveTask: (id: string | null, f: TaskForm): Promise<Task> => ipcRenderer.invoke(CRM.SAVE_TASK, id, f),
+    deals: (): Promise<DealSummary[]> => ipcRenderer.invoke(CRM.DEALS),
+    deal: (id: string): Promise<CrmDealPage> => ipcRenderer.invoke(CRM.DEAL, id),
+    saveDeal: (id: string | null, f: DealForm): Promise<Deal> => ipcRenderer.invoke(CRM.SAVE_DEAL, id, f),
+    /** Resolves to the change batch, to undo it. */
+    remove: (what: 'contact' | 'deal' | 'task' | 'activity', id: string): Promise<string> => ipcRenderer.invoke(CRM.DELETE, what, id),
+    undo: (batch?: string): Promise<{ undone: number; kept: number; summary: string[] }> => ipcRenderer.invoke(CRM.UNDO, batch),
+    importFile: (): Promise<CrmImported | null> => ipcRenderer.invoke(CRM.IMPORT),
+    exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
+    setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),

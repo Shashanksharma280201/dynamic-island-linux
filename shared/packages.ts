@@ -3,10 +3,10 @@
  * tools the agent may use; Settings → Packages turns them on or off. Built-in
  * packages for now; the same shape will carry third-party ones later.
  */
-export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs'
+export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm'
 
 /** Rail tabs a package can own. */
-export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs'
+export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm'
 
 export type PackageToolInfo = {
   name: string
@@ -107,6 +107,31 @@ export const PACKAGES: PackageInfo[] = [
       { name: 'docs_create', summary: 'Write a new document' },
       { name: 'docs_compare', summary: 'Compare two versions' },
       { name: 'docs_trash', summary: 'Move a file to the Trash', asks: true },
+    ],
+  },
+  {
+    id: 'crm',
+    name: 'CRM',
+    description:
+      'Your own simple CRM: people, deals and follow-ups, kept on this computer. Use it in its tab, or let the agent run it: find people, log calls, add follow-ups, move deals. The agent’s changes can be undone in one go.',
+    tab: 'crm',
+    permissions: ['Your CRM (stored on this computer)', 'Documents, to import and export contacts'],
+    tools: [
+      { name: 'crm_find', summary: 'Find people' },
+      { name: 'crm_contact', summary: 'See everything about someone' },
+      { name: 'crm_add_contact', summary: 'Add a person' },
+      { name: 'crm_update_contact', summary: 'Change someone’s details' },
+      { name: 'crm_log', summary: 'Log a call, meeting or note' },
+      { name: 'crm_tasks', summary: 'List follow-ups' },
+      { name: 'crm_add_task', summary: 'Add a follow-up' },
+      { name: 'crm_update_task', summary: 'Tick off or move a follow-up' },
+      { name: 'crm_deals', summary: 'See the pipeline' },
+      { name: 'crm_add_deal', summary: 'Add a deal' },
+      { name: 'crm_update_deal', summary: 'Move or change a deal' },
+      { name: 'crm_delete', summary: 'Delete a contact, deal or follow-up', asks: true },
+      { name: 'crm_undo', summary: 'Undo its last changes' },
+      { name: 'crm_import', summary: 'Import contacts (CSV, Excel, vCard)' },
+      { name: 'crm_export', summary: 'Export as CSV' },
     ],
   },
 ]

@@ -114,6 +114,16 @@ export const DocsAppIcon = () => (
   </Tile>
 )
 
+/** CRM: a contact card on teal. */
+export const CrmAppIcon = () => (
+  <Tile from="#5ad8e6" to="#0a95a8">
+    <rect x="5" y="7" width="18" height="14" rx="2.5" fill="#fff" />
+    <circle cx="10.5" cy="12.3" r="2.3" fill="#12a3b5" />
+    <path d="M7.1 18.3c.5-2 1.8-3.1 3.4-3.1s2.9 1.1 3.4 3.1z" fill="#12a3b5" />
+    <path d="M15.6 11.6h4.8M15.6 14.3h4.8M15.6 17h3.2" stroke="#8fdde6" strokeWidth="1.3" strokeLinecap="round" />
+  </Tile>
+)
+
 /** Settings: a gear on grey. */
 export const SettingsAppIcon = () => {
   const teeth = Array.from({ length: 8 }, (_, i) => i * 45)

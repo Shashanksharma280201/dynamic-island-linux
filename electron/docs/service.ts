@@ -192,13 +192,7 @@ export class DocsService {
    * the home folder and not inside a hidden folder (settings, keys…), else null.
    */
   openable(ref: string): string | null {
-    const home = this.d.home()
-    const p = ref.startsWith('~/') ? join(home, ref.slice(2)) : ref
-    if (!isAbsolute(p) || !kindOf(p)) return null
-    const full = resolve(p)
-    const rel = relative(home, full)
-    if (!rel || rel.startsWith('..') || isAbsolute(rel)) return null
-    return rel.split(sep).some((part) => part.startsWith('.')) ? null : full
+    return kindOf(ref) ? homeFile(this.d.home(), ref) : null
   }
 
   /** The output folder as people see it: "~/Documents/Dynamic Island". */
@@ -393,6 +387,19 @@ export class DocsService {
     this.d.onChange()
     return next
   }
+}
+
+/**
+ * The full path for "~/x" or "/home/me/x" when it's in the home folder and not
+ * inside a hidden folder (settings, keys…), else null. Pure.
+ */
+export function homeFile(home: string, ref: string): string | null {
+  const p = ref.startsWith('~/') ? join(home, ref.slice(2)) : ref
+  if (!isAbsolute(p)) return null
+  const full = resolve(p)
+  const rel = relative(home, full)
+  if (!rel || rel.startsWith('..') || isAbsolute(rel)) return null
+  return rel.split(sep).some((part) => part.startsWith('.')) ? null : full
 }
 
 /** "Invoice.pdf (d7) · PDF · 6 pages" for messages. Pure. */
