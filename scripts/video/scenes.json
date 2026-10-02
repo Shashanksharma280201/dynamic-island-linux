@@ -1,0 +1,86 @@
+[
+ {
+  "id": "intro",
+  "title": "Dynamic Island",
+  "sub": "for Linux, macOS and Windows",
+  "say": "This is Dynamic Island: a small capsule that lives on the edge of your screen. It shows what's happening, like music, messages, mail and your AI assistant, and lets you act on it without leaving what you're doing. It runs on Linux, macOS and Windows. Let's take a tour."
+ },
+ {
+  "id": "capsule",
+  "title": "The capsule",
+  "sub": "Drag it anywhere along the edges, or to the top center",
+  "say": "The capsule sits on the right edge of the screen. You can drag it up and down, over to the left edge, or up to the top center, where it becomes a pill, like the Dynamic Island on a phone. Everywhere else, your desktop stays fully clickable."
+ },
+ {
+  "id": "music",
+  "title": "Now Playing",
+  "sub": "Spotify, YouTube in your browser, and other players",
+  "say": "When music plays, the capsule shows the album art and a moving waveform. Hover over it to see the song. You can pause, skip, shuffle, repeat, or click the progress bar to jump ahead."
+ },
+ {
+  "id": "whatsapp",
+  "title": "WhatsApp",
+  "sub": "Read and reply without opening WhatsApp",
+  "say": "When a WhatsApp message arrives, it pops up as a card. Click Reply, type your answer, and press Enter. It's sent straight away, and you never left your work."
+ },
+ {
+  "id": "mail",
+  "title": "Mail",
+  "sub": "Any IMAP account: Gmail, Outlook, iCloud and more",
+  "say": "New mail shows up the same way. Read it on the island and reply in a few words. The reply is threaded, and a copy is saved in your Sent folder."
+ },
+ {
+  "id": "panel",
+  "title": "The panel",
+  "sub": "Click the capsule or press Ctrl+I",
+  "say": "Click the capsule, or press Control I, to open the panel. The icons beside it switch between sections. Here is the Control Center, for volume, brightness, Wi-Fi and Bluetooth."
+ },
+ {
+  "id": "chats",
+  "title": "Chats, Mail and Notes",
+  "sub": "Your inbox and notes, one click away",
+  "say": "Chats lists your WhatsApp conversations, with photos, videos and voice notes. Mail shows your inbox. And Notes keeps quick notes that save as you type."
+ },
+ {
+  "id": "assistant",
+  "title": "Your assistant",
+  "sub": "Claude, ChatGPT, Gemini, DeepSeek, OpenRouter or Ollama",
+  "say": "The island has its own assistant, with a character that shows what it's doing. Ask it to remember something, and it saves a note for you. Ask it to message someone, and it shows you exactly what it will send, and waits for you to allow it."
+ },
+ {
+  "id": "settings",
+  "title": "Settings",
+  "sub": "Character, AI provider, and packages",
+  "say": "In Settings, pick a character and give it a name, choose which AI it uses, and turn packages on or off. A package adds a tab and new skills for the assistant, like chats, mail, music, documents or the CRM."
+ },
+ {
+  "id": "docs",
+  "title": "Documents",
+  "sub": "Drop files on the island",
+  "say": "Documents works with your files. Drop them on the island or add them here. Merge PDFs, pick pages, or convert files in one tap. Or ask the assistant: here it fixes the spelling in a contract, as tracked changes you can review in Word."
+ },
+ {
+  "id": "crm",
+  "title": "CRM",
+  "sub": "People, deals and follow-ups",
+  "say": "The CRM keeps track of the people you work with. Import your contacts, then just tell the assistant what happened. It logs the call, and adds a follow-up for tomorrow. Anything it changes can be undone with one click."
+ },
+ {
+  "id": "spotify",
+  "title": "Spotify",
+  "sub": "Browse and play your music",
+  "say": "Connect your Spotify account to browse your playlists and albums, search for anything, and play it on any of your devices."
+ },
+ {
+  "id": "claude",
+  "title": "Claude Code",
+  "sub": "Approvals and plan limits on the island",
+  "say": "If you use Claude Code, the island shows its permission requests, so you can allow or deny them from anywhere. The rings on the Claude icon show how much of your plan you've used. And you can talk to Claude Code, by typing or by voice."
+ },
+ {
+  "id": "install",
+  "title": "Get it",
+  "sub": "Pick your system in the README and run the commands",
+  "say": "To install it, open the README, pick your system, and run the commands in order. Use the main branch on Linux, mac on a Mac, and windows on Windows. That's Dynamic Island. Thanks for watching."
+ }
+]

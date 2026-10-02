@@ -31,6 +31,17 @@ What's different on a Mac:
 | Shortcuts | **⌘I** opens the panel, **⌃⌥Space** talks to the assistant |
 | Everything else | The same as on Linux: the assistant (any AI), characters, Documents, CRM, Notes, WhatsApp, Mail, Spotify, voice, Claude Code |
 
+## Watch the tour
+
+[![A 3 minute tour of Dynamic Island](docs/media/dynamic-island-tour.jpg)](docs/media/dynamic-island-tour.mp4)
+
+A narrated, 3 minute tour of everything the island does: the capsule, Now
+Playing, WhatsApp and mail replies, the panel, the assistant, Settings,
+Documents, the CRM, Spotify, Claude Code, and how to install it. Click the
+picture to play it ([download the video](docs/media/dynamic-island-tour.mp4?raw=true)).
+It's recorded from the real app with made-up data; `scripts/video/make.sh`
+records it again after changes.
+
 ## Install
 
 Pick your computer's system below and run its commands in order, one at a

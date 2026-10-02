@@ -1,6 +1,8 @@
 // Minimal MPRIS player on the session bus for e2e tests.
-// FAKE_PLAYER_NAME (default "fake") and FAKE_PLAYER_ART (an art URL) let it
-// pose as e.g. Spotify's desktop app; OpenUri calls are printed as OPENURI.
+// FAKE_PLAYER_NAME (default "fake"), FAKE_PLAYER_ART (an art URL),
+// FAKE_PLAYER_TITLES ("One|Two"), FAKE_PLAYER_ARTIST and FAKE_PLAYER_LENGTH
+// (seconds) let it pose as e.g. Spotify's desktop app; OpenUri calls are
+// printed as OPENURI.
 const dbus = require('dbus-next')
 const { Interface, ACCESS_READ, ACCESS_READWRITE } = dbus.interface
 const { Variant } = dbus
@@ -34,9 +36,9 @@ class Player extends Interface {
   get Position() { return BigInt(30_000_000) }
   get Metadata() {
     return {
-      'xesam:title': new Variant('s', ['Fake Track One', 'Fake Track Two'][this._track % 2]),
-      'xesam:artist': new Variant('as', ['E2E Band']),
-      'mpris:length': new Variant('x', BigInt(180_000_000)),
+      'xesam:title': new Variant('s', (process.env.FAKE_PLAYER_TITLES || 'Fake Track One|Fake Track Two').split('|')[this._track % 2]),
+      'xesam:artist': new Variant('as', [process.env.FAKE_PLAYER_ARTIST || 'E2E Band']),
+      'mpris:length': new Variant('x', BigInt((Number(process.env.FAKE_PLAYER_LENGTH) || 180) * 1_000_000)),
       'mpris:trackid': new Variant('o', `/org/fake/track${this._track}`),
       ...(process.env.FAKE_PLAYER_ART ? { 'mpris:artUrl': new Variant('s', process.env.FAKE_PLAYER_ART) } : {}),
     }

@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Desktop</title>
+<style>
+  @font-face { font-family: Inter; src: url(../../node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2) format('woff2'); font-weight: 100 900; }
+  html, body { margin: 0; height: 100%; overflow: hidden; cursor: none; }
+  body {
+    font-family: Inter, sans-serif; color: #fff;
+    background:
+      radial-gradient(1200px 700px at 15% 20%, #3b2a8f 0%, transparent 60%),
+      radial-gradient(900px 600px at 85% 90%, #0e6b8c 0%, transparent 60%),
+      linear-gradient(135deg, #141428, #0b1020 60%, #071a24);
+  }
+  .card { position: absolute; left: 64px; top: 50%; transform: translateY(-50%); width: 560px; transition: opacity .5s ease, transform .5s ease; }
+  .card.hidden { opacity: 0; transform: translateY(calc(-50% + 16px)); }
+  .step { font-size: 14px; letter-spacing: .14em; text-transform: uppercase; color: #9fb4ff; font-weight: 600; margin-bottom: 14px; }
+  h1 { font-size: 56px; line-height: 1.05; margin: 0 0 16px; font-weight: 750; letter-spacing: -.02em; }
+  p { font-size: 22px; line-height: 1.4; margin: 0; color: #c9d2ea; font-weight: 450; }
+  .intro h1 { font-size: 76px; }
+  .os { display: flex; gap: 10px; margin-top: 26px; }
+  .os span { font-size: 15px; padding: 7px 14px; border-radius: 999px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.14); }
+  .install { position: absolute; inset: 0; display: none; padding: 56px 120px 56px 64px; box-sizing: border-box; }
+  .install.on { display: block; }
+  .install h1 { font-size: 44px; }
+  .cols { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 26px; }
+  .col { background: rgba(10,14,30,.72); border: 1px solid rgba(255,255,255,.12); border-radius: 16px; padding: 18px 20px; }
+  .col b { font-size: 19px; display: block; margin-bottom: 4px; }
+  .col i { font-style: normal; font-size: 13px; color: #9fb4ff; }
+  pre { font: 12.5px/1.65 'DejaVu Sans Mono', monospace; color: #d8f5d0; margin: 12px 0 0; white-space: pre-wrap; word-break: break-all; }
+  .foot { margin-top: 22px; font-size: 17px; color: #c9d2ea; }
+</style>
+</head>
+<body>
+  <div class="card hidden" id="card">
+    <div class="step" id="step"></div>
+    <h1 id="title"></h1>
+    <p id="sub"></p>
+    <div class="os" id="os"><span>Linux</span><span>macOS</span><span>Windows</span></div>
+  </div>
+  <div class="install" id="install">
+    <div class="step">Install</div>
+    <h1>Pick your system, run the commands</h1>
+    <div class="cols">
+      <div class="col"><b>Linux</b><i>branch main</i><pre>git clone -b main https://github.com/
+  shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+npm start</pre></div>
+      <div class="col"><b>macOS</b><i>branch mac</i><pre>xcode-select --install
+git clone -b mac https://github.com/
+  shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+npm start</pre></div>
+      <div class="col"><b>Windows</b><i>branch windows</i><pre>winget install --id Git.Git -e
+winget install --id OpenJS.NodeJS.LTS -e
+git clone -b windows https://github.com/
+  shashanksharma280201/dynamic-island-linux.git dynamic-island
+cd dynamic-island
+npm install
+npm start</pre></div>
+    </div>
+    <div class="foot">Full steps, installers and start at login: see the README.</div>
+  </div>
+<script>
+  window.show = ({ step, title, sub, intro, install }) => {
+    const card = document.getElementById('card')
+    document.getElementById('install').classList.toggle('on', !!install)
+    card.classList.add('hidden')
+    setTimeout(() => {
+      if (install) return
+      card.classList.toggle('intro', !!intro)
+      document.getElementById('os').style.display = intro ? 'flex' : 'none'
+      document.getElementById('step').textContent = step || ''
+      document.getElementById('title').textContent = title
+      document.getElementById('sub').textContent = sub || ''
+      card.classList.remove('hidden')
+    }, 350)
+  }
+</script>
+</body>
+</html>
