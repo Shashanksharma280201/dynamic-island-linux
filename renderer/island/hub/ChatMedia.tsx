@@ -47,14 +47,25 @@ function useMediaFile(chatId: string, msgId: string, auto: boolean) {
   return { file, error, loading, load }
 }
 
-/** True once the element has scrolled into view (and stays true). */
+/** The nearest ancestor that scrolls (the chat thread), or null for the window. */
+function scrollParent(el: Element): Element | null {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const o = getComputedStyle(p).overflowY
+    if (o === 'auto' || o === 'scroll') return p
+  }
+  return null
+}
+
+/** True once the element is in or near view (and stays true). */
 function useSeen<T extends Element>(): [React.RefObject<T>, boolean] {
   const ref = useRef<T>(null)
   const [seen, setSeen] = useState(false)
   useEffect(() => {
     const el = ref.current
     if (!el || seen) return
-    const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && setSeen(true), { rootMargin: '200px' })
+    // Measured against the thread itself, so the margin counts there: a photo
+    // just above the visible part loads too, whichever way the thread scrolled first.
+    const io = new IntersectionObserver((es) => es.some((e) => e.isIntersecting) && setSeen(true), { root: scrollParent(el), rootMargin: '200px' })
     io.observe(el)
     return () => io.disconnect()
   }, [seen])

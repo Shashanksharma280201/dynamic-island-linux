@@ -50,6 +50,8 @@ const until = async (fn, ms = 5000) => {
       DI_WHATSAPP_ENGINE: 'fake',
       DI_FAKE_WA_READY_MS: '300',
       DI_DEMO_LOG: WA_LOG,
+      // The stand-in claude, so Claude Code is there as a provider without a real install (as in CI).
+      DI_CLAUDE_BIN: path.join(__dirname, 'fake-claude.cjs'),
     },
   })
   const logs = []
