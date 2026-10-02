@@ -34,6 +34,25 @@ What's different on Windows:
 Media and system controls use a small PowerShell helper that ships with the
 app (nothing to install).
 
+## Download
+
+**Latest release: [v0.1.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.1.0)** ([all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)). Pick the
+file for your computer:
+
+| Your computer | Download |
+|---|---|
+| Ubuntu, Debian | [dynamic-island-linux-0.1.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.1.0-amd64.deb` |
+| Any Linux (X11) | [dynamic-island-linux-0.1.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x86_64.AppImage), then `chmod +x` it and run it |
+| Mac with Apple silicon (M1 and newer) | [dynamic-island-linux-0.1.0-arm64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-arm64.dmg) |
+| Mac with Intel | [dynamic-island-linux-0.1.0-x64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x64.dmg) |
+| Windows 10 or 11 | [dynamic-island-linux-0.1.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x64.exe) |
+
+The installers aren't signed yet. On a Mac, open the `.dmg`, drag Dynamic
+Island to Applications, and the first time open **System Settings → Privacy &
+Security** and click **Open Anyway**. On Windows, if SmartScreen warns, click
+**More info**, then **Run anyway**. To build it from the code instead, see
+[Install](#install).
+
 ## Watch the tour
 
 [![A 3 minute tour of Dynamic Island](docs/media/dynamic-island-tour.jpg)](docs/media/dynamic-island-tour.mp4)
