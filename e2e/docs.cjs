@@ -10,7 +10,7 @@ const os = require('os')
 const JSZip = require('jszip')
 const { PDFDocument, StandardFonts } = require('pdf-lib')
 const { Document, Packer, Paragraph, TextRun } = require('docx')
-const { spawn } = require('child_process')
+const { execFileSync, spawn } = require('child_process')
 const { startFakeAi } = require('./fake-ai.cjs')
 
 const ROOT = path.resolve(__dirname, '..')
@@ -219,27 +219,44 @@ const made = (name) => path.join(MADE, name)
     fs.writeFileSync(report, await pdf(4, 'Q'))
     await togglePanel()
     await page.waitForSelector('.hub', { state: 'detached', timeout: 5000 })
-    await sleep(800)
+    const source = spawn(ELECTRON, [path.join(__dirname, 'drag-source.cjs'), '--no-sandbox'], { env: { ...process.env, DRAG_FILE: report } })
+    let said = ''
+    source.stdout.on('data', (d) => (said += d))
+    source.stderr.on('data', (d) => /error/i.test(d) && !/bus\.cc|atom_cache/.test(d) && (said += d))
+    await until(() => said.includes('ready'), 15000)
+    // Aim at the resting capsule: the last answer's card closes by itself
+    // (close it now), and the island must have settled before measuring.
+    await page.evaluate(() => window.island.dismiss('claude-done'))
+    await until(async () => !!(await page.$('.capsule.idle')), 20000)
+    await sleep(600)
+    const islandId = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getNativeWindowHandle().readUInt32LE(0))
     const win = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())
     const box = await page.evaluate(() => {
-      const b = document.querySelector('.island').getBoundingClientRect()
+      const b = document.querySelector('.island-outer > .island').getBoundingClientRect()
       return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
     })
-    const source = spawn(ELECTRON, [path.join(__dirname, 'drag-source.cjs'), '--no-sandbox'], { env: { ...process.env, DRAG_FILE: report } })
-    await new Promise((r) => (source.stdout.on('data', (d) => d.toString().includes('ready') && r()), setTimeout(r, 8000)))
-    await sleep(800)
-    const xdnd = spawn('node', [path.join(__dirname, 'xtest.cjs'), 'dnd', '150', '460', String(Math.round((win.x + box.x) * SCALE)), String(Math.round((win.y + box.y) * SCALE))])
-    let finished = false
-    let invited = false
-    xdnd.on('exit', () => (finished = true))
-    while (!finished) {
-      if (await page.$('.drop-card')) invited = true
-      await sleep(50)
+    const target = [Math.round((win.x + box.x) * SCALE), Math.round((win.y + box.y) * SCALE)]
+    const under = () => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'child', ...target.map(String)]).toString().trim()
+    check('the island takes input where the file will be dropped', await until(() => under() === String(islandId), 3000), `${under()} vs ${islandId}`)
+    /** Drag the file onto the island, watching for the drop card on the way. */
+    const dragOnce = async () => {
+      const xdnd = spawn('node', [path.join(__dirname, 'xtest.cjs'), 'dnd', '150', '460', ...target.map(String)])
+      let finished = false
+      let invited = false
+      xdnd.on('exit', () => (finished = true))
+      while (!finished) {
+        if (await page.$('.drop-card')) invited = true
+        await sleep(50)
+      }
+      return invited
     }
+    let invited = await dragOnce()
+    // A busy machine can miss the start of a drag (no "dragging" yet): once more.
+    if (!invited && !said.includes('dragging')) invited = await dragOnce()
     source.kill()
-    check('a file dragged from another app shows the drop card', invited)
+    check('a file dragged from another app shows the drop card', invited, invited ? '' : `(drag source said: ${said.trim().replace(/\n/g, ' | ')})`)
     check('and dropping it adds it to Documents', await seen(page, '.doc-row[data-doc="Quarterly Report.pdf"][aria-pressed="true"]', 6000))
-    check('with its pages read', (await page.textContent('.doc-row[data-doc="Quarterly Report.pdf"]')).includes('4 pages'))
+    check('with its pages read', ((await page.textContent('.doc-row[data-doc="Quarterly Report.pdf"]', { timeout: 2000 }).catch(() => '')) ?? '').includes('4 pages'))
     await shot('08-dropped')
   } catch (e) {
     check('unexpected error', false, e.message)
