@@ -28,6 +28,17 @@ jobs:
         run: node e2e/smoke.cjs
         env:
           SHOTS: shots
+      - name: Build the installer (as in the README)
+        run: npm run package
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no signing certificate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer-${{ matrix.os }}
+          path: |
+            dist/*.dmg
+            dist/*.exe
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:

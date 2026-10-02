@@ -12,6 +12,25 @@ It's a generic project: anyone can install it on Linux, and the `mac` and
 `windows` branches run it on macOS and Windows too (see [Install](#install)).
 Every integration (Claude Code, WhatsApp, mail) is optional.
 
+## This is the macOS branch
+
+This branch runs the island on **macOS** (Apple silicon and Intel). It has
+everything on `main`, plus a macOS module (`electron/platform/darwin.ts`) for
+the parts that differ. To set it up, follow
+[Install on macOS](#install-on-macos).
+
+What's different on a Mac:
+
+| | On macOS |
+|---|---|
+| Island | A floating panel along the screen edge or at the top center, below the camera; no Dock icon (it lives in the menu bar) |
+| Now Playing | **Spotify** and **Apple Music**, with controls, seeking, shuffle and repeat. The first time, macOS asks to let Dynamic Island control them (Automation). Browsers and other players aren't shown yet |
+| Control Center | **Volume** and **Wi-Fi**. **Bluetooth** shows if [`blueutil`](https://github.com/toy/blueutil) is installed, **brightness** if [`brightness`](https://github.com/nriley/brightness) is (`brew install blueutil brightness`) |
+| Other apps' notifications | Not available: macOS doesn't let apps read other apps' notifications |
+| Frosted glass | Not yet (Glass and Solid looks both work) |
+| Shortcuts | **⌘I** opens the panel, **⌃⌥Space** talks to the assistant |
+| Everything else | The same as on Linux: the assistant (any AI), characters, Documents, CRM, Notes, WhatsApp, Mail, Spotify, voice, Claude Code |
+
 ## Install
 
 Pick your computer's system below and run its commands in order, one at a
@@ -220,29 +239,6 @@ remove dynamic-island-linux`, on macOS drag Dynamic Island from Applications
 to the Trash, and on Windows use **Settings → Apps → Installed apps →
 Dynamic Island → Uninstall**. Delete the `dynamic-island` folder to remove the
 code.
-
-## This is the macOS branch
-
-This branch runs the island on **macOS** (Apple silicon and Intel). It has
-everything on `main`, plus a macOS module (`electron/platform/darwin.ts`) for
-the parts that differ. Build an app with `npm run package` (a `.dmg` in
-`dist/`), or run it from source with `npm install && npm start`.
-
-What's different on a Mac:
-
-| | On macOS |
-|---|---|
-| Island | A floating panel along the screen edge or at the top center, below the camera; no Dock icon (it lives in the menu bar) |
-| Now Playing | **Spotify** and **Apple Music**, with controls, seeking, shuffle and repeat. The first time, macOS asks to let Dynamic Island control them (Automation). Browsers and other players aren't shown yet |
-| Control Center | **Volume** and **Wi-Fi**. **Bluetooth** shows if [`blueutil`](https://github.com/toy/blueutil) is installed, **brightness** if [`brightness`](https://github.com/nriley/brightness) is (`brew install blueutil brightness`) |
-| Other apps' notifications | Not available: macOS doesn't let apps read other apps' notifications |
-| Frosted glass | Not yet (Glass and Solid looks both work) |
-| Shortcuts | **⌘I** opens the panel, **⌃⌥Space** talks to the assistant |
-| Everything else | The same as on Linux: the assistant (any AI), characters, Documents, CRM, Notes, WhatsApp, Mail, Spotify, voice, Claude Code |
-
-For the microphone, macOS asks once the first time you talk to the
-assistant. Apps you build yourself aren't signed: the first time, right-click
-the app and choose **Open**.
 
 ## Features
 
