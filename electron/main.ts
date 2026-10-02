@@ -434,10 +434,11 @@ async function main() {
   await media.start().catch((e) => console.error('media provider:', e))
 
   // ---- Spotify (Web API with your own app's Client ID) ----
-  // The Spotify desktop app, if installed (deb/snap/flatpak).
+  // The Spotify desktop app, if installed (deb/snap/flatpak, or %APPDATA%\Spotify on Windows).
   const spotifyApp = (): string | null => {
     if (process.env.DI_SPOTIFY_APP !== undefined) return process.env.DI_SPOTIFY_APP || null
     const home = homedir()
+    if (process.platform === 'win32') return findExecutable('spotify', [join(process.env.APPDATA ?? join(home, 'AppData', 'Roaming'), 'Spotify')])
     const flatpak = ['/var/lib/flatpak/exports/bin', join(home, '.local/share/flatpak/exports/bin')]
     return findExecutable('spotify', ['/snap/bin', ...flatpak]) ?? findExecutable('com.spotify.Client', flatpak)
   }

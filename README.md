@@ -11,6 +11,30 @@ click it. Everywhere outside the island, your desktop stays fully clickable.
 It's a generic project: anyone on Linux can install it, and every integration
 (Claude Code, WhatsApp, mail) is optional.
 
+## This is the Windows branch
+
+This branch runs the island on **Windows 10 and 11**. It has everything on
+`main`, plus a Windows module (`electron/platform/win32.ts`) for the parts
+that differ. Build an installer with `npm run package` (a setup `.exe` in
+`dist/`), or run it from source with `npm install && npm start`.
+
+What's different on Windows:
+
+| | On Windows |
+|---|---|
+| Island | A floating bar along the screen edge or at the top center, always on top; it starts with Windows if you turn that on in Settings |
+| Now Playing | Any app in Windows' media overlay: **Spotify**, browsers (YouTube and others), Media Player and more, with cover art, controls, seeking, shuffle and repeat where the app allows it |
+| Control Center | **Volume** and mute, **Wi-Fi** and **Bluetooth** on and off, and **brightness** on laptop screens (external monitors don't let Windows set it) |
+| Other apps' notifications | Not available yet: Windows only lets packaged Store apps read them |
+| Frosted glass | Not yet (Glass and Solid looks both work) |
+| Shortcuts | **Ctrl+I** opens the panel, **Ctrl+Alt+Space** talks to the assistant |
+| Claude Code | The hook talks to the island over a named pipe; `npm run hook:install` sets it up as on Linux |
+| Everything else | The same as on Linux: the assistant (any AI), characters, Documents, CRM, Notes, WhatsApp, Mail, Spotify, voice |
+
+Media and system controls use a small PowerShell helper that ships with the
+app (nothing to install). Installers you build yourself aren't signed, so
+SmartScreen may warn the first time: choose **More info**, then **Run anyway**.
+
 ## Features
 
 | Feature | What you see | What you can do |
