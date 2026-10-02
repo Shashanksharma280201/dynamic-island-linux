@@ -42,7 +42,11 @@ export function Island({ activities }: { activities: Activity[] }) {
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [areaH, setAreaH] = useState(window.innerHeight)
   const { side, anchor, dragging, handlers, consumeDragClick } = useDock()
-  const top = islandTop(anchor, size.h, areaH)
+  const atTop = side === 'top'
+  const top = atTop ? EDGE_MARGIN : islandTop(anchor, size.h, areaH)
+  /** Left edge of the island in the window: on an edge, or centered at the top. */
+  const leftFor = (w: number) =>
+    side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
 
   useEffect(() => window.island.onSysState(setSys), [])
 
@@ -161,7 +165,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   useLayoutEffect(() => {
     const outer = outerRef.current
     if (!outer) return
-    const ox = side === 'left' ? EDGE_MARGIN : window.innerWidth - EDGE_MARGIN - outer.offsetWidth
+    const ox = leftFor(outer.offsetWidth)
     outer.querySelectorAll<HTMLElement>(':scope > .island').forEach((el) => {
       el.style.setProperty('--bgx', `${FROST_BLEED - (ox + el.offsetLeft)}px`)
       el.style.setProperty('--bgy', `${FROST_BLEED - (top + el.offsetTop)}px`)
@@ -173,7 +177,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   useLayoutEffect(() => {
     if (!size.w) return
     lastRect.current = {
-      x: side === 'left' ? EDGE_MARGIN : window.innerWidth - EDGE_MARGIN - size.w,
+      x: leftFor(size.w),
       y: top,
       width: size.w,
       height: size.h,
@@ -214,7 +218,7 @@ export function Island({ activities }: { activities: Activity[] }) {
     <div
       ref={outerRef}
       className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' with-rail' : ''}`}
-      style={{ top, [side]: EDGE_MARGIN }}
+      style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onClick={onClick}
@@ -229,12 +233,12 @@ export function Island({ activities }: { activities: Activity[] }) {
             key={key}
             layout
             // Content grows out of / sinks back into the docked edge.
-            style={{ transformOrigin: side === 'left' ? 'left center' : 'right center' }}
+            style={{ transformOrigin: atTop ? 'center top' : side === 'left' ? 'left center' : 'right center' }}
             // Opacity and transform only: a blur filter repaints the whole
             // panel every frame and stutters on big content like Chats.
-            initial={{ opacity: 0, scale: 0.92, x: side === 'left' ? -8 : 8 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.92, x: side === 'left' ? -8 : 8 }}
+            initial={{ opacity: 0, scale: 0.92, ...(atTop ? { y: -8 } : { x: side === 'left' ? -8 : 8 }) }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, ...(atTop ? { y: -8 } : { x: side === 'left' ? -8 : 8 }) }}
             transition={contentFade}
           >
             {showPanel ? (
@@ -281,11 +285,11 @@ export function Island({ activities }: { activities: Activity[] }) {
           <motion.div
             key="rail"
             className="island rail-shell"
-            initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16 }}
+            initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             // A short fixed fade out: the rail must be gone promptly, or its
             // (invisible) box keeps the island's clickable area large.
-            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : 16, transition: { duration: 0.16 } }}
+            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16, transition: { duration: 0.16 } }}
             transition={spring}
           >
             <Rail tab={tab} onTab={setTab} usage={claude?.usage} />
@@ -295,13 +299,13 @@ export function Island({ activities }: { activities: Activity[] }) {
 
       <AnimatePresence>
         {!showPanel && p.mode === 'minimal' && (
-          // Buds off the bottom of the capsule and merges back into it.
+          // Buds off the capsule (below it on an edge, beside it at the top) and merges back.
           <motion.div
             key="detached"
             className="island detached"
-            initial={{ opacity: 0, scale: 0.3, y: -24 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.3, y: -24 }}
+            initial={{ opacity: 0, scale: 0.3, ...(atTop ? { x: -24 } : { y: -24 }) }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.3, ...(atTop ? { x: -24 } : { y: -24 }) }}
             transition={spring}
           >
             <DetachedCircle activity={p.detached} />

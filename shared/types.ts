@@ -258,7 +258,7 @@ export type SettingsState = {
   hookInstalled: boolean
   /** False when passwords can only be obfuscated (no desktop keyring). */
   secureStorage: boolean
-  dockSide: 'left' | 'right'
+  dockSide: 'left' | 'right' | 'top'
   appearance: 'glass' | 'solid'
   shortcut: boolean
   frosted: boolean

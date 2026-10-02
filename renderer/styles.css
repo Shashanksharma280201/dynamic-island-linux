@@ -84,6 +84,25 @@ button {
 .island-outer.right {
   align-items: flex-end;
 }
+/* Top center, below the camera: a horizontal pill that grows downward;
+   a second activity sits beside it, like a phone's split island. */
+.island-outer.top {
+  flex-direction: row;
+  align-items: flex-start;
+  transition: none;
+}
+.island-outer.top .capsule {
+  flex-direction: row;
+  padding: 7px 14px;
+  min-height: 36px;
+}
+.island-outer.top .capsule.idle {
+  padding: 5px 14px 5px 8px;
+}
+.island-outer.top .capsule .grip {
+  width: 18px;
+  height: 4px;
+}
 .island-outer.dragging {
   transition: none;
   cursor: grabbing;

@@ -276,6 +276,44 @@ function hook(input, env = {}) {
     await sleep(600)
     const back = await bounds()
     check('dragging back docks it on the right again', back.x + back.width >= 1920 / SCALE - 1, JSON.stringify(back))
+
+    // Top center, below the camera
+    await sleep(400)
+    c = await center()
+    dragPointer(c.x, c.y, 960 / SCALE, 60 / SCALE)
+    await sleep(800)
+    const topWin = await bounds()
+    check('dropping it near the top center docks it there', Math.abs(topWin.x + topWin.width / 2 - 960 / SCALE) <= 1 && topWin.width < 1920 / SCALE, JSON.stringify(topWin))
+    pointer(40 / SCALE, 1000 / SCALE) // move off it, so it collapses back to the pill
+    await page.waitForSelector('.island-outer .capsule', { timeout: 5000 })
+    await sleep(700)
+    const t = await page.evaluate(() => {
+      const b = document.querySelector('.island-outer').getBoundingClientRect()
+      const cap = document.querySelector('.island-outer .capsule').getBoundingClientRect()
+      return { cx: window.screenX + b.x + b.width / 2, top: b.y, cls: document.querySelector('.island-outer').className, wide: cap.width > cap.height }
+    })
+    check('it sits centered at the top', Math.abs(t.cx - 960 / SCALE) <= 2 && t.top <= 12 && t.cls.includes('top'), JSON.stringify(t))
+    check('as a horizontal pill', t.wide)
+    const topCfg = JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8'))
+    check('the top position is saved', topCfg.dock?.side === 'top', JSON.stringify(topCfg.dock))
+    const tc = await center()
+    const winId = await app.evaluate(({ BrowserWindow }) => {
+      const h = BrowserWindow.getAllWindows()[0].getNativeWindowHandle()
+      return String(h.length >= 8 ? h.readBigUInt64LE(0) : h.readUInt32LE(0))
+    })
+    const xt = (...a) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), ...a.map(String)]).toString().trim()
+    check('input goes to the island at the top', xt('child', Math.round(tc.x * SCALE), Math.round(tc.y * SCALE)) === winId)
+    xt('click', Math.round(tc.x * SCALE), Math.round(tc.y * SCALE))
+    check('clicking it opens the panel, growing down from the top', await page.waitForSelector('.card.panel', { timeout: 3000 }).then(() => true, () => false))
+    await shot('07b-top-panel')
+    pointer(40 / SCALE, 1000 / SCALE) // bottom-left corner: well away from the panel
+    await page.waitForSelector('.card.panel', { state: 'detached', timeout: 5000 })
+    await sleep(600)
+    c = await center()
+    dragPointer(c.x, c.y, 1800 / SCALE, 400 / SCALE)
+    await sleep(800)
+    const off = await bounds()
+    check('dragging it away from the top docks it on an edge again', off.x + off.width >= 1920 / SCALE - 1, JSON.stringify(off))
     pointer(900 / SCALE, 500 / SCALE)
   } catch (e) {
     check('drag test error', false, e.message)

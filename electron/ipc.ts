@@ -121,7 +121,7 @@ export function wireIpc(h: {
   })
   ipcMain.on(IPC.DOCK_SET, (_e, d) => h.onDockSet(parseDock(d)))
   ipcMain.on(IPC.DOCK_PREVIEW, (_e, side) => {
-    if (side === 'left' || side === 'right') h.onDockPreview(side)
+    if (side === 'left' || side === 'right' || side === 'top') h.onDockPreview(side)
   })
   ipcMain.on(IPC.DRAG, (_e, on) => h.onDrag(on === true))
   ipcMain.on(IPC.OPEN_SETTINGS, (_e, section) =>

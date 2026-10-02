@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import type { DockState } from '@shared/types'
-import { DEFAULT_DOCK, clamp01, sideForX, type Side } from '@shared/dock'
+import { DEFAULT_DOCK, clamp01, sideForPoint, type Side } from '@shared/dock'
 
 const DRAG_THRESHOLD = 5
+
+const centerY = (el: HTMLElement) => {
+  const r = el.getBoundingClientRect()
+  return r.top + r.height / 2
+}
 
 /** Elements that keep their own click / typing behaviour instead of dragging. */
 const NO_DRAG = 'button, input, textarea, select, a, .no-drag'
@@ -10,7 +15,8 @@ const NO_DRAG = 'button, input, textarea, select, a, .no-drag'
 /**
  * Dock position from the main process, plus drag handling: press on the island
  * (not on a control) and move more than a few pixels to drag it along the edge;
- * crossing the middle of the screen moves it to the other edge. On release the
+ * crossing the middle of the screen moves it to the other edge, and dropping it
+ * near the top center docks it there. On release the
  * new dock is saved. Returns a flag to swallow the click that ends a drag.
  */
 export function useDock() {
@@ -39,7 +45,8 @@ export function useDock() {
       id: e.pointerId,
       startX: e.screenX,
       startY: e.screenY,
-      grabOffset: e.clientY - anchor,
+      // From the island's real center (at the top it isn't at the edge anchor).
+      grabOffset: e.clientY - centerY(e.currentTarget),
       side: dock.side,
       active: false,
     }
@@ -57,7 +64,7 @@ export function useDock() {
       window.island.setDragging(true)
     }
     setDragAnchor(Math.max(0, Math.min(window.innerHeight, e.clientY - d.grabOffset)))
-    const side = sideForX(e.screenX, dock.workArea)
+    const side = sideForPoint(e.screenX, e.screenY, dock.workArea)
     if (side !== d.side) {
       d.side = side
       window.island.previewSide(side)
@@ -71,7 +78,8 @@ export function useDock() {
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
     if (!d.active) return
     swallowClick.current = true
-    const y = clamp01((e.clientY - d.grabOffset) / window.innerHeight)
+    // At the top the height doesn't apply: keep the edge position for later.
+    const y = d.side === 'top' ? dock.y : clamp01((e.clientY - d.grabOffset) / window.innerHeight)
     setDock((cur) => ({ ...cur, side: d.side, y }))
     setDragAnchor(null)
     window.island.setDock({ side: d.side, y })

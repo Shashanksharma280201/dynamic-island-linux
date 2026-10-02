@@ -32,7 +32,7 @@ type Deps = {
   /** Whether this process was started with the CDP port WhatsApp needs. */
   whatsappCapable: boolean
   onConfigChanged: () => void
-  onDockSide: (side: 'left' | 'right') => void
+  onDockSide: (side: 'left' | 'right' | 'top') => void
   onAppearance: () => void
   /** Re-register the global shortcut; returns whether it is active. */
   applyShortcut: () => boolean
@@ -200,7 +200,7 @@ export class SettingsController {
       this.d.onAppearance()
     })
     ipcMain.handle(SETTINGS.SET_DOCK_SIDE, (_e, side) => {
-      if (side === 'left' || side === 'right') this.d.onDockSide(side)
+      if (side === 'left' || side === 'right' || side === 'top') this.d.onDockSide(side)
     })
     ipcMain.handle(SETTINGS.SET_HOOK, async (_e, on) => {
       await setHookInstalled(on === true)

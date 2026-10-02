@@ -570,6 +570,7 @@ async function main() {
     send(win, IPC.RECT_REQUEST, null)
   })
   pushAppearance()
+  pushCharacter()
   pushDock()
   win.webContents.on('render-process-gone', () => {
     if (!win.isDestroyed()) win.webContents.reload()

@@ -68,7 +68,7 @@ function speechWav(text, file) {
   fs.writeFileSync(path.join(PROJECT, 'README.md'), '# My project\n')
   fs.writeFileSync(
     path.join(USER_DATA, 'config.json'),
-    JSON.stringify({ notifications: true, dock: { side: 'right', y: 0.35 }, claude: { cwd: PROJECT, sttModel: 'tiny' } }),
+    JSON.stringify({ notifications: true, dock: { side: 'right', y: 0.35 }, claude: { cwd: PROJECT, sttModel: 'tiny' }, character: { id: 'mochi', name: 'Momo' } }),
   )
 
   // Local stand-in for Hugging Face, serving the test model under the name the app asks for.
@@ -151,6 +151,7 @@ function speechWav(text, file) {
     check('the project folder is shown', (await page.textContent('.folder-chip')).includes('my-project'))
     const rings = await page.$$eval('.rail-btn[aria-label="Claude"] .ring-fill', (cs) => cs.map((c) => `${c.getAttribute('class')}:${c.dataset.pct}`))
     check('the Claude icon shows session and weekly usage as rings', rings.join() === 'ring-fill session high:83,ring-fill week ok:41', rings.join())
+    check('the character saved in Settings is there from the start', !!(await page.$('.voice-stage .character[data-character="mochi"]')))
     await shot('02-claude-tab')
 
     // ---- A typed command, with the real keyboard ----

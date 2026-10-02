@@ -348,16 +348,16 @@ export function Settings() {
         <div className="toggle-row">
           <div>
             <div>Island position</div>
-            <div className="hint">Or drag the island along the edge, or across to the other side</div>
+            <div className="hint">Or drag the island: along an edge, across to the other side, or up to the top center</div>
           </div>
           <div className="segmented">
-            {(['left', 'right'] as const).map((side) => (
+            {(['left', 'top', 'right'] as const).map((side) => (
               <button
                 key={side}
                 className={s.dockSide === side ? 'on' : 'secondary'}
                 onClick={() => general.run(() => window.settings.setDockSide(side))}
               >
-                {side === 'left' ? 'Left' : 'Right'}
+                {side === 'left' ? 'Left' : side === 'top' ? 'Top' : 'Right'}
               </button>
             ))}
           </div>

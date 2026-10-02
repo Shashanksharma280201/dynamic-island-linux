@@ -1,11 +1,12 @@
-import { parseDock, columnBounds, sideForX, islandTop, DEFAULT_DOCK } from '../shared/dock'
+import { parseDock, columnBounds, sideForX, sideForPoint, islandTop, DEFAULT_DOCK, TOP_WIDTH } from '../shared/dock'
 
 const WA = { x: 0, y: 32, width: 1920, height: 1048 }
 
 test('parseDock validates and clamps', () => {
   expect(parseDock(undefined)).toEqual(DEFAULT_DOCK)
   expect(parseDock({ side: 'left', y: 0.5 })).toEqual({ side: 'left', y: 0.5 })
-  expect(parseDock({ side: 'top', y: 7 })).toEqual({ side: 'right', y: 1 })
+  expect(parseDock({ side: 'top', y: 7 })).toEqual({ side: 'top', y: 1 })
+  expect(parseDock({ side: 'bottom', y: 0.2 })).toEqual({ side: 'right', y: 0.2 })
   expect(parseDock({ side: 'left', y: 'x' })).toEqual({ side: 'left', y: DEFAULT_DOCK.y })
 })
 
@@ -19,6 +20,19 @@ test('columnBounds hugs the chosen edge of the work area', () => {
     width: 400,
     height: 800,
   })
+})
+
+test('the top position is a centered band', () => {
+  expect(columnBounds(WA, 'top')).toEqual({ x: (1920 - TOP_WIDTH) / 2, y: 32, width: TOP_WIDTH, height: 1048 })
+  expect(columnBounds({ x: 1920, y: 0, width: 600, height: 800 }, 'top')).toEqual({ x: 1920, y: 0, width: 600, height: 800 })
+})
+
+test('dropping near the top center docks at the top, elsewhere on the nearer edge', () => {
+  expect(sideForPoint(960, 60, WA)).toBe('top')
+  expect(sideForPoint(700, 150, WA)).toBe('top')
+  expect(sideForPoint(960, 400, WA)).toBe('right') // too low
+  expect(sideForPoint(300, 60, WA)).toBe('left') // too far left of center
+  expect(sideForPoint(1700, 60, WA)).toBe('right')
 })
 
 test('sideForX splits the work area in half', () => {
