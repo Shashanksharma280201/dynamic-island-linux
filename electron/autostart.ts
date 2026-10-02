@@ -36,11 +36,20 @@ function launchCommand(): string[] {
   return [process.execPath, app.getAppPath()]
 }
 
+/** macOS and Windows keep their own list of login items. */
+const nativeLogin = process.platform === 'darwin' || process.platform === 'win32'
+
 export function isAutostartEnabled(): boolean {
+  if (nativeLogin) return app.getLoginItemSettings().openAtLogin
   return existsSync(autostartFile())
 }
 
 export function setAutostart(on: boolean): void {
+  if (nativeLogin) {
+    // In development the app is electron + the project folder.
+    app.setLoginItemSettings({ openAtLogin: on, ...(app.isPackaged ? {} : { path: process.execPath, args: [app.getAppPath()] }) })
+    return
+  }
   const f = autostartFile()
   if (on) {
     mkdirSync(join(f, '..'), { recursive: true })

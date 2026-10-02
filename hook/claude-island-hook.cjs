@@ -11,7 +11,9 @@ const { buildDecision, allowSuggestions, summarize } = require(
 
 const SOCK =
   process.env.DYNAMIC_ISLAND_SOCK ||
-  (process.env.XDG_RUNTIME_DIR
+  (process.platform === 'win32'
+    ? `\\\\.\\pipe\\dynamic-island-${(process.env.USERNAME || 'user').replace(/[^\w.-]/g, '_')}`
+    : process.env.XDG_RUNTIME_DIR
     ? `${process.env.XDG_RUNTIME_DIR}/dynamic-island.sock`
     : `/tmp/dynamic-island-${process.getuid ? process.getuid() : 'user'}.sock`)
 

@@ -215,7 +215,7 @@ test('conversions', async () => {
   expect(existsSync(csvPath) && readFileSync(csvPath, 'utf8')).toBe('Item,Qty\nPens,10\n') // originals untouched
 })
 
-test('when LibreOffice can’t open a file, Word and Excel are converted the simple way', async () => {
+test.skipIf(process.platform === 'win32')('when LibreOffice can’t open a file, Word and Excel are converted the simple way', async () => {
   // Like a LibreOffice with only its core installed: it says so and exits 0.
   const soffice = file('soffice', '#!/bin/sh\necho "Error: source file could not be loaded" >&2\nexit 0\n')
   chmodSync(soffice, 0o755)

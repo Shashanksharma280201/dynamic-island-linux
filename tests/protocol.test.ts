@@ -19,9 +19,14 @@ test('decoder skips malformed lines instead of throwing', () => {
 })
 
 test('defaultSocketPath prefers env override, then XDG_RUNTIME_DIR, then per-user /tmp', () => {
-  expect(defaultSocketPath({ DYNAMIC_ISLAND_SOCK: '/x.sock' }, 1)).toBe('/x.sock')
-  expect(defaultSocketPath({ XDG_RUNTIME_DIR: '/run/user/1000' }, 1000)).toBe(
+  expect(defaultSocketPath({ DYNAMIC_ISLAND_SOCK: '/x.sock' }, 1, 'linux')).toBe('/x.sock')
+  expect(defaultSocketPath({ XDG_RUNTIME_DIR: '/run/user/1000' }, 1000, 'linux')).toBe(
     '/run/user/1000/dynamic-island.sock',
   )
-  expect(defaultSocketPath({}, 1000)).toBe('/tmp/dynamic-island-1000.sock')
+  expect(defaultSocketPath({}, 1000, 'linux')).toBe('/tmp/dynamic-island-1000.sock')
+})
+
+test('on Windows the island listens on a named pipe per user', () => {
+  expect(defaultSocketPath({ USERNAME: 'Shashank S' }, 'user', 'win32')).toBe('\\\\.\\pipe\\dynamic-island-Shashank_S')
+  expect(defaultSocketPath({ DYNAMIC_ISLAND_SOCK: '\\\\.\\pipe\\x' }, 1, 'win32')).toBe('\\\\.\\pipe\\x')
 })

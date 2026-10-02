@@ -1,5 +1,4 @@
 import type { BrowserWindow } from 'electron'
-import { readCursor } from './cursor'
 import { pointInRect, type Rect } from '@shared/hitbox'
 
 /**
@@ -18,11 +17,15 @@ export class Interactivity {
   private failures = 0
   private locked = false
 
-  constructor(private win: BrowserWindow) {
+  constructor(
+    private win: BrowserWindow,
+    /** The pointer, in the same coordinates as setRect's rect. */
+    private readCursor: () => Promise<{ x: number; y: number } | null>,
+  ) {
     this.win.setIgnoreMouseEvents(true)
   }
 
-  /** Island hit area in physical screen pixels (X11 root coordinates). */
+  /** Island hit area, in the cursor's coordinates (X11: physical pixels). */
   setRect(r: Rect | null): void {
     this.rect = r
   }
@@ -49,11 +52,11 @@ export class Interactivity {
     if (this.busy || this.locked || this.win.isDestroyed()) return
     this.busy = true
     try {
-      const p = this.rect ? await readCursor() : null
+      const p = this.rect ? await this.readCursor().catch(() => null) : null
       if (this.rect && !p && ++this.failures === 25) {
         console.error(
-          '[interactivity] cannot read the X11 cursor; the island will stay click-through. ' +
-            'Is DISPLAY set and is this an X11 session?',
+          '[interactivity] cannot read the cursor; the island will stay click-through. ' +
+            '(On Linux: is DISPLAY set and is this an X11 session?)',
         )
       }
       if (p) this.failures = 0

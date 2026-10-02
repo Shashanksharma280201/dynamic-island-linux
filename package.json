@@ -8,7 +8,7 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview -- --replace",
-    "restart": "electron-vite build && setsid electron . --replace >/dev/null 2>&1 < /dev/null &",
+    "restart": "electron-vite build && node scripts/restart.cjs",
     "typecheck": "tsc --noEmit -p .",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -122,7 +122,31 @@
       ]
     },
     "artifactName": "${name}-${version}-${arch}.${ext}",
-    "publish": null
+    "publish": null,
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "category": "public.app-category.productivity",
+      "icon": "assets/icon.png",
+      "extendInfo": {
+        "LSUIElement": true,
+        "NSMicrophoneUsageDescription": "Talk to your assistant from the island.",
+        "NSAppleEventsUsageDescription": "See and control what Spotify or Music is playing."
+      }
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.png",
+      "executableName": "DynamicIsland"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    }
   },
   "overrides": {
     "onnxruntime-node": "file:./stubs/onnxruntime-node",

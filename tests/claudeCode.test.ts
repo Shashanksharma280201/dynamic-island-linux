@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { ClaudeCode, claudeArgs, failureText } from '../electron/claudeCode'
+import { ClaudeCode, claudeArgs, failureText, launchOf } from '../electron/claudeCode'
 import type { ClaudeState } from '../shared/claude'
 
 const FAKE = join(__dirname, '../e2e/fake-claude.cjs')
@@ -113,4 +113,15 @@ test('approvals go through the island hook for runs from the island', async () =
   const r = await s.done()
   expect(r.reply).toMatch(/^Bash was no-decision\./)
   writeFileSync(join(s.dir, 'x'), '')
+})
+
+test('on Windows an npm .cmd shim runs its script with Node, never through cmd.exe', () => {
+  expect(launchOf('/usr/bin/claude', 'linux')).toEqual({ command: '/usr/bin/claude', args: [], node: false })
+  expect(launchOf('C:\\x\\claude.exe', 'win32')).toEqual({ command: 'C:\\x\\claude.exe', args: [], node: false })
+  const shim = '@ECHO off\r\nSET dp0=%~dp0\r\n"%_prog%"  "%dp0%\\node_modules\\@anthropic-ai\\claude-code\\cli.js" %*\r\n'
+  const l = launchOf('/npm/claude.cmd', 'win32', () => shim)
+  expect(l.node).toBe(true)
+  expect(l.command).toBe(process.execPath)
+  expect(l.args[0].replace(/\\/g, '/')).toBe('/npm/node_modules/@anthropic-ai/claude-code/cli.js')
+  expect(() => launchOf('/npm/odd.cmd', 'win32', () => 'echo hi')).toThrow('install Claude Code with its own installer')
 })

@@ -1,3 +1,4 @@
+import { testSocket } from './testSocket'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -18,7 +19,7 @@ function runHook(sock: string, input: object): Promise<string> {
 
 /** Fake island: answers each request with `reply(request)` (raw line). */
 async function fakeIsland(reply: (req: any, socket: net.Socket) => void) {
-  const sock = join(tmpdir(), `di-hook-${process.pid}-${Math.random()}.sock`)
+  const sock = testSocket('di-hook')
   const server = net.createServer((socket) => {
     const decode = createDecoder()
     socket.on('data', (c) => {

@@ -1,7 +1,7 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { createDecoder } from '@shared/protocol'
 import {
   applyStreamEvent,
@@ -16,7 +16,9 @@ import type { ClaudeConfig } from './config'
 import { MCP_NAME } from './agent/mcpServer'
 
 /** Where the claude command usually lives when it isn't on the app's PATH. */
-export function claudeSearchDirs(home: string): string[] {
+export function claudeSearchDirs(home: string, platform: string = process.platform, env = process.env): string[] {
+  if (platform === 'win32')
+    return [join(home, '.local', 'bin'), env.APPDATA ? join(env.APPDATA, 'npm') : '', env.LOCALAPPDATA ? join(env.LOCALAPPDATA, 'Programs', 'claude') : ''].filter(Boolean)
   return [
     join(home, '.local/bin'),
     join(home, '.claude/local'),
@@ -76,6 +78,18 @@ export function claudeArgs(o: {
   // the user ask on the island themselves.
   if (o.mcpConfig) args.push('--allowedTools', `mcp__${MCP_NAME}`, '--mcp-config', o.mcpConfig)
   return args
+}
+
+/**
+ * How to start a command. A Windows .cmd shim (what npm installs) would pass
+ * the prompt through cmd.exe, which can't quote it safely, so its script runs
+ * with Node directly instead. Pure, apart from reading the shim.
+ */
+export function launchOf(binary: string, platform: string = process.platform, read = (f: string) => readFileSync(f, 'utf8')): { command: string; args: string[]; node: boolean } {
+  if (platform !== 'win32' || !/\.(cmd|bat)$/i.test(binary)) return { command: binary, args: [], node: false }
+  const m = /%~?dp0%?\\([^"%]+?\.(?:c?js|mjs))"/i.exec(read(binary))
+  if (!m) throw new Error(`Can't start ${binary}: install Claude Code with its own installer (claude.exe), or point Settings at it.`)
+  return { command: process.execPath, args: [join(dirname(binary), m[1])], node: true }
 }
 
 /** Explain a run that ended without a result, from its exit and stderr. Pure. */
@@ -223,7 +237,9 @@ export class ClaudeCode {
     })
     const env: NodeJS.ProcessEnv = { ...process.env, DYNAMIC_ISLAND_SOCK: this.d.socketPath, DYNAMIC_ISLAND_RUN: '1' }
     delete env.ELECTRON_RUN_AS_NODE
-    const child = spawn(binary, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] })
+    const launch = launchOf(binary)
+    if (launch.node) env.ELECTRON_RUN_AS_NODE = '1' // this app's own Node runs the script
+    const child = spawn(launch.command, [...launch.args, ...args], { cwd, env, stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true })
     this.child = child
     const decode = createDecoder()
     let stderr = ''

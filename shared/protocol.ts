@@ -32,8 +32,10 @@ export function createDecoder(): (chunk: Buffer | string) => object[] {
 }
 
 /** Default socket path shared by the app and the hook. */
-export function defaultSocketPath(env: NodeJS.ProcessEnv, uid: number | string): string {
+export function defaultSocketPath(env: NodeJS.ProcessEnv, uid: number | string, platform: string = process.platform): string {
   if (env.DYNAMIC_ISLAND_SOCK) return env.DYNAMIC_ISLAND_SOCK
+  // Windows has named pipes instead of unix sockets (one per user).
+  if (platform === 'win32') return `\\\\.\\pipe\\dynamic-island-${(env.USERNAME || String(uid)).replace(/[^\w.-]/g, '_')}`
   if (env.XDG_RUNTIME_DIR) return `${env.XDG_RUNTIME_DIR}/dynamic-island.sock`
   return `/tmp/dynamic-island-${uid}.sock`
 }

@@ -1,3 +1,4 @@
+import { testSocket } from './testSocket'
 import net from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -6,7 +7,7 @@ import { ClaudeServer, parseRequest } from '../electron/providers/claude'
 import { encode, createDecoder } from '@shared/protocol'
 import type { ToolRequest } from '@shared/types'
 
-const sockPath = () => join(tmpdir(), `di-test-${process.pid}-${Math.random()}.sock`)
+const sockPath = () => testSocket()
 
 function connect(sock: string, lines: string[]): { client: net.Socket; replies: Promise<any[]> } {
   const client = net.createConnection(sock, () => client.write(lines.join('')))

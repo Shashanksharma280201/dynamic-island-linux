@@ -34,7 +34,9 @@ export function createIslandWindow(side: Side): BrowserWindow {
     focusable: false,
     hasShadow: false,
     alwaysOnTop: true,
-    type: 'dock',
+    // Linux: a dock window; macOS: a floating panel that never takes the
+    // menu bar; Windows: a tool window (no taskbar button).
+    type: process.platform === 'linux' ? 'dock' : process.platform === 'darwin' ? 'panel' : 'toolbar',
     backgroundColor: '#00000000',
     show: false,
     webPreferences: {

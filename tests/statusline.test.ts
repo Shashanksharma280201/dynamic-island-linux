@@ -1,3 +1,4 @@
+import { testSocket } from './testSocket'
 import { createRequire } from 'node:module'
 import { execFileSync, spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
@@ -55,7 +56,7 @@ test('install keeps your status line and uninstall restores it', () => {
 
 test('the bridge forwards usage to the island and runs your old status line', async () => {
   const dir = mkdtempSync(join(tmpdir(), 'di-sl-'))
-  const sock = join(dir, 's.sock')
+  const sock = testSocket('di-status')
   const got: string[] = []
   const server = net.createServer((c) => c.on('data', (d) => got.push(d.toString())))
   await new Promise<void>((r) => server.listen(sock, r))

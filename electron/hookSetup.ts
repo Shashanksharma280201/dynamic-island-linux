@@ -34,17 +34,23 @@ export function hookDir(): string {
 /** First executable named `name` on PATH (plus the usual per-user dirs). */
 export function findExecutable(name: string, extraDirs: string[] = []): string | null {
   const dirs = [...(process.env.PATH ?? '').split(delimiter), ...extraDirs].filter(Boolean)
+  // Windows finds "claude" as claude.exe or claude.cmd.
+  const exts = process.platform === 'win32' ? ['', ...(process.env.PATHEXT || '.EXE;.CMD;.BAT;.COM').split(';').map((e) => e.toLowerCase())] : ['']
   for (const d of dirs) {
-    const p = join(d, name)
-    try {
-      accessSync(p, constants.X_OK)
-      return p
-    } catch {
-      // not here
+    for (const ext of exts) {
+      const p = join(d, name + ext)
+      try {
+        accessSync(p, constants.X_OK)
+        if (process.platform === 'win32' && ext === '' && !/\.[a-z]+$/i.test(name)) continue // an extensionless file isn't runnable there
+        return p
+      } catch {
+        // not here
+      }
     }
   }
   return null
 }
+
 
 /**
  * How Claude Code should run the island's small Node scripts: Node if it is

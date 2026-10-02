@@ -4,14 +4,14 @@ import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
-import { MediaProvider } from './providers/media'
 import {
   NotificationMonitor,
   GtkActionInvoker,
   displayMs,
   type GtkInvoke,
 } from './providers/notifications'
-import { SystemControls, CommandQueue } from './providers/system'
+import { CommandQueue } from './providers/system'
+import { currentPlatform } from './platform'
 import { WhatsAppService, WwebjsEngine } from './providers/whatsapp'
 import { FakeWhatsAppEngine } from './providers/whatsappFake'
 import { createIslandWindow, placeIslandWindow } from './window'
@@ -117,6 +117,11 @@ function cdpUrl(): string {
 
 async function main() {
   const config = bootConfig
+  // What differs per OS: media, system controls, notifications, the cursor.
+  const platform = await currentPlatform()
+  const LINUX = platform.id === 'linux'
+  // A menu-bar app on macOS: no Dock icon.
+  if (process.platform === 'darwin') app.dock?.hide()
   const store = new ActivityStore()
   const win = createIslandWindow(config.dock.side)
   const claudeStateReady = earlyClaudeState()
@@ -157,6 +162,9 @@ async function main() {
   // LibreOffice (deb, snap or flatpak), for exact Office → PDF conversions.
   const soffice = (): string | null => {
     if (process.env.DI_SOFFICE !== undefined) return process.env.DI_SOFFICE || null
+    if (process.platform === 'darwin') return findExecutable('soffice', ['/Applications/LibreOffice.app/Contents/MacOS'])
+    if (process.platform === 'win32')
+      return findExecutable('soffice', [join(process.env.ProgramFiles || 'C:\\Program Files', 'LibreOffice', 'program'), join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'LibreOffice', 'program')])
     const flatpak = ['/var/lib/flatpak/exports/bin', join(homedir(), '.local/share/flatpak/exports/bin')]
     return findExecutable('soffice', ['/usr/bin', '/usr/local/bin']) ?? findExecutable('libreoffice', ['/snap/bin']) ?? findExecutable('org.libreoffice.LibreOffice', flatpak)
   }
@@ -183,7 +191,7 @@ async function main() {
   const backdrop = new Backdrop(
     win,
     () => display,
-    () => config.frosted && config.appearance === 'glass' && !WAYLAND && process.env.DI_BACKDROP !== 'off',
+    () => LINUX && config.frosted && config.appearance === 'glass' && !WAYLAND && process.env.DI_BACKDROP !== 'off',
     (img) => send(win, IPC.BACKDROP, img),
   )
   let shortcutActive = false
@@ -194,7 +202,7 @@ async function main() {
   let cssRect: Rect | null = null
   let dragging = false
   let shape: InputShape | null = null
-  if (process.env.DI_INPUT !== 'poll') {
+  if (LINUX && process.env.DI_INPUT !== 'poll') {
     try {
       win.setIgnoreMouseEvents(false) // resets Electron's own input region first
       shape = await InputShape.create(win)
@@ -203,7 +211,7 @@ async function main() {
       shape = null
     }
   }
-  const interactivity = shape ? null : new Interactivity(win)
+  const interactivity = shape ? null : new Interactivity(win, platform.readCursor)
   const updateHitArea = () => {
     if (shape) {
       if (dragging) shape.full()
@@ -214,7 +222,8 @@ async function main() {
       )
     } else {
       interactivity!.setRect(
-        cssRect && toPhysicalRect(cssRect, win.getBounds(), display.scaleFactor, 4),
+        // X11 reports the pointer in physical pixels; macOS and Windows in points.
+        cssRect && toPhysicalRect(cssRect, win.getBounds(), platform.cursorPhysical ? display.scaleFactor : 1, 4),
       )
     }
   }
@@ -415,7 +424,7 @@ async function main() {
   await islandMcp.start().catch((e) => console.error('island tools for Claude Code:', e.message ?? e))
 
   // ---- media ----
-  const media = new MediaProvider()
+  const media = platform.media()
   let nowPlaying: MediaState | null = null
   media.onChange((s) => {
     nowPlaying = s
@@ -457,7 +466,8 @@ async function main() {
 
   // ---- notifications (with GNotification buttons) ----
   const invokes = new Map<string, GtkInvoke>()
-  const invoker = new GtkActionInvoker()
+  // GNotification buttons go over D-Bus (Linux only).
+  const invoker = LINUX ? new GtkActionInvoker() : null
   transient.onDismiss((id) => invokes.delete(id))
   let notifSeq = 0
   const showNotification = (n: NotificationData, invoke?: GtkInvoke) => {
@@ -467,11 +477,12 @@ async function main() {
     transient.show({ kind: 'notification', id, priority, notification: n }, displayMs(n))
   }
   showNotificationLater = (n) => showNotification(n)
-  const notifications = new NotificationMonitor()
-  notifications.onNotify((n, invoke) => {
+  // Other apps' notifications can only be watched on Linux (D-Bus).
+  const notifications = LINUX ? new NotificationMonitor() : null
+  notifications?.onNotify((n, invoke) => {
     if (config.notifications) showNotification(n, invoke)
   })
-  await notifications.start().catch((e) => console.error('notifications:', e))
+  await notifications?.start().catch((e) => console.error('notifications:', e))
 
   // ---- CRM follow-ups: a card on the island when one is due ----
   const CRM_ICON = `data:image/svg+xml;utf8,${encodeURIComponent(
@@ -539,7 +550,7 @@ async function main() {
     applyShortcut: () => applyShortcut(),
     shortcutActive: () => shortcutActive,
     onFrosted: () => backdrop.refresh(),
-    frostedAvailable: !WAYLAND,
+    frostedAvailable: LINUX && !WAYLAND,
     notesFolder: notes.folder,
     claude: () => ({
       binary: findClaude(),
@@ -639,7 +650,7 @@ async function main() {
   if ((config.whatsapp && WA_CDP) || FAKE_WA) void whatsapp.start()
 
   // ---- system controls: polled only while the Control Center is open ----
-  const system = new SystemControls()
+  const system = platform.system()
   let sysTimer: ReturnType<typeof setInterval> | null = null
   // Demo mode simulates the system so every control can be shown.
   const demoSys: SystemState = { volume: 62, muted: false, wifi: true, bluetooth: false, brightness: 78 }
@@ -714,7 +725,7 @@ async function main() {
       const button = inv?.buttons[Number(key)]
       if (!inv || !button) return
       transient.dismiss(id)
-      invoker.invoke(inv.appId, button).catch((e) => console.error('notification action:', e))
+      invoker?.invoke(inv.appId, button).catch((e) => console.error('notification action:', e))
     },
     onOpenSettings: (section) => settings?.open(section),
     onDockSet: setDock,
@@ -810,11 +821,11 @@ async function main() {
     islandMcp.stop()
     spotify.stop()
     tray?.destroy()
-    invoker.stop()
+    invoker?.stop()
     await Promise.allSettled([
       claude.stop(),
       media.stop(),
-      notifications.stop(),
+      notifications?.stop(),
       mail.stop(),
       whatsapp.stop(),
       closeCursor(),
