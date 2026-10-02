@@ -3,3 +3,4 @@ dist/
 out/
 .vite/
 *.log
+video-out/
