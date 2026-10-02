@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { ClaudeCode, claudeArgs, failureText, launchOf } from '../electron/claudeCode'
@@ -7,7 +7,7 @@ import type { ClaudeState } from '../shared/claude'
 const FAKE = join(__dirname, '../e2e/fake-claude.cjs')
 
 function service(opts: { hook?: string; binary?: string | null } = {}) {
-  const dir = mkdtempSync(join(tmpdir(), 'di-cc-'))
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'di-cc-'))) // macOS: /var is /private/var
   const log = join(dir, 'args.log')
   process.env.DI_FAKE_CLAUDE_LOG = log
   const states: ClaudeState[] = []
