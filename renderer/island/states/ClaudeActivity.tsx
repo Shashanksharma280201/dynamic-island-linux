@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react'
 import type { ClaudeRun } from '@shared/claude'
-import { orbFor } from '@shared/claude'
-import { Orb } from '../voice/Orb'
+import { moodFor } from '@shared/character'
+import { Character } from '../character/Character'
 import { XIcon } from '../icons'
 
 export const runActive = (r?: ClaudeRun) => !!r && ['starting', 'thinking', 'tool', 'writing'].includes(r.phase)
@@ -30,7 +30,7 @@ export function runStatus(r: ClaudeRun): string {
 export function CompactClaude({ run }: { run: ClaudeRun }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
-      <Orb mood={orbFor(run.phase, run.tool?.name)} size={32} label={runStatus(run)} />
+      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} />
     </div>
   )
 }
@@ -57,7 +57,7 @@ export function ClaudeCard({ id, run, onOpen }: { id: string; run: ClaudeRun; on
         )}
       </div>
       <div className="claude-card-body">
-        <Orb mood={active ? orbFor(run.phase, run.tool?.name) : 'breathing'} size={32} />
+        <Character mood={moodFor(run.phase, run.tool?.name)} size={40} />
         <div className="claude-card-text">
           <div className="claude-prompt ellipsis">{run.prompt}</div>
           <div className={`claude-status ${run.phase}`}>{runStatus(run)}</div>

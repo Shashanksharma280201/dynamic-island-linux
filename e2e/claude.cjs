@@ -165,7 +165,7 @@ function speechWav(text, file) {
     check('with streaming output', first?.args.includes('stream-json') && first?.args.includes('--include-partial-messages'))
     check('and asks for approvals on the island', !!first && JSON.parse(first.args[first.args.indexOf('--settings') + 1]).hooks.PermissionRequest[0].hooks[0].command.includes('claude-island-hook'))
     const sawTool = await until(async () => /Reading README\.md/.test(await threadText()), 4000)
-    check('the orb shows what Claude is doing', sawTool && !!(await page.$('.claude-turn.live .orb')))
+    check('the character shows what Claude is doing (searching while it reads)', sawTool && !!(await page.$('.claude-turn.live .character[data-mood="searching"]')))
     await shot('03-working')
     check('the answer appears', await until(async () => /Done: summarize the readme/.test(await threadText()), 8000))
     await idle()
@@ -218,7 +218,7 @@ function speechWav(text, file) {
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
     xt(10, 10)
     await page.evaluate(() => window.island.claude.ask('something slow in the background'))
-    check('a running command shows an orb on the capsule', await page.waitForSelector('.claude-capsule .orb', { timeout: 5000 }).then(() => true, () => false))
+    check('a running command shows the character on the capsule', await page.waitForSelector('.claude-capsule .character', { timeout: 5000 }).then(() => true, () => false))
     await sleep(600) // let the previous card finish leaving
     await shot('06-capsule-orb')
     check(
@@ -269,7 +269,24 @@ function speechWav(text, file) {
     await until(() => runs().some((r) => r.args.includes('acceptEdits')), 5000)
     check('the permission mode applies to island commands', runs().at(-1)?.args.includes('acceptEdits'))
     await settings.screenshot({ path: `${OUT}/10-settings.png`, fullPage: true })
+
+    // ---- Character: pick one, name it; the island follows ----
+    await settings.click('#character .character-tile:has-text("Bolt")')
+    const cfg = () => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8')).character
+    check('picking a character saves it', await until(() => cfg()?.id === 'bolt' && cfg()?.name === 'Bolt', 4000), JSON.stringify(cfg()))
+    check('and every view of the agent uses it', await page.waitForSelector('.character[data-character="bolt"]', { timeout: 5000 }).then(() => true, () => false))
+    await settings.fill('#character .character-name', 'Sparky')
+    await settings.press('#character .character-name', 'Enter')
+    check('it can be renamed', await until(() => cfg()?.name === 'Sparky', 4000))
     await settings.close()
+    // The resting capsule shows it (asleep at night, awake by day).
+    await page.evaluate(() => window.island.claude.stop()).catch(() => {})
+    if (await page.$('.hub')) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    check(
+      'the resting island shows the character',
+      await page.waitForSelector('.capsule.idle .character[data-character="bolt"]', { timeout: 15000 }).then(() => true, () => false),
+    )
+    check('with its name', (await page.getAttribute('.capsule.idle', 'title'))?.startsWith('Sparky'))
   } catch (e) {
     check('unexpected error', false, e.message)
     await shot('99-failure')

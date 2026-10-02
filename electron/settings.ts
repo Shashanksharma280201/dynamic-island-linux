@@ -1,3 +1,4 @@
+import { parseCharacter } from '@shared/character'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
@@ -48,6 +49,7 @@ type Deps = {
   spotifySignIn: () => Promise<void>
   spotifySignOut: () => void
   onSpotifyClient: () => void
+  onCharacter: () => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -78,6 +80,7 @@ export class SettingsController {
       mail: config.mail.map(({ secret: _s, ...a }) => ({ ...a, status: mail.status(a.id) })),
       claude: this.d.claude(),
       spotify: this.d.spotify(),
+      character: config.character,
     }
   }
 
@@ -179,6 +182,16 @@ export class SettingsController {
       this.save()
       this.d.applyShortcut()
       this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_CHARACTER, (_e, patch) => {
+      const switching = typeof patch?.id === 'string' && patch.id !== config.character.id
+      config.character = parseCharacter({
+        id: typeof patch?.id === 'string' ? patch.id : config.character.id,
+        // Switching without renaming takes the new character's own name.
+        name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
+      })
+      this.save()
+      this.d.onCharacter()
     })
     ipcMain.handle(SETTINGS.SET_APPEARANCE, (_e, a) => {
       if (a !== 'glass' && a !== 'solid') return

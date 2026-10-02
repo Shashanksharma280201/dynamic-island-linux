@@ -1,6 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import type { Activity, SystemState } from '@shared/types'
+import type { Rect } from '@shared/hitbox'
 import { present } from '@shared/present'
 import { spring, contentFade } from '../anim/spring'
 import { IdlePill } from './states/IdlePill'
@@ -168,15 +169,25 @@ export function Island({ activities }: { activities: Activity[] }) {
   })
 
   // Report the hit area: the settled position and size, not the mid-animation one.
+  const lastRect = useRef<Rect | null>(null)
   useLayoutEffect(() => {
     if (!size.w) return
-    window.island.reportRect({
+    lastRect.current = {
       x: side === 'left' ? EDGE_MARGIN : window.innerWidth - EDGE_MARGIN - size.w,
       y: top,
       width: size.w,
       height: size.h,
-    })
+    }
+    window.island.reportRect(lastRect.current)
   }, [side, top, size.w, size.h, areaH])
+  // The page can load before the main process listens: report again when asked.
+  useEffect(
+    () =>
+      window.island.onRectRequest?.(() => {
+        if (lastRect.current) window.island.reportRect(lastRect.current)
+      }),
+    [],
+  )
 
   const key = showPanel
     ? 'panel'

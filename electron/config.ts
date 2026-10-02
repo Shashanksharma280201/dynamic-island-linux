@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
 import type { MailAccount, ServerConfig } from './providers/mail'
 import { DEFAULT_DOCK, parseDock, type Dock } from '@shared/dock'
+import { parseCharacter, type CharacterConfig } from '@shared/character'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -25,6 +26,8 @@ export type Config = {
   claude: ClaudeConfig
   /** Spotify: the Client ID of your own Spotify app ('' = not set up). */
   spotify: { clientId: string }
+  /** The island's character and the name you gave it. */
+  character: CharacterConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -75,6 +78,7 @@ const DEFAULTS: Config = {
   frosted: true,
   claude: CLAUDE_DEFAULTS,
   spotify: { clientId: '' },
+  character: parseCharacter(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -104,10 +108,11 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' } }
+  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
+  c.character = parseCharacter(r.character)
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

@@ -24,4 +24,5 @@ export const SETTINGS = {
   SET_SPOTIFY_CLIENT: 'settings:set-spotify-client',
   SPOTIFY_SIGN_IN: 'settings:spotify-sign-in',
   SPOTIFY_SIGN_OUT: 'settings:spotify-sign-out',
+  SET_CHARACTER: 'settings:set-character', // { id?, name? }
 } as const

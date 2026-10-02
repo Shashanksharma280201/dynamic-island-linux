@@ -1,3 +1,4 @@
+import type { CharacterConfig } from './character'
 import type { ClaudeRun } from './claude'
 export type ToolRequest = {
   id: string
@@ -98,6 +99,7 @@ export const IPC = {
   DECISION: 'island:decision', // renderer -> main: DecisionMsg
   MEDIA_CMD: 'island:media-cmd', // renderer -> main: MediaCmd
   REPORT_RECT: 'island:rect', // renderer -> main: island bounding Rect (window coords)
+  RECT_REQUEST: 'island:rect-request', // main -> renderer: report the rect again (main is ready)
   SYS_STATE: 'island:sys-state', // main -> renderer: SystemState
   SYS_CMD: 'island:sys-cmd', // renderer -> main: SysCmd
   PANEL: 'island:panel', // renderer -> main: boolean (Control Center open)
@@ -117,6 +119,7 @@ export const IPC = {
   TOGGLE_PANEL: 'island:toggle-panel', // main -> renderer: global shortcut pressed
   FOCUS_LOST: 'island:focus-lost', // main -> renderer: keyboard focus moved to another app
   BACKDROP: 'island:backdrop', // main -> renderer: blurred-glass snapshot (data URL) or null
+  CHARACTER: 'island:character', // main -> renderer: CharacterConfig
 } as const
 
 import type { Dock } from './dock'
@@ -268,6 +271,7 @@ export type SettingsState = {
   mail: MailAccountView[]
   claude: ClaudeSettings
   spotify: { clientId: string; redirectUri: string; status: string; user?: string; premium?: boolean; error?: string }
+  character: CharacterConfig
 }
 
 export type ClaudeSettings = {

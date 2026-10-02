@@ -331,3 +331,40 @@ button.link {
   font: inherit;
   cursor: pointer;
 }
+
+/* Character picker */
+.character-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.character-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 12px 6px 10px;
+  border-radius: 12px;
+  border: 1.5px solid transparent;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.character-tile:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.character-tile.on {
+  border-color: var(--accent, #0a84ff);
+  background: rgba(10, 132, 255, 0.12);
+}
+.character-tile b {
+  margin-top: 6px;
+  font-size: 13.5px;
+}
+.character-mood {
+  text-align: center;
+}
+.character-name {
+  width: 160px;
+}

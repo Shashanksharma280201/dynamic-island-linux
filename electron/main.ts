@@ -399,6 +399,7 @@ async function main() {
     spotifySignOut: () => spotify.signOut(),
     onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
+    onCharacter: () => pushCharacter(),
     onAppearance: () => {
       pushAppearance()
       updateHitArea()
@@ -539,6 +540,8 @@ async function main() {
       else updateHitArea()
     },
   })
+  // The island may have reported its rect before this was listening.
+  send(win, IPC.RECT_REQUEST, null)
 
   // A renderer reload (dev HMR, crash recovery) must get the current state.
   // KWin blurs behind windows that set _KDE_NET_WM_BLUR_BEHIND_REGION.
@@ -557,11 +560,14 @@ async function main() {
   backdrop.start()
   const pushAppearance = () =>
     send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
+  const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
   win.webContents.on('did-finish-load', () => {
     claudeUi?.push()
     pushState()
     pushDock()
     pushAppearance()
+    pushCharacter()
+    send(win, IPC.RECT_REQUEST, null)
   })
   pushAppearance()
   pushDock()

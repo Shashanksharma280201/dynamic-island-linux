@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ClaudeView, ClaudeUsage, UsageWindow } from '@shared/claude'
-import { currentWindow, orbFor } from '@shared/claude'
+import { currentWindow } from '@shared/claude'
+import { moodFor } from '@shared/character'
 import { agoText, resetText } from '@shared/format'
 import { Empty, errorText, useNow } from './common'
 import { useKeyboard } from './useKeyboard'
-import { Orb } from '../voice/Orb'
+import { Character } from '../character/Character'
 import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
 import { ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
@@ -102,7 +103,7 @@ function Conversation({ view }: { view: ClaudeView }) {
         <div className="claude-turn live">
           <div className="bubble mine">{run.prompt}</div>
           <div className="claude-answer live">
-            <Orb mood={orbFor(run.phase, run.tool?.name)} size={20} label={runStatus(run)} />
+            <Character mood={moodFor(run.phase, run.tool?.name)} size={24} label={runStatus(run)} />
             <div className="claude-answer-text">
               <div className="claude-status">{runStatus(run)}</div>
               {run.reply && <div className="claude-live-reply">{run.reply}</div>}
@@ -253,7 +254,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       <Limits usage={view.usage} bridge={view.usageBridge} />
       {voiceOn ? (
         <div className={`voice-stage ${voice.phase}`}>
-          <Orb mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'solving' : 'breathing'} size={64} />
+          <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} />
           <div className="caption voice-caption">{voiceCaption(voice, view)}</div>
           {voice.phase === 'preparing' && view.stt.downloading && (
             <div className="meter-bar download">
@@ -270,7 +271,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
         <Conversation view={view} />
       ) : (
         <div className="voice-stage idle">
-          <Orb mood="breathing" size={64} />
+          <Character mood="idle" size={72} />
           <div className="caption voice-caption">
             Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and tell Claude what to do in{' '}
             <b>{folderName(view.cwd)}</b>.

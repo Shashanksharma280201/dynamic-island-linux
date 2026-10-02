@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
+import { CharacterSection } from './CharacterSection'
 import { SettingsProblem } from './Problem'
 
 function Toggle({
@@ -304,6 +305,8 @@ export function Settings() {
   return (
     <main>
       <h1>Dynamic Island</h1>
+
+      <CharacterSection s={s} />
 
       <section id="general">
         <h2>General</h2>

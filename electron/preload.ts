@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { CharacterConfig, CharacterId } from '@shared/character'
 import { IPC } from '@shared/types'
 import type {
   Activity,
@@ -44,6 +45,7 @@ const api = {
   sendMediaCmd: (cmd: MediaCmd) => ipcRenderer.send(IPC.MEDIA_CMD, cmd),
   sendSysCmd: (cmd: SysCmd) => ipcRenderer.send(IPC.SYS_CMD, cmd),
   reportRect: (rect: Rect | null) => ipcRenderer.send(IPC.REPORT_RECT, rect),
+  onRectRequest: (cb: () => void) => on(IPC.RECT_REQUEST, cb),
   setPanel: (open: boolean) => ipcRenderer.send(IPC.PANEL, open),
   dismiss: (id: string) => ipcRenderer.send(IPC.DISMISS, id),
   hold: (id: string, hold: boolean) => ipcRenderer.send(IPC.HOLD, { id, hold }),
@@ -97,6 +99,7 @@ const api = {
   },
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),
+  onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   inbox: {
     sources: (): Promise<InboxSources> => ipcRenderer.invoke(INBOX.SOURCES),
     chats: (): Promise<ChatSummary[]> => ipcRenderer.invoke(INBOX.CHATS),
@@ -128,6 +131,7 @@ const settings = {
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
+  setCharacter: (patch: { id?: CharacterId; name?: string }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
   openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),

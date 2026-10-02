@@ -41,27 +41,6 @@ export function toolDetail(name: string, input: any): string {
 
 /** The thinking-orbs animation that fits what Claude is doing. Pure. */
 export type OrbMood = 'listening' | 'solving' | 'working' | 'searching' | 'connecting' | 'shaping' | 'composing' | 'breathing'
-export function orbFor(phase: RunPhase | 'idle' | 'listening' | 'transcribing', tool?: string): OrbMood {
-  switch (phase) {
-    case 'listening':
-      return 'listening'
-    case 'transcribing':
-      return 'solving'
-    case 'starting':
-    case 'thinking':
-      return 'working'
-    case 'writing':
-      return 'composing'
-    case 'tool':
-      if (tool === 'Read' || tool === 'Grep' || tool === 'Glob' || tool === 'WebSearch') return 'searching'
-      if (tool === 'Edit' || tool === 'Write' || tool === 'MultiEdit' || tool === 'NotebookEdit') return 'shaping'
-      if (tool === 'WebFetch' || tool?.startsWith('mcp__') || tool === 'Task' || tool === 'Agent') return 'connecting'
-      return 'working'
-    default:
-      return 'breathing'
-  }
-}
-
 /** One plan-limit window: how much is used and when it starts over. */
 export type UsageWindow = { pct: number; resetsAt?: number; limited?: boolean }
 

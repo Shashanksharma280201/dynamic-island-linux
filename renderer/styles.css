@@ -659,11 +659,12 @@ button {
   cursor: grab;
 }
 .capsule.idle {
-  padding: 20px 8px;
+  padding: 10px 6px 14px;
+  gap: 8px;
 }
 .capsule .grip {
   width: 5px;
-  height: 40px;
+  height: 22px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.28);
 }
@@ -2726,4 +2727,11 @@ button.sp-device {
 }
 .wa-viewer-bar .sp-icon-btn {
   color: #fff;
+}
+
+/* ---- Characters ---- */
+.character {
+  display: block;
+  flex: none;
+  overflow: visible;
 }

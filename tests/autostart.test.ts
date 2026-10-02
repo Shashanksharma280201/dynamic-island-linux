@@ -33,6 +33,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     frosted: true,
     claude: { cwd: '', permissionMode: 'default', voiceShortcut: true, sttModel: 'base', binary: '' },
     spotify: { clientId: '' },
+    character: { id: 'orbit', name: 'Orbit' },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)

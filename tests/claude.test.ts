@@ -2,7 +2,6 @@ import {
   applyStreamEvent,
   newRun,
   toolDetail,
-  orbFor,
   usageFromRateLimitEvent,
   parseUsage,
   currentWindow,
@@ -44,17 +43,12 @@ test('errors, subagents, junk and stopped runs', () => {
   expect(applyStreamEvent(stopped, { type: 'result', result: 'x' }, 2)).toBe(stopped)
 })
 
-test('tool lines and orb moods', () => {
+test('tool lines', () => {
   expect(toolDetail('Read', { file_path: '/a/b/app.ts' })).toBe('Reading app.ts')
   expect(toolDetail('Edit', { file_path: 'x/README.md' })).toBe('Editing README.md')
   expect(toolDetail('Bash', { command: 'git status\ngit diff', description: '' })).toBe('Running git status')
   expect(toolDetail('WebFetch', { url: 'https://docs.example.com/x' })).toBe('Reading docs.example.com')
   expect(toolDetail('mcp__github__create_issue', {})).toBe('Using github')
-  expect(orbFor('listening')).toBe('listening')
-  expect(orbFor('tool', 'Grep')).toBe('searching')
-  expect(orbFor('tool', 'Edit')).toBe('shaping')
-  expect(orbFor('writing')).toBe('composing')
-  expect(orbFor('idle')).toBe('breathing')
 })
 
 test('plan usage from the stream, the status line and resets', () => {
