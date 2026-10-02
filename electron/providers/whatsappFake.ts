@@ -213,8 +213,19 @@ export class FakeWhatsAppEngine implements WhatsAppEngine {
       this.chats = [c, ...this.chats.filter((x) => x !== c)]
       ev.onMessage({ chatId: c.id, sender: c.name, isGroup: false, text, time: Date.now() })
     }
-    at(this.readyMs + 1500, () => incoming('Hey! Are we still on for lunch?'))
-    at(this.readyMs + 2500, () => incoming('📷 Photo: the new place'))
+    const arrive = (wait: number) => {
+      at(wait + 1500, () => incoming('Hey! Are we still on for lunch?'))
+      at(wait + 2500, () => incoming('📷 Photo: the new place'))
+    }
+    // Recordings can choose the moment: the messages arrive once this file exists.
+    const trigger = process.env.DI_FAKE_WA_TRIGGER
+    if (!trigger) return arrive(this.readyMs)
+    const poll = setInterval(() => {
+      if (!existsSync(trigger)) return
+      clearInterval(poll)
+      arrive(0)
+    }, 200)
+    this.timers.push(poll as unknown as ReturnType<typeof setTimeout>)
   }
 
   async listChats(limit: number): Promise<ChatSummary[]> {

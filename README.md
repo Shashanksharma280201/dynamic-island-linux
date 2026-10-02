@@ -34,6 +34,17 @@ What's different on Windows:
 Media and system controls use a small PowerShell helper that ships with the
 app (nothing to install).
 
+## Watch the tour
+
+[![A 3 minute tour of Dynamic Island](docs/media/dynamic-island-tour.jpg)](docs/media/dynamic-island-tour.mp4)
+
+A narrated, 3 minute tour of everything the island does: the capsule, Now
+Playing, WhatsApp and mail replies, the panel, the assistant, Settings,
+Documents, the CRM, Spotify, Claude Code, and how to install it. Click the
+picture to play it ([download the video](docs/media/dynamic-island-tour.mp4?raw=true)).
+It's recorded from the real app with made-up data; `scripts/video/make.sh`
+records it again after changes.
+
 ## Install
 
 Pick your computer's system below and run its commands in order, one at a
