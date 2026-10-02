@@ -69,7 +69,7 @@ test('PDF: merge, keep, delete, reorder, rotate, split', async () => {
   const parts = await splitPdf(merged, chunkPages(5, 2))
   expect(await Promise.all(parts.map(pageCount))).toEqual([2, 2, 1])
   await expect(mergePdfs([a])).rejects.toThrow('at least two')
-})
+}, 30_000) // several PDF writes: slow on Windows runners
 
 test('PDF: watermark, footer and page numbers', async () => {
   const stamped = await stampPdf(await pdf(2), { text: 'CONFIDENTIAL', position: 'watermark', pageNumbers: true })
