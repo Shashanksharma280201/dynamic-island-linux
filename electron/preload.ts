@@ -1,7 +1,8 @@
-import { contextBridge, ipcRenderer } from 'electron'
+import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CharacterConfig, CharacterId } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
 import type { PackageId, PackageTab } from '@shared/packages'
+import type { DocAction, DocActionResult, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
 import { IPC } from '@shared/types'
 import type {
   Activity,
@@ -29,6 +30,7 @@ import { SETTINGS } from '../electron/settingsChannels'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
+import { DOCS } from '../electron/docsChannels'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
@@ -98,6 +100,21 @@ const api = {
     get: (id: string): Promise<Note> => ipcRenderer.invoke(INBOX.NOTE_GET, id),
     save: (id: string | undefined, body: string): Promise<string> => ipcRenderer.invoke(INBOX.NOTE_SAVE, id, body),
     remove: (id: string): Promise<void> => ipcRenderer.invoke(INBOX.NOTE_DELETE, id),
+  },
+  docs: {
+    view: (): Promise<DocsView> => ipcRenderer.invoke(DOCS.VIEW),
+    onChanged: (cb: () => void) => on(DOCS.CHANGED, cb),
+    add: (paths: string[]): Promise<DocsAdded> => ipcRenderer.invoke(DOCS.ADD, paths),
+    pick: (): Promise<DocsAdded> => ipcRenderer.invoke(DOCS.PICK),
+    remove: (ids: string[]): Promise<void> => ipcRenderer.invoke(DOCS.REMOVE, ids),
+    open: (id: string): Promise<void> => ipcRenderer.invoke(DOCS.OPEN, id),
+    show: (id: string): Promise<void> => ipcRenderer.invoke(DOCS.SHOW, id),
+    openFolder: (): Promise<void> => ipcRenderer.invoke(DOCS.OPEN_FOLDER),
+    action: (a: DocAction): Promise<DocActionResult> => ipcRenderer.invoke(DOCS.ACTION, a),
+    saveRecipe: (r: { id?: string; name: string; instruction: string }): Promise<DocRecipe[]> => ipcRenderer.invoke(DOCS.RECIPE_SAVE, r),
+    removeRecipe: (id: string): Promise<DocRecipe[]> => ipcRenderer.invoke(DOCS.RECIPE_REMOVE, id),
+    /** Where a file dropped on the island lives ('' if it isn't a file on disk). */
+    pathFor: (f: File): string => webUtils.getPathForFile(f),
   },
   onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),

@@ -103,6 +103,17 @@ export const NotesAppIcon = () => (
   </svg>
 )
 
+/** Documents: a page with a folded corner, on violet. */
+export const DocsAppIcon = () => (
+  <Tile from="#a08fff" to="#5a3fe0">
+    <path d="M9 5.5h7l4.5 4.5v12a1 1 0 0 1-1 1H9a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1z" fill="#fff" />
+    <path d="M16 5.5V9a1 1 0 0 0 1 1h3.5z" fill="#d6ceff" />
+    <g stroke="#7d68f2" strokeWidth="1.2" strokeLinecap="round">
+      <path d="M10.6 13.4h7M10.6 16.2h7M10.6 19h4.4" />
+    </g>
+  </Tile>
+)
+
 /** Settings: a gear on grey. */
 export const SettingsAppIcon = () => {
   const teeth = Array.from({ length: 8 }, (_, i) => i * 45)

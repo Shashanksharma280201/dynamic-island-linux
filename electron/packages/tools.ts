@@ -3,6 +3,7 @@ import { enabledPackages, type PackageId, type PackagesConfig } from '@shared/pa
 import type { SpotifyView, SpSearch, PlayResult } from '@shared/spotify'
 import { schema, str, type AgentTool } from '../agent/tools'
 import type { NotesStore } from '../notes'
+import { docsTools, type DocsContext } from './docsTools'
 
 /** What the built-in packages reach. Small interfaces, so tests can fake them. */
 export type PackageContext = {
@@ -25,6 +26,7 @@ export type PackageContext = {
     search: (q: string) => Promise<SpSearch>
     play: (o: { contextUri?: string; trackUri?: string }) => Promise<PlayResult>
   }
+  docs: DocsContext
   now?: () => Date
 }
 
@@ -290,7 +292,7 @@ function music(ctx: PackageContext): AgentTool[] {
   ]
 }
 
-const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = { basics, notes, chats, mail, music }
+const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = { basics, notes, chats, mail, music, docs: (ctx) => docsTools(ctx.docs) }
 
 /** The agent's tools: those of the packages that are turned on. */
 export function packageTools(c: PackagesConfig, ctx: PackageContext): AgentTool[] {

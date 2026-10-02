@@ -6,6 +6,7 @@ import type { HubTab } from './Hub'
 import {
   ClaudeAppIcon,
   ControlsAppIcon,
+  DocsAppIcon,
   MailAppIcon,
   NotesAppIcon,
   SettingsAppIcon,
@@ -20,6 +21,7 @@ const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'chats', label: 'Chats', icon: <WhatsAppIcon /> },
   { id: 'mail', label: 'Mail', icon: <MailAppIcon /> },
   { id: 'notes', label: 'Notes', icon: <NotesAppIcon /> },
+  { id: 'docs', label: 'Documents', icon: <DocsAppIcon /> },
 ]
 
 /** Badge text: nothing for 0, "99+" past 99. Pure. */

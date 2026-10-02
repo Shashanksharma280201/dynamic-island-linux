@@ -45,4 +45,7 @@ test('agent tools set the character’s mood', () => {
   expect(moodFor('tool', 'notes_read')).toBe('searching')
   expect(moodFor('tool', 'notes_create')).toBe('writing')
   expect(moodFor('tool', 'current_time')).toBe('working')
+  expect(moodFor('tool', 'docs_read')).toBe('searching')
+  expect(moodFor('tool', 'docx_edit')).toBe('writing')
+  expect(moodFor('tool', 'pdf_merge')).toBe('working')
 })

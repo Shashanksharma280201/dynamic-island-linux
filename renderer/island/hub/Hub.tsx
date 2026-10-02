@@ -9,9 +9,9 @@ import type { ClaudeView } from '@shared/claude'
 import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 
-export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes'
+export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs'
 
-export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes']
+export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes', 'docs']
 
 export function savedTab(): HubTab {
   try {

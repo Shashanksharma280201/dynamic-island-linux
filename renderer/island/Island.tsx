@@ -19,10 +19,10 @@ import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
 import { useCharacter } from './character/Character'
-import type { PackageTab } from '@shared/packages'
+import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 
 /** A tab whose package is turned off. */
-const tabOff = (t: HubTab, on: PackageTab[]) => (['notes', 'chats', 'mail', 'music'] as string[]).includes(t) && !on.includes(t as PackageTab)
+const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
 
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
@@ -310,7 +310,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16, transition: { duration: 0.16 } }}
             transition={spring}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? (['notes', 'chats', 'mail', 'music'] as const).filter((t) => !pkgTabs.includes(t)) : []} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>
         )}
       </AnimatePresence>

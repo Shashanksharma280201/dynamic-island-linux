@@ -36,6 +36,7 @@ function ctx(over: Partial<PackageContext> = {}) {
       search: async () => ({ tracks: [{ uri: 'spotify:track:1', name: 'Tidal', artists: 'Blue Hour', durationMs: 1 }], albums: [], playlists: [], artists: [] }) as any,
       play: async () => ({ ok: true }),
     },
+    docs: {} as any,
     ...over,
   }
   return { c, sent, commands, replies }
@@ -44,10 +45,10 @@ function ctx(over: Partial<PackageContext> = {}) {
 const names = (t: { name: string }[]) => t.map((x) => x.name)
 
 test('the catalog and which packages are on', () => {
-  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music'])
+  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music', 'docs'])
   expect(parsePackages({ disabled: ['mail', 'basics', 'nope', 'mail'] })).toEqual({ disabled: ['mail'] }) // basics can't be off
-  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music'])
-  expect(enabledTabs({ disabled: ['chats'] })).toEqual(['notes', 'mail', 'music'])
+  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music', 'docs'])
+  expect(enabledTabs({ disabled: ['chats'] })).toEqual(['notes', 'mail', 'music', 'docs'])
   // The catalog lists exactly the tools each package brings.
   const all = packageTools({ disabled: [] }, ctx().c)
   expect(names(all)).toEqual(PACKAGES.flatMap((p) => p.tools.map((t) => t.name)))

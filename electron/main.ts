@@ -1,4 +1,4 @@
-import { app, screen, globalShortcut, type Display } from 'electron'
+import { app, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
@@ -54,6 +54,9 @@ import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
 import { NotesStore } from './notes'
+import { DocsService } from './docs/service'
+import { printHtmlToPdf } from './docs/print'
+import { wireDocs } from './docsIpc'
 import { Backdrop } from './backdrop'
 import { FakeMailWatcher } from './providers/mailFake'
 import { IPC } from '@shared/types'
@@ -146,6 +149,29 @@ async function main() {
   store.onChange(pushState)
   const transient = new TransientCards(store)
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
+  // ---- documents: files you add, and what's made from them ----
+  // LibreOffice (deb, snap or flatpak), for exact Office → PDF conversions.
+  const soffice = (): string | null => {
+    if (process.env.DI_SOFFICE !== undefined) return process.env.DI_SOFFICE || null
+    const flatpak = ['/var/lib/flatpak/exports/bin', join(homedir(), '.local/share/flatpak/exports/bin')]
+    return findExecutable('soffice', ['/usr/bin', '/usr/local/bin']) ?? findExecutable('libreoffice', ['/snap/bin']) ?? findExecutable('org.libreoffice.LibreOffice', flatpak)
+  }
+  let docsIpc: { changed: () => void } | null = null
+  const docs = new DocsService({
+    dataDir: app.getPath('userData'),
+    outDir: () => process.env.DI_DOCS_OUT || join(app.getPath('documents'), 'Dynamic Island'),
+    home: () => homedir(),
+    searchRoots: (): Record<string, string> =>
+      process.env.DI_DOCS_SEARCH
+        ? { documents: process.env.DI_DOCS_SEARCH }
+        : { documents: app.getPath('documents'), downloads: app.getPath('downloads'), desktop: app.getPath('desktop') },
+    printPdf: printHtmlToPdf,
+    soffice,
+    trash: (p) => shell.trashItem(p),
+    // Tracked changes in Word show who made them: the character.
+    author: () => config.character.name,
+    onChange: () => docsIpc?.changed(),
+  })
   // Frosted glass: blurred snapshot of what's behind the island (X11 only).
   const backdrop = new Backdrop(
     win,
@@ -335,6 +361,7 @@ async function main() {
         mail,
         media: { now: () => nowPlaying, command: (c) => media.command(c) },
         spotify,
+        docs,
       }),
     askUser: (o) => agentApprovals.ask(o),
     system: () => agentSystemPrompt(config.character),
@@ -534,6 +561,7 @@ async function main() {
   claudeStateReady(claudeUi)
   claudeUi.push()
 
+  docsIpc = wireDocs(win, docs, { libreOffice: () => !!soffice() })
   waForMedia = whatsapp
   inbox = wireInbox(win, {
     whatsapp,

@@ -3,10 +3,10 @@
  * tools the agent may use; Settings → Packages turns them on or off. Built-in
  * packages for now; the same shape will carry third-party ones later.
  */
-export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music'
+export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs'
 
 /** Rail tabs a package can own. */
-export type PackageTab = 'notes' | 'chats' | 'mail' | 'music'
+export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs'
 
 export type PackageToolInfo = {
   name: string
@@ -85,7 +85,34 @@ export const PACKAGES: PackageInfo[] = [
       { name: 'spotify_play', summary: 'Find and play a song, album or playlist on Spotify' },
     ],
   },
+  {
+    id: 'docs',
+    name: 'Documents',
+    description:
+      'PDFs, Word files and spreadsheets: merge, split, convert, correct and write them, with or without the agent. Drop files on the island to start. Results are new files; your originals are never changed.',
+    tab: 'docs',
+    permissions: ['Files you drop on the island or pick', 'Your Documents, Downloads and Desktop folders (to find files by name)', 'Saves new files in Documents/Dynamic Island'],
+    tools: [
+      { name: 'docs_list', summary: 'List your documents' },
+      { name: 'docs_find', summary: 'Find a document by name' },
+      { name: 'docs_read', summary: 'Read a document' },
+      { name: 'pdf_merge', summary: 'Merge PDFs' },
+      { name: 'pdf_pages', summary: 'Keep, remove or reorder pages' },
+      { name: 'pdf_rotate', summary: 'Rotate pages' },
+      { name: 'pdf_split', summary: 'Split a PDF' },
+      { name: 'pdf_stamp', summary: 'Add a watermark or page numbers' },
+      { name: 'docx_edit', summary: 'Correct a Word file, as tracked changes' },
+      { name: 'sheet_edit', summary: 'Edit a spreadsheet' },
+      { name: 'docs_convert', summary: 'Convert between PDF, Word, Excel, CSV and text' },
+      { name: 'docs_create', summary: 'Write a new document' },
+      { name: 'docs_compare', summary: 'Compare two versions' },
+      { name: 'docs_trash', summary: 'Move a file to the Trash', asks: true },
+    ],
+  },
 ]
+
+/** Every rail tab a package can bring, in rail order. */
+export const PACKAGE_TABS: PackageTab[] = PACKAGES.flatMap((p) => (p.tab ? [p.tab] : []))
 
 export function packageInfo(id: PackageId): PackageInfo | undefined {
   return PACKAGES.find((p) => p.id === id)

@@ -12,6 +12,7 @@ export function agentSystemPrompt(c: CharacterConfig): string {
     'The user may have spoken their message and had it transcribed, so it can contain transcription mistakes: read it for intent.',
     'Your reply is shown in a small panel. Keep it short and plain (a few sentences, no tables or big headings) unless they ask for detail.',
     'You have tools from the packages the user turned on (their notes, chats, mail, music…). Use them when they help. Tools that act for the user, like sending a message, ask them first: don’t ask for permission yourself, just call the tool.',
-    'Everything the user keeps (notes, and later contacts and documents) stays on their computer.',
+    'Documents (PDF, Word, Excel…): the document tools never change the user’s files; each one saves a new file and tells you its id, which you can use in the next step. For corrections and reviews of a Word file, read it, then use docx_edit so the user sees tracked changes. Say what you made and where it was saved.',
+    'Everything the user keeps (notes, documents, and later contacts) stays on their computer.',
   ].join('\n')
 }

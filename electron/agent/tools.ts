@@ -1,9 +1,17 @@
-import type { NotesStore } from '../notes'
+/** A plain value in a tool's input. */
+export type ScalarProp = { type: 'string' | 'number' | 'boolean'; description?: string }
+
+/** A list in a tool's input: of strings, or of small objects of plain values. */
+export type ArrayProp = {
+  type: 'array'
+  description?: string
+  items: { type: 'string' } | { type: 'object'; properties: Record<string, ScalarProp>; required: string[]; additionalProperties: false }
+}
 
 /** JSON Schema for a tool's input (the subset every provider understands). */
 export type ToolSchema = {
   type: 'object'
-  properties: Record<string, { type: 'string' | 'number' | 'boolean'; description?: string }>
+  properties: Record<string, ScalarProp | ArrayProp>
   required: string[]
   additionalProperties: false
 }
@@ -37,12 +45,26 @@ export function checkInput(schema: ToolSchema, input: unknown): string | null {
   for (const [k, v] of Object.entries(o)) {
     const p = schema.properties[k]
     if (!p) return `Unknown field "${k}".`
-    if (typeof v !== p.type) return `"${k}" must be a ${p.type}.`
+    if (p.type !== 'array') {
+      if (typeof v !== p.type) return `"${k}" must be a ${p.type}.`
+      continue
+    }
+    if (!Array.isArray(v)) return `"${k}" must be a list.`
+    if (v.length > 500) return `"${k}" has too many items.`
+    for (const [n, item] of v.entries()) {
+      if (p.items.type === 'string') {
+        if (typeof item !== 'string') return `"${k}" must be a list of strings.`
+        continue
+      }
+      const bad = checkInput({ type: 'object', properties: p.items.properties, required: p.items.required, additionalProperties: false }, item)
+      if (bad) return `Item ${n + 1} of "${k}": ${bad}`
+    }
   }
   return null
 }
 
 export const str = (v: unknown) => (typeof v === 'string' ? v : '')
+export const strList = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
 export const schema = (properties: ToolSchema['properties'], required: string[] = []): ToolSchema => ({
   type: 'object',
   properties,
