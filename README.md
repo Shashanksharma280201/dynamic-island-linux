@@ -55,6 +55,11 @@ what that system needs. The commands below fetch the right branch for you.
 | macOS 11 Big Sur or newer, Apple silicon or Intel | `mac` | [Install on macOS](#install-on-macos) |
 | Windows 10 or 11, 64-bit | `windows` | [Install on Windows](#install-on-windows) |
 
+**Just want the app?** Download a ready-made installer for your system from
+[Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases/latest)
+(`.deb` or AppImage for Linux, `.dmg` for Mac, `.exe` for Windows). The steps
+below build it from the code instead.
+
 Everything works without any accounts. Claude Code, WhatsApp, mail, Spotify
 and the AI assistant are all optional and set up later from the island's
 Settings.
