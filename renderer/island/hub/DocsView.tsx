@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ClaudeView } from '@shared/claude'
-import { moodFor } from '@shared/character'
 import { fileSize, relativeTime } from '@shared/format'
 import {
   CONVERT_TARGETS,
@@ -10,14 +9,13 @@ import {
   type DocAction,
   type DocEntry,
   type DocKind,
-  type DocRecipe,
   type DocsView as DocsState,
 } from '@shared/docs'
 import { Empty, Spinner, errorText, useLoad, useNow } from './common'
 import { useKeyboard } from './useKeyboard'
-import { Character, useCharacter } from '../character/Character'
-import { runActive, runStatus } from '../states/ClaudeActivity'
-import { DocIcon, FolderIcon, PlusIcon, StopIcon, XIcon } from '../icons'
+import { useCharacter } from '../character/Character'
+import { DocIcon, FolderIcon, PlusIcon, XIcon } from '../icons'
+import { AskBar } from './AskBar'
 
 /** Files just dropped on the island: they get selected when the tab shows. */
 export type DocsIncoming = { ids: string[]; skipped: { path: string; why: string }[]; at: number }
@@ -261,14 +259,48 @@ export function DocsView({
         </div>
       )}
 
-      <Ask
+      <AskBar
+        className="docs-ask"
         claude={claude}
-        files={usable}
-        all={files}
-        recipes={data?.recipes ?? []}
         onTyping={onTyping}
+        label="about documents"
+        placeholder={(who) =>
+          usable.length ? `Ask ${who} to do something with ${usable.length === 1 ? 'this file' : `these ${usable.length} files`}…` : `Ask ${who}, or pick files first…`
+        }
+        setupHint={(n) => `Set up an AI in Settings to ask ${n} to review, correct or write documents. The buttons above work without it.`}
+        ideas={usable.length ? suggestions(usable) : []}
+        chips={(send, fill) =>
+          (data?.recipes ?? []).map((r) => (
+            <span key={r.id} className="chip recipe" title={r.instruction}>
+              <button className="plain" onClick={() => (usable.length ? send(r.instruction) : fill(r.instruction))}>
+                {r.name}
+              </button>
+              <button className="plain recipe-x" aria-label={`Forget “${r.name}”`} onClick={() => void window.island.docs.removeRecipe(r.id)}>
+                <XIcon />
+              </button>
+            </span>
+          ))
+        }
+        // Claude Code works with paths; the island's agent with the workspace ids.
+        compose={(t, code) => (usable.length ? `${t}\n\n(Files: ${usable.map((f) => (code ? f.path : `${f.name} (id ${f.id})`)).join('; ')})` : t)}
         hideBefore={actedAt}
         onAsk={() => setResult(null)}
+        afterRun={(run) => {
+          // Files made while answering, to open in one tap.
+          const fresh = files.filter((f) => f.origin === 'made' && f.at >= run.startedAt && !f.missing).slice(0, 2)
+          return (
+            fresh.length > 0 && (
+              <div className="ask-run-files">
+                {fresh.map((f) => (
+                  <button key={f.id} className="chip" title={f.path} onClick={() => void window.island.docs.open(f.id).catch(() => {})}>
+                    Open {f.name.length > 30 ? `${f.name.slice(0, 29)}…` : f.name}
+                  </button>
+                ))}
+              </div>
+            )
+          )
+        }}
+        onSave={(t) => window.island.docs.saveRecipe({ name: recipeName(t), instruction: t })}
       />
     </div>
   )
@@ -383,164 +415,6 @@ function Actions({
       {one && chip('Open', () => void window.island.docs.open(one.id).catch(() => {}))}
       {one && chip('Show in Folder', () => void window.island.docs.show(one.id).catch(() => {}))}
       {remove}
-    </div>
-  )
-}
-
-/** Ask the agent about the selected files; saved requests ("recipes") are one tap. */
-function Ask({
-  claude,
-  files,
-  all,
-  recipes,
-  onTyping,
-  hideBefore,
-  onAsk,
-}: {
-  claude: ClaudeView | null
-  files: DocEntry[]
-  /** Every listed file (to offer the ones the agent makes). */
-  all: DocEntry[]
-  recipes: DocRecipe[]
-  onTyping: (on: boolean) => void
-  /** A quick action ran after this question: its result shows instead. */
-  hideBefore: number
-  onAsk: () => void
-}) {
-  const { name } = useCharacter()
-  const [text, setText] = useState('')
-  const [err, setErr] = useState<string | null>(null)
-  const [askedAt, setAskedAt] = useState(0)
-  const [closedRun, setClosedRun] = useState<string | null>(null)
-  const kb = useKeyboard(onTyping)
-  const ref = useRef<HTMLTextAreaElement>(null)
-  if (!claude) return null
-  const code = claude.assistant.provider === 'claude-code'
-  const who = code ? 'Claude' : name
-  const run = claude.run
-  const working = runActive(run)
-  // The answer to what was asked from here (not to the Claude tab).
-  const ours = run && askedAt && askedAt > hideBefore && run.startedAt >= askedAt - 2000 && run.id !== closedRun ? run : null
-  // Files made while answering, to open in one tap.
-  const fresh = ours && !working ? all.filter((f) => f.origin === 'made' && f.at >= ours.startedAt && !f.missing).slice(0, 2) : []
-
-  if (!code && claude.assistant.problem)
-    return (
-      <div className="docs-ask setup">
-        <span className="caption">Set up an AI in Settings to ask {name} to review, correct or write documents. The buttons above work without it.</span>
-        <button className="pill small" onClick={(e) => (e.stopPropagation(), window.island.openSettings('ai'))}>
-          Set Up
-        </button>
-      </div>
-    )
-
-  const send = async (instruction: string) => {
-    const t = instruction.trim()
-    if (!t || working) return
-    setErr(null)
-    // Claude Code works with paths; the island's agent with the workspace ids.
-    const list = files.map((f) => (code ? f.path : `${f.name} (id ${f.id})`)).join('; ')
-    try {
-      setAskedAt(Date.now())
-      onAsk()
-      await window.island.claude.ask(files.length ? `${t}\n\n(Files: ${list})` : t)
-      setText('')
-    } catch (e) {
-      setErr(errorText(e))
-    }
-  }
-  const ideas = files.length ? suggestions(files) : []
-  const saveRecipe = async () => {
-    const t = text.trim()
-    if (!t) return
-    await window.island.docs.saveRecipe({ name: recipeName(t), instruction: t }).catch((e) => setErr(errorText(e)))
-  }
-
-  return (
-    <div className="docs-ask" onClick={(e) => e.stopPropagation()}>
-      {ours && (
-        <div className={`docs-run${working ? ' live' : ''}${ours.phase === 'error' ? ' failed' : ''}`}>
-          <Character mood={moodFor(ours.phase, ours.tool?.name)} size={26} label={runStatus(ours)} />
-          <div className="docs-run-text">
-            <div className="claude-status">{working ? runStatus(ours) : ours.phase === 'error' ? 'Couldn’t finish' : runStatus(ours)}</div>
-            {(ours.reply || ours.error) && <div className="docs-run-reply">{ours.phase === 'error' ? ours.error : ours.reply}</div>}
-            {fresh.length > 0 && (
-              <div className="docs-run-files">
-                {fresh.map((f) => (
-                  <button key={f.id} className="chip" title={f.path} onClick={() => void window.island.docs.open(f.id).catch(() => {})}>
-                    Open {f.name.length > 30 ? `${f.name.slice(0, 29)}…` : f.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          {working ? (
-            <button className="round-btn stop" title={`Stop ${who}`} aria-label={`Stop ${who}`} onClick={() => void window.island.claude.stop()}>
-              <StopIcon />
-            </button>
-          ) : (
-            <button className="close-btn" aria-label="Dismiss" onClick={() => setClosedRun(ours.id)}>
-              <XIcon />
-            </button>
-          )}
-        </div>
-      )}
-      {!working && !text.trim() && (ideas.length > 0 || recipes.length > 0) && (
-        <div className="chips docs-ideas">
-          {recipes.map((r) => (
-            <span key={r.id} className="chip recipe" title={r.instruction}>
-              <button className="plain" onClick={() => (files.length ? void send(r.instruction) : setText(r.instruction))}>
-                {r.name}
-              </button>
-              <button className="plain recipe-x" aria-label={`Forget “${r.name}”`} onClick={() => void window.island.docs.removeRecipe(r.id)}>
-                <XIcon />
-              </button>
-            </span>
-          ))}
-          {ideas.map((s) => (
-            <button key={s.name} className="chip idea" title={s.instruction} onClick={() => void send(s.instruction)}>
-              {s.name}
-            </button>
-          ))}
-        </div>
-      )}
-      {err && (
-        <div className="status error" onClick={() => setErr(null)}>
-          {err}
-        </div>
-      )}
-      <div className="reply-field claude-field">
-        <textarea
-          ref={ref}
-          rows={1}
-          value={text}
-          placeholder={working ? `${who} is working…` : files.length ? `Ask ${who} to do something with ${files.length === 1 ? 'this file' : `these ${files.length} files`}…` : `Ask ${who}, or pick files first…`}
-          aria-label={`Ask ${who} about documents`}
-          onPointerDown={() => {
-            kb.take()
-            setTimeout(() => ref.current?.focus(), 50)
-          }}
-          onFocus={kb.take}
-          onBlur={kb.release}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault()
-              void send(text)
-            } else if (e.key === 'Escape') {
-              ref.current?.blur()
-            }
-          }}
-        />
-        {text.trim() && !working && (
-          <button className="plain save-recipe" title="Save as a recipe (one tap next time)" aria-label="Save as a recipe" onClick={() => void saveRecipe()}>
-            ☆
-          </button>
-        )}
-        <button className="send" title="Send" aria-label="Send" disabled={!text.trim() || working} onClick={() => void send(text)}>
-          ↑
-        </button>
-      </div>
     </div>
   )
 }

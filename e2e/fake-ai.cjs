@@ -7,7 +7,9 @@
 // (tool call that asks first), "slow" waits 6 s, anything else is echoed.
 // With "(Files: … (id d3) …)" from the Documents tab: "grammar" corrects a
 // Word file, "merge" merges the PDFs, "summar…" reads it, "trash" moves it
-// to the Trash (asks first).
+// to the Trash (asks first). CRM: "log a call with <name> … remind me" logs a
+// call, then adds a follow-up; "add <First Last> from <Company> as a lead"
+// adds a contact; "delete <name>" deletes them (asks first).
 // The model "no-tools" rejects requests that include tools (like some local
 // models); the key "bad-key" is rejected.
 const http = require('http')
@@ -38,6 +40,16 @@ function startFakeAi() {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
       if (/^Sent to/.test(result)) return { text: 'Sent it!' }
       if (/did not allow/.test(result)) return { text: 'Okay, I didn’t send it.' }
+      if (/^Logged \(/.test(result) && /remind/i.test(prompt)) {
+        const who = /with (\w+)/i.exec(prompt)?.[1] ?? ''
+        const d = new Date(Date.now() + 86_400_000)
+        const due = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+        return { text: '', tool: { name: 'crm_add_task', input: { title: `Follow up with ${who}`, contact: who, due } } }
+      }
+      if (/^Added follow-up /.test(result)) return { text: 'Logged the call and added a follow-up for tomorrow.' }
+      if (/^Logged \(/.test(result)) return { text: 'Logged it.' }
+      if (/^Added .+ \(c\d+\)\.$/.test(result)) return { text: result.replace(/ \(c\d+\)/, '') }
+      if (/^Deleted /.test(result)) return { text: result }
       if (/^(Saved|Made) /.test(result)) return { text: `Done. ${result.split('\n')[0]}` }
       if (/^Moved /.test(result)) return { text: 'Moved it to the Trash.' }
       if (/^Failed: /.test(result)) return { text: `Sorry: ${result.slice(8)}` }
@@ -51,6 +63,12 @@ function startFakeAi() {
       if (/summar/i.test(prompt)) return { text: '', tool: { name: 'docs_read', input: { file: ids[0] } } }
       if (/trash/i.test(prompt)) return { text: '', tool: { name: 'docs_trash', input: { file: ids[0] } } }
     }
+    const call = /^log a call with (\w+)/i.exec(prompt)
+    if (call) return { text: '', tool: { name: 'crm_log', input: { contact: call[1], kind: 'call', text: 'Talked about the proposal' } } }
+    const lead = /^add (\w+ \w+) from (\w+) as a lead/i.exec(prompt)
+    if (lead) return { text: '', tool: { name: 'crm_add_contact', input: { name: lead[1], company: lead[2], status: 'lead' } } }
+    const del = /^delete (\w+)/i.exec(prompt)
+    if (del) return { text: '', tool: { name: 'crm_delete', input: { what: 'contact', id: del[1] } } }
     const tell = /^tell (\w+) (.+)/i.exec(prompt)
     if (tell) return { text: '', tool: { name: 'chats_send', input: { chat: tell[1], text: tell[2] } } }
     const m = /remember (?:to )?(.+)/i.exec(prompt)

@@ -18,7 +18,7 @@ It's a generic project: anyone on Linux can install it, and every integration
 | **Character** | The island's agent has a face: pick **Orbit** (the orb, with a face), **Bolt** (a little robot) or **Mochi** (a soft blob) in **Settings → Character** and give it a name. It acts out what the agent is doing: listening, thinking, searching, writing, working, done, needs you, something went wrong, and it sleeps on the resting capsule late at night | Click a character in Settings to switch; the previews act out every mood |
 | **Edge or top capsule** | A slim black capsule docked to the right or left edge of the screen, or **at the top center, below the camera**, as a horizontal pill that grows downward like a phone's Dynamic Island. With music playing it shows the album art and a waveform | Click it (or press **Ctrl+I** anywhere) to open the panel. **Drag it** up or down the edge, across the screen to the other side, or up to the top center; it remembers the spot. Or pick **Left / Top / Right** in Settings → General |
 | **Now Playing** | Album art + animated waveform while music plays in any MPRIS player: Spotify (app or web), YouTube / YouTube Music in Chrome or Firefox, VLC, Rhythmbox, … | Hover to expand: title, artist, progress bar (click it to seek), previous / play-pause / next, shuffle and repeat |
-| **Panel (Controls / Chats / Mail / Notes / Documents)** | Opens on click or **Ctrl+I**, with a slim column of icons floating beside it (like a detached dock) that remembers the last section. The Chats and Mail icons show a red badge with your unread count, and the Claude icon has two rings showing your session (outer) and weekly (inner) plan usage, turning orange at 80% and red at 95% | Click an icon to switch between the Control Center, your WhatsApp chats, your mail inbox, your notes and your documents at any time, not only when something new arrives. The gear at the bottom opens Settings. **Ctrl+I** again (or moving the pointer away) closes it |
+| **Panel (Controls / Chats / Mail / Notes / Documents / CRM)** | Opens on click or **Ctrl+I**, with a slim column of icons floating beside it (like a detached dock) that remembers the last section. The Chats and Mail icons show a red badge with your unread count, and the Claude icon has two rings showing your session (outer) and weekly (inner) plan usage, turning orange at 80% and red at 95% | Click an icon to switch between the Control Center, your WhatsApp chats, your mail inbox, your notes, your documents and your CRM at any time, not only when something new arrives. The gear at the bottom opens Settings. **Ctrl+I** again (or moving the pointer away) closes it |
 | **WhatsApp** | New messages pop up as a card per chat. **Chats** lists your recent chats with coloured avatars, a one-line preview, time and unread count, plus a search field. Conversations show bubbles with times, "Today / Yesterday" dividers and coloured sender names in groups. Photos and videos show as pictures (tap for full size), voice notes play right there, and files open with one tap (saved to Downloads) | Reply from the card or from the conversation view, search chats, **Mark as Read**, **Open Chats** |
 | **Notes** | Your notes, newest first, with a search field | **+** starts a new note (ready to type), click one to open and edit it, the trash icon deletes it. Notes save automatically as you type, as plain Markdown files on this computer |
 | **Mail** | New mail pops up as a card. **Mail** lists your recent inbox (unread dot, sender, subject, preview, time), with an account picker when you have several | Open a message to read it (marks it read, like Mail), **Reply** (threaded, saved to Sent), **Mark as Read**, **Open Inbox** |
@@ -26,8 +26,9 @@ It's a generic project: anyone on Linux can install it, and every integration
 | **Spotify** | The **Music** tab, styled like Spotify: Home (greeting, Liked Songs and what you played recently, your playlists), Search, Your Library, playlist and album pages whose header takes the cover's colour, a mini player and a full Now Playing screen. While Spotify plays, the pop-out Now Playing card uses Spotify's colours too | Play any song inside its playlist or album, like / unlike, shuffle, repeat, seek, next / previous. If nothing is playing anywhere it uses one of your Spotify devices or the Spotify app on this computer; otherwise **Connect to a device** lets you pick your phone or play in your browser (the Spotify Web Player). The device button in the player moves playback between devices |
 | **Claude: plan limits** | Your 5-hour session and weekly usage as two meters, with when each resets. A heads-up card when you pass 80% and 95% | Works with Claude Pro and Max. Turn on **Show my plan limits** in Settings (or the button in the Claude tab) |
 | **Any AI** | Pick the AI behind the agent in **Settings → AI**: Claude Code, Claude, ChatGPT, Gemini, DeepSeek, OpenRouter, Ollama or any OpenAI-compatible service | Paste your key; the island checks it and lists the models |
-| **Packages** | What the agent can do: Notes, WhatsApp, Mail, Music and Documents, each with its own tab, turned on or off in **Settings → Packages** | Ask “catch me up on my chats”, “reply to Rahul that I'm running late”, “play some lofi”. Anything that sends something asks you first |
+| **Packages** | What the agent can do: Notes, WhatsApp, Mail, Music, Documents and CRM, each with its own tab, turned on or off in **Settings → Packages** | Ask “catch me up on my chats”, “reply to Rahul that I'm running late”, “play some lofi”. Anything that sends something asks you first |
 | **Documents** | **Drop files on the island** (PDF, Word, Excel, CSV, PowerPoint, Markdown, text) and they appear in the **Documents** tab, newest first, with pages and sizes. Files made from them are marked and saved in `~/Documents/Dynamic Island`; your originals are never changed | Without any AI: **merge** PDFs, keep / delete / reorder **pages**, **rotate**, **split**, **number pages**, **convert** (Word / Excel / Markdown / text to PDF, CSV ↔ Excel, anything to text). Or ask the agent: “fix the spelling and grammar” (it marks its corrections as **tracked changes** you accept or reject in Word or LibreOffice), “summarize this”, “compare these two versions”, “add a DRAFT watermark”, “write a cover letter as a Word file”. Save a request you use often as a **recipe** for one tap next time |
+| **CRM** | Your own simple CRM in the **CRM** tab: **People** (search, Lead / Customer / Partner, when you last talked), each person's page (details, follow-ups, deals and a timeline of calls, meetings and notes), **Deals** (your pipeline and its total, by stage) and **Follow-ups** (overdue, today, upcoming). All of it is stored on this computer | Works fully without AI: add and edit people, log a call or note, add follow-ups with due dates (a card pops up on the island when one is due), move deals through the stages, import contacts from **Google Contacts, Outlook, Excel or a phone's vCard**, export to CSV. Or let the agent run it: “log a call with Rahul, he wants a quote, remind me Friday”, “who should I follow up with this week?”, “move the Acme deal to won”. What the agent changes shows in a bar with **Undo**, and deleting asks you first |
 | **Claude: talk or type to Claude Code** | The **Claude** tab: a conversation with Claude Code in the project folder you pick. Your character shows what it's doing: listening, working out what you said, thinking, searching, editing, writing | Tap the mic (or press **Ctrl+Alt+Space** anywhere), say what you want, and stop talking: it's transcribed on your computer and sent to Claude Code. Or type it. Follow-ups continue the same conversation; **Stop** ends a run; the ✎ button starts a new conversation. When the panel is closed, the character on the capsule shows Claude working and a card pops up with the answer |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
@@ -170,6 +171,7 @@ Ask by voice or typing as before. What the agent can do comes from
 | Mail | list and read your mail, **reply** |
 | Music | say what's playing, play / pause / skip, find and play something on Spotify |
 | Documents | find, read, merge, split, rotate, stamp, convert and compare documents, correct Word files with tracked changes, edit spreadsheets, write new documents, **move a file to the Trash** |
+| CRM | find people, read someone's page, add and update contacts, log calls and notes, add and tick off follow-ups, add and move deals, import and export, undo its own last changes, **delete** a contact, deal or follow-up |
 
 Anything that acts for you (the bold ones) **asks first**: a card shows exactly
 what will be sent, with **Allow** and **Don't Allow**. Turn a package off and
@@ -204,7 +206,36 @@ The agent can also find documents by name in your Documents, Downloads and
 Desktop folders (“merge the two March invoices in my Downloads”), and open
 documents by path in your home folder.
 
-### 4d. Connect Spotify (optional)
+### 4d. Your own CRM (optional)
+
+Open the **CRM** tab. Add people with **+**, or **••• → Import contacts…**
+to bring them in from a CSV (Google Contacts or Outlook export, any
+spreadsheet), an Excel file or a vCard (`.vcf`, from your phone). People who
+are already there are filled in, not duplicated, and **Undo** takes an
+import back.
+
+- **People**: tap someone to see their page. Set them as a **Lead**,
+  **Customer** or **Partner**; tap an email or phone number to copy it; log a
+  **call**, **meeting**, **email**, **message** or **note** on their
+  timeline; add **follow-ups** with a due date (Today, Tomorrow, Next week or
+  any date and time) and **deals**.
+- **Deals** shows your open pipeline and its total; move a deal through
+  **New → Qualified → Proposal → Negotiation → Won / Lost** with one tap.
+  Set your currency under **•••**.
+- **Follow-ups** lists what's overdue, due today and coming up. When one is
+  due, a card pops up on the island (date-only follow-ups at 9:00).
+- **The agent**: the box at the bottom asks about what's on screen (on a
+  person's page, about them). It can log calls, add follow-ups, update
+  details and move deals for you. Its changes appear in a bar with **Undo**,
+  which takes back everything it did in that answer (anything you changed
+  yourself since is kept). Deleting anything asks you first.
+- **••• → Export** saves contacts, deals or follow-ups as CSV in
+  `~/Documents/Dynamic Island` (they show up in the Documents tab).
+
+Everything is kept in `~/.config/dynamic-island-linux/crm/crm.json`, with a
+copy each day for the last week in `crm/backups/`.
+
+### 4e. Connect Spotify (optional)
 
 Spotify only lets apps you register yourself use its Web API, so there's a
 one-time setup (about a minute). Open Settings → **Spotify** and follow the
@@ -364,6 +395,10 @@ is available, Settings warns you that they are only obfuscated.
   name in Documents, Downloads and Desktop, and documents in your home folder
   outside hidden folders; it never overwrites a file. PDFs are made from HTML
   in a hidden window with JavaScript off and every network request blocked.
+- **CRM** data is stored only on this computer (one JSON file in the profile
+  folder, plus a week of daily backups). The CRM tab works offline; when you
+  ask the agent about your CRM, the details it looks up are sent to the AI
+  provider you chose (nothing leaves your computer with Ollama).
 - **Spotify**: the island talks to Spotify directly with your own app's Client
   ID. Your Spotify sign-in (tokens) is stored encrypted with the desktop
   keyring in the island's profile folder; Settings → Spotify → Disconnect
@@ -431,6 +466,10 @@ providers against a local stand-in AI server, and one tests Documents: adding
 files, merge / pages / page numbers / Word to PDF through the real print
 window, the agent correcting a Word file as tracked changes, recipes, asking
 before the Trash, and a real drag and drop from another app onto the island.
+The CRM suite adds a contact, logs a call, ticks off a follow-up, moves a
+deal to Won, imports a Google Contacts file (and undoes it), exports, lets the
+agent log a call and add a follow-up (undone in one go), checks that deleting
+asks first, and waits for a reminder card.
 To include voice (synthesized speech
 through a fake microphone into real Whisper), install `espeak-ng` and point
 `E2E_STT_MODELS` at a folder containing `Xenova/whisper-tiny`; otherwise that
@@ -461,6 +500,8 @@ electron/            main process
   packages/          what the agent can do, per package (notes, chats, mail, music, documents)
   docs/              documents: read, PDF operations, Word corrections, sheets,
                      conversions, compare, and the workspace (docsIpc.ts wires the tab)
+  crm/               the CRM: store (one JSON file, backups, undo) and import / export
+                     (crmIpc.ts wires the tab)
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
@@ -517,6 +558,11 @@ tests/               unit tests (vitest)
   which is how Word itself records tracked changes. New PDFs are printed from
   HTML by Chromium; with LibreOffice installed, Office files are converted by
   LibreOffice in the background with its own temporary profile.
+- **CRM**: people, deals, follow-ups and the timeline live in one JSON file,
+  written through a temporary file and renamed (a crash never leaves half a
+  file), with a copy kept each day for a week; a damaged file falls back to
+  the newest copy. Every change records what it replaced, grouped per click
+  or per agent answer, which is what **Undo** puts back.
 - **Notes** are read and written by the main process in the profile folder;
   each save writes a temporary file and renames it, so a crash never leaves a
   half-written note.

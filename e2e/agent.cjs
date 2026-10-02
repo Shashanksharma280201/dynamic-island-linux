@@ -125,7 +125,7 @@ const until = async (fn, ms = 5000) => {
 
     // Settings → Packages
     await settings.evaluate(() => document.getElementById('packages')?.scrollIntoView())
-    check('Settings lists the packages', (await settings.$$eval('#packages .package-name', (e) => e.map((x) => x.textContent))).join() === 'Basics · always on,Notes,WhatsApp,Mail,Music,Documents')
+    check('Settings lists the packages', (await settings.$$eval('#packages .package-name', (e) => e.map((x) => x.textContent))).join() === 'Basics · always on,Notes,WhatsApp,Mail,Music,Documents,CRM')
     check('and which tools ask first', (await settings.textContent('#packages [data-package="chats"]')).includes('Send a message · asks first'))
     await settings.screenshot({ path: `${OUT}/05-packages.png` })
     await settings.click('#packages input[aria-label="WhatsApp package"]')

@@ -4,6 +4,7 @@ import { ChatsView } from './ChatsView'
 import { MailView } from './MailView'
 import { NotesView } from './NotesView'
 import { DocsView, type DocsIncoming } from './DocsView'
+import { CrmView } from './crm/CrmView'
 import { ClaudePanel } from './ClaudePanel'
 import { MusicView } from '../music/MusicView'
 import type { ClaudeView } from '@shared/claude'
@@ -73,6 +74,7 @@ export function Hub({
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
       {tab === 'music' && <MusicView onTyping={onTyping} />}
       {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}
+      {tab === 'crm' && <CrmView claude={claude} onTyping={onTyping} />}
       {dropping && <DropZone />}
     </div>
   )

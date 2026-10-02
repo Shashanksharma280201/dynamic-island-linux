@@ -463,7 +463,8 @@ async function main() {
     if (due.length > 3) showNotification({ app: 'CRM · Follow-ups', icon: CRM_ICON, summary: `${due.length - 3} more follow-ups are due`, body: 'See them in the CRM tab.', urgency: 'normal' })
   }
   setTimeout(remindFollowUps, 5000)
-  const crmTimer = setInterval(remindFollowUps, 60_000)
+  // Tests check every second instead of every minute.
+  const crmTimer = setInterval(remindFollowUps, Number(process.env.DI_CRM_REMIND_MS) || 60_000)
 
   // ---- messages: WhatsApp + mail ----
   const hub = new MessageHub(transient)
