@@ -18,6 +18,8 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - name: Build the .deb and AppImage
+        run: npm run package
 
   e2e:
     runs-on: ubuntu-latest
