@@ -29,7 +29,7 @@ test('server receives request and returns decision to client', async () => {
     server.resolve({ id: req.id, decision: 'deny', message: 'nope' })
   })
   await server.start()
-  expect(statSync(sock).mode & 0o777).toBe(0o600)
+  if (process.platform !== 'win32') expect(statSync(sock).mode & 0o777).toBe(0o600) // a named pipe has no file mode
 
   const { replies } = connect(sock, [
     encode({ type: 'request', request: { id: 'x1', toolName: 'Bash', inputSummary: 'ls' } }),

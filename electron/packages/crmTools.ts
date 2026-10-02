@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import { basename } from 'node:path'
 import { STAGE_LABEL, STATUS_LABEL, KIND_LABEL, money, type Activity, type Contact, type Deal, type TaskSummary } from '@shared/crm'
 import type { DocEntry } from '@shared/docs'
 import { schema, str, strList, type AgentTool, type ScalarProp } from '../agent/tools'
@@ -457,7 +458,7 @@ export function crmTools(ctx: CrmContext): AgentTool[] {
           text = e.kind === 'xlsx' ? toCsv(await xlsxRows(bytes)) : Buffer.from(bytes).toString('utf8')
         }
         const parsed = contactsFromFile(name, text)
-        if (!parsed.contacts.length) throw new Error(`No contacts found in ${name.split('/').pop()}. A CSV needs a header row with a name or email column.`)
+        if (!parsed.contacts.length) throw new Error(`No contacts found in ${basename(name)}. A CSV needs a header row with a name or email column.`)
         const r = importContacts(store, b, parsed.contacts)
         const skipped = r.skipped + parsed.skipped
         return `Imported from ${name.split('/').pop()}: ${r.added} added, ${r.updated} filled in${skipped ? `, ${skipped} skipped` : ''}. The user can undo it in the CRM tab.`
