@@ -461,7 +461,7 @@ export function crmTools(ctx: CrmContext): AgentTool[] {
         if (!parsed.contacts.length) throw new Error(`No contacts found in ${basename(name)}. A CSV needs a header row with a name or email column.`)
         const r = importContacts(store, b, parsed.contacts)
         const skipped = r.skipped + parsed.skipped
-        return `Imported from ${name.split('/').pop()}: ${r.added} added, ${r.updated} filled in${skipped ? `, ${skipped} skipped` : ''}. The user can undo it in the CRM tab.`
+        return `Imported from ${basename(name)}: ${r.added} added, ${r.updated} filled in${skipped ? `, ${skipped} skipped` : ''}. The user can undo it in the CRM tab.`
       },
     },
     {
