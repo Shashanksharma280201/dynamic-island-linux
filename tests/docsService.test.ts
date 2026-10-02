@@ -119,7 +119,7 @@ test('PDF operations write new files and leave the originals as they were', asyn
 
   await docs.add([files.csv])
   await expect(docs.merge(['d1', 'People.csv'])).rejects.toThrow('People.csv isn’t a PDF. Convert it first (docs_convert to pdf).')
-})
+}, 30_000) // several PDF writes: slow on Windows runners
 
 test('Word corrections, spreadsheet edits, conversions, new documents and comparing', async () => {
   const { docs, files, printed } = await setup()
