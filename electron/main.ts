@@ -33,6 +33,11 @@ import {
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
+import { ApiAgent } from './agent/agent'
+import { builtinTools } from './agent/tools'
+import { friendlyError, listModels } from './agent/providers'
+import { agentSystemPrompt } from './agent/prompt'
+import { baseUrlFor, modelFor, providerInfo, setupProblem } from '@shared/ai'
 import { ClaudeController, earlyClaudeState } from './claudeIpc'
 import { MODELS, SpeechModels, registerSttScheme } from './stt'
 import { Spotify, REDIRECT_URI } from './spotify'
@@ -223,6 +228,21 @@ async function main() {
     return findExecutable('claude', claudeSearchDirs(homedir()))
   }
   const alertsSeen = new Set<string>()
+  // What the agent is doing, on the island: a live card, then the answer.
+  const agentChanged = (run?: ClaudeRun) => {
+    claudeUi?.push()
+    if (run && (run.phase === 'starting' || run.phase === 'thinking' || run.phase === 'tool' || run.phase === 'writing')) {
+      if (transient.has('claude-done')) transient.dismiss('claude-done')
+      store.upsert({ kind: 'claude', id: 'claude-run', priority: 2, run })
+    }
+  }
+  const agentFinished = (run: ClaudeRun) => {
+    store.remove('claude-run')
+    // A card with the answer, which closes by itself (hover keeps it).
+    if (run.phase !== 'stopped') {
+      transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
+    }
+  }
   const claudeCode = new ClaudeCode({
     config: () => config.claude,
     findBinary: findClaude,
@@ -233,14 +253,7 @@ async function main() {
     usageBridgeInstalled: isUsageBridgeInstalled,
     socketPath: SOCK,
     dataDir: app.getPath('userData'),
-    onChange: (s) => {
-      claudeUi?.push()
-      const run = s.run
-      if (run && (run.phase === 'starting' || run.phase === 'thinking' || run.phase === 'tool' || run.phase === 'writing')) {
-        if (transient.has('claude-done')) transient.dismiss('claude-done')
-        store.upsert({ kind: 'claude', id: 'claude-run', priority: 2, run })
-      }
-    },
+    onChange: (s) => agentChanged(s.run),
     onUsage: (u) => {
       for (const a of usageAlerts(u, alertsSeen, Date.now())) {
         alertsSeen.add(a.key)
@@ -254,13 +267,33 @@ async function main() {
         })
       }
     },
-    onFinished: (run: ClaudeRun) => {
-      store.remove('claude-run')
-      // A card with the answer, which closes by itself (hover keeps it).
-      if (run.phase !== 'stopped') {
-        transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
+    onFinished: (run: ClaudeRun) => agentFinished(run),
+  })
+  // The island's own agent, for every provider other than Claude Code.
+  const apiAgent = new ApiAgent({
+    dataDir: app.getPath('userData'),
+    target: () => {
+      const ai = config.ai
+      const problem = setupProblem(ai)
+      if (problem) return problem
+      const provider = providerInfo(ai.provider)
+      const stored = ai.keys[ai.provider]
+      return {
+        provider,
+        model: modelFor(ai),
+        apiKey: stored ? decryptSecret(stored) : '',
+        // Tests point every provider at a local stand-in.
+        baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
       }
     },
+    tools: () => builtinTools({ notes }),
+    system: () => agentSystemPrompt(config.character),
+    onChange: (s) => {
+      // Only the active engine's runs reach the island.
+      if (claudeUi?.engine() === apiAgent) agentChanged(s.run)
+      else claudeUi?.push()
+    },
+    onFinished: (run) => agentFinished(run),
   })
   let showNotificationLater: (n: NotificationData) => void = () => {}
   await claude.start().catch((e) => console.error('claude server:', e.message ?? e))
@@ -400,6 +433,26 @@ async function main() {
     onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onCharacter: () => pushCharacter(),
+    onAi: (previous) => {
+      // Switching away from a provider mid-answer stops that answer.
+      if (previous !== config.ai.provider) {
+        if (providerInfo(previous).kind === 'claude-code') claudeCode.stop()
+        else apiAgent.stop()
+      }
+      claudeUi?.push()
+    },
+    listModels: async (id) => {
+      const p = providerInfo(id)
+      if (p.kind === 'claude-code') return []
+      const stored = config.ai.keys[id]
+      if (p.needsKey && !stored) throw new Error('Add your API key first.')
+      const base = process.env.DI_AI_BASE_URL || (p.kind === 'anthropic' ? undefined : baseUrlFor(config.ai, id))
+      try {
+        return await listModels(p.kind, stored ? decryptSecret(stored) : '', base)
+      } catch (e) {
+        throw new Error(friendlyError(e, p.label, base))
+      }
+    },
     onAppearance: () => {
       pushAppearance()
       updateHitArea()
@@ -413,6 +466,7 @@ async function main() {
     win,
     config,
     claude: claudeCode,
+    agent: apiAgent,
     speech,
     saveConfig: () => saveConfig(config),
     setUsageBridge: setUsageBridgeInstalled,
@@ -611,6 +665,7 @@ async function main() {
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
     claudeCode.dispose()
+    apiAgent.dispose()
     spotify.stop()
     tray?.destroy()
     invoker.stop()

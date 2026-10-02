@@ -1,4 +1,5 @@
 import type { CharacterConfig } from './character'
+import type { AiSettings, ProviderId } from './ai'
 import type { ClaudeRun } from './claude'
 export type ToolRequest = {
   id: string
@@ -272,6 +273,7 @@ export type SettingsState = {
   claude: ClaudeSettings
   spotify: { clientId: string; redirectUri: string; status: string; user?: string; premium?: boolean; error?: string }
   character: CharacterConfig
+  ai: AiSettings
 }
 
 export type ClaudeSettings = {

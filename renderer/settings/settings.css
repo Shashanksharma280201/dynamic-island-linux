@@ -368,3 +368,25 @@ button.link {
 .character-name {
   width: 160px;
 }
+
+/* AI */
+#ai select {
+  max-width: 240px;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+.ai-key input[type='password'] {
+  width: 180px;
+}
+.ok-badge {
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+  background: rgba(48, 209, 88, 0.18);
+  color: #30d158;
+}

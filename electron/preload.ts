@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { CharacterConfig, CharacterId } from '@shared/character'
+import type { ProviderId } from '@shared/ai'
 import { IPC } from '@shared/types'
 import type {
   Activity,
@@ -132,6 +133,9 @@ const settings = {
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
   setCharacter: (patch: { id?: CharacterId; name?: string }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
+  setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
+  setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
+  aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
   openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),

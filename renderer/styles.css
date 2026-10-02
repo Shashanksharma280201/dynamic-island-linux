@@ -1672,6 +1672,11 @@ button {
   max-width: 150px;
   color: var(--label);
 }
+.model-chip {
+  max-width: 170px;
+  color: var(--label-2);
+  font-size: 12px;
+}
 .folder-chip svg {
   width: 14px;
   height: 14px;

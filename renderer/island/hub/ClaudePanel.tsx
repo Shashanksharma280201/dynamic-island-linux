@@ -5,7 +5,7 @@ import { moodFor } from '@shared/character'
 import { agoText, resetText } from '@shared/format'
 import { Empty, errorText, useNow } from './common'
 import { useKeyboard } from './useKeyboard'
-import { Character } from '../character/Character'
+import { Character, useCharacter } from '../character/Character'
 import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
 import { ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
@@ -130,7 +130,12 @@ function voiceCaption(v: Voice, view: ClaudeView): string {
   }
 }
 
+/** Who answers: Claude (Claude Code) or the character, for an API provider. */
+const usesClaudeCode = (view: ClaudeView) => view.assistant.provider === 'claude-code'
+
 function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; onTyping: (on: boolean) => void }) {
+  const { name } = useCharacter()
+  const who = usesClaudeCode(view) ? 'Claude' : name
   const [text, setText] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const kb = useKeyboard(onTyping)
@@ -160,8 +165,8 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
           ref={ref}
           rows={1}
           value={text}
-          placeholder={busy ? 'Claude is working…' : 'Ask Claude…'}
-          aria-label="Ask Claude"
+          placeholder={busy ? `${who} is working…` : `Ask ${who}…`}
+          aria-label={`Ask ${who}`}
           onPointerDown={() => {
             kb.take()
             setTimeout(() => ref.current?.focus(), 50)
@@ -179,7 +184,7 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
           }}
         />
         {busy ? (
-          <button className="round-btn stop" title="Stop Claude" aria-label="Stop Claude" onClick={() => void window.island.claude.stop()}>
+          <button className="round-btn stop" title={`Stop ${who}`} aria-label={`Stop ${who}`} onClick={() => void window.island.claude.stop()}>
             <StopIcon />
           </button>
         ) : text.trim() ? (
@@ -189,8 +194,8 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
         ) : (
           <button
             className={`round-btn mic${listening ? ' on' : ''}`}
-            title={listening ? 'Finish and send' : 'Talk to Claude'}
-            aria-label={listening ? 'Finish and send' : 'Talk to Claude'}
+            title={listening ? 'Finish and send' : `Talk to ${who}`}
+            aria-label={listening ? 'Finish and send' : `Talk to ${who}`}
             disabled={voice.phase === 'preparing' || voice.phase === 'transcribing'}
             onClick={voice.toggle}
             style={listening ? { boxShadow: `0 0 0 ${2 + voice.level * 8}px rgba(255, 179, 92, 0.35)` } : undefined}
@@ -205,12 +210,32 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
 
 /** The Claude tab: plan limits, the conversation, and voice / text input. */
 export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null; voice: Voice; onTyping: (on: boolean) => void }) {
-  const ready = view?.binary && view.stt.ready ? view.stt.model : ''
+  const { name } = useCharacter()
+  const code = !!view && usesClaudeCode(view)
+  const usable = !!view && (code ? !!view.binary : !view.assistant.problem)
+  const ready = usable && view?.stt.ready ? view.stt.model : ''
   useEffect(() => {
     if (ready) warmUp(ready)
   }, [ready])
   if (!view) return <div className="view claude-panel" />
-  if (!view.binary)
+  if (!code && view.assistant.problem)
+    return (
+      <div className="view claude-panel">
+        <div className="voice-stage idle">
+          <Character mood="idle" size={72} />
+        </div>
+        <Empty
+          title={`Set up ${name}’s AI`}
+          body={`${view.assistant.problem} Pick Claude, ChatGPT, Gemini, DeepSeek, OpenRouter, Ollama or Claude Code.`}
+          action={
+            <button className="pill primary" onClick={(e) => (e.stopPropagation(), window.island.openSettings('ai'))}>
+              Open Settings
+            </button>
+          }
+        />
+      </div>
+    )
+  if (code && !view.binary)
     return (
       <div className="view claude-panel">
         <Limits usage={view.usage} bridge={view.usageBridge} />
@@ -231,16 +256,26 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
   return (
     <div className="view claude-panel">
       <div className="section-head claude-head">
-        <span className="large-title">Claude</span>
+        <span className="large-title">{code ? 'Claude' : name}</span>
         <span className="spacer" />
-        <button
-          className="chip folder-chip"
-          title={view.cwd}
-          onClick={(e) => (e.stopPropagation(), void window.island.claude.pickFolder())}
-        >
-          <FolderIcon />
-          <span className="ellipsis">{folderName(view.cwd)}</span>
-        </button>
+        {code ? (
+          <button
+            className="chip folder-chip"
+            title={view.cwd}
+            onClick={(e) => (e.stopPropagation(), void window.island.claude.pickFolder())}
+          >
+            <FolderIcon />
+            <span className="ellipsis">{folderName(view.cwd)}</span>
+          </button>
+        ) : (
+          <button
+            className="chip model-chip"
+            title={`${view.assistant.label} · ${view.assistant.model} (change in Settings)`}
+            onClick={(e) => (e.stopPropagation(), window.island.openSettings('ai'))}
+          >
+            <span className="ellipsis">{view.assistant.model}</span>
+          </button>
+        )}
         <button
           className="icon-btn"
           title="New conversation"
@@ -251,7 +286,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
           <ComposeIcon />
         </button>
       </div>
-      <Limits usage={view.usage} bridge={view.usageBridge} />
+      {code && <Limits usage={view.usage} bridge={view.usageBridge} />}
       {voiceOn ? (
         <div className={`voice-stage ${voice.phase}`}>
           <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} />
@@ -272,10 +307,16 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       ) : (
         <div className="voice-stage idle">
           <Character mood="idle" size={72} />
-          <div className="caption voice-caption">
-            Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and tell Claude what to do in{' '}
-            <b>{folderName(view.cwd)}</b>.
-          </div>
+          {code ? (
+            <div className="caption voice-caption">
+              Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and tell Claude what to do in{' '}
+              <b>{folderName(view.cwd)}</b>.
+            </div>
+          ) : (
+            <div className="caption voice-caption">
+              Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and ask {name} anything. It can keep notes for you, too.
+            </div>
+          )}
         </div>
       )}
       {voice.heard && <div className="heard caption">“{voice.heard}”</div>}

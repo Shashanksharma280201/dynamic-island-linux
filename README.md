@@ -25,6 +25,7 @@ It's a generic project: anyone on Linux can install it, and every integration
 | **Two activities at once** | The capsule plus a small detached circle below it for the second activity | Hover to expand the main one |
 | **Spotify** | The **Music** tab, styled like Spotify: Home (greeting, Liked Songs and what you played recently, your playlists), Search, Your Library, playlist and album pages whose header takes the cover's colour, a mini player and a full Now Playing screen. While Spotify plays, the pop-out Now Playing card uses Spotify's colours too | Play any song inside its playlist or album, like / unlike, shuffle, repeat, seek, next / previous. If nothing is playing anywhere it uses one of your Spotify devices or the Spotify app on this computer; otherwise **Connect to a device** lets you pick your phone or play in your browser (the Spotify Web Player). The device button in the player moves playback between devices |
 | **Claude: plan limits** | Your 5-hour session and weekly usage as two meters, with when each resets. A heads-up card when you pass 80% and 95% | Works with Claude Pro and Max. Turn on **Show my plan limits** in Settings (or the button in the Claude tab) |
+| **Any AI** | Pick the AI behind the agent in **Settings → AI**: Claude Code, Claude, ChatGPT, Gemini, DeepSeek, OpenRouter, Ollama or any OpenAI-compatible service | Paste your key; the island checks it and lists the models. The agent can use your notes |
 | **Claude: talk or type to Claude Code** | The **Claude** tab: a conversation with Claude Code in the project folder you pick. Your character shows what it's doing: listening, working out what you said, thinking, searching, editing, writing | Tap the mic (or press **Ctrl+Alt+Space** anywhere), say what you want, and stop talking: it's transcribed on your computer and sent to Claude Code. Or type it. Follow-ups continue the same conversation; **Stop** ends a run; the ✎ button starts a new conversation. When the panel is closed, the character on the capsule shows Claude working and a card pops up with the answer |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Several waiting requests are answered in order, with a `+N` badge |
 | **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
@@ -140,6 +141,26 @@ When Claude needs permission for something (running a command, editing a file),
 the island asks you with **Allow** / **Don't Allow**, even if you haven't
 installed the approvals hook. In Settings you can let it edit files without
 asking (**Allow edits**), or use Claude Code's **Auto** mode.
+
+### 4b+. Use any AI: Claude, ChatGPT, Gemini, DeepSeek, OpenRouter or Ollama (optional)
+
+The agent in the **Claude** tab (with your character's face and name) can run
+on Claude Code (your Claude subscription, above) or on any of these with your
+own API key: **Claude (API key)**, **ChatGPT (OpenAI)**, **Gemini (Google)**,
+**DeepSeek**, **OpenRouter** (one key for hundreds of models), **Ollama** (free
+models on your own computer, no key), or **any other OpenAI-compatible
+service** (LM Studio, vLLM, Groq…).
+
+1. Open **Settings → AI** and pick the provider.
+2. Paste your API key and click **Save**. The island checks it right away and
+   lists the models you can use. Keys are stored encrypted with your desktop
+   keyring and only ever sent to that provider.
+3. Pick a model (or type any model name) and click **Save**.
+
+Ask by voice or typing as before. The agent can search, read and write your
+notes and knows the time; packages will add more. Small local models can
+struggle with multi-step requests; if a model doesn't support tools, the
+island still answers without them.
 
 ### 4c. Connect Spotify (optional)
 

@@ -18,6 +18,7 @@ import { useVoice } from './voice/useVoice'
 import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
+import { useCharacter } from './character/Character'
 
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
@@ -26,6 +27,7 @@ const FROST_BLEED = 40
 const PANEL_CLOSE_MS = 1500
 
 export function Island({ activities }: { activities: Activity[] }) {
+  const character = useCharacter()
   const [hover, setHover] = useState(false)
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
@@ -266,7 +268,12 @@ export function Island({ activities }: { activities: Activity[] }) {
               />
             ) : p.primary.kind === 'claude' ? (
               p.mode === 'expanded' ? (
-                <ClaudeCard id={p.primary.id} run={p.primary.run} onOpen={openClaude} />
+                <ClaudeCard
+                  id={p.primary.id}
+                  run={p.primary.run}
+                  onOpen={openClaude}
+                  title={claude && claude.assistant.provider !== 'claude-code' ? `${character.name} · ${claude.assistant.label}` : undefined}
+                />
               ) : (
                 <CompactClaude run={p.primary.run} />
               )

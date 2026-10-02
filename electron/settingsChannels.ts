@@ -25,4 +25,7 @@ export const SETTINGS = {
   SPOTIFY_SIGN_IN: 'settings:spotify-sign-in',
   SPOTIFY_SIGN_OUT: 'settings:spotify-sign-out',
   SET_CHARACTER: 'settings:set-character', // { id?, name? }
+  SET_AI: 'settings:set-ai', // { provider?, model?, baseUrl? } (model / baseUrl for the given or current provider)
+  SET_AI_KEY: 'settings:set-ai-key', // (provider, key | '') — '' removes it
+  AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
 } as const

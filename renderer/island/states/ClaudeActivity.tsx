@@ -36,7 +36,7 @@ export function CompactClaude({ run }: { run: ClaudeRun }) {
 }
 
 /** Hovered while working, or the answer once it's done. */
-export function ClaudeCard({ id, run, onOpen }: { id: string; run: ClaudeRun; onOpen: () => void }) {
+export function ClaudeCard({ id, run, onOpen, title }: { id: string; run: ClaudeRun; onOpen: () => void; title?: string }) {
   const active = runActive(run)
   const act = (e: MouseEvent, fn: () => void) => {
     e.stopPropagation()
@@ -48,7 +48,7 @@ export function ClaudeCard({ id, run, onOpen }: { id: string; run: ClaudeRun; on
         <span className="claude-mark" aria-hidden>
           ✳
         </span>
-        <span className="app-name ellipsis">Claude Code · {run.cwd.split('/').filter(Boolean).pop() ?? '~'}</span>
+        <span className="app-name ellipsis">{title ?? `Claude Code · ${run.cwd.split('/').filter(Boolean).pop() ?? '~'}`}</span>
         <span className="spacer" />
         {!active && (
           <button className="close-btn" title="Dismiss" onClick={(e) => act(e, () => window.island.dismiss(id))}>

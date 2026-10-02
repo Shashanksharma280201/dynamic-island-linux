@@ -1,6 +1,8 @@
 import { BrowserWindow, dialog, globalShortcut, ipcMain } from 'electron'
 import { CLAUDE } from './claudeChannels'
 import type { ClaudeCode } from './claudeCode'
+import type { ApiAgent } from './agent/agent'
+import { modelFor, providerInfo, setupProblem } from '@shared/ai'
 import type { SpeechModels } from './stt'
 import type { Config } from './config'
 import type { ClaudeView } from '@shared/claude'
@@ -11,6 +13,8 @@ type Deps = {
   win: BrowserWindow
   config: Config
   claude: ClaudeCode
+  /** The island's own agent, used for every provider except Claude Code. */
+  agent: ApiAgent
   speech: SpeechModels
   saveConfig: () => void
   setUsageBridge: (on: boolean) => Promise<unknown>
@@ -36,9 +40,20 @@ export class ClaudeController {
 
   constructor(private d: Deps) {}
 
+  /** Claude Code, or the island's agent for an API provider. */
+  engine(): ClaudeCode | ApiAgent {
+    return providerInfo(this.d.config.ai.provider).kind === 'claude-code' ? this.d.claude : this.d.agent
+  }
+
   view(): ClaudeView {
+    const ai = this.d.config.ai
+    const p = providerInfo(ai.provider)
+    const state = this.engine().state()
     return {
-      ...this.d.claude.state(),
+      ...state,
+      // Plan limits belong to Claude Code; keep showing them only there.
+      usage: p.kind === 'claude-code' ? state.usage : undefined,
+      assistant: { provider: p.id, label: p.label, model: p.kind === 'claude-code' ? '' : modelFor(ai), problem: setupProblem(ai) },
       stt: this.d.speech.status(this.d.config.claude.sttModel),
       permissionMode: this.d.config.claude.permissionMode,
       voiceShortcut: this.voiceActive,
@@ -84,13 +99,13 @@ export class ClaudeController {
   }
 
   wire(): void {
-    const { claude, speech, config } = this.d
+    const { speech, config } = this.d
     ipcMain.handle(CLAUDE.ASK, (_e, text) => {
       if (typeof text !== 'string') throw new Error('Invalid command')
-      claude.ask(text)
+      this.engine().ask(text)
     })
-    ipcMain.handle(CLAUDE.STOP, () => claude.stop())
-    ipcMain.handle(CLAUDE.NEW, () => claude.newConversation())
+    ipcMain.handle(CLAUDE.STOP, () => this.engine().stop())
+    ipcMain.handle(CLAUDE.NEW, () => this.engine().newConversation())
     ipcMain.handle(CLAUDE.PICK_FOLDER, () => this.pickFolder())
     ipcMain.handle(CLAUDE.SET_BRIDGE, async (_e, on) => {
       await this.d.setUsageBridge(on === true)

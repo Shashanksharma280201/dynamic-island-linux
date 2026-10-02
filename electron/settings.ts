@@ -1,4 +1,5 @@
 import { parseCharacter } from '@shared/character'
+import { PROVIDERS, baseUrlFor, modelFor, providerInfo, validBaseUrl, type ProviderId } from '@shared/ai'
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { mkdir } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
@@ -50,6 +51,9 @@ type Deps = {
   spotifySignOut: () => void
   onSpotifyClient: () => void
   onCharacter: () => void
+  /** The AI provider, model or key changed. */
+  onAi: (previous: ProviderId) => void
+  listModels: (provider: ProviderId) => Promise<string[]>
 }
 
 /** Settings window + the IPC it uses. */
@@ -81,6 +85,10 @@ export class SettingsController {
       claude: this.d.claude(),
       spotify: this.d.spotify(),
       character: config.character,
+      ai: {
+        provider: config.ai.provider,
+        providers: PROVIDERS.map((p) => ({ id: p.id, model: modelFor(config.ai, p.id), baseUrl: baseUrlFor(config.ai, p.id), hasKey: !!config.ai.keys[p.id] })),
+      },
     }
   }
 
@@ -192,6 +200,40 @@ export class SettingsController {
       })
       this.save()
       this.d.onCharacter()
+    })
+    const isProvider = (v: unknown): v is ProviderId => typeof v === 'string' && PROVIDERS.some((p) => p.id === v)
+    ipcMain.handle(SETTINGS.SET_AI, (_e, patch) => {
+      const previous = config.ai.provider
+      const target: ProviderId = isProvider(patch?.provider) ? patch.provider : previous
+      if (isProvider(patch?.provider)) config.ai.provider = patch.provider
+      if (typeof patch?.model === 'string') {
+        const m = patch.model.trim()
+        if (m && !/^[\w.:/@+-]{1,120}$/.test(m)) throw new Error('That doesn’t look like a model name.')
+        if (m) config.ai.models[target] = m
+        else delete config.ai.models[target]
+      }
+      if (typeof patch?.baseUrl === 'string') {
+        if (target !== 'ollama' && target !== 'custom') throw new Error('This provider’s address can’t be changed.')
+        const u = patch.baseUrl.trim()
+        if (u && !validBaseUrl(u)) throw new Error('Enter a full address, like http://localhost:11434/v1')
+        if (u) config.ai.baseUrls[target] = u
+        else delete config.ai.baseUrls[target]
+      }
+      this.save()
+      this.d.onAi(previous)
+    })
+    ipcMain.handle(SETTINGS.SET_AI_KEY, (_e, provider, key) => {
+      if (!isProvider(provider) || providerInfo(provider).kind === 'claude-code') throw new Error('Invalid provider')
+      const k = typeof key === 'string' ? key.trim() : ''
+      if (k.length > 500 || /\s/.test(k)) throw new Error('That doesn’t look like an API key.')
+      if (k) config.ai.keys[provider] = encryptSecret(k)
+      else delete config.ai.keys[provider]
+      this.save()
+      this.d.onAi(config.ai.provider)
+    })
+    ipcMain.handle(SETTINGS.AI_MODELS, (_e, provider) => {
+      if (!isProvider(provider)) throw new Error('Invalid provider')
+      return this.d.listModels(provider)
     })
     ipcMain.handle(SETTINGS.SET_APPEARANCE, (_e, a) => {
       if (a !== 'glass' && a !== 'solid') return

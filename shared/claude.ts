@@ -1,3 +1,4 @@
+import type { AssistantInfo } from './ai'
 const base = (p: unknown) => String(p ?? '').split('/').filter(Boolean).pop() ?? ''
 const clip = (s: string, n = 60) => (s.length > n ? s.slice(0, n - 1) + '…' : s)
 
@@ -80,6 +81,8 @@ export type SttStatus = { model: string; ready: boolean; downloading: boolean; p
 
 /** Everything the island's Claude tab shows. */
 export type ClaudeView = ClaudeState & {
+  /** Which AI answers: Claude Code or an API provider. */
+  assistant: AssistantInfo
   stt: SttStatus
   permissionMode: 'default' | 'acceptEdits' | 'auto'
   /** Accelerator of the talk shortcut when registered, e.g. "Ctrl+Alt+Space". */

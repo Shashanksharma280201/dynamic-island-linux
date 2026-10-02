@@ -79,8 +79,8 @@ export function moodFor(phase: RunPhase | 'idle' | 'listening' | 'transcribing',
     case 'writing':
       return 'writing'
     case 'tool':
-      if (tool && SEARCH_TOOLS.includes(tool)) return 'searching'
-      if (tool && WRITE_TOOLS.includes(tool)) return 'writing'
+      if (tool && (SEARCH_TOOLS.includes(tool) || /(^|_)(search|read|list|find|get)(_|$)/.test(tool))) return 'searching'
+      if (tool && (WRITE_TOOLS.includes(tool) || /(^|_)(create|write|update|save|add)(_|$)/.test(tool))) return 'writing'
       return 'working'
     case 'done':
       return 'done'
