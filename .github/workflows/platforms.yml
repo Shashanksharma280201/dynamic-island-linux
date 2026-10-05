@@ -113,6 +113,8 @@ jobs:
           Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
           Check "Claude Code hook removed" (-not (Select-String -Path $claude -Pattern claude-island -Quiet))
           Check "not running any more" (-not (Get-Process DynamicIsland -ErrorAction SilentlyContinue))
+          Write-Host "--- what the uninstall's last step did:"
+          Get-Content (Join-Path $env:TEMP 'dynamic-island-uninstall.log') -ErrorAction SilentlyContinue
           if ($failed) { exit 1 }
       - uses: actions/upload-artifact@v4
         if: always()
