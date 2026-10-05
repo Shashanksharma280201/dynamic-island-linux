@@ -20,9 +20,9 @@ export function appBundle(execPath: string): string | null {
   return i < 0 ? null : execPath.slice(0, i + 4)
 }
 
-/** NSIS puts its uninstaller next to the app as "Uninstall <Product>.exe". Pure. */
-export function windowsUninstaller(execPath: string, productName: string): string {
-  return win32.join(win32.dirname(execPath), `Uninstall ${productName}.exe`)
+/** NSIS puts its uninstaller next to the app, named after the executable: "Uninstall DynamicIsland.exe". Pure. */
+export function windowsUninstaller(execPath: string): string {
+  return win32.join(win32.dirname(execPath), `Uninstall ${win32.basename(execPath, '.exe')}.exe`)
 }
 
 /**
@@ -173,7 +173,7 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
     console.error('uninstall: login item', e)
   }
   const remove = o.removeData ? dataPaths({ userData: d.userData, platform: process.platform, home: homedir(), appId: d.appId, productName: d.productName }) : []
-  const uninstaller = windowsUninstaller(process.execPath, d.productName)
+  const uninstaller = windowsUninstaller(process.execPath)
   const finish = finishScript({
     platform: process.platform,
     pid: process.pid,
