@@ -66,14 +66,17 @@ jobs:
           # Where Windows says it is (Settings > Apps reads the same entry).
           $entry = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*' | Select-Object -First 1
           if (-not $entry) { throw "not in Installed apps" }
-          Write-Host "Installed apps: $($entry.DisplayName) $($entry.DisplayVersion) in $($entry.InstallLocation)"
-          $exe = Join-Path $entry.InstallLocation 'DynamicIsland.exe'
-          if (-not (Test-Path $exe)) { Get-ChildItem $entry.InstallLocation | Select-Object Name; throw "no DynamicIsland.exe" }
+          # Its folder is where its uninstaller is.
+          $uninstaller = [regex]::Match($entry.UninstallString, '"([^"]+)"').Groups[1].Value
+          $dir = Split-Path $uninstaller
+          Write-Host "Installed apps: $($entry.DisplayName) $($entry.DisplayVersion), in $dir"
+          $exe = Join-Path $dir 'DynamicIsland.exe'
+          if (-not (Test-Path $exe)) { Get-ChildItem $dir | Select-Object Name; throw "no DynamicIsland.exe" }
           $lnk = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"
           if (-not $lnk) { throw "no Start menu shortcut" }
           Write-Host "Start menu: $($lnk.FullName)"
           "APP_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          "APP_DIR=$($entry.InstallLocation)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "APP_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: The installed app works
         run: |
           $env:APP_PATH = $env:APP_EXE
