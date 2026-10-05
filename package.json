@@ -143,7 +143,9 @@
         "LSUIElement": true,
         "NSMicrophoneUsageDescription": "Talk to your assistant from the island.",
         "NSAppleEventsUsageDescription": "See and control what Spotify or Music is playing."
-      }
+      },
+      "identity": "-",
+      "artifactName": "Dynamic-Island-${version}-${arch}.${ext}"
     },
     "win": {
       "target": [

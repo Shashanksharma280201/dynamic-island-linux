@@ -45,3 +45,77 @@ jobs:
           name: shots-${{ matrix.os }}
           path: shots
           if-no-files-found: ignore
+
+  # What a Mac user does: download the .dmg, drag the app to Applications,
+  # open it, use it, then uninstall it, checking nothing is left behind.
+  install:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the .dmg (as in the README)
+        run: npm run package
+      - name: Download and install it like a user
+        run: |
+          DMG=$(ls dist/*.dmg | head -1)
+          echo "Installer: $DMG"
+          # Mark it as downloaded from the internet, as a browser does.
+          xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" "$DMG"
+          MNT=$(hdiutil attach -nobrowse -readonly "$DMG" | grep -o '/Volumes/.*' | head -1)
+          echo "Opened: $MNT"; ls "$MNT"
+          test -L "$MNT/Applications" # the drag-to-Applications shortcut
+          ditto "$MNT/Dynamic Island.app" "/Applications/Dynamic Island.app"
+          hdiutil detach "$MNT"
+      - name: The app is signed, so macOS doesn't call it damaged
+        run: |
+          APP="/Applications/Dynamic Island.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E "Identifier|Signature|flags"
+          spctl --assess --type execute -vv "$APP" 2>&1 || echo "Gatekeeper: not notarized, as expected (users click Open Anyway once)"
+          /usr/libexec/PlistBuddy -c "Print :LSUIElement" "$APP/Contents/Info.plist"
+          xattr -dr com.apple.quarantine "$APP" # the Open Anyway step, for the automated run
+      - name: The installed app works
+        run: node e2e/smoke.cjs
+        env:
+          APP_PATH: /Applications/Dynamic Island.app/Contents/MacOS/dynamic-island-linux
+          SHOTS: shots
+      - name: Opening it from Applications shows the island
+        run: |
+          open -a "Dynamic Island"
+          sleep 10
+          pgrep -fl "Dynamic Island" | head -3
+          test -d ~/Library/Application\ Support/Dynamic\ Island
+          screencapture -x shots/desktop.png || true
+          if [ -f shots/desktop.png ]; then sips -Z 1100 -s format jpeg -s formatOptions 60 shots/desktop.png --out shots/desktop.jpg >/dev/null; echo "SHOT_BASE64 $(base64 -i shots/desktop.jpg | tr -d '\n')"; fi
+      - name: Uninstall removes everything
+        run: |
+          APP="/Applications/Dynamic Island.app"
+          # Turn on what uninstall must undo: Claude Code approvals and status line.
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/dynamic-island-linux" "$APP/Contents/Resources/hook/install.cjs"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/dynamic-island-linux" "$APP/Contents/Resources/hook/statusline.cjs"
+          grep -c claude-island ~/.claude/settings.json
+          # Same as Uninstall… in the menu bar, with "delete my data" ticked.
+          "$APP/Contents/MacOS/dynamic-island-linux" --uninstall --yes --delete-data
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app" >/dev/null || break; sleep 1; done
+          sleep 3
+          FAILED=0
+          check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; FAILED=1; fi; }
+          check "app removed from Applications" '[ ! -e "$APP" ]'
+          check "app is in the Trash" 'ls ~/.Trash | grep -q "Dynamic Island"'
+          check "settings and data removed" '[ ! -e ~/Library/Application\ Support/Dynamic\ Island ]'
+          check "Claude Code hook and status line removed" '! grep -q claude-island ~/.claude/settings.json'
+          check "not running any more" '! pgrep -f "Dynamic Island.app" >/dev/null'
+          LEFT=$(find ~/Library -maxdepth 3 \( -iname "*dynamic island*" -o -iname "*dynamicisland*" \) 2>/dev/null)
+          echo "leftovers: ${LEFT:-none}"
+          check "nothing left in ~/Library" '[ -z "$LEFT" ]'
+          exit $FAILED
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-test-macos
+          path: shots
+          if-no-files-found: ignore
