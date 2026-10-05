@@ -13,8 +13,8 @@ describe('uninstall', () => {
   it('finds the app bundle and the Windows uninstaller', () => {
     expect(appBundle('/Applications/Dynamic Island.app/Contents/MacOS/dynamic-island-linux')).toBe('/Applications/Dynamic Island.app')
     expect(appBundle('/usr/bin/x')).toBeNull()
-    expect(windowsUninstaller('C:\\Users\\me\\AppData\\Local\\Programs\\Dynamic Island\\DynamicIsland.exe', 'Dynamic Island').replace(/\\/g, '/')).toBe(
-      'C:/Users/me/AppData/Local/Programs/Dynamic Island/Uninstall Dynamic Island.exe',
+    expect(windowsUninstaller('C:\\Users\\me\\AppData\\Local\\Programs\\Dynamic Island\\DynamicIsland.exe').replace(/\\/g, '/')).toBe(
+      'C:/Users/me/AppData/Local/Programs/Dynamic Island/Uninstall DynamicIsland.exe',
     )
   })
 
