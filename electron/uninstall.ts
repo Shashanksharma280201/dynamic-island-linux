@@ -97,9 +97,15 @@ export function finishScript(o: {
     return { ext: 'ps1', text: lines.join('\r\n') + '\r\n' }
   }
   const lines = [
-    `exec >>"\${TMPDIR:-/tmp}/${FINISH_LOG}" 2>&1`,
+    // The log goes next to this script, in the same temp folder the island uses.
+    `exec >>"$(dirname "$0")/${FINISH_LOG}" 2>&1`,
+    'set -x',
     `while kill -0 ${o.pid} 2>/dev/null; do sleep 0.3; done`,
+    // macOS keeps preferences in memory and writes them back after the app quits:
+    // tell it to forget them, not just delete the file.
+    ...o.remove.filter((p) => o.platform === 'darwin' && p.endsWith('.plist')).map((p) => `defaults delete ${sh(p.slice(0, -'.plist'.length))} 2>/dev/null`),
     ...o.remove.map((p) => `rm -rf ${sh(p)}`),
+    ...o.remove.filter((p) => o.platform === 'darwin' && p.endsWith('.plist')).flatMap((p) => ['sleep 2', `rm -f ${sh(p)}`]),
     ...(o.kind === 'appimage' && o.appImage ? [`rm -f ${sh(o.appImage)}`] : []),
     // A system package needs the administrator: the desktop asks for the password.
     ...(o.kind === 'deb' && o.debPackage ? [`command -v pkexec >/dev/null && pkexec apt-get remove -y ${sh(o.debPackage)}`] : []),
