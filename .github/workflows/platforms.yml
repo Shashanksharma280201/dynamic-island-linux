@@ -93,12 +93,12 @@ jobs:
         run: |
           $exe = $env:APP_EXE
           # Turn on what uninstall must undo: Claude Code approvals.
+          # (Start-Process -Wait: PowerShell doesn't wait for a Windows GUI app otherwise.)
           $env:ELECTRON_RUN_AS_NODE = '1'
-          & $exe (Join-Path $env:APP_DIR 'resources\hook\install.cjs')
-          # Claude Code's settings file, found the same way the installer does.
+          Start-Process -FilePath $exe -ArgumentList ('"' + (Join-Path $env:APP_DIR 'resources\hook\install.cjs') + '"') -Wait -NoNewWindow
           Remove-Item Env:ELECTRON_RUN_AS_NODE
-          # (node here, since a Windows GUI app's output doesn't reach the console)
-          $claude = node -e "process.stdout.write(require('path').join(process.env.CLAUDE_CONFIG_DIR || require('os').homedir(), process.env.CLAUDE_CONFIG_DIR ? '' : '.claude', 'settings.json'))"
+          $claude = @("$env:USERPROFILE\.claude\settings.json", "$env:HOME\.claude\settings.json") | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+          if (-not $claude) { throw "the hook installer wrote no settings.json" }
           Write-Host "Claude Code settings: $claude"
           Select-String -Path $claude -Pattern claude-island | Select-Object -First 1
           # Same as Uninstall... in the tray menu, with "delete my data" ticked.
