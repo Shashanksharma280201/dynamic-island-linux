@@ -41,3 +41,70 @@ jobs:
           name: shots-${{ matrix.os }}
           path: shots
           if-no-files-found: ignore
+
+  # What a Windows user does: run the installer, open the app, use it, then
+  # uninstall it, checking nothing is left behind.
+  install:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Build the installer (as in the README)
+        run: npm run package
+      - name: Install it like a user (per user, no admin)
+        run: |
+          $setup = Get-ChildItem dist\*.exe | Select-Object -First 1
+          Write-Host "Installer: $($setup.Name)"
+          Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
+          $app = "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe"
+          if (-not (Test-Path $app)) { Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Depth 1 | Select-Object FullName; throw "not installed at $app" }
+          Test-Path "$env:LOCALAPPDATA\Programs\Dynamic Island\Uninstall Dynamic Island.exe"
+          $lnk = Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"
+          if (-not $lnk) { throw "no Start menu shortcut" }
+          Write-Host "Start menu: $($lnk.FullName)"
+      - name: The installed app works
+        run: |
+          $env:APP_PATH = "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe"
+          node e2e/smoke.cjs
+        env:
+          SHOTS: shots
+      - name: Opening it from the Start menu shows the island
+        run: |
+          Start-Process "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe"
+          Start-Sleep 10
+          Get-Process DynamicIsland | Select-Object -First 1 Id, ProcessName
+          if (-not (Test-Path "$env:APPDATA\Dynamic Island")) { throw "no data folder" }
+      - name: Uninstall removes everything
+        run: |
+          $exe = "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe"
+          # Turn on what uninstall must undo: Claude Code approvals.
+          $env:ELECTRON_RUN_AS_NODE = '1'
+          & $exe "$env:LOCALAPPDATA\Programs\Dynamic Island\resources\hook\install.cjs"
+          Remove-Item Env:ELECTRON_RUN_AS_NODE
+          Select-String -Path "$env:USERPROFILE\.claude\settings.json" -Pattern claude-island | Select-Object -First 1
+          # Same as Uninstall… in the tray menu, with "delete my data" ticked.
+          & $exe --uninstall --yes --delete-data
+          for ($i = 0; $i -lt 60; $i++) { if (-not (Test-Path "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe") -and -not (Get-Process DynamicIsland -ErrorAction SilentlyContinue)) { break }; Start-Sleep 1 }
+          Start-Sleep 3
+          $failed = $false
+          function Check($name, $ok) { if ($ok) { Write-Host "ok: $name" } else { Write-Host "FAILED: $name"; $script:failed = $true } }
+          Check "app removed" (-not (Test-Path "$env:LOCALAPPDATA\Programs\Dynamic Island\DynamicIsland.exe"))
+          Check "settings and data removed" (-not (Test-Path "$env:APPDATA\Dynamic Island"))
+          Check "Start menu shortcut removed" (-not (Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"))
+          Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
+          Check "Claude Code hook removed" (-not (Select-String -Path "$env:USERPROFILE\.claude\settings.json" -Pattern claude-island -Quiet))
+          Check "not running any more" (-not (Get-Process DynamicIsland -ErrorAction SilentlyContinue))
+          if ($failed) { exit 1 }
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-test-windows
+          path: shots
+          if-no-files-found: ignore
