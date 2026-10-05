@@ -97,6 +97,13 @@
         "to": "tray.png"
       },
       {
+        "from": "assets",
+        "to": ".",
+        "filter": [
+          "trayTemplate*.png"
+        ]
+      },
+      {
         "from": "node_modules/onnxruntime-web/dist",
         "to": "ort",
         "filter": [
@@ -148,7 +155,8 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "Dynamic-Island-Setup-${version}.${ext}"
     }
   },
   "overrides": {

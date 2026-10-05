@@ -207,6 +207,7 @@ const settings = {
   setWhatsApp: (on: boolean): Promise<{ restart: boolean }> =>
     ipcRenderer.invoke(SETTINGS.SET_WHATSAPP, on),
   restart: () => ipcRenderer.invoke(SETTINGS.RESTART),
+  uninstall: () => ipcRenderer.invoke(SETTINGS.UNINSTALL),
   whatsappPair: (phone: string): Promise<string> => ipcRenderer.invoke(SETTINGS.WA_PAIR, phone),
   whatsappLogout: () => ipcRenderer.invoke(SETTINGS.WA_LOGOUT),
   mailPresets: (email?: string) => ipcRenderer.invoke(SETTINGS.MAIL_PRESETS, email),

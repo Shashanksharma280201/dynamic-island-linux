@@ -1,7 +1,8 @@
 // Smoke test that runs the real app on any OS (no X11, D-Bus or Xvfb needed):
 // the capsule shows, every tab opens, Documents merges PDFs and prints Word to
 // PDF, the CRM saves a contact, Settings opens, and nothing throws. CI runs it
-// on macOS and Windows; on Linux run it under xvfb-run.
+// on macOS and Windows; on Linux run it under xvfb-run. APP_PATH=<executable>
+// tests an installed app instead of the source.
 const { _electron } = require('playwright-core')
 const path = require('path')
 const fs = require('fs')
@@ -41,9 +42,11 @@ const seen = (page, sel, ms = 8000) => page.waitForSelector(sel, { timeout: ms }
   fs.writeFileSync(path.join(FILES, 'Letter.docx'), await Packer.toBuffer(new Document({ sections: [{ children: [new Paragraph('Hello from the smoke test')] }] })))
   fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'right', y: 0.3 } }))
 
+  // APP_PATH: test an installed app (its executable) instead of the source.
+  const installed = process.env.APP_PATH
   const app = await _electron.launch({
-    executablePath: require('electron'),
-    args: [ROOT, ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
+    executablePath: installed || require('electron'),
+    args: [...(installed ? [] : [ROOT]), ...(process.platform === 'linux' ? ['--no-sandbox'] : [])],
     cwd: ROOT,
     env: {
       ...process.env,
