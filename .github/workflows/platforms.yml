@@ -88,7 +88,7 @@ jobs:
           Start-Process $env:APP_EXE
           Start-Sleep 10
           Get-Process DynamicIsland | Select-Object -First 1 Id, ProcessName
-          if (-not (Test-Path "$env:APPDATA\Dynamic Island")) { throw "no data folder" }
+          if (-not (Test-Path "$env:APPDATA\dynamic-island-linux")) { throw "no data folder" }
       - name: Uninstall removes everything
         run: |
           $exe = $env:APP_EXE
@@ -104,7 +104,7 @@ jobs:
           $failed = $false
           function Check($name, $ok) { if ($ok) { Write-Host "ok: $name" } else { Write-Host "FAILED: $name"; $script:failed = $true } }
           Check "app removed" (-not (Test-Path $exe))
-          Check "settings and data removed" (-not (Test-Path "$env:APPDATA\Dynamic Island"))
+          Check "settings and data removed" (-not (Test-Path "$env:APPDATA\dynamic-island-linux"))
           Check "Start menu shortcut removed" (-not (Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"))
           Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
           Check "Claude Code hook removed" (-not (Select-String -Path "$env:USERPROFILE\.claude\settings.json" -Pattern claude-island -Quiet))
