@@ -269,7 +269,7 @@ From a terminal, the same thing without questions:
 
 | System | Command |
 |---|---|
-| macOS | `"/Applications/Dynamic Island.app/Contents/MacOS/dynamic-island-linux" --uninstall --yes --delete-data` |
+| macOS | `"/Applications/Dynamic Island.app/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data` |
 | Windows | `"%LOCALAPPDATA%\Programs\Dynamic Island\DynamicIsland.exe" --uninstall --yes --delete-data` |
 | Linux (.deb) | `dynamic-island-linux --uninstall --yes --delete-data` |
 | From source | `npm start -- --uninstall --yes --delete-data`, then delete the `dynamic-island` folder |
