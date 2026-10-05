@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
-import { homedir } from 'node:os'
-import { basename, posix, win32 } from 'node:path'
+import { existsSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { basename, join, posix, win32 } from 'node:path'
 
 /** How this copy of the island was installed, which decides how it removes itself. */
 export type InstallKind = 'mac-app' | 'windows-installer' | 'appimage' | 'deb' | 'source'
@@ -49,12 +49,15 @@ export function dataPaths(o: { userData: string; platform: NodeJS.Platform; home
 const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`
 const ps = (s: string) => `'${s.replace(/'/g, "''")}'`
 
+/** Where the finishing script writes what it did, to look at if something stays behind. */
+export const FINISH_LOG = 'dynamic-island-uninstall.log'
+
 /**
- * The command that finishes the uninstall once the island has quit (a running
+ * The script that finishes the uninstall once the island has quit (a running
  * app can't delete itself everywhere): waits for this process, deletes the
  * data paths, then removes the app the way it was installed. Pure.
  */
-export function finishCommand(o: {
+export function finishScript(o: {
   platform: NodeJS.Platform
   pid: number
   remove: string[]
@@ -62,24 +65,41 @@ export function finishCommand(o: {
   appImage?: string
   uninstaller?: string
   debPackage?: string
-}): { cmd: string; args: string[] } {
+}): { ext: 'ps1' | 'sh'; text: string } {
   if (o.platform === 'win32') {
     const lines = [
+      `Start-Transcript -Path (Join-Path $env:TEMP '${FINISH_LOG}') -Force | Out-Null`,
       `Wait-Process -Id ${o.pid} -Timeout 30 -ErrorAction SilentlyContinue`,
-      'Start-Sleep -Milliseconds 500',
-      ...o.remove.map((p) => `Remove-Item -LiteralPath ${ps(p)} -Recurse -Force -ErrorAction SilentlyContinue`),
+      'Start-Sleep -Seconds 1',
+      ...o.remove.map((p) => `Remove-Item -LiteralPath ${ps(p)} -Recurse -Force -ErrorAction Continue`),
       ...(o.kind === 'windows-installer' && o.uninstaller ? [`if (Test-Path -LiteralPath ${ps(o.uninstaller)}) { Start-Process -FilePath ${ps(o.uninstaller)} -ArgumentList '/S' -Wait }`] : []),
+      'Stop-Transcript | Out-Null',
     ]
-    return { cmd: 'powershell.exe', args: ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', lines.join('; ')] }
+    return { ext: 'ps1', text: lines.join('\r\n') + '\r\n' }
   }
   const lines = [
+    `exec >>"\${TMPDIR:-/tmp}/${FINISH_LOG}" 2>&1`,
     `while kill -0 ${o.pid} 2>/dev/null; do sleep 0.3; done`,
     ...o.remove.map((p) => `rm -rf ${sh(p)}`),
     ...(o.kind === 'appimage' && o.appImage ? [`rm -f ${sh(o.appImage)}`] : []),
     // A system package needs the administrator: the desktop asks for the password.
     ...(o.kind === 'deb' && o.debPackage ? [`command -v pkexec >/dev/null && pkexec apt-get remove -y ${sh(o.debPackage)}`] : []),
   ]
-  return { cmd: '/bin/sh', args: ['-c', lines.join('\n')] }
+  return { ext: 'sh', text: lines.join('\n') + '\n' }
+}
+
+/**
+ * How to start that script so it outlives the island. On Windows it goes
+ * through `start`, so it isn't tied to the app's process tree. Pure.
+ */
+export function launchCommand(platform: NodeJS.Platform, file: string): { cmd: string; args: string[]; verbatim: boolean } {
+  if (platform === 'win32')
+    return {
+      cmd: 'cmd.exe',
+      args: ['/d', '/s', '/c', `start "" /min powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "${file}"`],
+      verbatim: true,
+    }
+  return { cmd: '/bin/sh', args: [file], verbatim: false }
 }
 
 export type UninstallDeps = {
@@ -129,7 +149,7 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
   }
   const remove = o.removeData ? dataPaths({ userData: d.userData, platform: process.platform, home: homedir(), appId: d.appId, productName: d.productName }) : []
   const uninstaller = windowsUninstaller(process.execPath, d.productName)
-  const finish = finishCommand({
+  const finish = finishScript({
     platform: process.platform,
     pid: process.pid,
     remove,
@@ -138,7 +158,10 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
     uninstaller: existsSync(uninstaller) ? uninstaller : undefined,
     debPackage: d.debPackage,
   })
-  spawn(finish.cmd, finish.args, { detached: true, stdio: 'ignore', windowsHide: true }).unref()
+  const file = join(tmpdir(), `dynamic-island-uninstall.${finish.ext}`)
+  writeFileSync(file, finish.text)
+  const run = launchCommand(process.platform, file)
+  spawn(run.cmd, run.args, { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: run.verbatim }).unref()
   if (kind === 'mac-app') {
     const bundle = appBundle(process.execPath)
     if (bundle && basename(bundle).endsWith('.app')) await d.trash(bundle).catch((e) => console.error('uninstall: trash', e))
