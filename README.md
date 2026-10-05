@@ -269,11 +269,35 @@ npm run hook:install
 Claude Code's permission prompts now show on the island. `npm run
 hook:uninstall` removes it again.
 
-**Uninstall:** Quit from the tray / menu bar icon, then on Linux run `sudo apt
-remove dynamic-island-linux`, on macOS drag Dynamic Island from Applications
-to the Trash, and on Windows use **Settings → Apps → Installed apps →
-Dynamic Island → Uninstall**. Delete the `dynamic-island` folder to remove the
-code.
+### Uninstall
+
+The easiest way, on every system: click the island's icon in the menu bar
+(macOS) or tray (Windows, Linux) and choose **Uninstall Dynamic Island…**, or
+open **Settings → General → Uninstall…**. It asks first, then removes:
+
+- the app itself (to the Trash on macOS; on Windows its own uninstaller runs;
+  on Linux it asks for your password to remove the `.deb`, or deletes the
+  AppImage),
+- starting at login,
+- the Claude Code approvals and status line it set up (your own Claude Code
+  settings are kept),
+- and, only if you tick **Also delete my settings, notes, CRM and sign-ins**,
+  everything it saved. Files it made in your Documents folder are always kept.
+
+From a terminal, the same thing without questions:
+
+| System | Command |
+|---|---|
+| macOS | `"/Applications/Dynamic Island.app/Contents/MacOS/dynamic-island-linux" --uninstall --yes --delete-data` |
+| Windows | `"%LOCALAPPDATA%\Programs\Dynamic Island\DynamicIsland.exe" --uninstall --yes --delete-data` |
+| Linux (.deb) | `dynamic-island-linux --uninstall --yes --delete-data` |
+| From source | `npm start -- --uninstall --yes --delete-data`, then delete the `dynamic-island` folder |
+
+Leave out `--delete-data` to keep your settings and data. You can also remove it
+the usual way (drag it to the Trash on macOS, **Settings → Apps → Installed
+apps → Dynamic Island → Uninstall** on Windows, `sudo apt remove
+dynamic-island-linux` on Linux), but that leaves its settings and the Claude
+Code setup behind; Uninstall… removes those too.
 
 ## Features
 
