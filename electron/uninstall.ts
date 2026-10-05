@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { basename, join, win32 } from 'node:path'
+import { basename, posix, win32 } from 'node:path'
 
 /** How this copy of the island was installed, which decides how it removes itself. */
 export type InstallKind = 'mac-app' | 'windows-installer' | 'appimage' | 'deb' | 'source'
@@ -33,14 +33,14 @@ export function windowsUninstaller(execPath: string, productName: string): strin
 export function dataPaths(o: { userData: string; platform: NodeJS.Platform; home: string; appId: string; productName: string }): string[] {
   const paths = [o.userData]
   if (o.platform === 'darwin') {
-    const lib = join(o.home, 'Library')
+    const lib = posix.join(o.home, 'Library')
     paths.push(
-      join(lib, 'Preferences', `${o.appId}.plist`),
-      join(lib, 'Saved Application State', `${o.appId}.savedState`),
-      join(lib, 'Caches', o.appId),
-      join(lib, 'Caches', o.productName),
-      join(lib, 'Logs', o.productName),
-      join(lib, 'HTTPStorages', o.appId),
+      posix.join(lib, 'Preferences', `${o.appId}.plist`),
+      posix.join(lib, 'Saved Application State', `${o.appId}.savedState`),
+      posix.join(lib, 'Caches', o.appId),
+      posix.join(lib, 'Caches', o.productName),
+      posix.join(lib, 'Logs', o.productName),
+      posix.join(lib, 'HTTPStorages', o.appId),
     )
   }
   return paths
