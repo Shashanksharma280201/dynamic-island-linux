@@ -64,7 +64,11 @@ jobs:
           Write-Host "Installer: $($setup.Name)"
           Start-Process -FilePath $setup.FullName -ArgumentList '/S' -Wait
           # Where Windows says it is (Settings > Apps reads the same entry).
-          $entry = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*' | Select-Object -First 1
+          # (The installer can hand off to a second process, so give it a moment.)
+          for ($i = 0; $i -lt 60; $i++) {
+            $entry = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*' | Select-Object -First 1
+            if ($entry) { break }; Start-Sleep 1
+          }
           if (-not $entry) { throw "not in Installed apps" }
           # Its folder is where its uninstaller is.
           $uninstaller = [regex]::Match($entry.UninstallString, '"([^"]+)"').Groups[1].Value
@@ -110,7 +114,7 @@ jobs:
           Check "app removed" (-not (Test-Path $exe))
           Check "settings and data removed" (-not (Test-Path "$env:APPDATA\dynamic-island-linux"))
           Check "Start menu shortcut removed" (-not (Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"))
-          Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
+          Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
           Check "Claude Code hook removed" (-not (Select-String -Path $claude -Pattern claude-island -Quiet))
           Check "not running any more" (-not (Get-Process DynamicIsland -ErrorAction SilentlyContinue))
           Write-Host "--- what the uninstall's last step did:"
