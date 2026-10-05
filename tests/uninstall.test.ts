@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appBundle, dataPaths, doneText, finishCommand, installKind, windowsUninstaller } from '../electron/uninstall'
+import { appBundle, dataPaths, doneText, finishScript, installKind, launchCommand, windowsUninstaller } from '../electron/uninstall'
 
 describe('uninstall', () => {
   it('knows how it was installed', () => {
@@ -28,21 +28,28 @@ describe('uninstall', () => {
   })
 
   it('finishes after the island quits, quoting every path', () => {
-    const sh = finishCommand({ platform: 'darwin', pid: 42, remove: ["/Users/me/Library/Application Support/Dynamic Island", "/tmp/it's"], kind: 'mac-app' })
-    expect(sh.cmd).toBe('/bin/sh')
-    expect(sh.args[1]).toContain('while kill -0 42')
-    expect(sh.args[1]).toContain("rm -rf '/Users/me/Library/Application Support/Dynamic Island'")
-    expect(sh.args[1]).toContain(`rm -rf '/tmp/it'\\''s'`)
-    const img = finishCommand({ platform: 'linux', pid: 1, remove: [], kind: 'appimage', appImage: '/home/me/D I.AppImage' })
-    expect(img.args[1]).toContain("rm -f '/home/me/D I.AppImage'")
-    const deb = finishCommand({ platform: 'linux', pid: 1, remove: [], kind: 'deb', debPackage: 'dynamic-island-linux' })
-    expect(deb.args[1]).toContain("pkexec apt-get remove -y 'dynamic-island-linux'")
-    const win = finishCommand({ platform: 'win32', pid: 7, remove: ["C:\\Users\\o'neil\\AppData\\Roaming\\Dynamic Island"], kind: 'windows-installer', uninstaller: 'C:\\P\\Uninstall Dynamic Island.exe' })
-    expect(win.cmd).toBe('powershell.exe')
-    const script = win.args[win.args.length - 1]
-    expect(script).toContain('Wait-Process -Id 7')
-    expect(script).toContain("Remove-Item -LiteralPath 'C:\\Users\\o''neil\\AppData\\Roaming\\Dynamic Island'")
-    expect(script).toContain("-FilePath 'C:\\P\\Uninstall Dynamic Island.exe' -ArgumentList '/S'")
+    const sh = finishScript({ platform: 'darwin', pid: 42, remove: ['/Users/me/Library/Application Support/x', "/tmp/it's"], kind: 'mac-app' })
+    expect(sh.ext).toBe('sh')
+    expect(sh.text).toContain('dynamic-island-uninstall.log')
+    expect(sh.text).toContain('while kill -0 42')
+    expect(sh.text).toContain("rm -rf '/Users/me/Library/Application Support/x'")
+    expect(sh.text).toContain(`rm -rf '/tmp/it'\\''s'`)
+    expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'appimage', appImage: '/home/me/D I.AppImage' }).text).toContain("rm -f '/home/me/D I.AppImage'")
+    expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'deb', debPackage: 'dynamic-island-linux' }).text).toContain(
+      "pkexec apt-get remove -y 'dynamic-island-linux'",
+    )
+    const win = finishScript({ platform: 'win32', pid: 7, remove: ["C:\\Users\\o'neil\\AppData\\Roaming\\x"], kind: 'windows-installer', uninstaller: 'C:\\P\\Uninstall Dynamic Island.exe' })
+    expect(win.ext).toBe('ps1')
+    expect(win.text).toContain('Wait-Process -Id 7')
+    expect(win.text).toContain("Remove-Item -LiteralPath 'C:\\Users\\o''neil\\AppData\\Roaming\\x'")
+    expect(win.text).toContain("-FilePath 'C:\\P\\Uninstall Dynamic Island.exe' -ArgumentList '/S' -Wait")
+  })
+
+  it('starts the finishing script apart from the island', () => {
+    expect(launchCommand('linux', '/tmp/f.sh')).toEqual({ cmd: '/bin/sh', args: ['/tmp/f.sh'], verbatim: false })
+    const w = launchCommand('win32', 'C:\\T\\f.ps1')
+    expect(w.cmd).toBe('cmd.exe')
+    expect(w.args.at(-1)).toBe('start "" /min powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File "C:\\T\\f.ps1"')
   })
 
   it('says what happened', () => {
