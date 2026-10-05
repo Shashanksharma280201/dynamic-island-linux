@@ -64,15 +64,34 @@ export function finishScript(o: {
   kind: InstallKind
   appImage?: string
   uninstaller?: string
+  productName?: string
   debPackage?: string
 }): { ext: 'ps1' | 'sh'; text: string } {
   if (o.platform === 'win32') {
+    // Each step says what it does: the transcript only keeps what is written out.
     const lines = [
       `Start-Transcript -Path (Join-Path $env:TEMP '${FINISH_LOG}') -Force | Out-Null`,
+      `Write-Output 'waiting for the island (${o.pid}) to quit'`,
       `Wait-Process -Id ${o.pid} -Timeout 30 -ErrorAction SilentlyContinue`,
       'Start-Sleep -Seconds 1',
-      ...o.remove.map((p) => `Remove-Item -LiteralPath ${ps(p)} -Recurse -Force -ErrorAction Continue`),
-      ...(o.kind === 'windows-installer' && o.uninstaller ? [`if (Test-Path -LiteralPath ${ps(o.uninstaller)}) { Start-Process -FilePath ${ps(o.uninstaller)} -ArgumentList '/S' -Wait }`] : []),
+      ...o.remove.flatMap((p) => [`Write-Output ${ps(`removing ${p}`)}`, `Remove-Item -LiteralPath ${ps(p)} -Recurse -Force -ErrorAction Continue`]),
+      ...(o.kind === 'windows-installer'
+        ? [
+            `$u = ${ps(o.uninstaller ?? '')}`,
+            // Fall back to what Settings > Apps uses to remove it.
+            ...(o.productName
+              ? [
+                  `if (-not $u -or -not (Test-Path -LiteralPath $u)) { $e = Get-ChildItem HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object DisplayName -like ${ps(`${o.productName}*`)} | Select-Object -First 1; if ($e) { $u = [regex]::Match($e.UninstallString, '"([^"]+)"').Groups[1].Value } }`,
+                ]
+              : []),
+            'if ($u -and (Test-Path -LiteralPath $u)) {',
+            '  Write-Output "running $u /S"',
+            "  $p = Start-Process -FilePath $u -ArgumentList '/S' -Wait -PassThru",
+            '  Write-Output "uninstaller exit code: $($p.ExitCode)"',
+            '} else { Write-Output "no uninstaller found" }',
+          ]
+        : []),
+      "Write-Output 'done'",
       'Stop-Transcript | Out-Null',
     ]
     return { ext: 'ps1', text: lines.join('\r\n') + '\r\n' }
@@ -156,6 +175,7 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
     kind,
     appImage: process.env.APPIMAGE,
     uninstaller: existsSync(uninstaller) ? uninstaller : undefined,
+    productName: d.productName,
     debPackage: d.debPackage,
   })
   const file = join(tmpdir(), `dynamic-island-uninstall.${finish.ext}`)
