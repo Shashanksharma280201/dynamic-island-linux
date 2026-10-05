@@ -87,10 +87,11 @@ jobs:
         run: |
           open -a "Dynamic Island"
           sleep 10
-          pgrep -fl "Dynamic Island" | head -3
-          test -d ~/Library/Application\ Support/Dynamic\ Island
           screencapture -x shots/desktop.png || true
-          if [ -f shots/desktop.png ]; then sips -Z 1100 -s format jpeg -s formatOptions 60 shots/desktop.png --out shots/desktop.jpg >/dev/null; echo "SHOT_BASE64 $(base64 -i shots/desktop.jpg | tr -d '\n')"; fi
+          if [ -f shots/desktop.png ]; then sips -Z 1000 -s format jpeg -s formatOptions 55 shots/desktop.png --out shots/desktop.jpg >/dev/null; echo "SHOT_BASE64 $(base64 -i shots/desktop.jpg | tr -d '\n')"; fi
+          pgrep -fl "Dynamic Island.app/Contents/MacOS" | head -1
+          # Electron keeps its data under the package name.
+          test -d ~/Library/Application\ Support/dynamic-island-linux
       - name: Uninstall removes everything
         run: |
           APP="/Applications/Dynamic Island.app"
@@ -106,10 +107,10 @@ jobs:
           check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; FAILED=1; fi; }
           check "app removed from Applications" '[ ! -e "$APP" ]'
           check "app is in the Trash" 'ls ~/.Trash | grep -q "Dynamic Island"'
-          check "settings and data removed" '[ ! -e ~/Library/Application\ Support/Dynamic\ Island ]'
+          check "settings and data removed" '[ ! -e ~/Library/Application\ Support/dynamic-island-linux ]'
           check "Claude Code hook and status line removed" '! grep -q claude-island ~/.claude/settings.json'
           check "not running any more" '! pgrep -f "Dynamic Island.app" >/dev/null'
-          LEFT=$(find ~/Library -maxdepth 3 \( -iname "*dynamic island*" -o -iname "*dynamicisland*" \) 2>/dev/null)
+          LEFT=$(find ~/Library -maxdepth 3 \( -iname "*dynamic island*" -o -iname "*dynamicisland*" -o -iname "*dynamic-island*" \) 2>/dev/null)
           echo "leftovers: ${LEFT:-none}"
           check "nothing left in ~/Library" '[ -z "$LEFT" ]'
           exit $FAILED
