@@ -144,7 +144,7 @@
         "NSMicrophoneUsageDescription": "Talk to your assistant from the island.",
         "NSAppleEventsUsageDescription": "See and control what Spotify or Music is playing."
       },
-      "identity": "-",
+      "identity": null,
       "artifactName": "Dynamic-Island-${version}-${arch}.${ext}",
       "executableName": "Dynamic Island"
     },
@@ -162,7 +162,8 @@
     },
     "dmg": {
       "title": "Dynamic Island"
-    }
+    },
+    "afterPack": "scripts/after-pack.cjs"
   },
   "overrides": {
     "onnxruntime-node": "$onnxruntime-node",
