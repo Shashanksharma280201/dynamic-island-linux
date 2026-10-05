@@ -12,6 +12,7 @@ export const SETTINGS = {
   OPEN_NOTES_FOLDER: 'settings:open-notes-folder',
   SET_WHATSAPP: 'settings:set-whatsapp',
   RESTART: 'settings:restart',
+  UNINSTALL: 'settings:uninstall',
   WA_PAIR: 'settings:whatsapp-pair',
   WA_LOGOUT: 'settings:whatsapp-logout',
   MAIL_PRESETS: 'settings:mail-presets',

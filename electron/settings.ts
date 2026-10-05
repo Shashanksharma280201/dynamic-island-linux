@@ -40,6 +40,8 @@ type Deps = {
   applyShortcut: () => boolean
   shortcutActive: () => boolean
   onFrosted: () => void
+  /** Ask, then remove the island from this computer. */
+  uninstall: () => void
   frostedAvailable: boolean
   notesFolder: string
   claude: () => ClaudeSettings
@@ -268,6 +270,7 @@ export class SettingsController {
       this.changed()
       return { restart: config.whatsapp && !this.d.whatsappCapable }
     })
+    ipcMain.handle(SETTINGS.UNINSTALL, () => this.d.uninstall())
     ipcMain.handle(SETTINGS.RESTART, () => {
       app.relaunch()
       app.quit()

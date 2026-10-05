@@ -1,4 +1,4 @@
-import { app, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, dialog, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
@@ -50,6 +50,7 @@ import { spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
 import { homedir } from 'node:os'
 import { TransientCards } from './transient'
+import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
@@ -539,6 +540,7 @@ async function main() {
     applyShortcut: () => applyShortcut(),
     shortcutActive: () => shortcutActive,
     onFrosted: () => backdrop.refresh(),
+    uninstall: () => void runUninstall(),
     frostedAvailable: !WAYLAND,
     notesFolder: notes.folder,
     claude: () => ({
@@ -790,6 +792,7 @@ async function main() {
         settings?.changed()
       },
       openSettings: () => settings?.open(),
+      uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
   )
@@ -917,6 +920,47 @@ function runDemo(
 }
 
 // ---- lifecycle ----
+/**
+ * Removes the island from this computer (tray menu, Settings, or
+ * `--uninstall`). Asks first unless `--yes`; `--delete-data` also removes its
+ * settings and data without asking. Quits when done.
+ */
+async function runUninstall(argv: string[] = []): Promise<void> {
+  let removeData = argv.includes('--delete-data')
+  if (!argv.includes('--yes')) {
+    const r = await dialog.showMessageBox({
+      type: 'warning',
+      message: 'Uninstall Dynamic Island?',
+      detail:
+        'This removes the app, starting it at login, and the Claude Code approvals and status line it set up. Files it saved in your Documents folder are kept.',
+      checkboxLabel: 'Also delete my settings, notes, CRM and sign-ins',
+      checkboxChecked: false,
+      buttons: ['Uninstall', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    })
+    if (r.response !== 0) return
+    removeData = r.checkboxChecked
+  }
+  const text = await uninstall(
+    {
+      packaged: app.isPackaged,
+      userData: app.getPath('userData'),
+      appId: 'io.github.shashanksharma280201.dynamicisland',
+      productName: 'Dynamic Island',
+      debPackage: 'dynamic-island-linux',
+      removeHook: async () => isHookInstalled() && setHookInstalled(false),
+      removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
+      removeLoginItem: () => setAutostart(false),
+      trash: (p) => shell.trashItem(p),
+    },
+    { removeData },
+  )
+  console.log(`[island] ${text}`)
+  if (!argv.includes('--yes')) await dialog.showMessageBox({ type: 'info', message: 'Dynamic Island is uninstalled', detail: text, buttons: ['OK'] })
+  app.quit()
+}
+
 const wantsQuit = process.argv.includes('--quit')
 // `--replace` (what `npm start` passes): close the running island and take
 // its place, so a rebuilt island shows up without logging out.
@@ -926,9 +970,11 @@ function run(): void {
   app.on('second-instance', (_e, argv) => {
     // Ignore the `--quit` we sent to the island we replaced (it may arrive late).
     if (argv.includes(`--replaced-by=${process.pid}`)) return
-    if (argv.includes('--quit') || argv.includes('--replace')) app.quit()
+    if (argv.includes('--uninstall')) void runUninstall(argv)
+    else if (argv.includes('--quit') || argv.includes('--replace')) app.quit()
   })
-  app.whenReady().then(main)
+  // `--uninstall` with nothing running: just remove, no island.
+  app.whenReady().then(() => (process.argv.includes('--uninstall') ? runUninstall(process.argv) : main()))
   app.on('window-all-closed', () => {
     // keep running as a persistent widget
   })
