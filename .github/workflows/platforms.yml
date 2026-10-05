@@ -95,8 +95,11 @@ jobs:
           # Turn on what uninstall must undo: Claude Code approvals.
           $env:ELECTRON_RUN_AS_NODE = '1'
           & $exe (Join-Path $env:APP_DIR 'resources\hook\install.cjs')
+          # Claude Code's settings file, found the same way the installer does.
+          $claude = & $exe -e "process.stdout.write(require('path').join(process.env.CLAUDE_CONFIG_DIR || require('os').homedir(), process.env.CLAUDE_CONFIG_DIR ? '' : '.claude', 'settings.json'))"
           Remove-Item Env:ELECTRON_RUN_AS_NODE
-          Select-String -Path "$env:USERPROFILE\.claude\settings.json" -Pattern claude-island | Select-Object -First 1
+          Write-Host "Claude Code settings: $claude"
+          Select-String -Path $claude -Pattern claude-island | Select-Object -First 1
           # Same as Uninstall... in the tray menu, with "delete my data" ticked.
           & $exe --uninstall --yes --delete-data
           for ($i = 0; $i -lt 60; $i++) { if (-not (Test-Path $exe) -and -not (Get-Process DynamicIsland -ErrorAction SilentlyContinue)) { break }; Start-Sleep 1 }
@@ -107,7 +110,7 @@ jobs:
           Check "settings and data removed" (-not (Test-Path "$env:APPDATA\dynamic-island-linux"))
           Check "Start menu shortcut removed" (-not (Get-ChildItem "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Dynamic Island*.lnk"))
           Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
-          Check "Claude Code hook removed" (-not (Select-String -Path "$env:USERPROFILE\.claude\settings.json" -Pattern claude-island -Quiet))
+          Check "Claude Code hook removed" (-not (Select-String -Path $claude -Pattern claude-island -Quiet))
           Check "not running any more" (-not (Get-Process DynamicIsland -ErrorAction SilentlyContinue))
           if ($failed) { exit 1 }
       - uses: actions/upload-artifact@v4
