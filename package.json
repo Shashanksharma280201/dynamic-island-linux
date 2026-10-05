@@ -97,6 +97,13 @@
         "to": "tray.png"
       },
       {
+        "from": "assets",
+        "to": ".",
+        "filter": [
+          "trayTemplate*.png"
+        ]
+      },
+      {
         "from": "node_modules/onnxruntime-web/dist",
         "to": "ort",
         "filter": [

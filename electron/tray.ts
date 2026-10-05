@@ -12,12 +12,14 @@ export type TrayActions = {
   setHook: (on: boolean) => Promise<void>
   setAutostart: (on: boolean) => void
   openSettings: () => void
+  uninstall: () => void
   quit: () => void
 }
 
 function iconPath(): string {
   const base = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'assets')
-  return join(base, 'tray.png')
+  // macOS: a menu-bar sized template (black + alpha) it tints for light and dark menu bars.
+  return join(base, process.platform === 'darwin' ? 'trayTemplate.png' : 'tray.png')
 }
 
 /**
@@ -81,6 +83,7 @@ export class IslandTray {
           },
         },
         { type: 'separator' },
+        { label: 'Uninstall Dynamic Island…', click: () => this.actions.uninstall() },
         { label: 'Quit', click: () => this.actions.quit() },
       ]),
     )
