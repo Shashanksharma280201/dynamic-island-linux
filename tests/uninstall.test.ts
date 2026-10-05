@@ -42,7 +42,8 @@ describe('uninstall', () => {
     expect(win.ext).toBe('ps1')
     expect(win.text).toContain('Wait-Process -Id 7')
     expect(win.text).toContain("Remove-Item -LiteralPath 'C:\\Users\\o''neil\\AppData\\Roaming\\x'")
-    expect(win.text).toContain("-FilePath 'C:\\P\\Uninstall Dynamic Island.exe' -ArgumentList '/S' -Wait")
+    expect(win.text).toContain("$u = 'C:\\P\\Uninstall Dynamic Island.exe'")
+    expect(win.text).toContain("Start-Process -FilePath $u -ArgumentList '/S' -Wait -PassThru")
   })
 
   it('starts the finishing script apart from the island', () => {
