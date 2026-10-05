@@ -145,7 +145,8 @@
         "NSAppleEventsUsageDescription": "See and control what Spotify or Music is playing."
       },
       "identity": "-",
-      "artifactName": "Dynamic-Island-${version}-${arch}.${ext}"
+      "artifactName": "Dynamic-Island-${version}-${arch}.${ext}",
+      "executableName": "Dynamic Island"
     },
     "win": {
       "target": [
@@ -158,6 +159,9 @@
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true
+    },
+    "dmg": {
+      "title": "Dynamic Island"
     }
   },
   "overrides": {

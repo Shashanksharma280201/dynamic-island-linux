@@ -81,7 +81,7 @@ jobs:
       - name: The installed app works
         run: node e2e/smoke.cjs
         env:
-          APP_PATH: /Applications/Dynamic Island.app/Contents/MacOS/dynamic-island-linux
+          APP_PATH: /Applications/Dynamic Island.app/Contents/MacOS/Dynamic Island
           SHOTS: shots
       - name: Opening it from Applications shows the island
         run: |
@@ -95,11 +95,11 @@ jobs:
         run: |
           APP="/Applications/Dynamic Island.app"
           # Turn on what uninstall must undo: Claude Code approvals and status line.
-          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/dynamic-island-linux" "$APP/Contents/Resources/hook/install.cjs"
-          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/dynamic-island-linux" "$APP/Contents/Resources/hook/statusline.cjs"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/Dynamic Island" "$APP/Contents/Resources/hook/install.cjs"
+          ELECTRON_RUN_AS_NODE=1 "$APP/Contents/MacOS/Dynamic Island" "$APP/Contents/Resources/hook/statusline.cjs"
           grep -c claude-island ~/.claude/settings.json
           # Same as Uninstall… in the menu bar, with "delete my data" ticked.
-          "$APP/Contents/MacOS/dynamic-island-linux" --uninstall --yes --delete-data
+          "$APP/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data
           for i in $(seq 1 30); do pgrep -f "Dynamic Island.app" >/dev/null || break; sleep 1; done
           sleep 3
           FAILED=0
