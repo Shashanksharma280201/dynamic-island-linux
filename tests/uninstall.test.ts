@@ -38,6 +38,9 @@ describe('uninstall', () => {
     expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'deb', debPackage: 'dynamic-island-linux' }).text).toContain(
       "pkexec apt-get remove -y 'dynamic-island-linux'",
     )
+    const mac = finishScript({ platform: 'darwin', pid: 3, remove: ['/U/Library/Preferences/a.b.plist'], kind: 'mac-app' }).text
+    expect(mac).toContain("defaults delete '/U/Library/Preferences/a.b'")
+    expect(mac).toContain("rm -rf '/U/Library/Preferences/a.b.plist'")
     const win = finishScript({ platform: 'win32', pid: 7, remove: ["C:\\Users\\o'neil\\AppData\\Roaming\\x"], kind: 'windows-installer', uninstaller: 'C:\\P\\Uninstall Dynamic Island.exe' })
     expect(win.ext).toBe('ps1')
     expect(win.text).toContain('Wait-Process -Id 7')
