@@ -249,6 +249,9 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Auto-close the panel once the cursor has left for a moment (not while typing).
   useEffect(() => {
     // Also stays open while you're talking to Claude.
+    // A pinned panel (opened from the keyboard) unpins once the pointer is on
+    // it, even if it was already there when the panel opened.
+    if (panel && hover) pinned.current = false
     if (!panel || hover || typing || dropping || voice.phase !== 'idle' || pinned.current) return
     const t = setTimeout(() => setPanel(false), PANEL_CLOSE_MS)
     return () => clearTimeout(t)
