@@ -12,7 +12,7 @@ export function IdlePill() {
   }, [])
   return (
     <div className="capsule idle" title={`${name} · click for Control Center, drag to move`}>
-      <Character mood={restingMood(now)} size={38} />
+      <Character mood={restingMood(now)} size={38} track />
       <span className="grip" />
     </div>
   )

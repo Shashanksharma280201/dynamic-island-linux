@@ -71,6 +71,8 @@ export type ClaudeRun = {
   tool?: { name: string; detail: string }
   /** Tool calls so far this turn. */
   steps: number
+  /** The latest steps, oldest first (parallel bursts merged). */
+  trail?: string[]
   /** What Claude has written so far (the final answer once done). */
   reply: string
   error?: string
@@ -118,6 +120,27 @@ export function newRun(id: string, prompt: string, cwd: string, now: number): Cl
   return { id, prompt, cwd, phase: 'starting', steps: 0, reply: '', startedAt: now }
 }
 
+/** How many steps a run keeps for the island's ticker. */
+export const TRAIL_MAX = 8
+
+/**
+ * Add a batch of step labels to the trail. Claude often reads or edits several
+ * files at once: a burst with the same verb becomes one step ("Reading 3 files").
+ * Keeps the newest TRAIL_MAX. Pure.
+ */
+export function addSteps(trail: string[], labels: string[]): string[] {
+  const out = [...trail]
+  const merges = ['Reading', 'Editing', 'Writing']
+  for (let i = 0; i < labels.length; ) {
+    const verb = labels[i].split(' ')[0]
+    let j = i + 1
+    while (merges.includes(verb) && j < labels.length && labels[j].split(' ')[0] === verb) j++
+    out.push(j - i > 1 ? `${verb} ${j - i} files` : labels[i])
+    i = j
+  }
+  return out.slice(-TRAIL_MAX)
+}
+
 const textOf = (content: any[]): string =>
   content
     .filter((b) => b && b.type === 'text' && typeof b.text === 'string')
@@ -158,7 +181,14 @@ export function applyStreamEvent(run: ClaudeRun, ev: any, now: number): ClaudeRu
       if (tools.length) {
         const last = tools[tools.length - 1]
         const input = last.input && typeof last.input === 'object' ? last.input : {}
-        next = { ...next, phase: 'tool', steps: run.steps + tools.length, tool: { name: last.name, detail: toolDetail(last.name, input) } }
+        const labels = tools.map((t: any) => toolDetail(t.name, t.input && typeof t.input === 'object' ? t.input : {}))
+        next = {
+          ...next,
+          phase: 'tool',
+          steps: run.steps + tools.length,
+          tool: { name: last.name, detail: toolDetail(last.name, input) },
+          trail: addSteps(run.trail ?? [], labels),
+        }
       }
       return next
     }

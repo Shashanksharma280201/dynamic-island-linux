@@ -45,7 +45,7 @@ const gone = (page, selector, ms = 6000) => page.waitForSelector(selector, { sta
   const ai = await startFakeAi()
   fs.writeFileSync(
     path.join(USER_DATA, 'config.json'),
-    JSON.stringify({ dock: { side: 'right', y: 0.3 }, character: { id: 'mochi', name: 'Sparky' }, ai: { provider: 'ollama', models: { ollama: 'llama3.2' } } }),
+    JSON.stringify({ dock: { side: 'right', y: 0.3 }, character: { id: 'puff', name: 'Sparky' }, ai: { provider: 'ollama', models: { ollama: 'llama3.2' } } }),
   )
   const app = await _electron.launch({
     executablePath: ELECTRON,

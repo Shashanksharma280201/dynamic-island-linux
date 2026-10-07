@@ -5,11 +5,18 @@ import { ruleLabel } from '@shared/format'
 import { Badge } from './Badge'
 import { TerminalIcon } from '../icons'
 import { Character } from '../character/Character'
+import { sound } from '../../sound'
+import { APPROVAL_KEYS, keyLabel, type ApprovalKey } from '@shared/approvalKeys'
+
+const MAC = navigator.userAgent.includes('Macintosh')
+/** The shortcut that presses this button from anywhere. */
+const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{keyLabel(APPROVAL_KEYS[k], MAC)}</kbd>
 
 /** Claude Code permission prompt, styled like an Apple permission dialog. */
 export function ApprovalCard({ request, queued }: { request: ToolRequest; queued: number }) {
   const decide = (e: MouseEvent, msg: Omit<DecisionMsg, 'id'>) => {
     e.stopPropagation()
+    if (msg.decision === 'allow') sound('ok')
     window.island.sendDecision({ id: request.id, ...msg })
   }
   if (request.ask) return <AgentAsk request={request} ask={request.ask} queued={queued} decide={decide} />
@@ -48,9 +55,11 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
         <span className="spacer" />
         <button className="pill deny" onClick={(e) => decide(e, { decision: 'deny' })}>
           Don't Allow
+          <Key k="deny" />
         </button>
         <button className="pill primary allow" onClick={(e) => decide(e, { decision: 'allow' })}>
           Allow
+          <Key k="allow" />
         </button>
       </div>
       {rule && (
@@ -59,9 +68,8 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
           title={`Allow and don't ask again for ${rule} in this project`}
           onClick={(e) => decide(e, { decision: 'allow', always: true })}
         >
-          <span className="ellipsis" style={{ display: 'block' }}>
-            Always Allow {rule}
-          </span>
+          <span className="ellipsis">Always Allow {rule}</span>
+          <Key k="always" />
         </button>
       )}
     </div>
@@ -96,9 +104,11 @@ function AgentAsk({
         <span className="spacer" />
         <button className="pill deny" onClick={(e) => decide(e, { decision: 'deny' })}>
           Don't Allow
+          <Key k="deny" />
         </button>
         <button className="pill primary allow" onClick={(e) => decide(e, { decision: 'allow' })}>
           Allow
+          <Key k="allow" />
         </button>
       </div>
     </div>

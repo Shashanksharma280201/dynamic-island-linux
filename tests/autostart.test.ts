@@ -31,6 +31,8 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     appearance: 'glass',
     shortcut: true,
     frosted: true,
+    sounds: false,
+    greeted: '',
     claude: { cwd: '', permissionMode: 'default', voiceShortcut: true, sttModel: 'base', binary: '' },
     spotify: { clientId: '' },
     character: { id: 'orbit', name: 'Orbit' },

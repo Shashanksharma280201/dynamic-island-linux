@@ -77,6 +77,7 @@ export class SettingsController {
       appearance: config.appearance,
       shortcut: config.shortcut,
       frosted: config.frosted,
+      sounds: config.sounds,
       frostedAvailable: this.d.frostedAvailable,
       notesFolder: this.d.notesFolder,
       shortcutActive: this.d.shortcutActive(),
@@ -151,6 +152,11 @@ export class SettingsController {
       setAutostart(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_SOUNDS, (_e, on) => {
+      config.sounds = on === true
+      this.save()
+      this.d.onAppearance()
     })
     ipcMain.handle(SETTINGS.SET_FROSTED, (_e, on) => {
       config.frosted = on === true
