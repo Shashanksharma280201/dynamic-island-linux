@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import type { InboxSources, SystemState } from '@shared/types'
 import { ControlCenter } from '../states/ControlCenter'
 import { ChatsView } from './ChatsView'
@@ -65,8 +66,11 @@ export function Hub({
       }),
     'sources',
   )
+  // A new tab slides in from the direction you went on the rail.
+  const last = useRef({ tab, dir: '' })
+  if (last.current.tab !== tab) last.current = { tab, dir: HUB_TABS.indexOf(tab) > HUB_TABS.indexOf(last.current.tab) ? 'from-below' : 'from-above' }
   return (
-    <div className={`card panel hub ${tab}`} onClick={(e) => e.stopPropagation()}>
+    <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`} onClick={(e) => e.stopPropagation()}>
       {tab === 'controls' && <ControlCenter sys={sys} />}
       {tab === 'chats' && sources && <ChatsView sources={sources} onTyping={onTyping} />}
       {tab === 'mail' && sources && <MailView sources={sources} onTyping={onTyping} />}

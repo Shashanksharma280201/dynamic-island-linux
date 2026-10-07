@@ -31,7 +31,7 @@ export const MOODS: CharacterMood[] = [
   'dancing',
 ]
 
-export type CharacterId = 'orbit' | 'bolt' | 'mochi'
+export type CharacterId = 'orbit' | 'bolt' | 'puff'
 
 export type CharacterInfo = {
   id: CharacterId
@@ -45,7 +45,7 @@ export type CharacterInfo = {
 export const CHARACTERS: CharacterInfo[] = [
   { id: 'orbit', name: 'Orbit', kind: 'The orb, with a face', personality: 'Calm and focused. Keeps the swirling thinking and listening effects.' },
   { id: 'bolt', name: 'Bolt', kind: 'Little robot', personality: 'Eager and precise. Its antenna light shows what it is doing.' },
-  { id: 'mochi', name: 'Mochi', kind: 'Soft blob', personality: 'Gentle and cheerful. Squishes when it is happy, melts when it is sleepy.' },
+  { id: 'puff', name: 'Puff', kind: 'Soft dumpling', personality: 'Gentle and cheerful. Squishes when it is happy, melts when it is sleepy.' },
 ]
 
 export const DEFAULT_CHARACTER: CharacterId = 'orbit'
@@ -55,9 +55,39 @@ export type CharacterConfig = { id: CharacterId; name: string }
 
 /** Validate a stored character setting. Pure. */
 export function parseCharacter(raw: any): CharacterConfig {
-  const info = CHARACTERS.find((c) => c.id === raw?.id) ?? CHARACTERS.find((c) => c.id === DEFAULT_CHARACTER)!
-  const name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 24) : ''
+  // The soft blob was called Mochi before; that name belongs to another app.
+  const legacy = raw?.id === 'mochi'
+  const id = legacy ? 'puff' : raw?.id
+  const info = CHARACTERS.find((c) => c.id === id) ?? CHARACTERS.find((c) => c.id === DEFAULT_CHARACTER)!
+  let name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 24) : ''
+  if (legacy && name === 'Mochi') name = ''
   return { id: info.id, name: name || info.name }
+}
+
+/** The colour of each mood: the aura ring, the body tint, the card's edge light. */
+export const MOOD_COLOR: Record<CharacterMood, string | null> = {
+  idle: null,
+  listening: '#64d2ff',
+  thinking: '#bf5af2',
+  searching: '#5e5ce6',
+  writing: '#0a84ff',
+  working: '#0a84ff',
+  done: '#30d158',
+  attention: '#ff9f0a',
+  error: '#ff453a',
+  sleeping: null,
+  dancing: '#ff375f',
+}
+
+/**
+ * How the aura ring shows a mood: a spinning arc while busy, a full breathing
+ * ring when it needs you, a full ring when done, none at rest. Pure.
+ */
+export function ringKind(mood: CharacterMood): 'busy' | 'alert' | 'full' | null {
+  if (mood === 'listening' || mood === 'thinking' || mood === 'searching' || mood === 'writing' || mood === 'working') return 'busy'
+  if (mood === 'attention' || mood === 'error') return 'alert'
+  if (mood === 'done' || mood === 'dancing') return 'full'
+  return null
 }
 
 export function characterInfo(id: CharacterId): CharacterInfo {
@@ -96,4 +126,9 @@ export function moodFor(phase: RunPhase | 'idle' | 'listening' | 'transcribing',
 export function restingMood(now: Date): CharacterMood {
   const h = now.getHours()
   return h >= 23 || h < 6 ? 'sleeping' : 'idle'
+}
+
+/** Where the eyes look toward a pointer this far away (px): -1..1, a soft curve that never quite reaches the edge. Pure. */
+export function gazeToward(dx: number, dy: number): [number, number] {
+  return [Math.tanh(dx / 300), Math.tanh(dy / 220)]
 }

@@ -24,6 +24,10 @@ export type Config = {
   shortcut: boolean
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
+  /** The island's little sounds (off unless turned on). */
+  sounds: boolean
+  /** The day the island last said hello (YYYY-MM-DD); '' before the first time. */
+  greeted: string
   /** Claude Code commands from the island (voice or typed). */
   claude: ClaudeConfig
   /** Spotify: the Client ID of your own Spotify app ('' = not set up). */
@@ -82,6 +86,8 @@ const DEFAULTS: Config = {
   appearance: 'glass',
   shortcut: true,
   frosted: true,
+  sounds: false,
+  greeted: '',
   claude: CLAUDE_DEFAULTS,
   spotify: { clientId: '' },
   character: parseCharacter(null),
@@ -130,6 +136,8 @@ export function mergeConfig(raw: unknown): Config {
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
   if (typeof r.frosted === 'boolean') c.frosted = r.frosted
+  if (typeof r.sounds === 'boolean') c.sounds = r.sounds
+  if (typeof r.greeted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.greeted)) c.greeted = r.greeted
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {
@@ -160,4 +168,18 @@ export function saveConfig(c: Config): void {
   } catch (e) {
     console.error('config save failed:', e)
   }
+}
+
+/** Local date as YYYY-MM-DD. Pure. */
+export function dayOf(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/**
+ * Whether the island says hello at this start: once a day, never under test
+ * automation. `first` when it never has (it then shows a tip too). Pure.
+ */
+export function greeting(greeted: string, today: string, automated: boolean): { first: boolean } | null {
+  if (automated || greeted === today) return null
+  return { first: !greeted }
 }

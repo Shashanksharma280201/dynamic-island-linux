@@ -1,4 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { motion } from 'framer-motion'
+import { pop } from '../../anim/spring'
 import type { InboxUnread } from '@shared/types'
 import { currentWindow, type ClaudeUsage, type UsageWindow } from '@shared/claude'
 import { resetText } from '@shared/format'
@@ -122,12 +124,14 @@ export function Rail({ tab, onTab, usage, hidden = [] }: { tab: HubTab; onTab: (
             className={`rail-btn${tab === it.id ? ' on' : ''}`}
             onClick={() => onTab(it.id)}
           >
+            {/* One selection pill that slides from tab to tab. */}
+            {tab === it.id && <motion.span layoutId="rail-pill" className="rail-pill" transition={pop} />}
             {it.id === 'claude' && <UsageRing usage={usage} />}
             {it.icon}
             {b && (
-              <span className={`rail-badge ${it.id}`} aria-label={`${b} unread`}>
+              <motion.span key={b} className={`rail-badge ${it.id}`} aria-label={`${b} unread`} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={pop}>
                 {b}
-              </span>
+              </motion.span>
             )}
           </button>
         )

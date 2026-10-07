@@ -30,7 +30,8 @@ export function runStatus(r: ClaudeRun): string {
 export function CompactClaude({ run }: { run: ClaudeRun }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
-      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} />
+      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} track />
+      {run.steps > 0 && <span className="step-count">{run.steps}</span>}
     </div>
   )
 }
@@ -57,10 +58,22 @@ export function ClaudeCard({ id, run, onOpen, title }: { id: string; run: Claude
         )}
       </div>
       <div className="claude-card-body">
-        <Character mood={moodFor(run.phase, run.tool?.name)} size={40} />
+        <Character mood={moodFor(run.phase, run.tool?.name)} size={40} track interactive />
         <div className="claude-card-text">
           <div className="claude-prompt ellipsis">{run.prompt}</div>
-          <div className={`claude-status ${run.phase}`}>{runStatus(run)}</div>
+          {active && run.trail && run.trail.length > 1 ? (
+            // The last few steps: done ones dim with a check, the current one bright.
+            <ol className="claude-steps">
+              {run.trail.slice(-4).map((t, i, all) => (
+                <li key={`${run.steps}-${i}`} className={i === all.length - 1 && run.phase === 'tool' ? 'cur' : 'done'}>
+                  {t}
+                </li>
+              ))}
+              {run.phase !== 'tool' && <li className="cur">{runStatus(run)}</li>}
+            </ol>
+          ) : (
+            <div className={`claude-status ${run.phase}`}>{runStatus(run)}</div>
+          )}
           {run.phase === 'error' ? (
             <div className="claude-reply error clamp4">{run.error}</div>
           ) : (

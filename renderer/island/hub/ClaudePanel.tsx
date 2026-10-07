@@ -222,7 +222,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
     return (
       <div className="view claude-panel">
         <div className="voice-stage idle">
-          <Character mood="idle" size={72} />
+          <Character mood="idle" size={72} track interactive />
         </div>
         <Empty
           title={`Set up ${name}’s AI`}
@@ -289,7 +289,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       {code && <Limits usage={view.usage} bridge={view.usageBridge} />}
       {voiceOn ? (
         <div className={`voice-stage ${voice.phase}`}>
-          <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} />
+          <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
           <div className="caption voice-caption">{voiceCaption(voice, view)}</div>
           {voice.phase === 'preparing' && view.stt.downloading && (
             <div className="meter-bar download">
@@ -306,7 +306,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
         <Conversation view={view} />
       ) : (
         <div className="voice-stage idle">
-          <Character mood="idle" size={72} />
+          <Character mood="idle" size={72} track interactive />
           {code ? (
             <div className="caption voice-caption">
               Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and tell Claude what to do in{' '}

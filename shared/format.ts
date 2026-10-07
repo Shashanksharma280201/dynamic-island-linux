@@ -117,3 +117,8 @@ export function fileSize(bytes: number): string {
   const mb = bytes / (1024 * 1024)
   return `${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB`
 }
+
+/** "Good morning" for the hour of the day. Pure. */
+export function partOfDay(hour: number): string {
+  return hour < 5 || hour >= 18 ? 'Good evening' : hour < 12 ? 'Good morning' : 'Good afternoon'
+}

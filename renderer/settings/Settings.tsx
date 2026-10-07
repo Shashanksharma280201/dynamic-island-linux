@@ -349,6 +349,12 @@ export function Settings() {
             onChange={(v) => general.run(() => window.settings.setFrosted(v))}
           />
         )}
+        <Toggle
+          label="Sounds"
+          hint="Soft tones when the island opens, asks for approval, or Claude finishes. Quiet, and never more than one at a time"
+          on={s.sounds}
+          onChange={(v) => general.run(() => window.settings.setSounds(v))}
+        />
         <div className="toggle-row">
           <div>
             <div>Island position</div>

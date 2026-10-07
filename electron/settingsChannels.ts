@@ -9,6 +9,7 @@ export const SETTINGS = {
   SET_APPEARANCE: 'settings:set-appearance',
   SET_SHORTCUT: 'settings:set-shortcut',
   SET_FROSTED: 'settings:set-frosted',
+  SET_SOUNDS: 'settings:set-sounds',
   OPEN_NOTES_FOLDER: 'settings:open-notes-folder',
   SET_WHATSAPP: 'settings:set-whatsapp',
   RESTART: 'settings:restart',

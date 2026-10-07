@@ -63,6 +63,8 @@ const api = {
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),
+  onCursor: (cb: (at: { x: number; y: number }) => void) => on(IPC.CURSOR, cb),
+  onGreet: (cb: (g: { first: boolean }) => void) => on(IPC.GREET, cb),
   sendDecision: (msg: DecisionMsg) => ipcRenderer.send(IPC.DECISION, msg),
   sendMediaCmd: (cmd: MediaCmd) => ipcRenderer.send(IPC.MEDIA_CMD, cmd),
   sendSysCmd: (cmd: SysCmd) => ipcRenderer.send(IPC.SYS_CMD, cmd),
@@ -154,7 +156,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -196,6 +198,7 @@ const settings = {
   setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),
   setFrosted: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_FROSTED, on),
+  setSounds: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SOUNDS, on),
   openNotesFolder: () => ipcRenderer.invoke(SETTINGS.OPEN_NOTES_FOLDER),
   setClaude: (patch: Partial<{ permissionMode: string; voiceShortcut: boolean; sttModel: string; binary: string }>) =>
     ipcRenderer.invoke(SETTINGS.SET_CLAUDE, patch),

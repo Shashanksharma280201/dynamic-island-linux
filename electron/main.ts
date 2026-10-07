@@ -20,7 +20,7 @@ import { InputShape, shapeRect } from './inputShape'
 import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
-import { loadConfig, saveConfig } from './config'
+import { dayOf, greeting, loadConfig, saveConfig } from './config'
 import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
@@ -33,7 +33,8 @@ import {
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
-import type { MediaState } from '@shared/types'
+import type { DecisionMsg, MediaState } from '@shared/types'
+import { APPROVAL_KEYS, canAlways, frontApproval } from '@shared/approvalKeys'
 import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
@@ -156,6 +157,19 @@ async function main() {
   win.showInactive()
 
   const pushState = () => send(win, IPC.STATE, store.list())
+  // The character's eyes follow the pointer anywhere on screen: 15 times a
+  // second, and only when it moved.
+  let lastCursor = ''
+  setInterval(() => {
+    if (win.isDestroyed() || !win.isVisible()) return
+    const c = screen.getCursorScreenPoint()
+    const b = win.getBounds()
+    const at = { x: c.x - b.x, y: c.y - b.y }
+    const k = `${at.x},${at.y}`
+    if (k === lastCursor) return
+    lastCursor = k
+    send(win, IPC.CURSOR, at)
+  }, 66)
   store.onChange(pushState)
   const transient = new TransientCards(store)
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
@@ -693,12 +707,36 @@ async function main() {
     for (const ms of [30, 150, 400]) setTimeout(() => !win.isDestroyed() && updateHitArea(), ms)
   }
 
+  const decide = (m: DecisionMsg) => {
+    if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    claude.resolve(m)
+    store.remove(m.id)
+  }
+  // Answer the approval on screen from anywhere: Ctrl+Alt+Y / N / A. Grabbed
+  // only while one waits, and never by taking focus (a stray "y" typed in
+  // another app must not approve anything).
+  let approvalKeys = false
+  const syncApprovalKeys = () => {
+    const waiting = !!frontApproval(store.list())
+    if (waiting === approvalKeys) return
+    approvalKeys = waiting
+    for (const [key, accel] of Object.entries(APPROVAL_KEYS)) {
+      if (!waiting) {
+        globalShortcut.unregister(accel)
+        continue
+      }
+      const ok = globalShortcut.register(accel, () => {
+        const r = frontApproval(store.list())
+        if (!r || (key === 'always' && !canAlways(r))) return
+        decide({ id: r.id, decision: key === 'deny' ? 'deny' : 'allow', ...(key === 'always' ? { always: true } : {}) })
+      })
+      if (!ok) console.error(`[island] couldn't register ${accel} for approvals; another app may own it`)
+    }
+  }
+  store.onChange(syncApprovalKeys)
+
   wireIpc({
-    onDecision: (m) => {
-      if (agentApprovals.decide(m.id, m.decision === 'allow')) return
-      claude.resolve(m)
-      store.remove(m.id)
-    },
+    onDecision: decide,
     onMediaCmd: (c) => void media.command(c),
     onSysCmd: (c) => commands.push(c),
     onRect: (r) => {
@@ -761,7 +799,7 @@ async function main() {
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds })
   const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   win.webContents.on('did-finish-load', () => {
@@ -772,6 +810,14 @@ async function main() {
     pushCharacter()
     pushPackages()
     send(win, IPC.RECT_REQUEST, null)
+    // Hello, once a day (not when a test drives the app).
+    const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
+    const hello = greeting(config.greeted, dayOf(new Date()), automated)
+    if (hello) {
+      config.greeted = dayOf(new Date())
+      saveConfig(config)
+      setTimeout(() => send(win, IPC.GREET, hello), 600)
+    }
   })
   pushAppearance()
   pushCharacter()

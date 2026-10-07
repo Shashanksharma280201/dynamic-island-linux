@@ -99,7 +99,7 @@ x11.createClient((err, display) => {
     } else if (args[0] === 'key') {
       // keysyms: letters are their ASCII codes; Control_L = 0xffe3
       const parts = args[1].toLowerCase().split('+')
-      const named = { ctrl: 0xffe3, shift: 0xffe1, escape: 0xff1b, enter: 0xff0d }
+      const named = { ctrl: 0xffe3, shift: 0xffe1, alt: 0xffe9, escape: 0xff1b, enter: 0xff0d }
       const syms = parts.map((p) => named[p] ?? p.charCodeAt(0))
       const min = display.min_keycode
       const max = display.max_keycode

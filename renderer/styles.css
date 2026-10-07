@@ -362,10 +362,14 @@ button {
   user-select: text;
 }
 .approval .always {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   margin-top: 8px;
-  text-align: center;
+}
+.approval .always .ellipsis {
+  min-width: 0;
 }
 
 /* Media */
@@ -663,6 +667,206 @@ button {
 .panel-foot {
   display: flex;
   justify-content: flex-end;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion: cards build in, peek, approval stack, key chips
+   --------------------------------------------------------------------------- */
+/* A card's parts arrive one after another (header, title, body, buttons). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+.island .card:not(.panel) > * {
+  animation: rise 0.22s cubic-bezier(0, 0, 0.2, 1) 0.18s both;
+}
+.island .card:not(.panel) > :nth-child(1) {
+  animation-delay: 0.06s;
+}
+.island .card:not(.panel) > :nth-child(2) {
+  animation-delay: 0.1s;
+}
+.island .card:not(.panel) > :nth-child(3) {
+  animation-delay: 0.14s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .island .card:not(.panel) > * {
+    animation: none;
+  }
+}
+
+/* Hover peek: the capsule widens toward the screen with one line. The
+   character stays on the docked side. */
+.peek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  width: max-content;
+  min-width: 200px;
+  max-width: 320px;
+  padding: 0 10px 0 18px;
+  cursor: pointer;
+}
+.island-outer.left .peek {
+  flex-direction: row-reverse;
+  padding: 0 18px 0 10px;
+}
+.peek-text {
+  flex: 1;
+  min-width: 0;
+}
+.peek-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+.peek-sub {
+  font-size: 11.5px;
+  color: var(--label-3);
+  margin-top: 1px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The peek's title rolls when it changes (Claude's next step). */
+.peek-title-row {
+  position: relative;
+  height: 18px;
+  overflow: hidden;
+}
+.peek-title-row .peek-title {
+  line-height: 18px;
+}
+/* Claude's step count under the character on the capsule. */
+.step-count {
+  font: 700 10.5px/1 var(--font);
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+  margin-top: -6px;
+}
+/* The last few steps on Claude's working card. */
+.claude-steps {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  font-size: 12px;
+}
+.claude-steps li {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  height: 20px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  animation: rise 0.22s cubic-bezier(0, 0, 0.2, 1) both;
+}
+.claude-steps li::before {
+  width: 12px;
+  flex: none;
+  text-align: center;
+  font-size: 10px;
+}
+.claude-steps li.done {
+  color: var(--label-3);
+}
+.claude-steps li.done::before {
+  content: '✓';
+}
+.claude-steps li.cur {
+  font-weight: 600;
+  background: linear-gradient(90deg, var(--label-2) 0%, #fff 45%, var(--label-2) 70%) 0 0 / 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation:
+    rise 0.22s cubic-bezier(0, 0, 0.2, 1) both,
+    shimmer 2.4s linear infinite;
+}
+.claude-steps li.cur::before {
+  content: '›';
+  color: var(--label);
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .claude-steps li,
+  .claude-steps li.cur {
+    animation: none;
+  }
+}
+
+/* Switching tabs: the new one slides in from the direction you went. */
+@keyframes from-below {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+@keyframes from-above {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+}
+.card.panel.from-below {
+  animation: from-below 0.22s cubic-bezier(0, 0, 0.2, 1);
+}
+.card.panel.from-above {
+  animation: from-above 0.22s cubic-bezier(0, 0, 0.2, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.panel.from-below,
+  .card.panel.from-above {
+    animation: none;
+  }
+}
+
+/* A character you can boop. */
+.character.interactive {
+  cursor: pointer;
+}
+
+/* More approvals waiting: the edges of the next cards peek out below. */
+.approval-stack-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.approval-stack {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: -9px;
+  height: 30px;
+  border-radius: 0 0 22px 22px;
+  background: var(--material);
+  box-shadow: inset 0 -1px 0 var(--edge-bottom), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+}
+.approval-stack.second {
+  left: 28px;
+  right: 28px;
+  bottom: -17px;
+  opacity: 0.55;
+}
+
+/* Keyboard shortcut shown on a button. */
+.key {
+  font: 600 10px/1 var(--mono);
+  padding: 3px 5px;
+  margin-left: 7px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.16);
+  opacity: 0.85;
+  vertical-align: 1px;
+}
+.pill.primary .key {
+  background: rgba(255, 255, 255, 0.25);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1953,8 +2157,22 @@ button {
 }
 .rail-btn.on,
 .rail-btn[aria-label='Music'].on {
+  background: transparent;
+  box-shadow: none;
+}
+/* The selection: one pill that slides between tabs. */
+.rail-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
   background: rgba(255, 255, 255, 0.16);
   box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.22);
+}
+.rail-btn > .app-icon {
+  position: relative;
+}
+.rail-btn:hover .app-icon {
+  transform: translateY(-1px) scale(1.06);
 }
 
 /* ---------------------------------------------------------------------------
@@ -3021,11 +3239,39 @@ button.sp-device {
   display: flex;
   align-items: center;
   gap: 12px;
+  /* A pocket: dashed green edge, marching while files hover over it. */
+  background:
+    linear-gradient(90deg, rgba(48, 209, 88, 0.7) 50%, transparent 0) top / 12px 1.5px repeat-x,
+    linear-gradient(90deg, rgba(48, 209, 88, 0.7) 50%, transparent 0) bottom / 12px 1.5px repeat-x,
+    linear-gradient(0deg, rgba(48, 209, 88, 0.7) 50%, transparent 0) left / 1.5px 12px repeat-y,
+    linear-gradient(0deg, rgba(48, 209, 88, 0.7) 50%, transparent 0) right / 1.5px 12px repeat-y,
+    radial-gradient(70% 140% at 104% 50%, rgba(48, 209, 88, 0.28), transparent 70%);
+  animation: march 0.5s linear infinite;
 }
-.drop-card .app-icon {
-  width: 34px;
-  height: 34px;
-  flex-shrink: 0;
+.card.drop-card.adding {
+  animation: none;
+}
+.island-outer.left .drop-card {
+  flex-direction: row-reverse;
+}
+.drop-text {
+  flex: 1;
+  min-width: 0;
+}
+@keyframes march {
+  to {
+    background-position:
+      12px 0,
+      -12px 100%,
+      0 -12px,
+      100% 12px,
+      0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .card.drop-card {
+    animation: none;
+  }
 }
 .drop-zone {
   position: absolute;
