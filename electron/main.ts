@@ -1,4 +1,4 @@
-import { app, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, dialog, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
@@ -20,7 +20,7 @@ import { InputShape, shapeRect } from './inputShape'
 import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
-import { loadConfig, saveConfig } from './config'
+import { dayOf, greeting, loadConfig, saveConfig } from './config'
 import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
@@ -33,7 +33,8 @@ import {
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
-import type { MediaState } from '@shared/types'
+import type { DecisionMsg, MediaState } from '@shared/types'
+import { APPROVAL_KEYS, canAlways, frontApproval } from '@shared/approvalKeys'
 import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
@@ -50,6 +51,7 @@ import { spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
 import { homedir } from 'node:os'
 import { TransientCards } from './transient'
+import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
@@ -150,6 +152,19 @@ async function main() {
   win.showInactive()
 
   const pushState = () => send(win, IPC.STATE, store.list())
+  // The character's eyes follow the pointer anywhere on screen: 15 times a
+  // second, and only when it moved.
+  let lastCursor = ''
+  setInterval(() => {
+    if (win.isDestroyed() || !win.isVisible()) return
+    const c = screen.getCursorScreenPoint()
+    const b = win.getBounds()
+    const at = { x: c.x - b.x, y: c.y - b.y }
+    const k = `${at.x},${at.y}`
+    if (k === lastCursor) return
+    lastCursor = k
+    send(win, IPC.CURSOR, at)
+  }, 66)
   store.onChange(pushState)
   const transient = new TransientCards(store)
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
@@ -539,6 +554,7 @@ async function main() {
     applyShortcut: () => applyShortcut(),
     shortcutActive: () => shortcutActive,
     onFrosted: () => backdrop.refresh(),
+    uninstall: () => void runUninstall(),
     frostedAvailable: !WAYLAND,
     notesFolder: notes.folder,
     claude: () => ({
@@ -680,12 +696,36 @@ async function main() {
     for (const ms of [30, 150, 400]) setTimeout(() => !win.isDestroyed() && updateHitArea(), ms)
   }
 
+  const decide = (m: DecisionMsg) => {
+    if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    claude.resolve(m)
+    store.remove(m.id)
+  }
+  // Answer the approval on screen from anywhere: Ctrl+Alt+Y / N / A. Grabbed
+  // only while one waits, and never by taking focus (a stray "y" typed in
+  // another app must not approve anything).
+  let approvalKeys = false
+  const syncApprovalKeys = () => {
+    const waiting = !!frontApproval(store.list())
+    if (waiting === approvalKeys) return
+    approvalKeys = waiting
+    for (const [key, accel] of Object.entries(APPROVAL_KEYS)) {
+      if (!waiting) {
+        globalShortcut.unregister(accel)
+        continue
+      }
+      const ok = globalShortcut.register(accel, () => {
+        const r = frontApproval(store.list())
+        if (!r || (key === 'always' && !canAlways(r))) return
+        decide({ id: r.id, decision: key === 'deny' ? 'deny' : 'allow', ...(key === 'always' ? { always: true } : {}) })
+      })
+      if (!ok) console.error(`[island] couldn't register ${accel} for approvals; another app may own it`)
+    }
+  }
+  store.onChange(syncApprovalKeys)
+
   wireIpc({
-    onDecision: (m) => {
-      if (agentApprovals.decide(m.id, m.decision === 'allow')) return
-      claude.resolve(m)
-      store.remove(m.id)
-    },
+    onDecision: decide,
     onMediaCmd: (c) => void media.command(c),
     onSysCmd: (c) => commands.push(c),
     onRect: (r) => {
@@ -748,7 +788,7 @@ async function main() {
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind })
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds })
   const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   win.webContents.on('did-finish-load', () => {
@@ -759,6 +799,14 @@ async function main() {
     pushCharacter()
     pushPackages()
     send(win, IPC.RECT_REQUEST, null)
+    // Hello, once a day (not when a test drives the app).
+    const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
+    const hello = greeting(config.greeted, dayOf(new Date()), automated)
+    if (hello) {
+      config.greeted = dayOf(new Date())
+      saveConfig(config)
+      setTimeout(() => send(win, IPC.GREET, hello), 600)
+    }
   })
   pushAppearance()
   pushCharacter()
@@ -790,6 +838,7 @@ async function main() {
         settings?.changed()
       },
       openSettings: () => settings?.open(),
+      uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
   )
@@ -917,6 +966,47 @@ function runDemo(
 }
 
 // ---- lifecycle ----
+/**
+ * Removes the island from this computer (tray menu, Settings, or
+ * `--uninstall`). Asks first unless `--yes`; `--delete-data` also removes its
+ * settings and data without asking. Quits when done.
+ */
+async function runUninstall(argv: string[] = []): Promise<void> {
+  let removeData = argv.includes('--delete-data')
+  if (!argv.includes('--yes')) {
+    const r = await dialog.showMessageBox({
+      type: 'warning',
+      message: 'Uninstall Dynamic Island?',
+      detail:
+        'This removes the app, starting it at login, and the Claude Code approvals and status line it set up. Files it saved in your Documents folder are kept.',
+      checkboxLabel: 'Also delete my settings, notes, CRM and sign-ins',
+      checkboxChecked: false,
+      buttons: ['Uninstall', 'Cancel'],
+      defaultId: 1,
+      cancelId: 1,
+    })
+    if (r.response !== 0) return
+    removeData = r.checkboxChecked
+  }
+  const text = await uninstall(
+    {
+      packaged: app.isPackaged,
+      userData: app.getPath('userData'),
+      appId: 'io.github.shashanksharma280201.dynamicisland',
+      productName: 'Dynamic Island',
+      debPackage: 'dynamic-island-linux',
+      removeHook: async () => isHookInstalled() && setHookInstalled(false),
+      removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
+      removeLoginItem: () => setAutostart(false),
+      trash: (p) => shell.trashItem(p),
+    },
+    { removeData },
+  )
+  console.log(`[island] ${text}`)
+  if (!argv.includes('--yes')) await dialog.showMessageBox({ type: 'info', message: 'Dynamic Island is uninstalled', detail: text, buttons: ['OK'] })
+  app.quit()
+}
+
 const wantsQuit = process.argv.includes('--quit')
 // `--replace` (what `npm start` passes): close the running island and take
 // its place, so a rebuilt island shows up without logging out.
@@ -926,9 +1016,11 @@ function run(): void {
   app.on('second-instance', (_e, argv) => {
     // Ignore the `--quit` we sent to the island we replaced (it may arrive late).
     if (argv.includes(`--replaced-by=${process.pid}`)) return
-    if (argv.includes('--quit') || argv.includes('--replace')) app.quit()
+    if (argv.includes('--uninstall')) void runUninstall(argv)
+    else if (argv.includes('--quit') || argv.includes('--replace')) app.quit()
   })
-  app.whenReady().then(main)
+  // `--uninstall` with nothing running: just remove, no island.
+  app.whenReady().then(() => (process.argv.includes('--uninstall') ? runUninstall(process.argv) : main()))
   app.on('window-all-closed', () => {
     // keep running as a persistent widget
   })

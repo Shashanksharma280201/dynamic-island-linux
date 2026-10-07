@@ -4,7 +4,7 @@ import { vi } from 'vitest'
 vi.mock('electron', () => ({ app: {} }))
 
 test('every character has a name, kind and personality', () => {
-  expect(CHARACTERS.map((c) => c.id)).toEqual(['orbit', 'bolt', 'mochi'])
+  expect(CHARACTERS.map((c) => c.id)).toEqual(['orbit', 'bolt', 'puff'])
   for (const c of CHARACTERS) expect(c.name && c.kind && c.personality).toBeTruthy()
   expect(new Set(MOODS).size).toBe(MOODS.length)
 })
@@ -12,11 +12,14 @@ test('every character has a name, kind and personality', () => {
 test('stored character settings are validated', () => {
   expect(parseCharacter(null)).toEqual({ id: 'orbit', name: 'Orbit' })
   expect(parseCharacter({ id: 'bolt' })).toEqual({ id: 'bolt', name: 'Bolt' })
-  expect(parseCharacter({ id: 'mochi', name: '  Momo  ' })).toEqual({ id: 'mochi', name: 'Momo' })
+  expect(parseCharacter({ id: 'puff', name: '  Momo  ' })).toEqual({ id: 'puff', name: 'Momo' })
+  // The blob used to be called Mochi: saved settings move over to Puff.
+  expect(parseCharacter({ id: 'mochi', name: 'Momo' })).toEqual({ id: 'puff', name: 'Momo' })
+  expect(parseCharacter({ id: 'mochi', name: 'Mochi' })).toEqual({ id: 'puff', name: 'Puff' })
   expect(parseCharacter({ id: 'dragon', name: 'X' })).toEqual({ id: 'orbit', name: 'X' })
   expect(parseCharacter({ id: 'bolt', name: 'A'.repeat(40) }).name).toHaveLength(24)
   expect(parseCharacter({ id: 'bolt', name: 42 }).name).toBe('Bolt')
-  expect(mergeConfig({ character: { id: 'mochi', name: 'Mo' } }).character).toEqual({ id: 'mochi', name: 'Mo' })
+  expect(mergeConfig({ character: { id: 'puff', name: 'Mo' } }).character).toEqual({ id: 'puff', name: 'Mo' })
   expect(mergeConfig({}).character).toEqual({ id: 'orbit', name: 'Orbit' })
 })
 

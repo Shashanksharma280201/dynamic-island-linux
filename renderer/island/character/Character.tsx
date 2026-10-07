@@ -1,14 +1,40 @@
-import { createContext, useContext, useEffect, useId, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion'
 import { ThinkingOrb } from 'thinking-orbs'
 import type { OrbMood } from '@shared/claude'
-import { DEFAULT_CHARACTER, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
+import { DEFAULT_CHARACTER, MOOD_COLOR, gazeToward, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
+import { sound } from '../../sound'
 
 /** The chosen character (and its name) for everything on the island. */
 export const CharacterContext = createContext<CharacterConfig>({ id: DEFAULT_CHARACTER, name: 'Orbit' })
 export const useCharacter = () => useContext(CharacterContext)
 
 // ---------------------------------------------------------------- motion ----
+
+/** A face shown over the mood for a moment (a reaction). */
+type Face = 'happy' | 'spiral' | 'heart' | null
+/** Where the eyes look: -1..1 on each axis. */
+type Look = [number, number]
+
+/** Three boops this close together and it gets dizzy. */
+export const BOOP_WINDOW_MS = 1400
+export const DIZZY_MS = 2400
+
+
+/** The eyes follow the pointer anywhere on screen (the main process sends it). */
+function useGaze(ref: RefObject<SVGSVGElement>, enabled: boolean): Look {
+  const [look, setLook] = useState<Look>([0, 0])
+  useEffect(() => {
+    if (!enabled || !window.island?.onCursor) return setLook([0, 0])
+    return window.island.onCursor(({ x, y }) => {
+      const r = ref.current?.getBoundingClientRect()
+      if (!r || !r.width) return
+      const next = gazeToward(x - (r.left + r.width / 2), y - (r.top + r.height / 2))
+      setLook((prev) => (Math.abs(prev[0] - next[0]) + Math.abs(prev[1] - next[1]) < 0.03 ? prev : next))
+    })
+  }, [enabled, ref])
+  return look
+}
 
 const loop = (duration: number, ease: any = 'easeInOut'): Transition => ({ duration, repeat: Infinity, ease })
 
@@ -34,7 +60,8 @@ function bodyMotion(mood: CharacterMood): { animate: TargetAndTransition; transi
     case 'dancing':
       return { animate: { rotate: [-8, 8, -8], y: [0, -4, 0, -4, 0] }, transition: loop(0.9) }
     default:
-      return { animate: { y: [0, -2, 0], rotate: 0, scale: 1 }, transition: loop(3.4) }
+      // Breathes: a slow rise and a hint of swell.
+      return { animate: { y: [0, -2, 0], scaleY: [1, 1.016, 1], rotate: 0, scale: 1 }, transition: loop(3.6) }
   }
 }
 
@@ -72,13 +99,20 @@ function useGlance(active: boolean): number {
 type EyeLook = { color: string; rx: number; ry: number; glow?: boolean; shine?: boolean }
 
 /** A pair of eyes that changes with the mood. */
-function Eyes({ lx, rx: rxPos, y, look, mood, still }: { lx: number; rx: number; y: number; look: EyeLook; mood: CharacterMood; still: boolean }) {
-  const awake = mood !== 'sleeping' && mood !== 'done' && mood !== 'dancing' && mood !== 'error'
+function Eyes({ lx, rx: rxPos, y, look, mood, still, face = null }: { lx: number; rx: number; y: number; look: EyeLook; mood: CharacterMood; still: boolean; face?: Face }) {
+  const awake = !face && mood !== 'sleeping' && mood !== 'done' && mood !== 'dancing' && mood !== 'error'
   const blink = useBlink(awake && !still)
   const glance = useGlance(mood === 'idle' && !still)
   const stroke = { stroke: look.color, strokeWidth: look.rx * 0.75, strokeLinecap: 'round' as const, fill: 'none' }
   const one = (cx: number, side: -1 | 1) => {
-    if (mood === 'done' || mood === 'dancing')
+    if (face === 'spiral') {
+      let d = `M${cx} ${y}`
+      for (let a = 0.3; a < Math.PI * 4.2; a += 0.3) d += ` L${cx + Math.cos(a * side) * a * look.rx * 0.14} ${y + Math.sin(a * side) * a * look.rx * 0.14}`
+      return <path key={side} d={d} stroke={look.color} strokeWidth={look.rx * 0.36} fill="none" strokeLinecap="round" />
+    }
+    if (face === 'heart')
+      return <path key={side} transform={`translate(${cx} ${y}) scale(${look.rx * 0.16})`} d="M0 6 C-9 -1 -7 -9 0 -4 C7 -9 9 -1 0 6Z" fill="#ff375f" />
+    if (face === 'happy' || mood === 'done' || mood === 'dancing')
       return <path key={side} d={`M${cx - look.rx} ${y + 1} Q${cx} ${y - look.ry * 1.1} ${cx + look.rx} ${y + 1}`} {...stroke} />
     if (mood === 'sleeping') return <path key={side} d={`M${cx - look.rx} ${y} Q${cx} ${y + look.ry * 0.6} ${cx + look.rx} ${y}`} {...stroke} />
     if (mood === 'error')
@@ -152,14 +186,6 @@ function Overlay({ mood }: { mood: CharacterMood }) {
           ))}
         </g>
       )
-    case 'attention':
-      return at(
-        <motion.g animate={{ scale: [1, 1.25, 1] }} transition={loop(0.7)}>
-          <circle r={8} fill="#ff9f0a" />
-          <rect x={-1.4} y={-5} width={2.8} height={6.5} rx={1.2} fill="#fff" />
-          <circle cy={4} r={1.5} fill="#fff" />
-        </motion.g>,
-      )
     case 'sleeping':
       return at(
         [0, 1].map((i) => (
@@ -192,8 +218,17 @@ const ANTENNA: Partial<Record<CharacterMood, string>> = {
   sleeping: '#636366',
 }
 
-function Bolt({ mood, still }: { mood: CharacterMood; still: boolean }) {
-  const light = ANTENNA[mood] ?? '#30d158'
+type BodyProps = { mood: CharacterMood; still: boolean; face: Face; look: Look; tint: string }
+
+/** The face turns toward where the eyes look (a head on a sphere). */
+const Face = ({ look, still, children }: { look: Look; still: boolean; children: ReactNode }) => (
+  <motion.g animate={{ x: look[0] * 3.2, y: look[1] * 2.6 }} transition={still ? { duration: 0 } : { type: 'spring', stiffness: 220, damping: 24 }}>
+    {children}
+  </motion.g>
+)
+
+function Bolt({ mood, still, face, look, tint }: BodyProps) {
+  const light = face === 'heart' ? '#ff375f' : (ANTENNA[mood] ?? '#30d158')
   return (
     <g>
       <line x1={50} y1={13} x2={50} y2={24} stroke="#9aa4b2" strokeWidth={3} strokeLinecap="round" />
@@ -202,27 +237,34 @@ function Bolt({ mood, still }: { mood: CharacterMood; still: boolean }) {
       <rect x={79} y={45} width={8} height={18} rx={4} fill="#c9d0d9" />
       <rect x={18} y={24} width={64} height={58} rx={24} fill="#eef1f5" />
       <rect x={18} y={24} width={64} height={58} rx={24} fill="url(#boltShade)" />
+      <rect x={18} y={24} width={64} height={58} rx={24} fill={tint} />
       <rect x={26} y={35} width={48} height={33} rx={15} fill="#161b26" />
-      <Eyes lx={40} rx={60} y={51.5} look={{ color: '#64d2ff', rx: 5.6, ry: 7.5, glow: true }} mood={mood} still={still} />
+      <Face look={look} still={still}>
+        <Eyes lx={40} rx={60} y={51.5} look={{ color: '#64d2ff', rx: 5.6, ry: 7.5, glow: true }} mood={mood} still={still} face={face} />
+      </Face>
     </g>
   )
 }
 
-function Mochi({ mood, still }: { mood: CharacterMood; still: boolean }) {
+function Puff({ mood, still, face, look, tint }: BodyProps) {
   const sad = mood === 'error'
   const happy = mood === 'done' || mood === 'dancing'
+  const body = 'M12 82 C 10 40, 32 18, 50 18 C 68 18, 90 40, 88 82 Q 50 92 12 82Z'
   return (
     <motion.g animate={mood === 'sleeping' ? { scaleY: 0.9, scaleX: 1.06 } : happy ? { scaleY: [1, 0.9, 1], scaleX: [1, 1.08, 1] } : { scaleY: 1, scaleX: 1 }} transition={happy ? loop(0.6) : { duration: 0.4 }} style={{ originX: '50px', originY: '86px' }}>
-      <path d="M12 82 C 10 40, 32 18, 50 18 C 68 18, 90 40, 88 82 Q 50 92 12 82Z" fill="#fff6f0" />
-      <path d="M12 82 C 10 40, 32 18, 50 18 C 68 18, 90 40, 88 82 Q 50 92 12 82Z" fill="url(#mochiShade)" />
-      <Eyes lx={38} rx={62} y={52} look={{ color: '#2b2b2e', rx: 4.6, ry: 6, shine: true }} mood={mood} still={still} />
-      <ellipse cx={28} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={0.85} />
-      <ellipse cx={72} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={0.85} />
-      {mood === 'listening' || mood === 'attention' ? (
-        <ellipse cx={50} cy={65} rx={3} ry={3.6} fill="#2b2b2e" />
-      ) : (
-        <path d={sad ? 'M44 68 Q50 63 56 68' : 'M45 63 Q50 68 55 63'} stroke="#2b2b2e" strokeWidth={2.4} fill="none" strokeLinecap="round" />
-      )}
+      <path d={body} fill="#fff6f0" />
+      <path d={body} fill="url(#puffShade)" />
+      <path d={body} fill={tint} />
+      <Face look={look} still={still}>
+        <Eyes lx={38} rx={62} y={52} look={{ color: '#2b2b2e', rx: 4.6, ry: 6, shine: true }} mood={mood} still={still} face={face} />
+        <ellipse cx={28} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={face === 'heart' ? 1 : 0.85} />
+        <ellipse cx={72} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={face === 'heart' ? 1 : 0.85} />
+        {face === 'spiral' || mood === 'listening' || mood === 'attention' ? (
+          <ellipse cx={50} cy={65} rx={3} ry={3.6} fill="#2b2b2e" />
+        ) : (
+          <path d={sad ? 'M44 68 Q50 63 56 68' : face ? 'M44 63 Q50 70 56 63' : 'M45 63 Q50 68 55 63'} stroke="#2b2b2e" strokeWidth={2.4} fill="none" strokeLinecap="round" />
+        )}
+      </Face>
     </motion.g>
   )
 }
@@ -236,34 +278,184 @@ const ORB_MOOD: Partial<Record<CharacterMood, OrbMood>> = {
   attention: 'connecting',
 }
 
-function Orbit({ mood, still }: { mood: CharacterMood; still: boolean }) {
+function Orbit({ mood, still, face, look, tint }: BodyProps) {
   return (
     <g>
       <circle cx={50} cy={52} r={30} fill="url(#orbitCore)" />
-      <Eyes lx={41} rx={59} y={50} look={{ color: '#fff3ec', rx: 4.2, ry: 5.8 }} mood={mood} still={still} />
-      {mood !== 'sleeping' && mood !== 'error' && mood !== 'listening' && mood !== 'attention' && (
-        <path d="M45 61 Q50 65 55 61" stroke="#fff3ec" strokeWidth={2.2} fill="none" strokeLinecap="round" />
-      )}
-      {(mood === 'listening' || mood === 'attention') && <ellipse cx={50} cy={62} rx={2.6} ry={3} fill="#fff3ec" />}
+      <circle cx={50} cy={52} r={30} fill={tint} />
+      <Face look={look} still={still}>
+        <Eyes lx={41} rx={59} y={50} look={{ color: '#fff3ec', rx: 4.2, ry: 5.8 }} mood={mood} still={still} face={face} />
+        {(face || (mood !== 'sleeping' && mood !== 'error' && mood !== 'listening' && mood !== 'attention')) && face !== 'spiral' && (
+          <path d={face ? 'M44 60 Q50 67 56 60' : 'M45 61 Q50 65 55 61'} stroke="#fff3ec" strokeWidth={2.2} fill="none" strokeLinecap="round" />
+        )}
+        {(face === 'spiral' || (!face && (mood === 'listening' || mood === 'attention'))) && <ellipse cx={50} cy={62} rx={2.6} ry={3} fill="#fff3ec" />}
+      </Face>
     </g>
   )
 }
 
-const BODIES: Record<CharacterId, (p: { mood: CharacterMood; still: boolean }) => JSX.Element> = { bolt: Bolt, mochi: Mochi, orbit: Orbit }
+const BODIES: Record<CharacterId, (p: BodyProps) => JSX.Element> = { bolt: Bolt, puff: Puff, orbit: Orbit }
+
+// ------------------------------------------------------------------ ring ----
+
+/** The aura ring: the mood's colour, spinning while busy, breathing when it needs you. */
+function Ring({ mood, still, color = MOOD_COLOR[mood] }: { mood: CharacterMood; still: boolean; color?: string | null }) {
+  const kind = ringKind(mood)
+  if (!kind || !color) return null
+  const c = 2 * Math.PI * 46
+  return (
+    <g className="aura-ring" data-ring={kind}>
+      <circle cx={50} cy={52} r={46} fill="none" stroke="rgba(255,255,255,.1)" strokeWidth={3.4} />
+      <motion.circle
+        cx={50}
+        cy={52}
+        r={46}
+        fill="none"
+        stroke={color}
+        strokeWidth={3.6}
+        strokeLinecap="round"
+        filter="url(#glow)"
+        strokeDasharray={kind === 'busy' ? `${c * 0.18} ${c}` : `${c} ${c}`}
+        style={{ originX: '50px', originY: '52px' }}
+        initial={{ opacity: 0 }}
+        animate={still ? { opacity: 1, rotate: -90 } : kind === 'busy' ? { opacity: 1, rotate: [-90, 270] } : kind === 'alert' ? { opacity: [1, 0.55, 1], rotate: -90 } : { opacity: 1, rotate: -90 }}
+        transition={kind === 'busy' ? { rotate: { duration: 1.4, repeat: Infinity, ease: 'linear' }, opacity: { duration: 0.24 } } : kind === 'alert' ? { opacity: loop(1.2), rotate: { duration: 0 } } : { duration: 0.24 }}
+      />
+    </g>
+  )
+}
+
+// ------------------------------------------------------------- reactions ----
+
+/** Boop the character, boop it again fast and it gets dizzy; rest the pointer on it and it loves you. */
+function useReactions(enabled: boolean) {
+  const [face, setFace] = useState<Face>(null)
+  const [react, setReact] = useState<'boop' | 'dizzy' | 'love' | null>(null)
+  const boops = useRef<number[]>([])
+  const timer = useRef<ReturnType<typeof setTimeout>>()
+  const hoverTimer = useRef<ReturnType<typeof setTimeout>>()
+  const lastLove = useRef(0)
+  const play = (r: 'boop' | 'dizzy' | 'love', ms: number) => {
+    clearTimeout(timer.current)
+    setReact(r)
+    setFace(r === 'dizzy' ? 'spiral' : r === 'love' ? 'heart' : 'happy')
+    timer.current = setTimeout(() => (setReact(null), setFace(null)), ms)
+  }
+  useEffect(() => () => (clearTimeout(timer.current), clearTimeout(hoverTimer.current)), [])
+  if (!enabled) return { face: null, react: null, handlers: {} }
+  return {
+    face,
+    react,
+    handlers: {
+      onPointerDown: () => {
+        if (react === 'dizzy') return
+        const now = Date.now()
+        boops.current = [...boops.current.filter((t) => now - t < BOOP_WINDOW_MS), now]
+        if (boops.current.length >= 3) {
+          boops.current = []
+          play('dizzy', DIZZY_MS)
+          sound('dizzy')
+        } else {
+          play('boop', 600)
+          sound('boop')
+        }
+      },
+      onPointerEnter: () => {
+        clearTimeout(hoverTimer.current)
+        hoverTimer.current = setTimeout(() => {
+          if (Date.now() - lastLove.current < 8000) return
+          lastLove.current = Date.now()
+          play('love', 1600)
+        }, 1600)
+      },
+      onPointerMove: () => {},
+      onPointerLeave: () => clearTimeout(hoverTimer.current),
+    },
+  }
+}
+
+/** Body motion for a reaction, on top of the mood. */
+function reactionMotion(r: 'boop' | 'dizzy' | 'love'): { animate: TargetAndTransition; transition: Transition } {
+  if (r === 'boop') return { animate: { scaleX: [1, 1.14, 0.96, 1], scaleY: [1, 0.86, 1.06, 1], rotate: 0, y: 0 }, transition: { duration: 0.6, times: [0, 0.12, 0.35, 1] } }
+  if (r === 'dizzy') return { animate: { rotate: [-10, 10, -10], y: 0 }, transition: loop(0.62) }
+  return { animate: { y: [0, -3, 0], rotate: 0 }, transition: loop(0.8) }
+}
+
+/** Little extras for a reaction: stars circling, hearts rising. */
+function ReactionOverlay({ r }: { r: 'boop' | 'dizzy' | 'love' }) {
+  if (r === 'dizzy')
+    return (
+      <motion.g animate={{ rotate: 360 }} transition={{ duration: 1.6, repeat: Infinity, ease: 'linear' }} style={{ originX: '50px', originY: '14px' }}>
+        {[0, 120, 240].map((a) => (
+          <path key={a} transform={`rotate(${a} 50 14) translate(${50 + 16} 14) scale(.5)`} d="M0 -8 L1.6 -1.6 L8 0 L1.6 1.6 L0 8 L-1.6 1.6 L-8 0 L-1.6 -1.6Z" fill="#ffd60a" />
+        ))}
+      </motion.g>
+    )
+  if (r === 'love')
+    return (
+      <g>
+        {[
+          [80, 20, 0],
+          [18, 16, 0.35],
+          [88, 40, 0.7],
+        ].map(([x, y, d]) => (
+          <motion.path key={x} d="M0 6 C-9 -1 -7 -9 0 -4 C7 -9 9 -1 0 6Z" fill="#ff375f" initial={{ opacity: 0, x, y: y + 10, scale: 0.4 }} animate={{ opacity: [0, 1, 0], y: [y + 10, y - 8], scale: 0.8 }} transition={{ duration: 1.4, delay: d }} />
+        ))}
+      </g>
+    )
+  return null
+}
 
 /**
  * The island's character in a mood. Uses the chosen character unless `id`
  * is given (Settings previews). Small sizes leave out the extras.
+ * `track`: the eyes follow the pointer. `interactive`: boop it, rest on it.
  */
-export function Character({ mood, size = 64, id, label }: { mood: CharacterMood; size?: number; id?: CharacterId; label?: string }) {
+export function Character({
+  mood,
+  size = 64,
+  id,
+  label,
+  track = false,
+  interactive = false,
+  ring = size >= 30,
+  color: colorOverride,
+}: {
+  mood: CharacterMood
+  size?: number
+  id?: CharacterId
+  label?: string
+  track?: boolean
+  interactive?: boolean
+  ring?: boolean
+  /** A colour for the ring and tint instead of the mood's own (e.g. green for a file drop). */
+  color?: string
+}) {
   const chosen = useCharacter()
   const which = id ?? chosen.id
   const reduce = useReducedMotion() ?? false
   const uid = useId().replace(/:/g, '')
+  const ref = useRef<SVGSVGElement>(null)
+  const look = useGaze(ref, track && !reduce && mood !== 'sleeping')
+  const { face, react, handlers } = useReactions(interactive && !reduce)
   const Body = BODIES[which] ?? Orbit
-  const body = bodyMotion(mood)
+  const body = react ? reactionMotion(react) : bodyMotion(mood)
+  const color = colorOverride ?? MOOD_COLOR[mood]
+  const tintId = `tint-${uid}`
   const svg = (
-    <svg className={`character character-${which}`} data-mood={mood} data-character={which} width={size} height={size} viewBox="0 0 100 100" role="img" aria-label={label ?? `${chosen.name}: ${mood}`}>
+    <svg
+      ref={ref}
+      className={`character character-${which}${interactive ? ' interactive' : ''}`}
+      data-mood={mood}
+      data-character={which}
+      data-reaction={react ?? undefined}
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      role="img"
+      aria-label={label ?? `${chosen.name}: ${mood}`}
+      {...handlers}
+    >
       <defs>
         <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="1.6" result="b" />
@@ -276,7 +468,7 @@ export function Character({ mood, size = 64, id, label }: { mood: CharacterMood;
           <stop offset="0.55" stopColor="#000" stopOpacity="0" />
           <stop offset="1" stopColor="#000" stopOpacity="0.14" />
         </linearGradient>
-        <radialGradient id="mochiShade" cx="40%" cy="30%" r="80%">
+        <radialGradient id="puffShade" cx="40%" cy="30%" r="80%">
           <stop offset="0.6" stopColor="#000" stopOpacity="0" />
           <stop offset="1" stopColor="#d9b8a8" stopOpacity="0.45" />
         </radialGradient>
@@ -285,11 +477,17 @@ export function Character({ mood, size = 64, id, label }: { mood: CharacterMood;
           <stop offset="0.6" stopColor="#d9714b" />
           <stop offset="1" stopColor="#8f3a20" />
         </radialGradient>
+        {/* The mood's colour rising from the bottom of the body. */}
+        <linearGradient id={tintId} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0" stopColor={color ?? '#000'} stopOpacity={color ? (which === 'orbit' ? 0.35 : 0.5) : 0} />
+          <stop offset="0.7" stopColor={color ?? '#000'} stopOpacity={0} />
+        </linearGradient>
       </defs>
-      <motion.g key={reduce ? 'still' : mood} animate={reduce ? undefined : body.animate} transition={body.transition} style={{ originX: '50px', originY: '88px' }} data-uid={uid}>
-        <Body mood={mood} still={reduce} />
+      {ring && <Ring mood={mood} still={reduce} color={color} />}
+      <motion.g key={reduce ? 'still' : (react ?? mood)} animate={reduce ? undefined : body.animate} transition={body.transition} style={{ originX: '50px', originY: '88px' }} data-uid={uid}>
+        <Body mood={mood} still={reduce} face={face} look={look} tint={`url(#${tintId})`} />
       </motion.g>
-      {size >= 30 && <Overlay mood={mood} />}
+      {size >= 30 && (react ? <ReactionOverlay r={react} /> : <Overlay mood={mood} />)}
     </svg>
   )
   if (which !== 'orbit') return svg

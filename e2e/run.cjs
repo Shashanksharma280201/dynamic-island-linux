@@ -149,12 +149,16 @@ function hook(input, env = {}) {
     await page.waitForSelector('.card.approval .badge', { timeout: 5000 })
     const first = await page.textContent('.card.approval .code')
     check('approvals answered FIFO with +1 badge', first.includes('first'), first)
+    check('the next approval peeks out below the card', !!(await page.$('.approval-stack')))
+    await sleep(400)
     await shot('04-approval-queue')
-    await page.click('.pill.deny')
+    // Answered from the keyboard, without the island taking focus.
+    const keys = (combo) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'key', combo])
+    keys('ctrl+alt+n')
     await page.waitForFunction(() => document.querySelector('.card.approval .code')?.textContent.includes('second'), null, { timeout: 3000 })
-    await page.click('.pill.allow')
+    keys('ctrl+alt+y')
     const [o1, o2] = await Promise.all([h1, h2])
-    check('deny then allow reach the right hooks', JSON.parse(o1).hookSpecificOutput.decision.behavior === 'deny' && JSON.parse(o2).hookSpecificOutput.decision.behavior === 'allow')
+    check('Ctrl+Alt+N then Ctrl+Alt+Y deny and allow, in order', JSON.parse(o1).hookSpecificOutput.decision.behavior === 'deny' && JSON.parse(o2).hookSpecificOutput.decision.behavior === 'allow')
 
     // 7. "Answer in terminal" → hook prints nothing
     h = hook(input)

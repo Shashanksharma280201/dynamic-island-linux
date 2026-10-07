@@ -1,9 +1,12 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
 import type { Rect } from '@shared/hitbox'
 import { present } from '@shared/present'
-import { spring, contentFade } from '../anim/spring'
+import { spring, pop, contentIn, contentOut, morphSpring, sizeRank } from '../anim/spring'
+import { sound } from '../sound'
+import { useHoverIntent } from './useHoverIntent'
+import { Hello, Peek } from './states/Peek'
 import { IdlePill } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
 import { ApprovalCard } from './states/ApprovalCard'
@@ -18,11 +21,10 @@ import { useVoice } from './voice/useVoice'
 import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
 import { EDGE_MARGIN, islandTop } from '@shared/dock'
-import { useCharacter } from './character/Character'
+import { Character, useCharacter } from './character/Character'
 import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 import type { DocsAdded } from '@shared/docs'
 import type { DocsIncoming } from './hub/DocsView'
-import { DocsAppIcon } from './hub/AppIcons'
 import { errorText } from './hub/common'
 
 /** A tab whose package is turned off. */
@@ -31,15 +33,19 @@ const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).inclu
 /** Files dragged over the island (and not, say, text). */
 const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).includes('Files')
 
-/** What the collapsed island turns into while files are dragged over it. */
-function DropCard() {
+/**
+ * What the island turns into while files are dragged over it: a pocket the
+ * character leans into. Once dropped, it swallows them while they're added.
+ */
+function DropCard({ count, adding }: { count: number; adding: boolean }) {
+  const files = count > 1 ? `${count} files` : count === 1 ? '1 file' : 'files'
   return (
-    <div className="card drop-card">
-      <DocsAppIcon />
-      <div>
-        <div className="title">Drop to add to Documents</div>
+    <div className={`card drop-card${adding ? ' adding' : ''}`}>
+      <div className="drop-text">
+        <div className="title">{adding ? `Adding ${files}…` : `Drop ${files} to add to Documents`}</div>
         <div className="caption">PDFs, Word, Excel, slides or text</div>
       </div>
+      <Character mood={adding ? 'working' : 'listening'} size={46} color="#30d158" />
     </div>
   )
 }
@@ -86,16 +92,24 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Drop files on the island to add them to Documents (when it's turned on).
   const docsOn = !!window.island.docs && (!pkgTabs || pkgTabs.includes('docs'))
   const [dropping, setDropping] = useState(false)
+  const [dragCount, setDragCount] = useState(0)
+  // Dropped files being added: the character swallows them meanwhile.
+  const [adding, setAdding] = useState(0)
   const [incoming, setIncoming] = useState<DocsIncoming | null>(null)
   const lastOver = useRef(0)
   const dropFiles = async (files: File[]) => {
     const paths = files.map((f) => window.island.docs.pathFor(f)).filter(Boolean)
+    setAdding(files.length)
+    sound('gulp')
+    const shown = new Promise((ok) => setTimeout(ok, 450)) // long enough to see the gulp
     let r: DocsAdded
     try {
       r = paths.length ? await window.island.docs.add(paths) : { added: [], skipped: files.map((f) => ({ path: f.name, why: 'not a file on this computer' })) }
     } catch (e) {
       r = { added: [], skipped: [{ path: 'The files', why: errorText(e) }] }
     }
+    await shown
+    setAdding(0)
     setIncoming({ ids: r.added.map((f) => f.id), skipped: r.skipped, at: Date.now() })
     setTab('docs')
     pinned.current = true // the pointer was busy dragging: stay open until it visits
@@ -114,6 +128,7 @@ export function Island({ activities }: { activities: Activity[] }) {
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
           lastOver.current = performance.now()
+          setDragCount(e.dataTransfer.items?.length ?? 0)
           setDropping(true)
         },
         // Moving between parts of the island leaves one and enters (then drags
@@ -170,14 +185,28 @@ export function Island({ activities }: { activities: Activity[] }) {
       }),
     [],
   )
+  // Hello, once a day: a short introduction that hover or a click ends.
+  const [hello, setHello] = useState<{ first: boolean; tip: boolean } | null>(null)
+  useEffect(
+    () =>
+      window.island.onGreet?.((g) => {
+        setHello({ first: g.first, tip: false })
+        if (g.first) setTimeout(() => setHello((h) => h && { ...h, tip: true }), 1600)
+        setTimeout(() => setHello(null), g.first ? 3800 : 2400)
+      }),
+    [],
+  )
   // The main process's cursor loop is the source of truth for hover: DOM
   // mouseleave is not delivered once the window turns click-through.
   useEffect(() => window.island.onHover(setHover), [])
 
-  const p = present(activities, { expanded: hover })
+  // Hover intent: a short rest peeks, a longer one opens the full card.
+  const stage = useHoverIntent(hover && !panel && !dropping)
+  const p = present(activities, { expanded: stage === 'full' })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
+  const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
 
@@ -211,6 +240,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   )
   useEffect(() => {
     if (hover) pinned.current = false
+    if (hover) setHello(null)
   }, [hover])
   useEffect(() => {
     if (!panel) setTyping(false)
@@ -276,14 +306,46 @@ export function Island({ activities }: { activities: Activity[] }) {
 
   const key = showPanel
     ? 'panel'
-    : dropping
+    : dropping || adding
       ? 'drop'
-      : p.mode === 'idle'
-      ? 'idle'
-      : `${p.mode}:${p.primary.kind}:${p.primary.id}`
+      : peeking
+        ? `peek:${p.mode === 'idle' ? 'idle' : p.primary.id}`
+        : hello && p.mode === 'idle'
+          ? `hello:${hello.tip ? 'tip' : 'hi'}`
+          : p.mode === 'idle'
+            ? 'idle'
+            : `${p.mode}:${p.primary.kind}:${p.primary.id}`
+
+  // Growing uses the open spring, shrinking the close one (no bounce).
+  const shown = useRef({ key, spring: spring as ReturnType<typeof morphSpring> })
+  if (shown.current.key !== key) shown.current = { key, spring: morphSpring(shown.current.key, key) }
+  const shell = shown.current.spring
+
+  // The island's little sounds (when turned on), one per change of state.
+  const heard = useRef(key)
+  useEffect(() => {
+    const was = heard.current
+    heard.current = key
+    if (was === key) return
+    if (key.startsWith('expanded:approval:')) return sound('ask')
+    if (key === 'expanded:claude:claude-done' && p.mode === 'expanded' && p.primary.kind === 'claude') return sound(p.primary.run.phase === 'error' ? 'error' : 'done')
+    if (key.startsWith('peek:')) return sound('peek')
+    if (sizeRank(key) > sizeRank(was)) sound('open')
+    else if (sizeRank(key) < sizeRank(was) && !was.startsWith('peek:')) sound('close')
+  }, [key]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Content hand-off: the old content leaves fast while the new one starts a
+  // little later, so they overlap. Blur only on small content: on the panel it
+  // would repaint the whole panel every frame.
+  const reduce = useReducedMotion() ?? false
+  const toward = atTop ? { y: -6 } : { x: side === 'left' ? -6 : 6 }
+  const soft = key !== 'panel' && !reduce
+  const enter = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, ...toward, ...(soft ? { filter: 'blur(4px)' } : {}) }
+  const leave = reduce ? { opacity: 0, transition: { duration: 0.16 } } : { opacity: 0, scale: 0.97, ...(soft ? { filter: 'blur(4px)' } : {}), transition: contentOut }
 
   const onClick = () => {
     if (consumeDragClick()) return
+    setHello(null)
     if (p.mode !== 'idle' && !showPanel) {
       if (p.primary.kind === 'notification') return window.island.dismiss(p.primary.id)
       if (p.primary.kind === 'message') return // has its own buttons
@@ -311,24 +373,26 @@ export function Island({ activities }: { activities: Activity[] }) {
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
           border-radius for it, so the corners stay round while it grows. */}
-      <motion.div className="island" layout transition={spring} style={{ borderRadius: 26 }}>
+      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
             layout
             // Content grows out of / sinks back into the docked edge.
             style={{ transformOrigin: atTop ? 'center top' : side === 'left' ? 'left center' : 'right center' }}
-            // Opacity and transform only: a blur filter repaints the whole
-            // panel every frame and stutters on big content like Chats.
-            initial={{ opacity: 0, scale: 0.92, ...(atTop ? { y: -8 } : { x: side === 'left' ? -8 : 8 }) }}
-            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, ...(atTop ? { y: -8 } : { x: side === 'left' ? -8 : 8 }) }}
-            transition={contentFade}
+            initial={enter}
+            animate={soft ? { opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' } : { opacity: 1, scale: 1, x: 0, y: 0 }}
+            transition={reduce ? { duration: 0.16 } : contentIn}
+            exit={leave}
           >
             {showPanel ? (
               <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
-            ) : dropping ? (
-              <DropCard />
+            ) : dropping || adding ? (
+              <DropCard count={adding || dragCount} adding={adding > 0} />
+            ) : peeking ? (
+              <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} />
+            ) : hello && p.mode === 'idle' ? (
+              <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
               <IdlePill />
             ) : p.primary.kind === 'approval' ? (
@@ -371,6 +435,23 @@ export function Island({ activities }: { activities: Activity[] }) {
       </motion.div>
 
       <AnimatePresence>
+        {isApproval && !showPanel && !atTop && p.mode === 'expanded' && p.queued > 0 && (
+          // More approvals waiting: the edges of the next cards peek out below.
+          <motion.div
+            key="stack"
+            className="approval-stack-wrap"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={pop}
+          >
+            <span className="approval-stack" />
+            {p.queued > 1 && <span className="approval-stack second" />}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
         {showPanel && (
           // Section icons float beside the panel as their own glass pill.
           <motion.div
@@ -381,7 +462,8 @@ export function Island({ activities }: { activities: Activity[] }) {
             // A short fixed fade out: the rail must be gone promptly, or its
             // (invisible) box keeps the island's clickable area large.
             exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16, transition: { duration: 0.16 } }}
-            transition={spring}
+            // Follows the panel a beat later.
+            transition={{ ...pop, delay: 0.04 }}
           >
             <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>

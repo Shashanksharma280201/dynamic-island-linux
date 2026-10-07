@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { setSoundsOn } from './sound'
 import type { Activity } from '@shared/types'
 import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { Island } from './island/Island'
@@ -26,7 +27,8 @@ export function App() {
   )
   useEffect(
     () =>
-      window.island.onAppearance(({ appearance, blur }) => {
+      window.island.onAppearance(({ appearance, blur, sounds }) => {
+        setSoundsOn(!!sounds)
         document.documentElement.dataset.appearance = appearance
         document.documentElement.dataset.blur = blur ? 'yes' : 'no'
       }),
