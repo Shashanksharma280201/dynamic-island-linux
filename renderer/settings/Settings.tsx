@@ -349,6 +349,12 @@ export function Settings() {
             onChange={(v) => general.run(() => window.settings.setFrosted(v))}
           />
         )}
+        <Toggle
+          label="Sounds"
+          hint="Soft tones when the island opens, asks for approval, or Claude finishes. Quiet, and never more than one at a time"
+          on={s.sounds}
+          onChange={(v) => general.run(() => window.settings.setSounds(v))}
+        />
         <div className="toggle-row">
           <div>
             <div>Island position</div>
@@ -377,6 +383,15 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setShortcut(v))}
         />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
+        <div className="toggle-row">
+          <div>
+            <div>Uninstall</div>
+            <div className="hint">Removes the app, starting at login and its Claude Code setup. You choose whether your settings and data go too</div>
+          </div>
+          <button className="secondary" onClick={() => general.run(() => window.settings.uninstall())}>
+            Uninstall…
+          </button>
+        </div>
         {general.error && <p className="error">{general.error}</p>}
       </section>
 

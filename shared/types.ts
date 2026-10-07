@@ -108,6 +108,8 @@ export const IPC = {
   SYS_CMD: 'island:sys-cmd', // renderer -> main: SysCmd
   PANEL: 'island:panel', // renderer -> main: boolean (Control Center open)
   HOVER: 'island:hover', // main -> renderer: boolean (cursor over the island)
+  CURSOR: 'island:cursor', // main -> renderer: { x, y } pointer in window coords (eyes follow it)
+  GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
   FOCUS: 'island:focus', // renderer -> main: boolean (take keyboard focus for typing)
@@ -119,7 +121,7 @@ export const IPC = {
   DOCK_SET: 'island:dock-set', // renderer -> main: Dock (drag released)
   DOCK_PREVIEW: 'island:dock-preview', // renderer -> main: Side (dragged across the middle)
   DRAG: 'island:drag', // renderer -> main: boolean (keep interactive while dragging)
-  APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur }
+  APPEARANCE: 'island:appearance', // main -> renderer: { appearance, blur, sounds }
   TOGGLE_PANEL: 'island:toggle-panel', // main -> renderer: global shortcut pressed
   FOCUS_LOST: 'island:focus-lost', // main -> renderer: keyboard focus moved to another app
   BACKDROP: 'island:backdrop', // main -> renderer: blurred-glass snapshot (data URL) or null
@@ -267,6 +269,7 @@ export type SettingsState = {
   appearance: 'glass' | 'solid'
   shortcut: boolean
   frosted: boolean
+  sounds: boolean
   /** Frosted snapshots need X11 screen capture (not on Wayland). */
   frostedAvailable: boolean
   notesFolder: string
