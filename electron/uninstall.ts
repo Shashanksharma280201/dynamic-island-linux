@@ -46,6 +46,15 @@ export function dataPaths(o: { userData: string; platform: NodeJS.Platform; home
   return paths
 }
 
+/**
+ * The app menu entry and icon that the install script adds next to an
+ * AppImage (Uninstall removes them with it). Pure.
+ */
+export function appImageExtras(o: { home: string; dataHome?: string }): string[] {
+  const data = o.dataHome || posix.join(o.home, '.local', 'share')
+  return [posix.join(data, 'applications', 'dynamic-island-linux.desktop'), posix.join(data, 'icons', 'hicolor', '512x512', 'apps', 'dynamic-island-linux.png')]
+}
+
 const sh = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`
 const ps = (s: string) => `'${s.replace(/'/g, "''")}'`
 
@@ -63,6 +72,8 @@ export function finishScript(o: {
   remove: string[]
   kind: InstallKind
   appImage?: string
+  /** Files that came with the AppImage (its menu entry and icon). */
+  appImageExtras?: string[]
   uninstaller?: string
   productName?: string
   debPackage?: string
@@ -106,7 +117,7 @@ export function finishScript(o: {
     ...o.remove.filter((p) => o.platform === 'darwin' && p.endsWith('.plist')).map((p) => `defaults delete ${sh(p.slice(0, -'.plist'.length))} 2>/dev/null`),
     ...o.remove.map((p) => `rm -rf ${sh(p)}`),
     ...o.remove.filter((p) => o.platform === 'darwin' && p.endsWith('.plist')).flatMap((p) => ['sleep 2', `rm -f ${sh(p)}`]),
-    ...(o.kind === 'appimage' && o.appImage ? [`rm -f ${sh(o.appImage)}`] : []),
+    ...(o.kind === 'appimage' && o.appImage ? [`rm -f ${[o.appImage, ...(o.appImageExtras ?? [])].map(sh).join(' ')}`] : []),
     // A system package needs the administrator: the desktop asks for the password.
     ...(o.kind === 'deb' && o.debPackage ? [`command -v pkexec >/dev/null && pkexec apt-get remove -y ${sh(o.debPackage)}`] : []),
   ]
@@ -180,6 +191,7 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
     remove,
     kind,
     appImage: process.env.APPIMAGE,
+    appImageExtras: appImageExtras({ home: homedir(), dataHome: process.env.XDG_DATA_HOME }),
     uninstaller: existsSync(uninstaller) ? uninstaller : undefined,
     productName: d.productName,
     debPackage: d.debPackage,

@@ -1,0 +1,214 @@
+name: Install scripts
+
+# Installs a published release the way the README tells people to, with the
+# one-line install scripts, on Linux (.deb and AppImage), macOS and Windows.
+# Then checks that the app starts, and removes it again with its own
+# Uninstall. Runs after every release (called by release.yml), when the
+# scripts change, or by hand for any release.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to install (empty for the latest)
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      tag:
+        type: string
+        required: false
+        default: ''
+  push:
+    paths:
+      - scripts/install.sh
+      - scripts/install.ps1
+      - .github/workflows/install-test.yml
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    # Which release, and whether it's new enough to have Uninstall (0.2.0+).
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.r.outputs.tag }}
+      full: ${{ steps.r.outputs.full }}
+    steps:
+      - id: r
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          api="https://api.github.com/repos/${{ github.repository }}/releases"
+          if [ -n "$TAG" ]; then url="$api/tags/$TAG"; else url="$api/latest"; fi
+          tag=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" "$url" | jq -r .tag_name)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # v0.1.0 came before Uninstall and the fixed macOS signature: only
+          # check that it installs.
+          if [ "$tag" = v0.1.0 ]; then echo "full=false" >> "$GITHUB_OUTPUT"; else echo "full=true" >> "$GITHUB_OUTPUT"; fi
+          echo "Testing $tag"
+
+  linux:
+    needs: release
+    strategy:
+      fail-fast: false
+      matrix:
+        format: [deb, appimage]
+    runs-on: ubuntu-latest
+    env:
+      DI_VERSION: ${{ needs.release.outputs.tag }}
+      DI_FORMAT: ${{ matrix.format }}
+      DI_NO_LAUNCH: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install with the one-line script
+        # Piped into bash, exactly like `curl … | bash`.
+        run: cat scripts/install.sh | bash
+      - name: It's installed
+        run: |
+          if [ "$DI_FORMAT" = deb ]; then
+            dpkg-query -W -f='${Package} ${Version}\n' dynamic-island-linux
+            command -v dynamic-island-linux
+          else
+            test -x ~/.local/bin/DynamicIsland.AppImage
+            cat ~/.local/share/applications/dynamic-island-linux.desktop
+            test -s ~/.local/share/icons/hicolor/512x512/apps/dynamic-island-linux.png
+          fi
+      - name: It starts
+        if: needs.release.outputs.full == 'true'
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq xvfb dbus-x11 >/dev/null
+          # Distros without Ubuntu's user-namespace lock-down are where the
+          # AppImage is used; the .deb has its own setuid sandbox.
+          [ "$DI_FORMAT" = appimage ] && sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
+          echo "DISPLAY=:99" >> "$GITHUB_ENV"
+          export DISPLAY=:99
+          sleep 2
+          if [ "$DI_FORMAT" = deb ]; then
+            cmd=dynamic-island-linux
+          else
+            # The menu entry's command, exactly as the app menu runs it.
+            cmd=$(sed -n 's/^Exec=//p' ~/.local/share/applications/dynamic-island-linux.desktop)
+          fi
+          echo "Starting: $cmd"
+          eval "dbus-launch --exit-with-session $cmd" > island.log 2>&1 &
+          sleep 15
+          # Its window's renderer runs once the island is up.
+          echo "--- processes:"; pgrep -af -- '--type=renderer' || true
+          pgrep -f -- '--type=renderer' >/dev/null || { echo "--- it didn't start:"; cat island.log; exit 1; }
+      - name: Uninstall removes it
+        if: needs.release.outputs.full == 'true'
+        run: |
+          if [ "$DI_FORMAT" = deb ]; then app=dynamic-island-linux; else app="$HOME/.local/bin/DynamicIsland.AppImage"; export APPIMAGE_EXTRACT_AND_RUN=1; fi
+          test -d ~/.config/dynamic-island-linux
+          dbus-launch --exit-with-session "$app" --uninstall --yes --delete-data || true
+          for i in $(seq 1 40); do pgrep -f -- '--type=renderer' >/dev/null || break; sleep 1; done
+          sleep 3
+          echo "--- what the uninstall's last step did:"; cat /tmp/dynamic-island-uninstall.log 2>/dev/null || true
+          failed=0
+          check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; failed=1; fi; }
+          check "not running any more" '! pgrep -f -- "--type=renderer" >/dev/null'
+          check "settings and data removed" '[ ! -e ~/.config/dynamic-island-linux ]'
+          if [ "$DI_FORMAT" = deb ]; then
+            # Removing a system package needs the password (pkexec); there's
+            # nobody to type it here, so do that part by hand.
+            sudo apt-get remove -y -qq dynamic-island-linux >/dev/null
+            check "the package is gone" '! dpkg -s dynamic-island-linux 2>/dev/null | grep -q "^Status: install ok installed"'
+          else
+            check "the AppImage is gone" '[ ! -e ~/.local/bin/DynamicIsland.AppImage ]'
+            check "its menu entry is gone" '[ ! -e ~/.local/share/applications/dynamic-island-linux.desktop ]'
+            check "its icon is gone" '[ ! -e ~/.local/share/icons/hicolor/512x512/apps/dynamic-island-linux.png ]'
+          fi
+          exit $failed
+
+  macos:
+    needs: release
+    runs-on: macos-latest
+    env:
+      DI_VERSION: ${{ needs.release.outputs.tag }}
+      DI_NO_LAUNCH: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install with the one-line script
+        run: cat scripts/install.sh | bash
+      - name: It's installed
+        run: |
+          APP="/Applications/Dynamic Island.app"
+          test -d "$APP"
+          /usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist"
+          # No quarantine flag, so no "Open Anyway" step for the user.
+          if xattr "$APP" | grep -q com.apple.quarantine; then echo "it's quarantined"; exit 1; fi
+      - name: Its signature is valid and it starts
+        if: needs.release.outputs.full == 'true'
+        run: |
+          APP="/Applications/Dynamic Island.app"
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          open "$APP"
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null && break; sleep 1; done
+          sleep 8
+          pgrep -af "Dynamic Island.app/Contents/MacOS/"
+      - name: Uninstall removes it
+        if: needs.release.outputs.full == 'true'
+        run: |
+          APP="/Applications/Dynamic Island.app"
+          "$APP/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data || true
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null || break; sleep 1; done
+          sleep 6
+          failed=0
+          check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; failed=1; fi; }
+          check "app removed from Applications" '[ ! -e "$APP" ]'
+          check "app is in the Trash" 'ls ~/.Trash | grep -q "Dynamic Island"'
+          check "settings and data removed" '[ ! -e ~/Library/Application\ Support/dynamic-island-linux ]'
+          check "not running any more" '! pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
+          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)dynamic-island-uninstall.log" 2>/dev/null || true
+          exit $failed
+
+  windows:
+    needs: release
+    runs-on: windows-latest
+    env:
+      DI_VERSION: ${{ needs.release.outputs.tag }}
+      DI_NO_LAUNCH: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install with the one-line script (Windows PowerShell)
+        # The PowerShell that comes with Windows (5.1), the way the README
+        # runs it: the script's text piped into Invoke-Expression.
+        shell: powershell
+        run: Get-Content scripts\install.ps1 -Raw | Invoke-Expression
+      - name: It's installed
+        shell: pwsh
+        run: |
+          $entry = Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*' | Select-Object -First 1
+          if (-not $entry) { throw "not in Installed apps" }
+          "$($entry.DisplayName) $($entry.DisplayVersion)"
+          $dir = Split-Path ([regex]::Match($entry.UninstallString, '"([^"]+)"').Groups[1].Value)
+          $exe = Get-ChildItem $dir -Filter *.exe | Where-Object Name -notlike 'Uninstall*' | Select-Object -First 1 -ExpandProperty FullName
+          if (-not $exe) { throw "no app in $dir" }
+          "APP_EXE=$exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "APP_DIR=$dir" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: It starts
+        if: needs.release.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          Start-Process $env:APP_EXE
+          Start-Sleep 12
+          Get-Process DynamicIsland | Select-Object -First 1 Id, ProcessName
+      - name: Uninstall removes it
+        if: needs.release.outputs.full == 'true'
+        shell: pwsh
+        run: |
+          Start-Process -FilePath $env:APP_EXE -ArgumentList '--uninstall', '--yes', '--delete-data' -Wait
+          for ($i = 0; $i -lt 60; $i++) { if (-not (Test-Path $env:APP_EXE) -and -not (Get-Process DynamicIsland -ErrorAction SilentlyContinue)) { break }; Start-Sleep 1 }
+          Start-Sleep 3
+          $failed = $false
+          function Check($name, $ok) { if ($ok) { Write-Host "ok: $name" } else { Write-Host "FAILED: $name"; $script:failed = $true } }
+          Check "app removed" (-not (Test-Path $env:APP_EXE))
+          Check "settings and data removed" (-not (Test-Path "$env:APPDATA\dynamic-island-linux"))
+          Check "not in Installed apps" (-not (Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object DisplayName -like 'Dynamic Island*'))
+          Check "not running any more" (-not (Get-Process DynamicIsland -ErrorAction SilentlyContinue))
+          Write-Host "--- what the uninstall's last step did:"
+          Get-Content (Join-Path $env:TEMP 'dynamic-island-uninstall.log') -ErrorAction SilentlyContinue
+          if ($failed) { exit 1 }

@@ -1,19 +1,26 @@
 name: Release
 
 # Builds the installers on each OS, from that OS's branch (main for Linux,
-# mac, windows), and publishes them as one GitHub release. Run it from the
-# Actions tab (Run workflow, with the version tag) or by pushing a v* tag.
+# mac, windows), and publishes them as one GitHub release with checksums and
+# notes from CHANGELOG.md. Then installs the published release with the
+# one-line install scripts on every OS to check it. Run it from the Actions
+# tab (Run workflow, with the version tag) or by pushing a v* tag. First bump
+# "version" in package.json (on main, then merge into mac and windows) and add
+# the version's section to CHANGELOG.md.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Version tag, e.g. v0.1.0
+        description: Version tag, e.g. v0.2.0
         required: true
   push:
     tags: ['v*']
 
 permissions:
   contents: write
+
+env:
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -36,6 +43,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
+      - name: The version matches the tag
+        shell: bash
+        run: |
+          have=$(node -p "require('./package.json').version")
+          if [ "v$have" != "$TAG" ]; then
+            echo "::error::package.json on ${{ matrix.branch }} says $have, but this release is $TAG. Bump the version (and merge it into mac and windows) first."
+            exit 1
+          fi
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -58,30 +73,90 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/download-artifact@v4
         with:
           path: installers
           merge-multiple: true
-      - run: ls -la installers
+      - name: Name the files for people, and checksum them
+        run: |
+          VER="${TAG#v}"
+          cd installers
+          ls -la
+          for f in *; do
+            case "$f" in
+              *"$VER"*) ;;
+              *) echo "::error::$f wasn't built as version $VER"; exit 1 ;;
+            esac
+            case "$f" in
+              *-amd64.deb | *-x86_64.AppImage) new="$f" ;;
+              *-arm64.dmg) new="dynamic-island-mac-MSeries-$VER-arm64.dmg" ;;
+              *-x64.dmg) new="dynamic-island-mac-intel-$VER-x64.dmg" ;;
+              *.exe) new="dynamic-island-windows-$VER-x64.exe" ;;
+              *) echo "::error::unexpected file: $f"; exit 1 ;;
+            esac
+            if [ "$f" != "$new" ]; then mv -v "$f" "$new"; fi
+          done
+          for f in "dynamic-island-linux-$VER-amd64.deb" "dynamic-island-linux-$VER-x86_64.AppImage" \
+            "dynamic-island-mac-MSeries-$VER-arm64.dmg" "dynamic-island-mac-intel-$VER-x64.dmg" \
+            "dynamic-island-windows-$VER-x64.exe"; do
+            [ -s "$f" ] || { echo "::error::$f is missing"; exit 1; }
+          done
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+      - name: Release notes from CHANGELOG.md
+        run: |
+          VER="${TAG#v}"
+          new=$(awk -v v="$VER" '$0 ~ "^## " v "( |$)" { f = 1; next } /^## / && f { exit } f' CHANGELOG.md)
+          if [ -z "$(printf '%s' "$new" | tr -d '[:space:]')" ]; then
+            echo "::error::CHANGELOG.md has no section for $VER (a heading like '## $VER (date)')"
+            exit 1
+          fi
+          dl="https://github.com/${{ github.repository }}/releases/download/$TAG"
+          raw="https://raw.githubusercontent.com/${{ github.repository }}/main/scripts"
+          {
+            echo "## What's new"
+            echo
+            printf '%s\n' "$new"
+            echo
+            echo "## Install"
+            echo
+            echo "**One command** downloads the right installer for your computer, checks it, installs it and starts it:"
+            echo
+            echo "- **Linux or Mac**, in Terminal: \`curl -fsSL $raw/install.sh | bash\`"
+            echo "- **Windows**, in PowerShell: \`irm $raw/install.ps1 | iex\`"
+            echo
+            echo "**Or download the file for your computer:**"
+            echo
+            echo "| Your computer | File |"
+            echo "|---|---|"
+            echo "| Ubuntu, Debian | [dynamic-island-linux-$VER-amd64.deb]($dl/dynamic-island-linux-$VER-amd64.deb), then \`sudo apt install ./dynamic-island-linux-$VER-amd64.deb\` |"
+            echo "| Any Linux (X11) | [dynamic-island-linux-$VER-x86_64.AppImage]($dl/dynamic-island-linux-$VER-x86_64.AppImage), then \`chmod +x\` it and run it |"
+            echo "| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-$VER-arm64.dmg]($dl/dynamic-island-mac-MSeries-$VER-arm64.dmg) |"
+            echo "| Mac with Intel | [dynamic-island-mac-intel-$VER-x64.dmg]($dl/dynamic-island-mac-intel-$VER-x64.dmg) |"
+            echo "| Windows 10 or 11 | [dynamic-island-windows-$VER-x64.exe]($dl/dynamic-island-windows-$VER-x64.exe) |"
+            echo
+            echo "The installers aren't signed. **Mac:** open the \`.dmg\` and drag Dynamic Island to Applications; the first time, open **System Settings → Privacy & Security** and click **Open Anyway**. **Windows:** if SmartScreen warns, click **More info**, then **Run anyway**. The one-command install skips both."
+            echo
+            echo "\`SHA256SUMS.txt\` lists each file's checksum: \`sha256sum -c SHA256SUMS.txt --ignore-missing\` (Mac: \`shasum -a 256 -c SHA256SUMS.txt --ignore-missing\`)."
+            echo
+            echo "**To remove it**, open the island's menu and choose **Uninstall Dynamic Island…**. The [README](https://github.com/${{ github.repository }}#readme) has a video tour, the steps to build it yourself, and how to connect Claude Code, WhatsApp, mail and Spotify."
+          } > notes.md
+          cat notes.md
       - uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.tag || github.ref_name }}
+          tag_name: ${{ env.TAG }}
           target_commitish: main
-          name: Dynamic Island ${{ inputs.tag || github.ref_name }}
+          name: Dynamic Island ${{ env.TAG }}
+          body_path: notes.md
           files: installers/*
-          body: |
-            Dynamic Island for Linux, macOS and Windows. Download the file for your computer:
 
-            | Your computer | File |
-            |---|---|
-            | Ubuntu, Debian | `dynamic-island-linux-…-amd64.deb`: `sudo apt install ./dynamic-island-linux-*-amd64.deb` |
-            | Any Linux (X11) | `dynamic-island-linux-…-x86_64.AppImage`: `chmod +x` it, then run it |
-            | Mac with Apple silicon (M1 and newer) | `dynamic-island-linux-…-arm64.dmg` |
-            | Mac with Intel | `dynamic-island-linux-…-x64.dmg` |
-            | Windows 10 or 11 | `dynamic-island-linux-…-x64.exe` |
-
-            **Mac:** open the `.dmg` and drag Dynamic Island to Applications. The app isn't signed, so the first time macOS blocks it: open **System Settings → Privacy & Security** and click **Open Anyway**.
-
-            **Windows:** run the `.exe`. The installer isn't signed, so SmartScreen may warn: click **More info**, then **Run anyway**.
-
-            Each installer is built from its branch (`main`, `mac`, `windows`). The [README](https://github.com/shashanksharma280201/dynamic-island-linux#readme) has a video tour, the steps to build it yourself, and how to connect Claude Code, WhatsApp, mail and Spotify.
+  verify:
+    # Install the release that was just published, on every OS, the way the
+    # README says to.
+    needs: release
+    uses: ./.github/workflows/install-test.yml
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
