@@ -1,5 +1,7 @@
 # Dynamic Island for Linux
 
+**[Download Dynamic Island v0.2.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.2.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
+
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule on
 the edge of your screen (right side by default, drag it anywhere along the left or
 right edge) that morphs with spring physics to show what's going
@@ -814,7 +816,9 @@ with the tag (`v0.3.0`). It builds the installers on Linux, macOS and Windows,
 names them, publishes them as a pre-release with `SHA256SUMS.txt` and notes
 from the changelog, then installs it with the one-line scripts on all three
 systems, checks that it starts, and uninstalls it again. Only then does it
-become the latest release, the one people download.
+become the latest release, the one people download. Then point the release
+links at the top of this README and in [Download](#download) at the new
+version.
 
 ### Project layout
 
