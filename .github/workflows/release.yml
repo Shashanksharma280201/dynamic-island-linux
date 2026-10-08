@@ -81,6 +81,8 @@ jobs:
           path: installers
           merge-multiple: true
       - name: Name the files for people, and checksum them
+        # scripts/install.sh and install.ps1 download the files by these
+        # names: change them together.
         run: |
           VER="${TAG#v}"
           cd installers
