@@ -21,8 +21,10 @@
 set -euo pipefail
 
 REPO="${DI_REPO:-shashanksharma280201/dynamic-island-linux}"
-# Overridable for tests (a local stand-in for GitHub).
-API="${DI_API:-https://api.github.com}"
+# Plain github.com pages and links, not the GitHub API: the API answers only
+# 60 lookups an hour for everyone behind one internet address. Overridable for
+# tests (a local stand-in for GitHub).
+WEB="${DI_GITHUB:-https://github.com}"
 ASSETS="${DI_ASSETS:-https://raw.githubusercontent.com/$REPO/main/assets}"
 
 say() { printf '\033[1m==>\033[0m %s\n' "$*"; }
@@ -32,37 +34,64 @@ fail() {
   exit 1
 }
 
-# Download URLs of the release's files, one per line.
-release_urls() {
-  local api="$API/repos/$REPO/releases/latest"
-  if [ -n "${DI_VERSION:-}" ]; then api="$API/repos/$REPO/releases/tags/$DI_VERSION"; fi
-  curl -fsSL -H 'Accept: application/vnd.github+json' "$api" |
-    grep -o '"browser_download_url": *"[^"]*"' |
-    sed 's/.*"\(http[^"]*\)"$/\1/'
+# Which release to install: DI_VERSION, or the latest (github.com sends
+# .../releases/latest on to that release's page). Sets TAG, VER and DL.
+find_release() {
+  local code loc out
+  if [ -n "${DI_VERSION:-}" ]; then
+    TAG="v${DI_VERSION#v}"
+    code="$(curl -sS -I -o /dev/null -w '%{http_code}' "$WEB/$REPO/releases/tag/$TAG")" ||
+      fail "Couldn't reach GitHub. Check your internet connection and try again."
+    case "$code" in
+      200) ;;
+      404) fail "There's no Dynamic Island release called $TAG (see $WEB/$REPO/releases)." ;;
+      *) fail "Couldn't look up the $TAG release (GitHub answered $code). Try again in a minute." ;;
+    esac
+  else
+    out="$(curl -sS -I -o /dev/null -w '%{http_code} %{redirect_url}' "$WEB/$REPO/releases/latest")" ||
+      fail "Couldn't reach GitHub. Check your internet connection and try again."
+    code="${out%% *}"
+    loc="${out#* }"
+    case "$code $loc" in
+      3??\ */releases/tag/?*) TAG="${loc##*/releases/tag/}" ;;
+      3??\ * | 404\ *) fail "Couldn't find the latest release (see $WEB/$REPO/releases)." ;;
+      *) fail "Couldn't look up the latest release (GitHub answered $code). Try again in a minute." ;;
+    esac
+  fi
+  VER="${TAG#v}"
+  DL="$WEB/$REPO/releases/download/$TAG"
 }
-
-# The first URL whose file name matches a pattern (extended regex).
-pick() { printf '%s\n' "$URLS" | grep -E -e "$1" | head -n 1 || true; }
 
 sha256() {
   if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
 }
 
-# Download one file of the release into $TMP and check its checksum.
+# Download one file of the release into $TMP (sets FILE), and check it against
+# the release's SHA256SUMS.txt. Every release names its files the same way.
 fetch() {
-  local url="$1" name
-  name="$(basename "$url")"
+  local name="$1" code want=""
+  code="$(curl -sSL -o "$TMP/SHA256SUMS.txt" -w '%{http_code}' "$DL/SHA256SUMS.txt")" ||
+    fail "Couldn't download SHA256SUMS.txt. Check your internet connection and try again."
+  case "$code" in
+    200)
+      want="$(awk -v n="$name" '$2 == n || $2 == "*" n { print $1; exit }' "$TMP/SHA256SUMS.txt")"
+      [ -n "$want" ] || fail "$name is not listed in the release's SHA256SUMS.txt."
+      ;;
+    404) ;; # releases before 0.2.0 have none
+    *) fail "Couldn't download SHA256SUMS.txt (GitHub answered $code). Try again in a minute." ;;
+  esac
   say "Downloading $name"
-  curl -fL --progress-bar -o "$TMP/$name" "$url"
-  local sums
-  sums="$(pick '/SHA256SUMS\.txt$')"
-  if [ -z "$sums" ]; then
+  code="$(curl -L --progress-bar -o "$TMP/$name" -w '%{http_code}' "$DL/$name")" ||
+    fail "Couldn't download $name. Check your internet connection and try again."
+  case "$code" in
+    200) ;;
+    404) fail "The $TAG release has no $name." ;;
+    *) fail "Couldn't download $name (GitHub answered $code). Try again in a minute." ;;
+  esac
+  if [ -z "$want" ]; then
     note "This release has no SHA256SUMS.txt, so the download can't be checked."
   else
-    curl -fsSL -o "$TMP/SHA256SUMS.txt" "$sums"
-    local want got
-    want="$(grep -E " \*?$name\$" "$TMP/SHA256SUMS.txt" | cut -d' ' -f1 || true)"
-    [ -n "$want" ] || fail "$name is not listed in the release's SHA256SUMS.txt."
+    local got
     got="$(sha256 "$TMP/$name")"
     [ "$want" = "$got" ] || fail "$name doesn't match its checksum (expected $want, got $got). Try again; if it keeps failing, download it from the releases page."
     note "Checksum OK."
@@ -102,10 +131,7 @@ launch() {
 }
 
 install_deb() {
-  local url
-  url="$(pick '-amd64\.deb$')"
-  [ -n "$url" ] || fail "This release has no .deb. Try DI_FORMAT=appimage."
-  fetch "$url"
+  fetch "dynamic-island-linux-$VER-amd64.deb"
   # apt reads the file as an unprivileged user: let it.
   chmod 755 "$TMP"
   chmod 644 "$FILE"
@@ -116,10 +142,8 @@ install_deb() {
 }
 
 install_appimage() {
-  local url data bin apps icons app exec
-  url="$(pick '-x86_64\.AppImage$')"
-  [ -n "$url" ] || fail "This release has no AppImage."
-  fetch "$url"
+  local data bin apps icons app exec
+  fetch "dynamic-island-linux-$VER-x86_64.AppImage"
   bin="${XDG_BIN_HOME:-$HOME/.local/bin}"
   data="${XDG_DATA_HOME:-$HOME/.local/share}"
   apps="$data/applications"
@@ -165,18 +189,15 @@ install_linux() {
 }
 
 install_mac() {
-  local arch pattern url mnt app dest
+  local arch mnt app dest
   arch="$(uname -m)"
   # A Terminal running under Rosetta reports x86_64 on Apple silicon.
   if [ "$(sysctl -n sysctl.proc_translated 2>/dev/null || echo 0)" = 1 ]; then arch=arm64; fi
   case "$arch" in
-    arm64) pattern='-arm64\.dmg$' ;;
-    x86_64) pattern='-x64\.dmg$' ;;
+    arm64) fetch "dynamic-island-mac-MSeries-$VER-arm64.dmg" ;;
+    x86_64) fetch "dynamic-island-mac-intel-$VER-x64.dmg" ;;
     *) fail "Unknown Mac processor: $arch." ;;
   esac
-  url="$(pick "$pattern")"
-  [ -n "$url" ] || fail "This release has no installer for this Mac ($arch)."
-  fetch "$url"
   mnt="$TMP/mount"
   mkdir -p "$mnt"
   hdiutil attach -nobrowse -readonly -noautoopen -mountpoint "$mnt" "$FILE" >/dev/null
@@ -215,9 +236,10 @@ main() {
   TMP="$(mktemp -d)"
   MOUNTED=""
   trap '[ -n "$MOUNTED" ] && hdiutil detach "$MOUNTED" -quiet 2>/dev/null; rm -rf "$TMP"' EXIT
-  say "Looking up the ${DI_VERSION:-latest} release of Dynamic Island"
-  URLS="$(release_urls)" || fail "Couldn't reach GitHub to find the release${DI_VERSION:+ $DI_VERSION}."
-  [ -n "$URLS" ] || fail "The release${DI_VERSION:+ $DI_VERSION} has no files."
+  local which=latest
+  if [ -n "${DI_VERSION:-}" ]; then which="v${DI_VERSION#v}"; fi
+  say "Looking up the $which release of Dynamic Island"
+  find_release
   case "$(uname -s)" in
     Linux) install_linux ;;
     Darwin) install_mac ;;

@@ -57,7 +57,9 @@ jobs:
         format: [deb, appimage]
     runs-on: ubuntu-latest
     env:
-      DI_VERSION: ${{ needs.release.outputs.tag }}
+      # The tag asked for, if any. Without one the scripts look up the latest
+      # release themselves, as they do for most people.
+      DI_VERSION: ${{ inputs.tag }}
       DI_FORMAT: ${{ matrix.format }}
       DI_NO_LAUNCH: '1'
     steps:
@@ -127,7 +129,9 @@ jobs:
     needs: release
     runs-on: macos-latest
     env:
-      DI_VERSION: ${{ needs.release.outputs.tag }}
+      # The tag asked for, if any. Without one the scripts look up the latest
+      # release themselves, as they do for most people.
+      DI_VERSION: ${{ inputs.tag }}
       DI_NO_LAUNCH: '1'
     steps:
       - uses: actions/checkout@v4
@@ -169,7 +173,9 @@ jobs:
     needs: release
     runs-on: windows-latest
     env:
-      DI_VERSION: ${{ needs.release.outputs.tag }}
+      # The tag asked for, if any. Without one the scripts look up the latest
+      # release themselves, as they do for most people.
+      DI_VERSION: ${{ inputs.tag }}
       DI_NO_LAUNCH: '1'
     steps:
       - uses: actions/checkout@v4
@@ -212,3 +218,11 @@ jobs:
           Write-Host "--- what the uninstall's last step did:"
           Get-Content (Join-Path $env:TEMP 'dynamic-island-uninstall.log') -ErrorAction SilentlyContinue
           if ($failed) { exit 1 }
+      - name: Crashes, if any
+        # The installer has crashed now and then on these machines (the
+        # script runs it again); Windows logs which part of it crashed.
+        if: always()
+        shell: pwsh
+        run: |
+          Get-WinEvent -FilterHashtable @{ LogName = 'Application'; ProviderName = 'Application Error'; StartTime = (Get-Date).AddHours(-3) } -ErrorAction SilentlyContinue |
+            Where-Object Message -match 'dynamic-island|DynamicIsland|Uninstall' | Format-List TimeCreated, Message
