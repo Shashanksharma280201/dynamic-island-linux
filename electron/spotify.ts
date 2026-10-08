@@ -116,6 +116,8 @@ export class Spotify {
   private login: { server: http.Server; timer: ReturnType<typeof setTimeout> } | null = null
   private watchers = 0
   private poll: ReturnType<typeof setTimeout> | null = null
+  /** Goes up as each command to the player goes out and again as it's done. */
+  private commands = 0
   private playlistCache = new Map<string, SpCollection>()
   private accounts: string
   private api: string
@@ -288,6 +290,20 @@ export class Spotify {
   }
 
   /** One Web API call; refreshes an expired token once. */
+  /**
+   * Sends a command to the player. A player state that was on its way
+   * meanwhile may be from before it, so refreshPlayer drops that one (the
+   * command's own refresh follows).
+   */
+  private async command(method: 'PUT' | 'POST', path: string, body?: unknown): Promise<void> {
+    this.commands++
+    try {
+      await this.call(method, path, body)
+    } finally {
+      this.commands++
+    }
+  }
+
   private async call(method: string, path: string, body?: unknown, retried = false): Promise<any> {
     const res = await net.fetch(path.startsWith('http') ? path : `${this.api}${path}`, {
       method,
@@ -468,12 +484,12 @@ export class Spotify {
     this.ready()
     const body = this.playBody(o)
     if (deviceId) {
-      await this.call('PUT', `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, body)
+      await this.command('PUT', `/me/player/play?device_id=${encodeURIComponent(deviceId)}`, body)
       await this.refreshPlayer(400)
       return { ok: true }
     }
     try {
-      await this.call('PUT', '/me/player/play', body)
+      await this.command('PUT', '/me/player/play', body)
     } catch (e) {
       if (!(e instanceof SpotifyError) || e.status !== 404) throw e
       // Nothing is active: use a device that's open, or the app on this computer.
@@ -499,7 +515,7 @@ export class Spotify {
   /** Move playback to a device (Spotify's "Connect to a device"). */
   async transfer(deviceId: string): Promise<void> {
     this.ready()
-    await this.call('PUT', '/me/player', { device_ids: [deviceId], play: true })
+    await this.command('PUT', '/me/player', { device_ids: [deviceId], play: true })
     await this.refreshPlayer(500)
   }
 
@@ -522,31 +538,34 @@ export class Spotify {
     }
   }
 
-  async control(cmd: { type: 'toggle' | 'next' | 'previous' } | { type: 'seek'; ms: number } | { type: 'shuffle'; on: boolean } | { type: 'repeat'; state: SpRepeat } | { type: 'volume'; percent: number }): Promise<void> {
+  async control(cmd: { type: 'play' | 'pause' | 'next' | 'previous' } | { type: 'seek'; ms: number } | { type: 'shuffle'; on: boolean } | { type: 'repeat'; state: SpRepeat } | { type: 'volume'; percent: number }): Promise<void> {
     this.ready()
     switch (cmd.type) {
-      case 'toggle':
-        await this.call('PUT', this.player?.isPlaying ? '/me/player/pause' : '/me/player/play')
-        if (this.player) this.player = { ...this.player, isPlaying: !this.player.isPlaying, at: Date.now() }
+      // Play or pause as the button showed, not by the state cached here,
+      // which can be a moment behind.
+      case 'play':
+      case 'pause':
+        await this.command('PUT', `/me/player/${cmd.type}`)
+        if (this.player) this.player = { ...this.player, isPlaying: cmd.type === 'play', at: Date.now() }
         break
       case 'next':
-        await this.call('POST', '/me/player/next')
+        await this.command('POST', '/me/player/next')
         break
       case 'previous':
-        await this.call('POST', '/me/player/previous')
+        await this.command('POST', '/me/player/previous')
         break
       case 'seek':
-        await this.call('PUT', `/me/player/seek?position_ms=${Math.max(0, Math.round(cmd.ms))}`)
+        await this.command('PUT', `/me/player/seek?position_ms=${Math.max(0, Math.round(cmd.ms))}`)
         if (this.player) this.player = { ...this.player, progressMs: cmd.ms, at: Date.now() }
         break
       case 'shuffle':
-        await this.call('PUT', `/me/player/shuffle?state=${cmd.on}`)
+        await this.command('PUT', `/me/player/shuffle?state=${cmd.on}`)
         break
       case 'repeat':
-        await this.call('PUT', `/me/player/repeat?state=${cmd.state}`)
+        await this.command('PUT', `/me/player/repeat?state=${cmd.state}`)
         break
       case 'volume':
-        await this.call('PUT', `/me/player/volume?volume_percent=${Math.max(0, Math.min(100, Math.round(cmd.percent)))}`)
+        await this.command('PUT', `/me/player/volume?volume_percent=${Math.max(0, Math.min(100, Math.round(cmd.percent)))}`)
         break
     }
     this.changed()
@@ -586,8 +605,12 @@ export class Spotify {
   async refreshPlayer(delay = 0): Promise<void> {
     if (delay) await new Promise((r) => setTimeout(r, delay))
     if (this.status !== 'ready') return
+    const asked = this.commands
     try {
-      this.player = mapPlayer(await this.call('GET', '/me/player'), Date.now())
+      const player = mapPlayer(await this.call('GET', '/me/player'), Date.now())
+      // A command went out while this was on its way, so it may be older.
+      if (this.commands !== asked) return
+      this.player = player
       if (this.player?.track) await this.checkLiked(this.player.track.uri)
       this.error = undefined
     } catch (e: any) {
