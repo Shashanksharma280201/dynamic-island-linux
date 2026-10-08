@@ -81,8 +81,9 @@ jobs:
         if: needs.release.outputs.full == 'true'
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb dbus-x11 >/dev/null
-          # Distros without Ubuntu's user-namespace lock-down are where the
-          # AppImage is used; the .deb has its own setuid sandbox.
+          # Ubuntu 24.04 lets an app sandbox itself (with user namespaces)
+          # only under an AppArmor profile: the .deb installs one, an
+          # AppImage can't, so allow it here as other distros do.
           [ "$DI_FORMAT" = appimage ] && sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
@@ -108,7 +109,7 @@ jobs:
           dbus-launch --exit-with-session "$app" --uninstall --yes --delete-data || true
           for i in $(seq 1 40); do pgrep -f -- '--type=renderer' >/dev/null || break; sleep 1; done
           sleep 3
-          echo "--- what the uninstall's last step did:"; cat /tmp/dynamic-island-uninstall.log 2>/dev/null || true
+          echo "--- what the uninstall's last step did:"; cat /tmp/dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
           failed=0
           check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; failed=1; fi; }
           check "not running any more" '! pgrep -f -- "--type=renderer" >/dev/null'
@@ -166,7 +167,7 @@ jobs:
           check "app is in the Trash" 'ls ~/.Trash | grep -q "Dynamic Island"'
           check "settings and data removed" '[ ! -e ~/Library/Application\ Support/dynamic-island-linux ]'
           check "not running any more" '! pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
-          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)dynamic-island-uninstall.log" 2>/dev/null || true
+          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)"dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
           exit $failed
 
   windows:
@@ -219,8 +220,8 @@ jobs:
           Get-Content (Join-Path $env:TEMP 'dynamic-island-uninstall.log') -ErrorAction SilentlyContinue
           if ($failed) { exit 1 }
       - name: Crashes, if any
-        # The installer has crashed now and then on these machines (the
-        # script runs it again); Windows logs which part of it crashed.
+        # Installers made before 0.2.0 crash now and then on these machines
+        # (the script runs them again); Windows logs which part crashed.
         if: always()
         shell: pwsh
         run: |

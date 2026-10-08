@@ -999,20 +999,30 @@ async function runUninstall(argv: string[] = []): Promise<void> {
     if (r.response !== 0) return
     removeData = r.checkboxChecked
   }
-  const text = await uninstall(
-    {
-      packaged: app.isPackaged,
-      userData: app.getPath('userData'),
-      appId: 'io.github.shashanksharma280201.dynamicisland',
-      productName: 'Dynamic Island',
-      debPackage: 'dynamic-island-linux',
-      removeHook: async () => isHookInstalled() && setHookInstalled(false),
-      removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
-      removeLoginItem: () => setAutostart(false),
-      trash: (p) => shell.trashItem(p),
-    },
-    { removeData },
-  )
+  let text: string
+  try {
+    text = await uninstall(
+      {
+        packaged: app.isPackaged,
+        userData: app.getPath('userData'),
+        appId: 'io.github.shashanksharma280201.dynamicisland',
+        productName: 'Dynamic Island',
+        debPackage: 'dynamic-island-linux',
+        removeHook: async () => isHookInstalled() && setHookInstalled(false),
+        removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
+        removeLoginItem: () => setAutostart(false),
+        trash: (p) => shell.trashItem(p),
+      },
+      { removeData },
+    )
+  } catch (e) {
+    const why = e instanceof Error ? e.message : String(e)
+    console.error(`[island] couldn't uninstall: ${why}`)
+    if (!argv.includes('--yes')) await dialog.showMessageBox({ type: 'error', message: "Couldn't uninstall Dynamic Island", detail: why, buttons: ['OK'] })
+    // Started only to uninstall: tell whoever ran it that it didn't work.
+    if (process.argv.includes('--uninstall')) app.exit(1)
+    return
+  }
   console.log(`[island] ${text}`)
   if (!argv.includes('--yes')) await dialog.showMessageBox({ type: 'info', message: 'Dynamic Island is uninstalled', detail: text, buttons: ['OK'] })
   app.quit()
