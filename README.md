@@ -33,22 +33,49 @@ What's different on a Mac:
 
 ## Download
 
-**Latest release: [v0.1.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.1.0)** ([all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)). Pick the
-file for your computer:
+**Latest release: [v0.2.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.2.0)** ([what's new](CHANGELOG.md), [all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)).
+
+**Install with one command.** It downloads the right installer for your
+computer, checks it against the release's checksums, installs it and starts it.
+Run the same command again later to update.
+
+On **Linux or a Mac**, open Terminal and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/shashanksharma280201/dynamic-island-linux/main/scripts/install.sh | bash
+```
+
+(If Ubuntu says `curl` isn't found, run `sudo apt install curl` first.)
+
+On **Windows**, open PowerShell and run:
+
+```powershell
+irm https://raw.githubusercontent.com/shashanksharma280201/dynamic-island-linux/main/scripts/install.ps1 | iex
+```
+
+On Ubuntu and Debian it installs the `.deb` with apt (it asks for your
+password); on other Linux it puts the AppImage in `~/.local/bin` with an app
+menu entry. On a Mac it copies the app to Applications; on Windows it installs
+it for your account, no administrator needed. Either way there's no "Open
+Anyway" or SmartScreen step.
+
+**Or download the file for your computer:**
 
 | Your computer | Download |
 |---|---|
-| Ubuntu, Debian | [dynamic-island-linux-0.1.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.1.0-amd64.deb` |
-| Any Linux (X11) | [dynamic-island-linux-0.1.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x86_64.AppImage), then `chmod +x` it and run it |
-| Mac with Apple silicon (M1 and newer) | [dynamic-island-linux-0.1.0-arm64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-arm64.dmg) |
-| Mac with Intel | [dynamic-island-linux-0.1.0-x64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x64.dmg) |
-| Windows 10 or 11 | [dynamic-island-linux-0.1.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.1.0/dynamic-island-linux-0.1.0-x64.exe) |
+| Ubuntu, Debian | [dynamic-island-linux-0.2.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-linux-0.2.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.2.0-amd64.deb` |
+| Any Linux (X11) | [dynamic-island-linux-0.2.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-linux-0.2.0-x86_64.AppImage), then `chmod +x` it and run it |
+| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-0.2.0-arm64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-mac-MSeries-0.2.0-arm64.dmg) |
+| Mac with Intel | [dynamic-island-mac-intel-0.2.0-x64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-mac-intel-0.2.0-x64.dmg) |
+| Windows 10 or 11 | [dynamic-island-windows-0.2.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-windows-0.2.0-x64.exe) |
 
-The installers aren't signed yet. On a Mac, open the `.dmg`, drag Dynamic
+These installers aren't signed yet. On a Mac, open the `.dmg`, drag Dynamic
 Island to Applications, and the first time open **System Settings → Privacy &
 Security** and click **Open Anyway**. On Windows, if SmartScreen warns, click
-**More info**, then **Run anyway**. To build it from the code instead, see
-[Install](#install).
+**More info**, then **Run anyway**. To check a download, compare it with
+[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
+--ignore-missing` (on a Mac, `shasum -a 256 -c SHA256SUMS.txt
+--ignore-missing`). To build it from the code instead, see [Install](#install).
 
 ## Watch the tour
 
@@ -74,7 +101,8 @@ what that system needs. The commands below fetch the right branch for you.
 | macOS 11 Big Sur or newer, Apple silicon or Intel | `mac` | [Install on macOS](#install-on-macos) |
 | Windows 10 or 11, 64-bit | `windows` | [Install on Windows](#install-on-windows) |
 
-**Just want the app?** Download a ready-made installer for your system from
+**Just want the app?** Use the one-line install in [Download](#download), or
+pick a ready-made installer from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases/latest)
 (`.deb` or AppImage for Linux, `.dmg` for Mac, `.exe` for Windows). The steps
 below build it from the code instead.
@@ -236,7 +264,7 @@ npm run package
 explorer dist
 ```
 
-In the folder that opens, double-click **dynamic-island-linux-…-x64.exe** and
+In the folder that opens, double-click **Dynamic-Island-Setup-….exe** and
 follow the installer. If Windows SmartScreen says it protected your PC, click
 **More info**, then **Run anyway** (the installer you built isn't signed).
 Open **Dynamic Island** from the Start menu afterwards.
@@ -246,7 +274,9 @@ tick **Start at login**.
 
 ### After installing (all systems)
 
-**Update to the latest version** (in the `dynamic-island` folder):
+**Update to the latest version.** If you installed it with the one-line
+command, run that command again. If you built it from the code, in the
+`dynamic-island` folder:
 
 ```bash
 git pull
@@ -277,7 +307,7 @@ open **Settings → General → Uninstall…**. It asks first, then removes:
 
 - the app itself (to the Trash on macOS; on Windows its own uninstaller runs;
   on Linux it asks for your password to remove the `.deb`, or deletes the
-  AppImage),
+  AppImage and the menu entry the one-line install added),
 - starting at login,
 - the Claude Code approvals and status line it set up (your own Claude Code
   settings are kept),
@@ -291,6 +321,7 @@ From a terminal, the same thing without questions:
 | macOS | `"/Applications/Dynamic Island.app/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data` |
 | Windows | `"%LOCALAPPDATA%\Programs\DynamicIsland\DynamicIsland.exe" --uninstall --yes --delete-data` |
 | Linux (.deb) | `dynamic-island-linux --uninstall --yes --delete-data` |
+| Linux (AppImage from the one-line install) | `~/.local/bin/DynamicIsland.AppImage --uninstall --yes --delete-data` |
 | From source | `npm start -- --uninstall --yes --delete-data`, then delete the `dynamic-island` folder |
 
 Leave out `--delete-data` to keep your settings and data. You can also remove it
@@ -629,7 +660,7 @@ This creates, in `dist/`:
 Install the `.deb`:
 
 ```bash
-sudo apt install ./dist/dynamic-island-linux-0.1.0-amd64.deb
+sudo apt install ./dist/dynamic-island-linux-*-amd64.deb
 ```
 
 Then open **Dynamic Island** from the app launcher, or run `dynamic-island-linux`.
@@ -637,8 +668,8 @@ Then open **Dynamic Island** from the app launcher, or run `dynamic-island-linux
 Or run the AppImage directly:
 
 ```bash
-chmod +x dist/dynamic-island-linux-0.1.0-x86_64.AppImage
-./dist/dynamic-island-linux-0.1.0-x86_64.AppImage
+chmod +x dist/dynamic-island-linux-*-x86_64.AppImage
+./dist/dynamic-island-linux-*-x86_64.AppImage
 ```
 
 When installed this way, turn on Claude Code approvals and Start at login from
@@ -776,6 +807,14 @@ through a fake microphone into real Whisper), install `espeak-ng` and point
 part is skipped. Run it with `E2E_SCALE=2` to test a HiDPI display. CI runs all of this
 on every push and pull request.
 
+**Releasing.** Bump the version on `main` (`npm version 0.3.0
+--no-git-tag-version`), add its section to `CHANGELOG.md`, merge `main` into
+`mac` and `windows`, then run the **Release** workflow from the Actions tab
+with the tag (`v0.3.0`). It builds the installers on Linux, macOS and Windows,
+names them, publishes them with `SHA256SUMS.txt` and notes from the changelog,
+and then installs the published release with the one-line scripts on all three
+systems, checks that it starts, and uninstalls it again.
+
 ### Project layout
 
 ```
@@ -805,8 +844,10 @@ electron/            main process
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
+scripts/             install.sh / install.ps1 (the one-line installers), video/ (the tour)
 e2e/                 end-to-end test harness
 tests/               unit tests (vitest)
+CHANGELOG.md         what changed in each release
 ```
 
 ### How it works

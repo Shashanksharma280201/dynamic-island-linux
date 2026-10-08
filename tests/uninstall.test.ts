@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { appBundle, dataPaths, doneText, finishScript, installKind, launchCommand, windowsUninstaller } from '../electron/uninstall'
+import { appImageExtras, appBundle, dataPaths, doneText, finishScript, installKind, launchCommand, windowsUninstaller } from '../electron/uninstall'
 
 describe('uninstall', () => {
   it('knows how it was installed', () => {
@@ -35,6 +35,13 @@ describe('uninstall', () => {
     expect(sh.text).toContain("rm -rf '/Users/me/Library/Application Support/x'")
     expect(sh.text).toContain(`rm -rf '/tmp/it'\\''s'`)
     expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'appimage', appImage: '/home/me/D I.AppImage' }).text).toContain("rm -f '/home/me/D I.AppImage'")
+    // The menu entry and icon the install script added go with it.
+    expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'appimage', appImage: '/h/x.AppImage', appImageExtras: appImageExtras({ home: '/h' }) }).text).toContain(
+      "rm -f '/h/x.AppImage' '/h/.local/share/applications/dynamic-island-linux.desktop' '/h/.local/share/icons/hicolor/512x512/apps/dynamic-island-linux.png'",
+    )
+    expect(appImageExtras({ home: '/h', dataHome: '/d' })[0]).toBe('/d/applications/dynamic-island-linux.desktop')
+    // A .deb never removes files by hand.
+    expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'deb', appImageExtras: appImageExtras({ home: '/h' }), debPackage: 'p' }).text).not.toContain('.desktop')
     expect(finishScript({ platform: 'linux', pid: 1, remove: [], kind: 'deb', debPackage: 'dynamic-island-linux' }).text).toContain(
       "pkexec apt-get remove -y 'dynamic-island-linux'",
     )

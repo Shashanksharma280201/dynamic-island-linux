@@ -1,6 +1,6 @@
 {
   "name": "dynamic-island-linux",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Mac-style Dynamic Island for Linux (X11 + GNOME)",
   "main": "out/main/main.js",
   "type": "module",
