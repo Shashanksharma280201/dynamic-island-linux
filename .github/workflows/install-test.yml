@@ -81,8 +81,9 @@ jobs:
         if: needs.release.outputs.full == 'true'
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq xvfb dbus-x11 >/dev/null
-          # Distros without Ubuntu's user-namespace lock-down are where the
-          # AppImage is used; the .deb has its own setuid sandbox.
+          # Ubuntu 24.04 lets an app sandbox itself (with user namespaces)
+          # only under an AppArmor profile: the .deb installs one, an
+          # AppImage can't, so allow it here as other distros do.
           [ "$DI_FORMAT" = appimage ] && sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           Xvfb :99 -screen 0 1920x1080x24 >/dev/null 2>&1 &
           echo "DISPLAY=:99" >> "$GITHUB_ENV"
@@ -219,8 +220,8 @@ jobs:
           Get-Content (Join-Path $env:TEMP 'dynamic-island-uninstall.log') -ErrorAction SilentlyContinue
           if ($failed) { exit 1 }
       - name: Crashes, if any
-        # The installer has crashed now and then on these machines (the
-        # script runs it again); Windows logs which part of it crashed.
+        # Installers made before 0.2.0 crash now and then on these machines
+        # (the script runs them again); Windows logs which part crashed.
         if: always()
         shell: pwsh
         run: |

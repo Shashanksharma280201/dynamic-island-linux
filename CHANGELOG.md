@@ -42,6 +42,9 @@ or install it with one command (see the [README](https://github.com/shashankshar
   removes the app, starting at login, the Claude Code setup and, if you choose,
   all your data.
 - Every release has a `SHA256SUMS.txt` to check the files against.
+- Windows: the installer no longer quits without installing now and then on
+  Windows 11 24H2 and later.
+- Ubuntu 24.04: the .deb sets up the AppArmor profile the app needs there.
 - macOS: the app is signed properly (no more "damaged" message) and has its own
   menu bar icon.
 

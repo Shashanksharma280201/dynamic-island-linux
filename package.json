@@ -32,7 +32,7 @@
     "@types/smtp-server": "^3.5.13",
     "@vitejs/plugin-react": "^4.3.0",
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.16.1",
     "electron-vite": "^2.3.0",
     "framer-motion": "^11.11.0",
     "hoodiecrow-imap": "^2.1.0",
@@ -120,7 +120,9 @@
       "icon": "assets/icon.png",
       "synopsis": "Mac-style Dynamic Island for Linux",
       "desktop": {
-        "StartupWMClass": "dynamic-island-linux"
+        "entry": {
+          "StartupWMClass": "dynamic-island-linux"
+        }
       }
     },
     "deb": {
