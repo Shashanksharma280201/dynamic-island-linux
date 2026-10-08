@@ -1,13 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import type { DockState } from '@shared/types'
-import { DEFAULT_DOCK, clamp01, sideForPoint, type Side } from '@shared/dock'
+import { DEFAULT_DOCK, EDGE_MARGIN, clamp01, islandTop, sideForPoint, type Side } from '@shared/dock'
 
 const DRAG_THRESHOLD = 5
-
-const centerY = (el: HTMLElement) => {
-  const r = el.getBoundingClientRect()
-  return r.top + r.height / 2
-}
 
 /** Elements that keep their own click / typing behaviour instead of dragging. */
 const NO_DRAG = 'button, input, textarea, select, a, .no-drag'
@@ -39,14 +34,23 @@ export function useDock() {
 
   const anchor = dragAnchor ?? dock.y * window.innerHeight
 
+  /** Where the island's center settles for its current size. Not its box
+   * right now: that slides there when the size changes (resting the pointer
+   * on it starts a peek), and a grab measured mid-slide would leave the
+   * island off the pointer for the whole drag. */
+  const settledCenter = (el: HTMLElement) => {
+    const h = el.offsetHeight
+    return (dock.side === 'top' ? EDGE_MARGIN : islandTop(anchor, h, window.innerHeight)) + h / 2
+  }
+
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     if (e.button !== 0 || (e.target as HTMLElement).closest(NO_DRAG)) return
     drag.current = {
       id: e.pointerId,
       startX: e.screenX,
       startY: e.screenY,
-      // From the island's real center (at the top it isn't at the edge anchor).
-      grabOffset: e.clientY - centerY(e.currentTarget),
+      // From the island's own center (at the top it isn't at the edge anchor).
+      grabOffset: e.clientY - settledCenter(e.currentTarget),
       side: dock.side,
       active: false,
     }
