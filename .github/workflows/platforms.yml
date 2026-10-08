@@ -114,7 +114,7 @@ jobs:
           LEFT=$(find ~/Library -maxdepth 3 \( -iname "*dynamic island*" -o -iname "*dynamicisland*" -o -iname "*dynamic-island*" \) 2>/dev/null)
           echo "leftovers: ${LEFT:-none}"
           check "nothing left in ~/Library" '[ -z "$LEFT" ]'
-          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)dynamic-island-uninstall.log" 2>/dev/null || true
+          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)"dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
           exit $FAILED
       - uses: actions/upload-artifact@v4
         if: always()
