@@ -266,10 +266,11 @@ function hook(input, env = {}) {
     const after = await bounds()
     check('dragging across the middle docks it on the left edge', after.x === 0, JSON.stringify(after))
     c = await center()
-    check('it follows the pointer vertically', Math.abs(c.y - targetY) < 30, `${Math.round(c.y)} vs ${targetY}`)
+    // It lands where it was dropped, even if grabbed mid-peek (it was 17-29px off at 2x).
+    check('it follows the pointer vertically', Math.abs(c.y - targetY) < 12, `${Math.round(c.y)} vs ${targetY}`)
     check('releasing a drag does not count as a click', !(await page.$('.card.panel')))
     const cfg = JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8'))
-    check('dock position is saved', cfg.dock?.side === 'left' && Math.abs(cfg.dock.y - 700 / 1080) < 0.05, JSON.stringify(cfg.dock))
+    check('dock position is saved', cfg.dock?.side === 'left' && Math.abs(cfg.dock.y - 700 / 1080) < 0.01, JSON.stringify(cfg.dock))
     await shot('07-docked-left')
     // and back: a small vertical drag keeps the side
     dragPointer(c.x, c.y, c.x, c.y - 150 / SCALE)

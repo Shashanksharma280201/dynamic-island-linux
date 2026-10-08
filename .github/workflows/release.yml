@@ -1,12 +1,13 @@
 name: Release
 
 # Builds the installers on each OS, from that OS's branch (main for Linux,
-# mac, windows), and publishes them as one GitHub release with checksums and
-# notes from CHANGELOG.md. Then installs the published release with the
-# one-line install scripts on every OS to check it. Run it from the Actions
-# tab (Run workflow, with the version tag) or by pushing a v* tag. First bump
-# "version" in package.json (on main, then merge into mac and windows) and add
-# the version's section to CHANGELOG.md.
+# mac, windows), and publishes them as one GitHub pre-release with checksums
+# and notes from CHANGELOG.md. Then installs it with the one-line install
+# scripts on every OS, starts it and uninstalls it, and only then makes it the
+# latest release (the one people get). Run it from the Actions tab (Run
+# workflow, with the version tag) or by pushing a v* tag. First bump "version"
+# in package.json (on main, then merge into mac and windows) and add the
+# version's section to CHANGELOG.md.
 on:
   workflow_dispatch:
     inputs:
@@ -81,6 +82,8 @@ jobs:
           path: installers
           merge-multiple: true
       - name: Name the files for people, and checksum them
+        # scripts/install.sh and install.ps1 download the files by these
+        # names: change them together.
         run: |
           VER="${TAG#v}"
           cd installers
@@ -152,6 +155,9 @@ jobs:
           name: Dynamic Island ${{ env.TAG }}
           body_path: notes.md
           files: installers/*
+          # Until the install test below passes, the latest release (what the
+          # one-line install gets) stays the previous one.
+          prerelease: true
 
   verify:
     # Install the release that was just published, on every OS, the way the
@@ -160,3 +166,12 @@ jobs:
     uses: ./.github/workflows/install-test.yml
     with:
       tag: ${{ inputs.tag || github.ref_name }}
+
+  promote:
+    # It installs, starts and uninstalls everywhere: make it the latest.
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$TAG" --repo "${{ github.repository }}" --prerelease=false --latest

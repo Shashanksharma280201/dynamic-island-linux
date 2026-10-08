@@ -21,46 +21,73 @@ function Install-DynamicIsland {
 
   $repo = 'shashanksharma280201/dynamic-island-linux'
   if ($env:DI_REPO) { $repo = $env:DI_REPO }
-  $headers = @{ 'User-Agent' = 'dynamic-island-installer'; 'Accept' = 'application/vnd.github+json' }
+  # Plain github.com pages and links, not the GitHub API: the API answers only
+  # 60 lookups an hour for everyone behind one internet address. Overridable
+  # for tests (a local stand-in for GitHub).
+  $web = 'https://github.com'
+  if ($env:DI_GITHUB) { $web = $env:DI_GITHUB.TrimEnd('/') }
+  $headers = @{ 'User-Agent' = 'dynamic-island-installer' }
 
-  # Overridable for tests (a local stand-in for GitHub).
-  $base = 'https://api.github.com'
-  if ($env:DI_API) { $base = $env:DI_API }
-  $which = 'latest'
-  $api = "$base/repos/$repo/releases/latest"
   if ($env:DI_VERSION) {
-    $which = $env:DI_VERSION
-    $api = "$base/repos/$repo/releases/tags/$($env:DI_VERSION)"
+    $tag = 'v' + ($env:DI_VERSION -replace '^v', '')
+    Write-Host "==> Looking up the $tag release of Dynamic Island"
+    try {
+      Invoke-WebRequest -Uri "$web/$repo/releases/tag/$tag" -Method Head -Headers $headers -UseBasicParsing | Out-Null
+    } catch {
+      if ([int]$_.Exception.Response.StatusCode -eq 404) { throw "There's no Dynamic Island release called $tag (see $web/$repo/releases)." }
+      throw "Couldn't reach GitHub ($($_.Exception.Message)). Check your internet connection and try again."
+    }
+  } else {
+    Write-Host '==> Looking up the latest release of Dynamic Island'
+    # github.com sends .../releases/latest on to that release's page.
+    try {
+      $req = [Net.WebRequest]::Create("$web/$repo/releases/latest")
+      $req.Method = 'HEAD'
+      $req.AllowAutoRedirect = $false
+      $req.UserAgent = $headers['User-Agent']
+      $res = $req.GetResponse()
+      $location = $res.Headers['Location']
+      $res.Close()
+    } catch {
+      throw "Couldn't reach GitHub ($($_.Exception.Message)). Check your internet connection and try again."
+    }
+    if ($location -match '/releases/tag/([^/?#]+)$') { $tag = $Matches[1] } else { throw "Couldn't find the latest release (see $web/$repo/releases)." }
   }
-  Write-Host "==> Looking up the $which release of Dynamic Island"
-  try {
-    $release = Invoke-RestMethod -Uri $api -Headers $headers -UseBasicParsing
-  } catch {
-    throw "Couldn't reach GitHub to find the $which release: $($_.Exception.Message)"
-  }
-
-  $asset = $release.assets | Where-Object { $_.name -like 'dynamic-island-windows-*.exe' } | Select-Object -First 1
-  if (-not $asset) { $asset = $release.assets | Where-Object { $_.name -like '*.exe' } | Select-Object -First 1 }
-  if (-not $asset) { throw "The $($release.tag_name) release has no Windows installer." }
+  # Every release names its files the same way.
+  $dl = "$web/$repo/releases/download/$tag"
+  $name = 'dynamic-island-windows-' + ($tag -replace '^v', '') + '-x64.exe'
 
   $dir = Join-Path $env:TEMP ('dynamic-island-' + [guid]::NewGuid().ToString('N'))
   New-Item -ItemType Directory -Path $dir | Out-Null
   try {
-    $file = Join-Path $dir $asset.name
-    Write-Host "==> Downloading $($asset.name) ($([math]::Round($asset.size / 1MB)) MB)"
-    Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $file -UseBasicParsing
+    $text = $null
+    try {
+      $text = (Invoke-WebRequest -Uri "$dl/SHA256SUMS.txt" -Headers $headers -UseBasicParsing).Content
+    } catch {
+      # Releases before 0.2.0 have none.
+      if ([int]$_.Exception.Response.StatusCode -ne 404) { throw "Couldn't download SHA256SUMS.txt ($($_.Exception.Message)). Check your internet connection and try again." }
+    }
+    $want = $null
+    if ($text) {
+      if ($text -is [byte[]]) { $text = [Text.Encoding]::UTF8.GetString($text) }
+      $line = ($text -split "`n") | Where-Object { ($_.Trim() -split '\s+')[-1] -in @($name, "*$name") } | Select-Object -First 1
+      if (-not $line) { throw "$name is not listed in the release's SHA256SUMS.txt." }
+      $want = ($line.Trim() -split '\s+')[0].ToLower()
+    }
 
-    $sums = $release.assets | Where-Object { $_.name -eq 'SHA256SUMS.txt' } | Select-Object -First 1
-    if (-not $sums) {
+    $file = Join-Path $dir $name
+    Write-Host "==> Downloading $name"
+    try {
+      Invoke-WebRequest -Uri "$dl/$name" -OutFile $file -Headers $headers -UseBasicParsing
+    } catch {
+      if ([int]$_.Exception.Response.StatusCode -eq 404) { throw "The $tag release has no $name." }
+      throw "Couldn't download $name ($($_.Exception.Message)). Check your internet connection and try again."
+    }
+    if (-not $want) {
       Write-Host "    This release has no SHA256SUMS.txt, so the download can't be checked."
     } else {
-      $text = (Invoke-WebRequest -Uri $sums.browser_download_url -UseBasicParsing).Content
-      if ($text -is [byte[]]) { $text = [Text.Encoding]::UTF8.GetString($text) }
-      $line = ($text -split "`n") | Where-Object { $_.Trim() -match ('[ *]' + [regex]::Escape($asset.name) + '$') } | Select-Object -First 1
-      if (-not $line) { throw "$($asset.name) is not listed in the release's SHA256SUMS.txt." }
-      $want = ($line.Trim() -split '\s+')[0].ToLower()
       $got = (Get-FileHash -Path $file -Algorithm SHA256).Hash.ToLower()
-      if ($want -ne $got) { throw "$($asset.name) doesn't match its checksum (expected $want, got $got). Try again; if it keeps failing, download it from the releases page." }
+      if ($want -ne $got) { throw "$name doesn't match its checksum (expected $want, got $got). Try again; if it keeps failing, download it from the releases page." }
       Write-Host '    Checksum OK.'
     }
 
@@ -73,8 +100,15 @@ function Install-DynamicIsland {
     }
 
     Write-Host '==> Installing'
-    $p = Start-Process -FilePath $file -ArgumentList '/S' -Wait -PassThru
-    if ($p.ExitCode -ne 0) { throw "The installer stopped with code $($p.ExitCode)." }
+    $code = (Start-Process -FilePath $file -ArgumentList '/S' -Wait -PassThru).ExitCode
+    if ($code -ne 0) {
+      # Now and then the installer crashes (code -1073741819, seen on Windows
+      # Server 2025); running it again is safe.
+      Write-Host "    The installer stopped unexpectedly (code $code), so trying once more."
+      Start-Sleep -Seconds 3
+      $code = (Start-Process -FilePath $file -ArgumentList '/S' -Wait -PassThru).ExitCode
+    }
+    if ($code -ne 0) { throw "The installer stopped with code $code. Download it from $web/$repo/releases and run it yourself." }
 
     # Where it went: Installed apps knows (the installer can hand off to a second
     # process, so give it a moment).
@@ -95,7 +129,7 @@ function Install-DynamicIsland {
       Write-Host '==> Starting Dynamic Island'
       Start-Process -FilePath $exe
     }
-    Write-Host "==> Done. Dynamic Island $($release.tag_name) is installed ($exe)."
+    Write-Host "==> Done. Dynamic Island $tag is installed ($exe)."
     Write-Host '    Its icon is in the notification area (bottom right; it may be under the ^ arrow).'
   } finally {
     Remove-Item -LiteralPath $dir -Recurse -Force -ErrorAction SilentlyContinue

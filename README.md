@@ -811,9 +811,10 @@ on every push and pull request.
 --no-git-tag-version`), add its section to `CHANGELOG.md`, merge `main` into
 `mac` and `windows`, then run the **Release** workflow from the Actions tab
 with the tag (`v0.3.0`). It builds the installers on Linux, macOS and Windows,
-names them, publishes them with `SHA256SUMS.txt` and notes from the changelog,
-and then installs the published release with the one-line scripts on all three
-systems, checks that it starts, and uninstalls it again.
+names them, publishes them as a pre-release with `SHA256SUMS.txt` and notes
+from the changelog, then installs it with the one-line scripts on all three
+systems, checks that it starts, and uninstalls it again. Only then does it
+become the latest release, the one people download.
 
 ### Project layout
 
