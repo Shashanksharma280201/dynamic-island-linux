@@ -108,7 +108,7 @@ jobs:
           dbus-launch --exit-with-session "$app" --uninstall --yes --delete-data || true
           for i in $(seq 1 40); do pgrep -f -- '--type=renderer' >/dev/null || break; sleep 1; done
           sleep 3
-          echo "--- what the uninstall's last step did:"; cat /tmp/dynamic-island-uninstall.log 2>/dev/null || true
+          echo "--- what the uninstall's last step did:"; cat /tmp/dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
           failed=0
           check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; failed=1; fi; }
           check "not running any more" '! pgrep -f -- "--type=renderer" >/dev/null'
@@ -166,7 +166,7 @@ jobs:
           check "app is in the Trash" 'ls ~/.Trash | grep -q "Dynamic Island"'
           check "settings and data removed" '[ ! -e ~/Library/Application\ Support/dynamic-island-linux ]'
           check "not running any more" '! pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
-          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)dynamic-island-uninstall.log" 2>/dev/null || true
+          echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)"dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
           exit $failed
 
   windows:

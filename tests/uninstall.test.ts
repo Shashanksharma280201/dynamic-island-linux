@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { appImageExtras, appBundle, dataPaths, doneText, finishScript, installKind, launchCommand, windowsUninstaller } from '../electron/uninstall'
+import { mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { basename, dirname, join } from 'node:path'
+import { appImageExtras, appBundle, dataPaths, doneText, finishScript, installKind, launchCommand, windowsUninstaller, writeFinishScript } from '../electron/uninstall'
 
 describe('uninstall', () => {
   it('knows how it was installed', () => {
@@ -54,6 +57,21 @@ describe('uninstall', () => {
     expect(win.text).toContain("Remove-Item -LiteralPath 'C:\\Users\\o''neil\\AppData\\Roaming\\x'")
     expect(win.text).toContain("$u = 'C:\\P\\Uninstall Dynamic Island.exe'")
     expect(win.text).toContain("Start-Process -FilePath $u -ArgumentList '/S' -Wait -PassThru")
+  })
+
+  it('writes the finishing script into a folder of its own', () => {
+    const base = mkdtempSync(join(tmpdir(), 'di-uninstall-test-'))
+    // What used to block it: someone else's file at the old fixed name.
+    writeFileSync(join(base, 'dynamic-island-uninstall.sh'), 'not ours')
+    const a = writeFinishScript({ ext: 'sh', text: 'echo done\n' }, base)
+    const b = writeFinishScript({ ext: 'sh', text: 'echo done\n' }, base)
+    expect(dirname(a)).not.toBe(dirname(b))
+    expect(basename(dirname(a))).toMatch(/^dynamic-island-uninstall-/)
+    expect(basename(a)).toBe('uninstall.sh')
+    expect(readFileSync(a, 'utf8')).toBe('echo done\n')
+    expect(readFileSync(join(base, 'dynamic-island-uninstall.sh'), 'utf8')).toBe('not ours')
+    // Only this user can open the folder.
+    if (process.platform !== 'win32') expect(statSync(dirname(a)).mode & 0o077).toBe(0)
   })
 
   it('starts the finishing script apart from the island', () => {

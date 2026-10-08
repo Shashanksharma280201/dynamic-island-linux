@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process'
-import { existsSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { homedir, tmpdir } from 'node:os'
 import { basename, join, posix, win32 } from 'node:path'
 
@@ -108,7 +108,7 @@ export function finishScript(o: {
     return { ext: 'ps1', text: lines.join('\r\n') + '\r\n' }
   }
   const lines = [
-    // The log goes next to this script, in the same temp folder the island uses.
+    // The log goes next to this script, in its own folder.
     `exec >>"$(dirname "$0")/${FINISH_LOG}" 2>&1`,
     'set -x',
     `while kill -0 ${o.pid} 2>/dev/null; do sleep 0.3; done`,
@@ -122,6 +122,18 @@ export function finishScript(o: {
     ...(o.kind === 'deb' && o.debPackage ? [`command -v pkexec >/dev/null && pkexec apt-get remove -y ${sh(o.debPackage)}`] : []),
   ]
   return { ext: 'sh', text: lines.join('\n') + '\n' }
+}
+
+/**
+ * Writes the finishing script into a new folder only this user can open, and
+ * returns its path (its log goes next to it). On Linux the temp folder is
+ * shared by everyone, so a fixed name there could already be someone else's
+ * file, which can't be written, or a link to one.
+ */
+export function writeFinishScript(finish: { ext: string; text: string }, base = tmpdir()): string {
+  const file = join(mkdtempSync(join(base, 'dynamic-island-uninstall-')), `uninstall.${finish.ext}`)
+  writeFileSync(file, finish.text)
+  return file
 }
 
 /**
@@ -196,8 +208,7 @@ export async function uninstall(d: UninstallDeps, o: { removeData: boolean }): P
     productName: d.productName,
     debPackage: d.debPackage,
   })
-  const file = join(tmpdir(), `dynamic-island-uninstall.${finish.ext}`)
-  writeFileSync(file, finish.text)
+  const file = writeFinishScript(finish)
   const run = launchCommand(process.platform, file)
   spawn(run.cmd, run.args, { detached: true, stdio: 'ignore', windowsHide: true, windowsVerbatimArguments: run.verbatim }).unref()
   if (kind === 'mac-app') {
