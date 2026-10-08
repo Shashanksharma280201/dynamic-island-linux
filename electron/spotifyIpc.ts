@@ -49,7 +49,7 @@ export function wireSpotify(spotify: Spotify): void {
   ipcMain.handle(SPOTIFY.PLAY_BROWSER, (_e, o) => spotify.playInBrowser(what(o)))
   ipcMain.handle(SPOTIFY.CONTROL, (_e, c) => {
     const t = c?.type
-    if (t === 'toggle' || t === 'next' || t === 'previous') return spotify.control({ type: t })
+    if (t === 'play' || t === 'pause' || t === 'next' || t === 'previous') return spotify.control({ type: t })
     if (t === 'seek' && Number.isFinite(c.ms)) return spotify.control({ type: 'seek', ms: Number(c.ms) })
     if (t === 'shuffle') return spotify.control({ type: 'shuffle', on: c.on === true })
     if (t === 'repeat' && ['off', 'context', 'track'].includes(c.state)) return spotify.control({ type: 'repeat', state: c.state })

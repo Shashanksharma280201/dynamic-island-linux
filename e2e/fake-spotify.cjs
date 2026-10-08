@@ -51,8 +51,9 @@ function coverPng(hex, size = 64) {
 
 function startFakeSpotify({ port = 0, premium = true } = {}) {
   const log = []
-  // premium / devices / token can be changed by a test while running.
-  const s = { log, liked: new Set(['spotify:track:t2']), player: null, activeDevice: false, activeId: 'dev1', webPlayer: false, phone: false, codes: new Map(), premium, devices: true, token: /^Bearer at-\d$/ }
+  // premium / devices / token can be changed by a test while running;
+  // playerDelay (ms) makes the player state arrive late, as read when asked.
+  const s = { log, liked: new Set(['spotify:track:t2']), player: null, activeDevice: false, activeId: 'dev1', webPlayer: false, phone: false, codes: new Map(), premium, devices: true, token: /^Bearer at-\d$/, playerDelay: 0 }
   let base = ''
   // Relative here; made absolute when sent (the port is known only after listen).
   const img = (hex) => [{ url: `/img/${hex}.png`, width: 300, height: 300 }, { url: `/img/${hex}.png?s=64`, width: 64, height: 64 }]
@@ -198,7 +199,10 @@ function startFakeSpotify({ port = 0, premium = true } = {}) {
           playlists: { items: playlists.filter((x) => hit(x.name)).map(plJson) },
         })
       }
-      if (api === '/me/player' && req.method === 'GET') return s.player ? send(res, 200, playerJson()) : send(res, 204)
+      if (api === '/me/player' && req.method === 'GET') {
+        const answer = s.player ? [200, playerJson()] : [204]
+        return s.playerDelay ? void setTimeout(() => send(res, ...answer), s.playerDelay) : send(res, ...answer)
+      }
       if (api === '/me/player/devices') return send(res, 200, { devices: deviceList() })
       if (api === '/me/player' && req.method === 'PUT') {
         const id = json().device_ids?.[0]
