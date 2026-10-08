@@ -102,8 +102,9 @@ function Install-DynamicIsland {
     Write-Host '==> Installing'
     $code = (Start-Process -FilePath $file -ArgumentList '/S' -Wait -PassThru).ExitCode
     if ($code -ne 0) {
-      # Now and then the installer crashes (code -1073741819, seen on Windows
-      # Server 2025); running it again is safe.
+      # Installers made before 0.2.0 crash now and then on Windows 11 24H2 and
+      # later (code -1073741819, an electron-builder bug); running it again is
+      # safe.
       Write-Host "    The installer stopped unexpectedly (code $code), so trying once more."
       Start-Sleep -Seconds 3
       $code = (Start-Process -FilePath $file -ArgumentList '/S' -Wait -PassThru).ExitCode
