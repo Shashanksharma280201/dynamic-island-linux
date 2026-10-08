@@ -289,7 +289,7 @@ function Collection({ uri, back, play, player }: { uri: string; back: () => void
             playing={playingHere}
             onClick={() =>
               playingHere || (inThis && player && !player.isPlaying)
-                ? void window.island.spotify.control({ type: 'toggle' })
+                ? void window.island.spotify.control({ type: playingHere ? 'pause' : 'play' })
                 : play(c.kind === 'liked' ? { contextUri: LIKED.uri, trackUri: data?.tracks[0]?.uri } : { contextUri: c.uri })
             }
           />
@@ -396,7 +396,7 @@ function NowPlaying({ p, close, contextName, devices }: { p: SpPlayer; close: ()
         <button className="sp-icon-btn big" aria-label="Previous" onClick={(e) => (stop(e), ctl({ type: 'previous' }))}>
           <PrevIcon />
         </button>
-        <button className="sp-play white" aria-label={p.isPlaying ? 'Pause' : 'Play'} onClick={(e) => (stop(e), ctl({ type: 'toggle' }))}>
+        <button className="sp-play white" aria-label={p.isPlaying ? 'Pause' : 'Play'} onClick={(e) => (stop(e), ctl({ type: p.isPlaying ? 'pause' : 'play' }))}>
           {p.isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
         </button>
         <button className="sp-icon-btn big" aria-label="Next" onClick={(e) => (stop(e), ctl({ type: 'next' }))}>
@@ -438,7 +438,7 @@ function MiniPlayer({ p, onOpen, devices }: { p: SpPlayer; onOpen: () => void; d
         <DeviceIcon />
       </button>
       <LikeButton p={p} />
-      <button className="sp-icon-btn" aria-label={p.isPlaying ? 'Pause' : 'Play'} onClick={(e) => (stop(e), void window.island.spotify.control({ type: 'toggle' }))}>
+      <button className="sp-icon-btn" aria-label={p.isPlaying ? 'Pause' : 'Play'} onClick={(e) => (stop(e), void window.island.spotify.control({ type: p.isPlaying ? 'pause' : 'play' }))}>
         {p.isPlaying ? <PauseIcon size={22} /> : <PlayIcon size={22} />}
       </button>
       <span className="sp-mini-line" style={{ width: `${pct}%` }} />

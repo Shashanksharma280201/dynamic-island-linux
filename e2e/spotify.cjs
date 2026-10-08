@@ -134,6 +134,26 @@ const until = async (fn, ms = 5000) => {
     check('pause', await until(() => sp.player?.playing === false, 4000))
     await page.click('.sp-now [aria-label="Play"]')
     check('play', await until(() => sp.player?.playing === true, 4000))
+    // Spotify can answer late: a player state read before a pause, arriving
+    // after it, mustn't put the Pause button back (or make Play pause).
+    sp.playerDelay = 1500
+    await page.click('.sp-now [aria-label="Shuffle"]') // its refresh reads the state while it still plays
+    await sleep(600)
+    await page.evaluate(() => {
+      window.__flipped = false
+      window.__paused = false
+      new MutationObserver(() => {
+        if (window.__paused && document.querySelector('.sp-now [aria-label="Pause"]')) window.__flipped = true
+      }).observe(document.querySelector('.sp-now'), { subtree: true, childList: true, attributes: true })
+    })
+    await page.click('.sp-now [aria-label="Pause"]')
+    await page.waitForSelector('.sp-now [aria-label="Play"]', { timeout: 4000 })
+    await page.evaluate(() => (window.__paused = true))
+    await sleep(2500)
+    check('a late answer from before a pause doesn’t undo it', sp.player?.playing === false && !(await page.evaluate(() => window.__flipped)), `playing: ${sp.player?.playing}`)
+    sp.playerDelay = 0
+    await page.click('.sp-now [aria-label="Play"]')
+    check('and Play plays', await until(() => sp.player?.playing === true, 4000))
     await page.click('.sp-now [aria-label="Close"]')
 
     // ---- A followed playlist (Spotify won't list its songs any more) ----
