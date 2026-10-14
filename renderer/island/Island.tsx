@@ -57,6 +57,16 @@ function DropCard({ count, adding }: { count: number; adding: boolean }) {
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
 
+/**
+ * The island's glass clips its content (overflow: hidden), but focusing a field
+ * near its edge still scrolls it, leaving everything shifted. Undo that.
+ */
+const unscroll = (e: { currentTarget: HTMLElement; target: EventTarget }) => {
+  if (e.target !== e.currentTarget) return // a list scrolling inside is fine
+  e.currentTarget.scrollTop = 0
+  e.currentTarget.scrollLeft = 0
+}
+
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
 
@@ -406,7 +416,7 @@ export function Island({ activities }: { activities: Activity[] }) {
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
           border-radius for it, so the corners stay round while it grows. */}
-      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }}>
+      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }} onScroll={unscroll}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
@@ -545,6 +555,7 @@ export function Island({ activities }: { activities: Activity[] }) {
           <motion.div
             key="rail"
             className="island rail-shell"
+            onScroll={unscroll}
             initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             // A short fixed fade out: the rail must be gone promptly, or its

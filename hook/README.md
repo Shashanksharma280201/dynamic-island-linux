@@ -12,6 +12,12 @@ Two small scripts connect Claude Code to the **Dynamic Island**:
   and forget: it never prints anything, never blocks or changes what Claude does,
   and always exits 0 within a second.
 
+Other agents (Codex, Gemini CLI, Cursor Agent) run the session hook too, with
+`--agent <id>`; `node hook/agents.cjs <codex|gemini|cursor> [--uninstall]` adds
+or removes it in their own hook file (`~/.codex/hooks.json`,
+`~/.gemini/settings.json`, `~/.cursor/hooks.json`), backed up first. Their
+approvals stay in the agent.
+
 ## Install
 
 From the island's tray menu (**Claude Code approvals**), or:

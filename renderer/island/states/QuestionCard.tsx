@@ -131,8 +131,8 @@ function OtherField({ value, onChange, onDone }: { value: string; onChange: (v: 
   const ref = useRef<HTMLInputElement | null>(null)
   useEffect(() => {
     window.island.setFocus(true)
-    const t = setTimeout(() => ref.current?.focus(), 50)
-    ref.current?.focus()
+    const t = setTimeout(() => ref.current?.focus({ preventScroll: true }), 50)
+    ref.current?.focus({ preventScroll: true })
     return () => {
       clearTimeout(t)
       window.island.setFocus(false)

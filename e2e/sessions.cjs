@@ -129,6 +129,8 @@ function approval(input) {
     key('ctrl+i')
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
     await leave()
+    // Its icon rail must go too, or its invisible box keeps the island's clickable area big.
+    check('the icon rail leaves with the panel', await gone(page, '.rail-shell'))
 
     // ---- It needs you ----
     await term.hook({ hook_event_name: 'PreToolUse', session_id: 's1', tool_name: 'Bash', tool_input: { command: 'npm test' } })
@@ -220,6 +222,28 @@ function approval(input) {
     await page.click('.plan-card .pill.primary:has-text("Start")')
     check('and Start approves it', (await plan)?.hookSpecificOutput?.decision?.behavior === 'allow')
     await leave()
+
+    // ---- Other agents: Gemini CLI ----
+    const gemini = (args, input) =>
+      new Promise((resolve) => {
+        const p = spawn('node', [path.join(ROOT, 'hook/claude-island-hook-events.cjs'), '--agent', 'gemini', ...args], { env })
+        p.on('close', resolve)
+        p.stdin.end(JSON.stringify({ session_id: 'g1', cwd: '/home/me/notes-app', ...input }))
+      })
+    await gemini(['UserPromptSubmit'], { hook_event_name: 'BeforeAgent', prompt: 'build it' })
+    await gemini(['PreToolUse'], { hook_event_name: 'BeforeTool', tool_name: 'run_shell_command', tool_input: { command: 'npm run build' } })
+    check('another agent shows too', await seen(page, '.session-capsule'))
+    key('ctrl+i')
+    await page.waitForSelector('.hub', { timeout: 3000 })
+    await page.click('.rail-btn[aria-label="Sessions"]')
+    check('named, with its step read like Claude\'s', await seen(page, '.session-row:has-text("Gemini CLI"):has-text("Running npm run build")'))
+    await sleep(400)
+    check('nothing on the island is left scrolled out of place', await page.evaluate(() => [...document.querySelectorAll('.island')].every((e) => !e.scrollTop && !e.scrollLeft)))
+    await shot('09-gemini-session')
+    key('ctrl+i')
+    await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
+    await leave()
+    await gemini(['SessionEnd'], { hook_event_name: 'SessionEnd' })
 
     // ---- The session closes ----
     await term.hook({ hook_event_name: 'UserPromptSubmit', session_id: 's1', prompt: 'thanks' })

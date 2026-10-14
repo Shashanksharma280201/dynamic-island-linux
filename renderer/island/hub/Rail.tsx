@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import { motion } from 'framer-motion'
 import { pop } from '../../anim/spring'
 import type { InboxUnread } from '@shared/types'
@@ -127,10 +127,19 @@ export function Rail({
   sessions?: number
 }) {
   const unread = useUnread()
+  // One selection pill that slides from tab to tab. (Not a shared-layout
+  // layoutId: that kept the rail from ever leaving once the panel closed.)
+  const railRef = useRef<HTMLDivElement | null>(null)
+  const [pillY, setPillY] = useState<number | null>(null)
+  useLayoutEffect(() => {
+    const on = railRef.current?.querySelector<HTMLElement>('.rail-btn[aria-selected="true"]')
+    setPillY(on ? on.offsetTop : null)
+  }, [tab, hidden.join()])
   const badge = (id: HubTab) =>
     id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : id === 'sessions' ? badgeText(sessions) : ''
   return (
-    <div className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
+    <div ref={railRef} className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
+      {pillY !== null && <motion.span className="rail-pill" initial={false} animate={{ y: pillY }} transition={pop} aria-hidden />}
       {ITEMS.filter((it) => !hidden.includes(it.id)).map((it) => {
         const b = badge(it.id)
         const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : it.id === 'alerts' ? alerts : it.id === 'sessions' ? sessions : null
@@ -145,8 +154,6 @@ export function Rail({
             className={`rail-btn${tab === it.id ? ' on' : ''}`}
             onClick={() => onTab(it.id)}
           >
-            {/* One selection pill that slides from tab to tab. */}
-            {tab === it.id && <motion.span layoutId="rail-pill" className="rail-pill" transition={pop} />}
             {it.id === 'claude' && <UsageRing usage={usage} />}
             {it.icon}
             {b && (

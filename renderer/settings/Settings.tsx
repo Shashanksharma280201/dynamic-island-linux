@@ -106,6 +106,20 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
         on={hookInstalled}
         onChange={(v) => run(() => window.settings.setHook(v))}
       />
+      {s.agentHooks?.length > 0 && (
+        <>
+          <div className="hint group-hint">Other coding agents: show their sessions on the island too (their approvals stay in the agent).</div>
+          {s.agentHooks.map((a) => (
+            <Toggle
+              key={a.id}
+              label={a.name}
+              hint={a.installed ? `On, in ${a.path}. ${a.note}` : `Adds a hook to ${a.path} (backed up first).`}
+              on={a.installed}
+              onChange={(v) => run(() => window.settings.setAgentHook(a.id, v))}
+            />
+          ))}
+        </>
+      )}
       <Toggle
         label="Talk shortcut Ctrl+Alt+Space"
         hint={

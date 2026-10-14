@@ -432,3 +432,6 @@ button.link {
 .package-row .switch {
   margin-top: 4px;
 }
+.group-hint {
+  margin: 14px 0 2px;
+}

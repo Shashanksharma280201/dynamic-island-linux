@@ -3,6 +3,8 @@
 // Notification, Stop, SessionEnd): tells the Dynamic Island what the session
 // is doing so it can show it live. Fire and forget: it never blocks or
 // changes anything Claude does, prints nothing and always exits 0.
+// Other agents run it as `… --agent <codex|gemini|cursor> [Event]`: their
+// event names and fields are read into Claude Code's.
 const net = require('node:net')
 const fs = require('node:fs')
 const { execFileSync } = require('node:child_process')
@@ -20,6 +22,55 @@ setTimeout(quit, 1500).unref()
 
 // Runs the island started itself show in its own Claude panel already.
 if (process.env.DYNAMIC_ISLAND_RUN === '1') quit()
+
+// Other agents' event names, as Claude Code's.
+const EVENTS = {
+  BeforeTool: 'PreToolUse',
+  AfterTool: 'PostToolUse',
+  BeforeAgent: 'UserPromptSubmit',
+  AfterAgent: 'Stop',
+  sessionStart: 'SessionStart',
+  sessionEnd: 'SessionEnd',
+  beforeSubmitPrompt: 'UserPromptSubmit',
+  userPromptSubmitted: 'UserPromptSubmit',
+  preToolUse: 'PreToolUse',
+  postToolUse: 'PostToolUse',
+  notification: 'Notification',
+  stop: 'Stop',
+  agentStop: 'Stop',
+  session_start: 'SessionStart',
+  session_end: 'SessionEnd',
+  user_prompt_submit: 'UserPromptSubmit',
+  pre_tool_use: 'PreToolUse',
+  post_tool_use: 'PostToolUse',
+}
+
+const str = (v) => (typeof v === 'string' && v ? v : undefined)
+
+/** Fill in Claude Code's field names from another agent's input. */
+function normalize(h) {
+  const call = h.toolCall && typeof h.toolCall === 'object' ? h.toolCall : null
+  if (!h.tool_name) h.tool_name = str(h.toolName) || (call && str(call.name)) || str(h.tool)
+  if (!h.tool_input) {
+    let args = h.toolArgs
+    if (typeof args === 'string') {
+      try {
+        args = JSON.parse(args)
+      } catch {
+        args = undefined
+      }
+    }
+    if (!args && call && call.args && typeof call.args === 'object') args = call.args
+    if (args && typeof args === 'object') h.tool_input = args
+  }
+  if (!h.tool_response && h.toolResult && typeof h.toolResult === 'object') h.tool_response = h.toolResult
+  if (!str(h.session_id)) h.session_id = str(h.conversationId) || str(h.conversation_id) || str(h.sessionId) || str(process.env.GEMINI_SESSION_ID)
+  if (!str(h.cwd)) {
+    const roots = Array.isArray(h.workspacePaths) ? h.workspacePaths : Array.isArray(h.workspace_roots) ? h.workspace_roots : []
+    h.cwd = str(h.workdir) || str(roots[0]) || process.cwd()
+  }
+  return h
+}
 
 /** Long strings cut short, so a big Write doesn't travel twice. */
 function trim(v, depth = 0) {
@@ -78,21 +129,28 @@ function lastReply(transcript) {
   return undefined
 }
 
+// `--agent <id>` and, for agents that don't say it in their input, the event.
+const argv = process.argv.slice(2)
+const at = argv.indexOf('--agent')
+const AGENT = (at >= 0 && argv[at + 1]) || process.env.DI_AGENT || 'claude-code'
+const EVENT_ARG = argv.filter((a, i) => a !== '--agent' && i !== at + 1)[0]
+
 let raw = ''
 process.stdin.on('data', (d) => (raw += d))
 process.stdin.on('end', () => {
   let h
   try {
-    h = JSON.parse(raw || '{}')
+    h = normalize(JSON.parse(raw || '{}'))
   } catch {
     return quit()
   }
-  const event = h.hook_event_name
+  const name = EVENT_ARG || h.hook_event_name || h.event
+  const event = EVENTS[name] || name
   const msg = {
     type: 'event',
     event: {
       event,
-      agent: process.env.DI_AGENT || 'claude-code',
+      agent: AGENT,
       sessionId: h.session_id,
       cwd: h.cwd,
       at: Date.now(),
@@ -114,7 +172,9 @@ process.stdin.on('end', () => {
     }
   }
   if (event === 'Notification') e.message = h.message
-  if (event === 'Stop') e.final = (typeof h.last_assistant_message === 'string' && h.last_assistant_message) || lastReply(h.transcript_path)
+  if (event === 'Stop')
+    e.final =
+      (str(h.last_assistant_message) || str(h.prompt_response) || str(h.response) || (AGENT === 'claude-code' ? lastReply(h.transcript_path) : '') || '').slice(0, 4000) || undefined
   if (event === 'SessionStart' || event === 'UserPromptSubmit' || event === 'Stop') e.pid = agentPid()
 
   const client = net.createConnection(SOCK, () => client.end(JSON.stringify(msg) + '\n'))

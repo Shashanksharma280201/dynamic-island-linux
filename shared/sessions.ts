@@ -115,6 +115,59 @@ const projectOf = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? c
 
 const EDIT_TOOLS = ['Edit', 'MultiEdit', 'Write', 'NotebookEdit']
 
+/** Other agents' tools, as the Claude Code tool that does the same. */
+const TOOL_ALIASES: Record<string, string> = {
+  read_file: 'Read',
+  read_many_files: 'Read',
+  view: 'Read',
+  write_file: 'Write',
+  create: 'Write',
+  replace: 'Edit',
+  edit: 'Edit',
+  edit_file: 'Edit',
+  str_replace: 'Edit',
+  apply_patch: 'Edit',
+  run_shell_command: 'Bash',
+  shell: 'Bash',
+  bash: 'Bash',
+  run_command: 'Bash',
+  exec_command: 'Bash',
+  local_shell: 'Bash',
+  glob: 'Glob',
+  find_files: 'Glob',
+  search_file_content: 'Grep',
+  grep: 'Grep',
+  grep_search: 'Grep',
+  codebase_search: 'Grep',
+  list_directory: 'LS',
+  ls: 'LS',
+  web_fetch: 'WebFetch',
+  fetch: 'WebFetch',
+  google_web_search: 'WebSearch',
+  web_search: 'WebSearch',
+  write_todos: 'TodoWrite',
+  todo_write: 'TodoWrite',
+  update_plan: 'TodoWrite',
+}
+
+/**
+ * Another agent's tool call as Claude Code's: its name, and the path and
+ * command under the names Claude uses (file_path, command). Pure.
+ */
+export function canonicalTool(tool: string, input?: Record<string, unknown>): { tool: string; input?: Record<string, unknown> } {
+  const name = TOOL_ALIASES[tool] ?? TOOL_ALIASES[tool.toLowerCase()] ?? tool
+  if (!input) return { tool: name }
+  const i: Record<string, unknown> = { ...input }
+  const path = i.file_path ?? i.absolute_path ?? i.path ?? i.FilePath ?? i.target_file
+  if (typeof path === 'string' && name !== 'Glob' && name !== 'Grep') i.file_path = path
+  const cmd = i.command ?? i.CommandLine ?? i.cmd
+  if (Array.isArray(cmd)) i.command = cmd.filter((c) => typeof c === 'string').join(' ').replace(/^(bash|sh|zsh) -l?c /, '')
+  else if (typeof cmd === 'string') i.command = cmd
+  if (name === 'Edit' && typeof i.old_str === 'string' && i.old_string === undefined) i.old_string = i.old_str
+  if (name === 'Edit' && typeof i.new_str === 'string' && i.new_string === undefined) i.new_string = i.new_str
+  return { tool: name, input: i }
+}
+
 /** What a step says: "Reading app.ts", "Asking you a question". Pure. */
 export function stepLabel(tool: string, input?: Record<string, unknown>): string {
   if (tool === 'AskUserQuestion') return 'Asking you a question'
@@ -156,7 +209,8 @@ export function applyEvent(sessions: Record<string, AgentSession>, e: AgentEvent
       s = { ...s, phase: 'working', prompt: e.prompt ?? s.prompt, steps: [], turnSteps: 0, added: 0, removed: 0, edits: 0, files: [], turnStartedAt: e.at, finishedAt: undefined, final: undefined, message: undefined }
       break
     case 'PreToolUse': {
-      const tool = e.tool ?? 'tool'
+      const { tool, input } = e.agent === 'claude-code' ? { tool: e.tool ?? 'tool', input: e.input } : canonicalTool(e.tool ?? 'tool', e.input)
+      e = { ...e, input }
       const steps = s.steps.map((x) => (x.done ? x : { ...x, done: true }))
       steps.push({ id: `${e.at}-${s.turnSteps}`, tool, label: stepLabel(tool, e.input), at: e.at, done: false })
       s = {
@@ -171,7 +225,8 @@ export function applyEvent(sessions: Record<string, AgentSession>, e: AgentEvent
       break
     }
     case 'PostToolUse': {
-      const tool = e.tool ?? 'tool'
+      const { tool, input } = e.agent === 'claude-code' ? { tool: e.tool ?? 'tool', input: e.input } : canonicalTool(e.tool ?? 'tool', e.input)
+      e = { ...e, input }
       const diff = EDIT_TOOLS.includes(tool) ? diffForEdit(tool, e.input, e.patch, e.created) : undefined
       let hit = -1
       for (let i = s.steps.length - 1; i >= 0; i--)

@@ -18,6 +18,15 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - Answer Claude's **questions** on the island, one at a time, picking options or
   typing your own answer, and read its **plan** before you let it start.
 - If you had approvals on, the island adds the new session hook by itself.
+- **Codex, Gemini CLI and Cursor Agent** sessions can show too: turn each on in
+  Settings → Claude. Their steps read the same way ("Running npm test",
+  "Editing app.ts").
+
+**Fixes**
+
+- After you used the icons beside the panel and closed it, an invisible strip
+  under the island could keep catching clicks meant for the app below. Gone.
+- Typing in a card no longer leaves the island's content shifted.
 
 **Notifications**
 

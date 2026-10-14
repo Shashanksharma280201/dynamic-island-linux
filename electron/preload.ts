@@ -212,6 +212,7 @@ const settings = {
   setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
   setAutostart: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AUTOSTART, on),
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
+  setAgentHook: (id: string, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AGENT_HOOK, id, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
   setCharacter: (patch: { id?: CharacterId; name?: string }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),

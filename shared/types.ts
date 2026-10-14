@@ -270,6 +270,8 @@ export type SettingsState = {
   notifications: boolean
   autostart: boolean
   hookInstalled: boolean
+  /** Other coding agents (Codex, Gemini CLI, Cursor) whose sessions show on the island. */
+  agentHooks: { id: string; name: string; installed: boolean; path: string; note: string }[]
   /** False when passwords can only be obfuscated (no desktop keyring). */
   secureStorage: boolean
   dockSide: 'left' | 'right' | 'top'

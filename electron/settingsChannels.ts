@@ -5,6 +5,7 @@ export const SETTINGS = {
   SET_NOTIFICATIONS: 'settings:set-notifications',
   SET_AUTOSTART: 'settings:set-autostart',
   SET_HOOK: 'settings:set-hook',
+  SET_AGENT_HOOK: 'settings:set-agent-hook', // (agent id, on)
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',
   SET_SHORTCUT: 'settings:set-shortcut',

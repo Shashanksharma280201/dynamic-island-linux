@@ -10,7 +10,7 @@ import type { ClaudeSettings, SettingsState } from '@shared/types'
 import { saveConfig, parseMailAccount, type Config, type StoredMailAccount } from './config'
 import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
-import { isHookInstalled, setHookInstalled } from './hookSetup'
+import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
 import type { WhatsAppService } from './providers/whatsapp'
@@ -72,6 +72,7 @@ export class SettingsController {
       notifications: config.notifications,
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),
+      agentHooks: agentHooks(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -267,6 +268,11 @@ export class SettingsController {
       await setHookInstalled(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_AGENT_HOOK, async (_e, id, on) => {
+      if (typeof id !== 'string') return
+      await setAgentHook(id, on === true)
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_WHATSAPP, async (_e, on) => {
       config.whatsapp = on === true
