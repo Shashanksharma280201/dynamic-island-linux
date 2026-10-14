@@ -4870,3 +4870,55 @@ button .spinner-orb,
 .island-outer.top .island.tour-bar {
   align-self: flex-start;
 }
+
+/* The wardrobe: right-click the resting island. */
+.card.wardrobe-card {
+  width: 372px;
+}
+.wardrobe-card .wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+.wardrobe-card .wardrobe-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 2px 4px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--label-2);
+  font: 500 10px/1.2 var(--font);
+  cursor: pointer;
+}
+.wardrobe-card .wardrobe-item:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+.wardrobe-card .wardrobe-item.on {
+  color: var(--label);
+  background: rgba(10, 132, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.7);
+}
+.wardrobe-card .swatches {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  justify-content: center;
+}
+.wardrobe-card .swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  padding: 0;
+  cursor: pointer;
+}
+.wardrobe-card .swatch.own {
+  background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
+}
+.wardrobe-card .swatch.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--blue);
+}

@@ -9,6 +9,8 @@ export const SETTINGS = {
   SET_KEY: 'settings:set-key', // (shortcut id, accelerator | null for the default) -> error text | null
   SET_OPEN_ON_HOVER: 'settings:set-open-on-hover', // boolean
   TOUR: 'settings:tour', // start the island's tour
+  OPEN_SOUNDS: 'settings:open-sounds', // open the folder for your own sounds
+  SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
   RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',

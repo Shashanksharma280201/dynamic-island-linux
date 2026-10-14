@@ -15,6 +15,17 @@ const USER_DATA = path.join(TMP, 'profile')
 const ELECTRON = path.join(ROOT, 'node_modules/electron/dist/electron')
 const SCALE = Number(process.env.E2E_SCALE) || 1
 fs.mkdirSync(OUT, { recursive: true })
+// A tiny WAV (a tenth of a second of silence) for "your own sounds".
+const wav = () => {
+  const data = Buffer.alloc(1600 * 2)
+  const h = Buffer.alloc(44)
+  h.write('RIFF', 0), h.writeUInt32LE(36 + data.length, 4), h.write('WAVE', 8), h.write('fmt ', 12)
+  h.writeUInt32LE(16, 16), h.writeUInt16LE(1, 20), h.writeUInt16LE(1, 22), h.writeUInt32LE(16000, 24)
+  h.writeUInt32LE(32000, 28), h.writeUInt16LE(2, 32), h.writeUInt16LE(16, 34), h.write('data', 36), h.writeUInt32LE(data.length, 40)
+  return Buffer.concat([h, data])
+}
+fs.mkdirSync(path.join(USER_DATA, 'sounds'), { recursive: true })
+fs.writeFileSync(path.join(USER_DATA, 'sounds', 'done.wav'), wav())
 
 const results = []
 const check = (name, ok, extra = '') => {
@@ -130,6 +141,15 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await settings.click('#shortcuts .toggle-row:has(.key-recorder[data-shortcut="voice"]) button.link:has-text("Reset")')
     check('Reset puts the default back', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+Space")'))
 
+    // ---- Your own sounds ----
+    await settings.click('#general .toggle-row:has-text("Sounds") input.switch')
+    check('with sounds on, Settings says which files it uses', await seen(settings, '#general .hint:has-text("Using yours for: done")'))
+    const served = await page.evaluate(() => fetch('island-media://sound/done').then((r) => [r.status, r.headers.get('content-type')]))
+    check('the island can play your file', served[0] === 200 && served[1] === 'audio/wav', JSON.stringify(served))
+    fs.writeFileSync(path.join(USER_DATA, 'sounds', 'ask.wav'), wav())
+    check('a file added later is picked up', await seen(settings, '#general .hint:has-text("Using yours for: ask, done")', 5000))
+    await settings.click('#general .toggle-row:has-text("Sounds") input.switch')
+
     // ---- Show me around ----
     const kept = (await page.evaluate(() => window.island.notifications.view())).entries.length
     await settings.click('button:has-text("Start Tour")')
@@ -157,6 +177,51 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('the last step says Done', await seen(page, '.tour-next:has-text("Done")'))
     await page.click('.tour-next')
     check('and the island is yours again', (await gone(page, '.tour-bar')) && (await seen(page, '.capsule.idle')))
+
+    // ---- The desktop companion ----
+    await settings.click('#character .toggle-row:has-text("On your desktop too") input.switch')
+    const buddy = await (async () => {
+      for (let i = 0; i < 50; i++) {
+        const w = app.windows().find((p) => p.url().includes('companion.html'))
+        if (w) return w
+        await sleep(100)
+      }
+      return null
+    })()
+    check('the character can sit on the desktop too', !!buddy && (await seen(buddy, '.companion[data-mood]')))
+    const hook = (input) =>
+      new Promise((resolve) => {
+        const p = require('child_process').spawn('node', [path.join(ROOT, 'hook/claude-island-hook-events.cjs')], { env: { ...process.env, DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock') } })
+        p.on('close', resolve)
+        p.stdin.end(JSON.stringify({ session_id: 'c1', cwd: '/home/me/site', ...input }))
+      })
+    await hook({ hook_event_name: 'UserPromptSubmit', prompt: 'tidy the css' })
+    await hook({ hook_event_name: 'PreToolUse', tool_name: 'Grep', tool_input: { pattern: 'color' } })
+    check('it acts out what Claude is doing', await seen(buddy, '.companion[data-mood="searching"]'))
+    await buddy.screenshot({ path: `${OUT}/11-companion.png`, omitBackground: true })
+    await hook({ hook_event_name: 'SessionEnd' })
+    const where = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.getTitle() === 'Companion')?.getPosition())
+    const before = await where()
+    await buddy.mouse.move(60, 60)
+    await buddy.mouse.down()
+    for (let i = 1; i <= 5; i++) await buddy.mouse.move(60 - i * 8, 60 - i * 6)
+    await buddy.mouse.up()
+    await sleep(300)
+    const after = await where()
+    check('drag it anywhere', after[0] < before[0] && after[1] < before[1], `${before} -> ${after}`)
+    check('and it remembers the spot', JSON.stringify(cfg().companion?.at) === JSON.stringify({ x: after[0], y: after[1] }), JSON.stringify(cfg().companion))
+    await buddy.click('.companion')
+    check('a click opens the island', await seen(page, '.hub'))
+    key('ctrl+i')
+    await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
+    await settings.click('#character .toggle-row:has-text("On your desktop too") input.switch')
+    check('and it goes when turned off', await (async () => {
+      for (let i = 0; i < 30; i++) {
+        if (!app.windows().some((p) => p.url().includes('companion.html'))) return true
+        await sleep(100)
+      }
+      return false
+    })())
 
     // ---- Open on hover ----
     await settings.click('.toggle-row:has-text("Open the panel when the pointer rests on the island") input.switch')
@@ -187,6 +252,37 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await shot(page, '05-open-on-hover')
     away()
     check('and it closes again when you move away', await gone(page, '.hub', 5000))
+
+    // ---- The wardrobe ----
+    if (await page.$('.hub')) {
+      key('ctrl+i')
+      await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
+    }
+    away()
+    await page.mouse.move(4, (await page.evaluate(() => innerHeight)) - 4)
+    await page.evaluate(() => document.querySelector('.island-outer').dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
+    await page.waitForSelector('.capsule.idle', { timeout: 4000 })
+    await page.click('.capsule.idle', { button: 'right' })
+    check('right-click the island to dress it up', await seen(page, '.wardrobe-card'))
+    check('every outfit to pick', (await page.$$('.wardrobe-card .wardrobe-item')).length === 15)
+    await sleep(500)
+    await shot(page, '08-wardrobe')
+    await page.click('.wardrobe-card .wardrobe-item[data-outfit="crown"]')
+    await page.click('.wardrobe-card .swatch[aria-label="Sky"]')
+    check('the outfit and colour are saved', await (async () => {
+      for (let i = 0; i < 30; i++) {
+        const c = cfg().character
+        if (c?.outfit === 'crown' && c?.color === '#5ac8fa') return true
+        await sleep(100)
+      }
+      return false
+    })(), JSON.stringify(cfg().character))
+    await sleep(400)
+    await shot(page, '09-wardrobe-crown')
+    await page.click('.wardrobe-card button:has-text("Done")')
+    check('and the island wears them', await seen(page, '.capsule.idle svg.character[data-outfit="crown"]'))
+    await sleep(400)
+    await shot(page, '10-capsule-crown')
   } catch (e) {
     check('unexpected error', false, e.message)
   } finally {

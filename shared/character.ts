@@ -50,8 +50,66 @@ export const CHARACTERS: CharacterInfo[] = [
 
 export const DEFAULT_CHARACTER: CharacterId = 'orbit'
 
-/** The character as configured: which one, and what you call it. */
-export type CharacterConfig = { id: CharacterId; name: string }
+/** What the character wears ('auto' follows the season). */
+export const OUTFITS = ['none', 'auto', 'beanie', 'cap', 'crown', 'headphones', 'glasses', 'sunglasses', 'bowtie', 'party', 'flower', 'santa', 'witch', 'tophat', 'scarf'] as const
+export type Outfit = (typeof OUTFITS)[number]
+/** Something to wear (not 'auto'). */
+export type Wear = Exclude<Outfit, 'auto'>
+
+export const OUTFIT_LABEL: Record<Outfit, string> = {
+  none: 'Nothing',
+  auto: 'Seasonal',
+  beanie: 'Beanie',
+  cap: 'Cap',
+  crown: 'Crown',
+  headphones: 'Headphones',
+  glasses: 'Glasses',
+  sunglasses: 'Sunglasses',
+  bowtie: 'Bow tie',
+  party: 'Party hat',
+  flower: 'Flower',
+  santa: 'Santa hat',
+  witch: 'Witch hat',
+  tophat: 'Top hat',
+  scarf: 'Scarf',
+}
+
+/** Body colours to pick from (null: the character's own). */
+export const BODY_COLORS: { id: string; label: string; color: string | null }[] = [
+  { id: 'own', label: 'Its own', color: null },
+  { id: 'coral', label: 'Coral', color: '#ff6b6b' },
+  { id: 'sun', label: 'Sunshine', color: '#ffc93c' },
+  { id: 'mint', label: 'Mint', color: '#3ddc97' },
+  { id: 'sky', label: 'Sky', color: '#5ac8fa' },
+  { id: 'iris', label: 'Iris', color: '#7d7aff' },
+  { id: 'lilac', label: 'Lilac', color: '#c77dff' },
+  { id: 'rose', label: 'Rose', color: '#ff7eb6' },
+]
+
+/** The character as configured: which one, what you call it, what it wears, its colour. */
+export type CharacterConfig = { id: CharacterId; name: string; outfit?: Outfit; color?: string | null }
+
+/**
+ * What 'auto' wears on a day: a witch hat at Halloween, a Santa hat in
+ * December, a party hat at New Year, a flower around Valentine's Day, a beanie
+ * the rest of the winter, sunglasses in summer, else nothing. Pure.
+ */
+export function seasonalOutfit(d: Date): Wear {
+  const m = d.getMonth() + 1
+  const day = d.getDate()
+  if ((m === 12 && day === 31) || (m === 1 && day <= 2)) return 'party'
+  if (m === 10 && day >= 20) return 'witch'
+  if (m === 12 && day <= 26) return 'santa'
+  if (m === 2 && day >= 7 && day <= 14) return 'flower'
+  if (m === 12 || m <= 2) return 'beanie'
+  if ((m === 6 && day >= 21) || m === 7 || m === 8) return 'sunglasses'
+  return 'none'
+}
+
+/** What it wears today. Pure. */
+export function wearing(outfit: Outfit | undefined, now: Date): Wear {
+  return !outfit || outfit === 'auto' ? (outfit === 'auto' ? seasonalOutfit(now) : 'none') : outfit
+}
 
 /** Validate a stored character setting. Pure. */
 export function parseCharacter(raw: any): CharacterConfig {
@@ -61,7 +119,9 @@ export function parseCharacter(raw: any): CharacterConfig {
   const info = CHARACTERS.find((c) => c.id === id) ?? CHARACTERS.find((c) => c.id === DEFAULT_CHARACTER)!
   let name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 24) : ''
   if (legacy && name === 'Mochi') name = ''
-  return { id: info.id, name: name || info.name }
+  const outfit: Outfit = (OUTFITS as readonly string[]).includes(raw?.outfit) ? raw.outfit : 'auto'
+  const color = BODY_COLORS.some((c) => c.color && c.color === raw?.color) ? (raw.color as string) : null
+  return { id: info.id, name: name || info.name, outfit, color }
 }
 
 /** The colour of each mood: the aura ring, the body tint, the card's edge light. */

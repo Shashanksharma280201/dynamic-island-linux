@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { setSoundsOn } from './sound'
+import { setSoundsOn, setCustomSounds } from './sound'
 import type { Activity } from '@shared/types'
 import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { Island } from './island/Island'
@@ -27,8 +27,9 @@ export function App() {
   )
   useEffect(
     () =>
-      window.island.onAppearance(({ appearance, blur, sounds, openOnHover }) => {
+      window.island.onAppearance(({ appearance, blur, sounds, openOnHover, customSounds }) => {
         setSoundsOn(!!sounds)
+        setCustomSounds(customSounds)
         document.documentElement.dataset.openOnHover = openOnHover ? 'yes' : 'no'
         document.documentElement.dataset.appearance = appearance
         document.documentElement.dataset.blur = blur ? 'yes' : 'no'

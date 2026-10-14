@@ -41,6 +41,7 @@ import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
 import { enabledPackages, enabledTabs } from '@shared/packages'
+import { parseCharacter } from '@shared/character'
 import { friendlyError, listModels } from './agent/providers'
 import { agentSystemPrompt } from './agent/prompt'
 import { baseUrlFor, modelFor, providerInfo, setupProblem } from '@shared/ai'
@@ -57,6 +58,9 @@ import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
 import { SessionTracker } from './sessions'
+import { CustomSounds } from './sounds'
+import { Companion } from './companion'
+import { companionMood } from '@shared/companion'
 import { SESSIONS } from './sessionChannels'
 import { focusTerminal, terminalFocused } from './terminal'
 import { MailManager } from './mailManager'
@@ -141,7 +145,10 @@ async function main() {
   )
   speech.serve()
   let waForMedia: WhatsAppService | null = null
-  serveMedia(() => waForMedia)
+  // Your own sounds (Settings → General → Sounds → Open Folder).
+  let onSounds = () => {}
+  const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
+  serveMedia(() => waForMedia, (kind) => customSounds.read(kind))
   let claudeUi: ClaudeController | null = null
   let display: Display = placeIslandWindow(win, config.dock.side)
   // The side actually shown: config.dock.side, or a preview while dragging.
@@ -645,6 +652,9 @@ async function main() {
       return null
     },
     onOpenOnHover: () => pushAppearance(),
+    setCompanion: (on) => setCompanion(on),
+    customSounds: () => customSounds.kinds(),
+    openSounds: () => void shell.openPath(customSounds.ensureDir()),
     startTour: () => send(win, IPC.TOUR, null),
     pauseShortcuts: (on) => {
       if (on) {
@@ -894,10 +904,59 @@ async function main() {
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds, openOnHover: config.openOnHover })
-  const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds, openOnHover: config.openOnHover, customSounds: customSounds.urls() })
+  const pushCharacter = () => {
+    send(win, IPC.CHARACTER, config.character)
+    updateCompanion()
+  }
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   const pushKeys = () => send(win, IPC.KEYS, config.keys)
+  // The desktop companion: the character on your desktop too (Settings → Character).
+  let lastBusy = Date.now()
+  const companion = new Companion({
+    spot: () => config.companion.at,
+    saveSpot: (at) => {
+      config.companion = { ...config.companion, at }
+      saveConfig(config)
+    },
+    onClick: () => send(win, IPC.TOGGLE_PANEL, null),
+  })
+  const updateCompanion = () => {
+    if (!config.companion.on) return
+    const list = store.list()
+    if (list.length) lastBusy = Date.now()
+    companion.set(companionMood(list, lastBusy, new Date()), config.character)
+  }
+  const setCompanion = (on: boolean) => {
+    config.companion = { ...config.companion, on }
+    saveConfig(config)
+    if (on) {
+      companion.show()
+      updateCompanion()
+    } else companion.hide()
+  }
+  store.onChange(updateCompanion)
+  const companionTimer = setInterval(updateCompanion, 15_000)
+  if (config.companion.on) {
+    companion.show()
+    updateCompanion()
+  }
+  onSounds = () => {
+    pushAppearance()
+    settings?.changed()
+  }
+  // The wardrobe on the island (right-click the character).
+  ipcMain.on(IPC.SET_LOOK, (_e, patch) => {
+    if (!patch || typeof patch !== 'object') return
+    config.character = parseCharacter({
+      ...config.character,
+      ...('outfit' in patch ? { outfit: patch.outfit } : {}),
+      ...('color' in patch ? { color: patch.color } : {}),
+    })
+    saveConfig(config)
+    pushCharacter()
+    settings?.changed()
+  })
   win.webContents.on('did-finish-load', () => {
     claudeUi?.push()
     pushState()
@@ -970,6 +1029,9 @@ async function main() {
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
     sessions.stop()
+    customSounds.close()
+    clearInterval(companionTimer)
+    companion.hide()
     center.flush()
     clearInterval(crmTimer)
     crm.flush()

@@ -127,6 +127,7 @@ export const IPC = {
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
+  SET_LOOK: 'island:set-look', // renderer -> main: { outfit?, color? } from the island's wardrobe
   TOUR: 'island:tour', // main -> renderer: start "Show me around"
   KEYS: 'island:keys', // main -> renderer: Shortcuts (the global shortcuts' keys)
   PIN: 'island:pin', // renderer -> main: activity id (keep a transient card until it's closed)
@@ -287,6 +288,10 @@ export type SettingsState = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island. */
   openOnHover: boolean
+  /** Sounds replaced by your own files. */
+  customSounds: string[]
+  /** The character also sits on the desktop. */
+  companion: boolean
   mac: boolean
   /** Other coding agents (Codex, Gemini CLI, Cursor) whose sessions show on the island. */
   agentHooks: { id: string; name: string; installed: boolean; path: string; note: string }[]

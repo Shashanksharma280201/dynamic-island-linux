@@ -32,6 +32,7 @@ import { useSessions } from './useSessions'
 import { CompactSession, SessionCard } from './states/SessionActivity'
 import { CloseBar } from './states/CloseBar'
 import { tourSteps } from './tour'
+import { WardrobePicker } from './character/Wardrobe'
 import { useShortcutLabel } from './useShortcuts'
 
 /** A tab whose package is turned off. */
@@ -217,6 +218,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       }),
     [],
   )
+  // Right-click the resting island: dress the character up.
+  const [wardrobe, setWardrobe] = useState(false)
   // "Show me around": example cards, one step at a time (nothing real is touched).
   const panelKey = useShortcutLabel('panel')
   const steps = tourSteps(character.name, panelKey)
@@ -265,11 +268,27 @@ export function Island({ activities: real }: { activities: Activity[] }) {
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
 
-  // "Open on hover" (Settings): resting on the resting island opens the panel.
+  // The wardrobe closes once the pointer has left for a moment.
   useEffect(() => {
-    if (stage !== 'full' || p.mode !== 'idle' || panel || document.documentElement.dataset.openOnHover !== 'yes') return
+    if (!wardrobe || hover) return
+    const t = setTimeout(() => setWardrobe(false), PANEL_CLOSE_MS * 2)
+    return () => clearTimeout(t)
+  }, [wardrobe, hover])
+
+  // "Open on hover" (Settings): resting on the resting island opens the panel.
+  // Only on a fresh rest: closing the panel (or the wardrobe) under the pointer
+  // mustn't open it again until the pointer has left.
+  const hoverArmed = useRef(true)
+  useEffect(() => {
+    if (!hover) hoverArmed.current = true
+  }, [hover])
+  useEffect(() => {
+    if (panel || wardrobe) hoverArmed.current = false
+  }, [panel, wardrobe])
+  useEffect(() => {
+    if (stage !== 'full' || p.mode !== 'idle' || panel || wardrobe || !hoverArmed.current || document.documentElement.dataset.openOnHover !== 'yes') return
     setPanel(true)
-  }, [stage, p.mode, panel])
+  }, [stage, p.mode, panel, wardrobe])
 
   // Keep a notification / message open while it's hovered or being answered.
   const transientId =
@@ -368,9 +387,12 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     [],
   )
 
+  const dressing = wardrobe && !showPanel && p.mode === 'idle' && !dropping
   const key = showPanel
     ? 'panel'
-    : dropping || adding
+    : dressing
+      ? 'wardrobe'
+      : dropping || adding
       ? 'drop'
       : peeking
         ? `peek:${p.mode === 'idle' ? 'idle' : p.primary.id}`
@@ -440,6 +462,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        if (p.mode === 'idle' && !showPanel) setWardrobe(true)
+      }}
       onClick={onClick}
       {...handlers}
       {...dropHandlers}
@@ -461,6 +487,24 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           >
             {showPanel ? (
               <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+            ) : dressing ? (
+              <div className="card wardrobe-card" onClick={(e) => e.stopPropagation()}>
+                <div className="card-head">
+                  <span className="app-name">Dress up {character.name}</span>
+                  <span className="spacer" />
+                  <button className="pill primary small" onClick={() => setWardrobe(false)}>
+                    Done
+                  </button>
+                </div>
+                <WardrobePicker
+                  id={character.id}
+                  outfit={character.outfit ?? 'auto'}
+                  color={character.color ?? null}
+                  size={38}
+                  onOutfit={(outfit) => window.island.setLook({ outfit })}
+                  onColor={(color) => window.island.setLook({ color })}
+                />
+              </div>
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (

@@ -29,6 +29,8 @@ export type Config = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island (no click needed). */
   openOnHover: boolean
+  /** The character also sits on the desktop, where you put it. */
+  companion: { on: boolean; at: { x: number; y: number } | null }
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
   /** The island's little sounds (off unless turned on). */
@@ -95,6 +97,7 @@ const DEFAULTS: Config = {
   shortcut: true,
   keys: parseShortcuts(null),
   openOnHover: false,
+  companion: { on: false, at: null },
   frosted: true,
   sounds: false,
   greeted: '',
@@ -132,7 +135,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, keys: parseShortcuts(null), mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, keys: parseShortcuts(null), companion: { on: false, at: null }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -147,6 +150,10 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
   c.keys = parseShortcuts(r.keys)
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
+  c.companion = {
+    on: r.companion?.on === true,
+    at: Number.isFinite(r.companion?.at?.x) && Number.isFinite(r.companion?.at?.y) ? { x: Math.round(r.companion.at.x), y: Math.round(r.companion.at.y) } : null,
+  }
   if (typeof r.frosted === 'boolean') c.frosted = r.frosted
   if (typeof r.sounds === 'boolean') c.sounds = r.sounds
   if (typeof r.greeted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.greeted)) c.greeted = r.greeted

@@ -44,6 +44,10 @@ type Deps = {
   /** Let go of our global shortcuts while new keys are recorded (and take them back). */
   pauseShortcuts: (on: boolean) => void
   startTour: () => void
+  setCompanion: (on: boolean) => void
+  /** Sounds you replaced with your own files, and their folder. */
+  customSounds: () => string[]
+  openSounds: () => void
   onOpenOnHover: () => void
   shortcutActive: () => boolean
   onFrosted: () => void
@@ -86,6 +90,8 @@ export class SettingsController {
       shortcut: config.shortcut,
       keys: config.keys,
       openOnHover: config.openOnHover,
+      customSounds: this.d.customSounds(),
+      companion: config.companion.on,
       mac: process.platform === 'darwin',
       frosted: config.frosted,
       sounds: config.sounds,
@@ -223,6 +229,11 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.RECORDING, (_e, on) => this.d.pauseShortcuts(on === true))
     ipcMain.handle(SETTINGS.TOUR, () => this.d.startTour())
+    ipcMain.handle(SETTINGS.OPEN_SOUNDS, () => this.d.openSounds())
+    ipcMain.handle(SETTINGS.SET_COMPANION, (_e, on) => {
+      this.d.setCompanion(on === true)
+      this.changed()
+    })
     ipcMain.handle(SETTINGS.SET_OPEN_ON_HOVER, (_e, on) => {
       config.openOnHover = on === true
       this.save()
@@ -234,6 +245,8 @@ export class SettingsController {
         id: typeof patch?.id === 'string' ? patch.id : config.character.id,
         // Switching without renaming takes the new character's own name.
         name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
+        outfit: patch && 'outfit' in patch ? patch.outfit : config.character.outfit,
+        color: patch && 'color' in patch ? patch.color : config.character.color,
       })
       this.save()
       this.d.onCharacter()

@@ -50,6 +50,19 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Open on hover** (Settings → General): rest on the island and the panel
   opens, no click needed.
 
+**Your character**
+
+- **Wardrobe:** 13 outfits (beanie, cap, crown, headphones, glasses,
+  sunglasses, bow tie, party hat, flower, Santa hat, witch hat, top hat, scarf)
+  and a **Seasonal** one that changes with the date, plus a body colour. Pick
+  them in Settings → Character, or right-click the island.
+- **On your desktop too:** the character can sit on the desktop, acting out
+  what's going on (working along with Claude, waving when something needs you,
+  dancing to music, dozing when it's quiet). Drag it anywhere; click it to open
+  the island.
+- **Your own sounds:** put a file named after a sound (done.mp3, ask.wav…) in
+  the sounds folder (Settings → General → Sounds) and it plays instead.
+
 **Looks**
 
 - Dotted "thinking orbs" show what's going on: on the capsule and the cards

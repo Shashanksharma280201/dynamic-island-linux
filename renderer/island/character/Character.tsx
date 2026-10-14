@@ -2,7 +2,8 @@ import { createContext, useContext, useEffect, useId, useRef, useState, type Rea
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion'
 import { ThinkingOrb } from 'thinking-orbs'
 import type { OrbMood } from '@shared/claude'
-import { DEFAULT_CHARACTER, MOOD_COLOR, gazeToward, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
+import { DEFAULT_CHARACTER, MOOD_COLOR, gazeToward, ringKind, wearing, type CharacterConfig, type CharacterId, type CharacterMood, type Outfit, type Wear } from '@shared/character'
+import { ANCHORS, FaceWear, HATS, HeadWear } from './Outfits'
 import { sound } from '../../sound'
 
 /** The chosen character (and its name) for everything on the island. */
@@ -218,7 +219,10 @@ const ANTENNA: Partial<Record<CharacterMood, string>> = {
   sleeping: '#636366',
 }
 
-type BodyProps = { mood: CharacterMood; still: boolean; face: Face; look: Look; tint: string }
+type BodyProps = { mood: CharacterMood; still: boolean; face: Face; look: Look; tint: string; wear: Wear; paint: string | null }
+
+/** Your colour over the body, keeping its shading. */
+const paintStyle = (blend: 'multiply' | 'color') => ({ mixBlendMode: blend }) as const
 
 /** The face turns toward where the eyes look (a head on a sphere). */
 const Face = ({ look, still, children }: { look: Look; still: boolean; children: ReactNode }) => (
@@ -227,26 +231,30 @@ const Face = ({ look, still, children }: { look: Look; still: boolean; children:
   </motion.g>
 )
 
-function Bolt({ mood, still, face, look, tint }: BodyProps) {
+function Bolt({ mood, still, face, look, tint, wear, paint }: BodyProps) {
   const light = face === 'heart' ? '#ff375f' : (ANTENNA[mood] ?? '#30d158')
+  // Under a hat the antenna folds away.
+  const antenna = !HATS.includes(wear)
   return (
     <g>
-      <line x1={50} y1={13} x2={50} y2={24} stroke="#9aa4b2" strokeWidth={3} strokeLinecap="round" />
-      <motion.circle cx={50} cy={11} r={5} fill={light} animate={still ? undefined : { opacity: mood === 'sleeping' ? 0.5 : [1, 0.55, 1] }} transition={loop(mood === 'listening' ? 0.8 : 2)} />
+      {antenna && <line x1={50} y1={13} x2={50} y2={24} stroke="#9aa4b2" strokeWidth={3} strokeLinecap="round" />}
+      {antenna && <motion.circle cx={50} cy={11} r={5} fill={light} animate={still ? undefined : { opacity: mood === 'sleeping' ? 0.5 : [1, 0.55, 1] }} transition={loop(mood === 'listening' ? 0.8 : 2)} />}
       <rect x={13} y={45} width={8} height={18} rx={4} fill="#c9d0d9" />
       <rect x={79} y={45} width={8} height={18} rx={4} fill="#c9d0d9" />
       <rect x={18} y={24} width={64} height={58} rx={24} fill="#eef1f5" />
       <rect x={18} y={24} width={64} height={58} rx={24} fill="url(#boltShade)" />
       <rect x={18} y={24} width={64} height={58} rx={24} fill={tint} />
+      {paint && <rect x={18} y={24} width={64} height={58} rx={24} fill={paint} style={paintStyle('multiply')} />}
       <rect x={26} y={35} width={48} height={33} rx={15} fill="#161b26" />
       <Face look={look} still={still}>
         <Eyes lx={40} rx={60} y={51.5} look={{ color: '#64d2ff', rx: 5.6, ry: 7.5, glow: true }} mood={mood} still={still} face={face} />
+        <FaceWear wear={wear} a={ANCHORS.bolt} />
       </Face>
     </g>
   )
 }
 
-function Puff({ mood, still, face, look, tint }: BodyProps) {
+function Puff({ mood, still, face, look, tint, wear, paint }: BodyProps) {
   const sad = mood === 'error'
   const happy = mood === 'done' || mood === 'dancing'
   const body = 'M12 82 C 10 40, 32 18, 50 18 C 68 18, 90 40, 88 82 Q 50 92 12 82Z'
@@ -255,8 +263,10 @@ function Puff({ mood, still, face, look, tint }: BodyProps) {
       <path d={body} fill="#fff6f0" />
       <path d={body} fill="url(#puffShade)" />
       <path d={body} fill={tint} />
+      {paint && <path d={body} fill={paint} style={paintStyle('multiply')} />}
       <Face look={look} still={still}>
         <Eyes lx={38} rx={62} y={52} look={{ color: '#2b2b2e', rx: 4.6, ry: 6, shine: true }} mood={mood} still={still} face={face} />
+        <FaceWear wear={wear} a={ANCHORS.puff} />
         <ellipse cx={28} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={face === 'heart' ? 1 : 0.85} />
         <ellipse cx={72} cy={64} rx={6.5} ry={3.6} fill="#ffb3c1" opacity={face === 'heart' ? 1 : 0.85} />
         {face === 'spiral' || mood === 'listening' || mood === 'attention' ? (
@@ -278,13 +288,15 @@ const ORB_MOOD: Partial<Record<CharacterMood, OrbMood>> = {
   attention: 'connecting',
 }
 
-function Orbit({ mood, still, face, look, tint }: BodyProps) {
+function Orbit({ mood, still, face, look, tint, wear, paint }: BodyProps) {
   return (
     <g>
       <circle cx={50} cy={52} r={30} fill="url(#orbitCore)" />
+      {paint && <circle cx={50} cy={52} r={30} fill={paint} style={paintStyle('color')} />}
       <circle cx={50} cy={52} r={30} fill={tint} />
       <Face look={look} still={still}>
         <Eyes lx={41} rx={59} y={50} look={{ color: '#fff3ec', rx: 4.2, ry: 5.8 }} mood={mood} still={still} face={face} />
+        <FaceWear wear={wear} a={ANCHORS.orbit} />
         {(face || (mood !== 'sleeping' && mood !== 'error' && mood !== 'listening' && mood !== 'attention')) && face !== 'spiral' && (
           <path d={face ? 'M44 60 Q50 67 56 60' : 'M45 61 Q50 65 55 61'} stroke="#fff3ec" strokeWidth={2.2} fill="none" strokeLinecap="round" />
         )}
@@ -420,6 +432,8 @@ export function Character({
   interactive = false,
   ring = size >= 30,
   color: colorOverride,
+  outfit,
+  paint: paintOverride,
 }: {
   mood: CharacterMood
   size?: number
@@ -430,6 +444,10 @@ export function Character({
   ring?: boolean
   /** A colour for the ring and tint instead of the mood's own (e.g. green for a file drop). */
   color?: string
+  /** What it wears, instead of the chosen outfit (Settings previews). */
+  outfit?: Outfit
+  /** Its body colour, instead of the chosen one (null: its own). */
+  paint?: string | null
 }) {
   const chosen = useCharacter()
   const which = id ?? chosen.id
@@ -439,6 +457,8 @@ export function Character({
   const look = useGaze(ref, track && !reduce && mood !== 'sleeping')
   const { face, react, handlers } = useReactions(interactive && !reduce)
   const Body = BODIES[which] ?? Orbit
+  const wear = wearing(outfit ?? chosen.outfit, new Date())
+  const paint = paintOverride !== undefined ? paintOverride : (chosen.color ?? null)
   const body = react ? reactionMotion(react) : bodyMotion(mood)
   const color = colorOverride ?? MOOD_COLOR[mood]
   const tintId = `tint-${uid}`
@@ -449,10 +469,12 @@ export function Character({
       data-mood={mood}
       data-character={which}
       data-reaction={react ?? undefined}
+      data-outfit={wear}
       width={size}
       height={size}
       viewBox="0 0 100 100"
       role="img"
+      overflow="visible"
       aria-label={label ?? `${chosen.name}: ${mood}`}
       {...handlers}
     >
@@ -485,7 +507,8 @@ export function Character({
       </defs>
       {ring && <Ring mood={mood} still={reduce} color={color} />}
       <motion.g key={reduce ? 'still' : (react ?? mood)} animate={reduce ? undefined : body.animate} transition={body.transition} style={{ originX: '50px', originY: '88px' }} data-uid={uid}>
-        <Body mood={mood} still={reduce} face={face} look={look} tint={`url(#${tintId})`} />
+        <Body mood={mood} still={reduce} face={face} look={look} tint={`url(#${tintId})`} wear={wear} paint={paint} />
+        <HeadWear wear={wear} a={ANCHORS[which] ?? ANCHORS.orbit} />
       </motion.g>
       {size >= 30 && (react ? <ReactionOverlay r={react} /> : <Overlay mood={mood} />)}
     </svg>
@@ -502,7 +525,7 @@ export function Character({
         style={{ position: 'absolute', left: 0, top: 0, width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.85 }}
       >
         <span style={{ display: 'block', flex: 'none', transform: `scale(${(size * 1.08) / halo})` }}>
-          <ThinkingOrb state={orbMood} size={halo as 20 | 32 | 64} theme="dark" color={mood === 'listening' ? '#ffb35c' : '#f0a483'} />
+          <ThinkingOrb state={orbMood} size={halo as 20 | 32 | 64} theme="dark" color={paint ?? (mood === 'listening' ? '#ffb35c' : '#f0a483')} />
         </span>
       </span>
       <span style={{ position: 'absolute', inset: 0 }}>{svg}</span>

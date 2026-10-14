@@ -7,6 +7,7 @@ import { PackagesSection } from './PackagesSection'
 import { SettingsProblem } from './Problem'
 import { ShortcutsSection } from './ShortcutsSection'
 import { shortcutLabel } from '@shared/shortcuts'
+import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
 function Toggle({
   on,
@@ -371,6 +372,22 @@ export function Settings() {
           on={s.sounds}
           onChange={(v) => general.run(() => window.settings.setSounds(v))}
         />
+        {s.sounds && (
+          <div className="toggle-row">
+            <div>
+              <div>Your own sounds</div>
+              <div className="hint">
+                {s.customSounds?.length
+                  ? `Using yours for: ${s.customSounds.join(', ')}. `
+                  : 'Put a sound file in the folder named after what it replaces: '}
+                {s.customSounds?.length ? 'Add or remove files any time.' : `${SOUND_KINDS.slice(3, 7).map((k) => `${k}.mp3 (${SOUND_INFO[k]})`).join(', ')}, and more. WAV, MP3, OGG or M4A.`}
+              </div>
+            </div>
+            <button className="secondary" onClick={() => general.run(() => window.settings.openSounds())}>
+              Open Folder
+            </button>
+          </div>
+        )}
         <div className="toggle-row">
           <div>
             <div>Island position</div>

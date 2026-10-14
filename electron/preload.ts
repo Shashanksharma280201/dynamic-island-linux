@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { CharacterConfig, CharacterId } from '@shared/character'
+import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
 import type { PackageId, PackageTab } from '@shared/packages'
 import type { DocAction, DocActionResult, DocEntry, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
@@ -24,6 +24,7 @@ import { IPC } from '@shared/types'
 import type { AgentSession } from '@shared/sessions'
 import type { Shortcuts } from '@shared/shortcuts'
 import { SESSIONS } from './sessionChannels'
+import { COMPANION } from './companionChannels'
 import type {
   Activity,
   DecisionMsg,
@@ -82,6 +83,15 @@ const api = {
   pin: (id: string) => ipcRenderer.send(IPC.PIN, id),
   /** The global shortcuts' keys (they can be changed in Settings). */
   onKeys: (cb: (k: Shortcuts) => void) => on(IPC.KEYS, cb),
+  /** Dress the character from the island (right-click wardrobe). */
+  setLook: (patch: { outfit?: Outfit; color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
+  /** The desktop companion's page. */
+  companion: {
+    onState: (cb: (s: { mood: CharacterMood; character: CharacterConfig }) => void) => on(COMPANION.STATE, cb),
+    move: (dx: number, dy: number) => ipcRenderer.send(COMPANION.MOVE, { dx, dy }),
+    drop: () => ipcRenderer.send(COMPANION.DROP),
+    click: () => ipcRenderer.send(COMPANION.CLICK),
+  },
   /** Start the tour (tray, Settings). */
   onTour: (cb: () => void) => on(IPC.TOUR, cb),
   setFocus: (focus: boolean) => ipcRenderer.send(IPC.FOCUS, focus),
@@ -186,7 +196,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string> }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -225,9 +235,11 @@ const settings = {
   setOpenOnHover: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_OPEN_ON_HOVER, on),
   setRecording: (on: boolean) => ipcRenderer.invoke(SETTINGS.RECORDING, on),
   tour: () => ipcRenderer.invoke(SETTINGS.TOUR),
+  openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
+  setCompanion: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_COMPANION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
-  setCharacter: (patch: { id?: CharacterId; name?: string }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
+  setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
