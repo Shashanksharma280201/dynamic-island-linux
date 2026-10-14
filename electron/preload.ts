@@ -49,6 +49,8 @@ import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
 import { DOCS } from '../electron/docsChannels'
 import { CRM } from '../electron/crmChannels'
+import { NOTIFS } from '../electron/notifChannels'
+import type { CenterView } from '@shared/notifCenter'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
@@ -87,6 +89,17 @@ const api = {
   onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
   /** Artwork as a data URL (to sample its colours). */
   imageData: (url: string): Promise<string | null> => ipcRenderer.invoke(SPOTIFY.IMAGE, url),
+  /** The notification center: history, Clear all, Do Not Disturb. */
+  notifications: {
+    view: (): Promise<CenterView> => ipcRenderer.invoke(NOTIFS.VIEW),
+    dismiss: (id: string): Promise<void> => ipcRenderer.invoke(NOTIFS.DISMISS, id),
+    /** Clears the list and the island's cards; resolves to how many were cleared. */
+    clearAll: (): Promise<number> => ipcRenderer.invoke(NOTIFS.CLEAR_ALL),
+    undo: (): Promise<void> => ipcRenderer.invoke(NOTIFS.UNDO),
+    seen: (): Promise<void> => ipcRenderer.invoke(NOTIFS.SEEN),
+    setDnd: (on: boolean): Promise<void> => ipcRenderer.invoke(NOTIFS.SET_DND, on),
+    onChanged: (cb: (v: CenterView) => void) => on(NOTIFS.CHANGED, cb),
+  },
   spotify: {
     state: (): Promise<SpotifyView> => ipcRenderer.invoke(SPOTIFY.STATE),
     onChange: (cb: (v: SpotifyView) => void) => on(SPOTIFY.CHANGED, cb),

@@ -26,6 +26,8 @@ import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 import type { DocsAdded } from '@shared/docs'
 import type { DocsIncoming } from './hub/DocsView'
 import { errorText } from './hub/common'
+import { useNotifications } from './useNotifications'
+import { clearedText } from '@shared/notifCenter'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
@@ -58,6 +60,14 @@ const PANEL_CLOSE_MS = 1500
 
 export function Island({ activities }: { activities: Activity[] }) {
   const character = useCharacter()
+  const center = useNotifications()
+  // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
+  const [cleared, setCleared] = useState<number | null>(null)
+  useEffect(() => {
+    if (cleared === null) return
+    const t = setTimeout(() => setCleared(null), 5000)
+    return () => clearTimeout(t)
+  }, [cleared])
   const [hover, setHover] = useState(false)
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
@@ -346,6 +356,10 @@ export function Island({ activities }: { activities: Activity[] }) {
   const enter = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, ...toward, ...(soft ? { filter: 'blur(4px)' } : {}) }
   const leave = reduce ? { opacity: 0, transition: { duration: 0.16 } } : { opacity: 0, scale: 0.97, ...(soft ? { filter: 'blur(4px)' } : {}), transition: contentOut }
 
+  // Notification and message cards waiting on the island.
+  const notifCards = activities.filter((a) => a.kind === 'notification' || a.kind === 'message').length
+  const onNotifCard = !showPanel && p.mode === 'expanded' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
+
   const onClick = () => {
     if (consumeDragClick()) return
     setHello(null)
@@ -389,7 +403,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (
@@ -397,20 +411,21 @@ export function Island({ activities }: { activities: Activity[] }) {
             ) : hello && p.mode === 'idle' ? (
               <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
-              <IdlePill />
+              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} />
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (
               <NotificationCard
                 id={p.primary.id}
                 notification={p.primary.notification}
-                queued={p.queued}
+                // The "N more · Clear all" pill below counts what's waiting.
+                queued={notifCards >= 2 ? 0 : p.queued}
               />
             ) : p.primary.kind === 'message' ? (
               <MessageCard
                 id={p.primary.id}
                 message={p.primary.message}
-                queued={p.queued}
+                queued={notifCards >= 2 ? 0 : p.queued}
                 onReplying={setReplying}
                 onOpen={() => {
                   setTab(p.primary.kind === 'message' && p.primary.message.source === 'mail' ? 'mail' : 'chats')
@@ -436,6 +451,54 @@ export function Island({ activities }: { activities: Activity[] }) {
           </motion.div>
         </AnimatePresence>
       </motion.div>
+
+      <AnimatePresence>
+        {notifCards >= 2 && onNotifCard && (
+          // More notifications waiting behind this one: say how many, and clear them all at once.
+          <motion.div
+            key="notif-stack"
+            className="island notif-stack"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">{notifCards - 1} more</span>
+            <button
+              className="clear"
+              onClick={async () => {
+                const n = await window.island.notifications.clearAll()
+                setCleared(n > 0 ? n : null)
+              }}
+            >
+              Clear all
+            </button>
+          </motion.div>
+        )}
+        {cleared !== null && !showPanel && !onNotifCard && (
+          <motion.div
+            key="notif-cleared"
+            className="island notif-stack toast"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">{clearedText(cleared)}</span>
+            <button
+              className="clear undo"
+              onClick={() => {
+                void window.island.notifications.undo()
+                setCleared(null)
+              }}
+            >
+              Undo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isApproval && !showPanel && !atTop && p.mode === 'expanded' && p.queued > 0 && (
@@ -468,7 +531,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             // Follows the panel a beat later.
             transition={{ ...pop, delay: 0.04 }}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>
         )}
       </AnimatePresence>

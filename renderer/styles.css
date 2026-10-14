@@ -3918,3 +3918,349 @@ button.crm-menu-item:hover {
 .crm-currency-row > span {
   flex: 1;
 }
+
+/* ---------------------------------------------------------------------------
+   Notifications: the notification center tab, the island's stack and
+   Clear all, and Do Not Disturb
+   --------------------------------------------------------------------------- */
+.card.panel.hub.alerts {
+  height: clamp(320px, calc(100vh - 200px), 520px);
+}
+.nc {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.nc-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 4px 0;
+}
+.nc-title {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-right: auto;
+}
+.nc-dnd,
+.nc-clear {
+  border: 0;
+  border-radius: 999px;
+  height: 26px;
+  padding: 0 11px;
+  font: 600 12px/1 var(--font);
+  color: var(--label);
+  background: var(--fill-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  transition:
+    background 0.18s,
+    color 0.18s,
+    transform 0.12s;
+}
+.nc-dnd:hover,
+.nc-clear:hover:not(:disabled) {
+  background: var(--fill);
+}
+.nc-dnd:active,
+.nc-clear:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.nc-dnd.on {
+  background: #5e5ce6;
+  color: #fff;
+}
+.nc-clear:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.nc-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(94, 92, 230, 0.18);
+  color: #c7c6ff;
+  font-size: 12px;
+  line-height: 1.3;
+}
+.nc-banner span {
+  flex: 1;
+}
+.nc-banner .plain {
+  color: #fff;
+  font-weight: 600;
+}
+.nc-list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 2px 44px;
+  scrollbar-width: none;
+}
+.nc-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nc-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+  height: 20px;
+  font-size: 12px;
+  color: var(--label-2);
+}
+.nc-app {
+  font-weight: 600;
+  margin-right: auto;
+  text-transform: none;
+}
+.nc-group-head .plain {
+  font-size: 12px;
+  color: var(--label-2);
+}
+.nc-group-head .plain:hover {
+  color: var(--label);
+}
+.nc-row {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  touch-action: pan-y;
+  cursor: grab;
+}
+.nc-row.opens {
+  cursor: pointer;
+}
+.nc-row:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.nc-row.unseen::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.nc-row.critical {
+  box-shadow: inset 0 0 0 1px rgba(255, 69, 58, 0.45);
+}
+.nc-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.nc-icon .avatar {
+  width: 30px;
+  height: 30px;
+}
+.nc-bell {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: var(--fill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--label);
+}
+.nc-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.nc-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.nc-what {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.nc-when {
+  flex: none;
+  font-size: 11px;
+  color: var(--label-3);
+  font-variant-numeric: tabular-nums;
+}
+.nc-body {
+  font-size: 12.5px;
+  line-height: 1.32;
+  color: var(--label-2);
+}
+.nc-count {
+  font-size: 11px;
+  color: var(--label-3);
+}
+.nc-x {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fill-2);
+  color: var(--label-2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    background 0.15s;
+}
+.nc-row:hover .nc-x,
+.nc-group-head:hover .nc-x,
+.nc-x:focus-visible {
+  opacity: 1;
+}
+.nc-x:hover {
+  background: var(--fill);
+  color: var(--label);
+}
+.nc-row .nc-x {
+  align-self: center;
+}
+.nc-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  padding: 20px 26px 30px;
+}
+.nc-empty .title {
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 650;
+}
+.nc-empty .caption {
+  font-size: 12.5px;
+  color: var(--label-2);
+  line-height: 1.35;
+}
+.nc-toast {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: rgba(58, 58, 64, 0.96);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13px;
+}
+.nc-toast span {
+  flex: 1;
+}
+.nc-toast .plain {
+  color: var(--blue);
+  font-weight: 650;
+}
+
+/* Under a notification card: "2 more · Clear all", then "Cleared … · Undo". */
+.island.notif-stack {
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 5px 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--label-2);
+  cursor: default;
+}
+.notif-stack .more {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.notif-stack .clear {
+  border: 0;
+  border-radius: 999px;
+  height: 24px;
+  padding: 0 11px;
+  background: var(--fill-2);
+  color: var(--label);
+  font: 650 12px/1 var(--font);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    transform 0.12s;
+}
+.notif-stack .clear:hover {
+  background: var(--fill);
+}
+.notif-stack .clear:active {
+  transform: scale(0.94);
+}
+.notif-stack .clear.undo {
+  color: var(--blue);
+}
+
+/* Do Not Disturb: a moon (and how many are waiting) on the resting capsule. */
+.capsule.idle {
+  position: relative;
+}
+.dnd-badge {
+  position: absolute;
+  /* On the character's lower corner, like a status badge on an avatar. */
+  top: 34px;
+  right: 3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: #5e5ce6;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font: 700 9px/1 var(--font);
+  box-shadow: 0 0 0 1.5px var(--material);
+}
+.island-outer.top .island.notif-stack {
+  align-self: flex-start;
+  margin-top: 6px;
+}
+.island-outer.top .dnd-badge {
+  top: auto;
+  bottom: 2px;
+  right: auto;
+  left: 34px;
+}

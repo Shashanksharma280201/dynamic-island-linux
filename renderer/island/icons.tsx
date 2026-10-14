@@ -99,6 +99,12 @@ export const BellIcon = () => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </Svg>
 )
+/** Do Not Disturb: a crescent moon. */
+export const MoonIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z" fill="currentColor" />
+  </svg>
+)
 export const ChatIcon = () => (
   <Svg size={14}>
     <path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.5L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.5z" />
@@ -116,8 +122,8 @@ export const TerminalIcon = () => (
     <path d="m7.5 9.5 3 2.5-3 2.5M12.5 15h4" />
   </Svg>
 )
-export const XIcon = () => (
-  <Svg size={12}>
+export const XIcon = ({ size = 12 }: { size?: number }) => (
+  <Svg size={size}>
     <path d="M6 6l12 12M18 6 6 18" />
   </Svg>
 )

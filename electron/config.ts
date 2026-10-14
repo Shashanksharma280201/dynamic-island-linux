@@ -13,6 +13,8 @@ export type StoredMailAccount = MailAccount & { secret: string }
 export type Config = {
   /** Mirror desktop notifications on the island. */
   notifications: boolean
+  /** Do Not Disturb: notifications and messages go quietly to the notification center. */
+  dnd: boolean
   /** Run the built-in WhatsApp (linked device). */
   whatsapp: boolean
   mail: StoredMailAccount[]
@@ -80,6 +82,7 @@ export function parseClaudeConfig(raw: any): ClaudeConfig {
 
 const DEFAULTS: Config = {
   notifications: true,
+  dnd: false,
   whatsapp: false,
   mail: [],
   dock: DEFAULT_DOCK,
@@ -139,6 +142,7 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.sounds === 'boolean') c.sounds = r.sounds
   if (typeof r.greeted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.greeted)) c.greeted = r.greeted
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
+  if (typeof r.dnd === 'boolean') c.dnd = r.dnd
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {
     c.mail = r.mail.map(parseMailAccount).filter((a: StoredMailAccount | null) => !!a)

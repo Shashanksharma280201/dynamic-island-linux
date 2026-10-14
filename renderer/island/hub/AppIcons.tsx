@@ -36,6 +36,14 @@ export const ControlsAppIcon = () => (
   </Tile>
 )
 
+/** Notifications: a white bell on red, like the system's. */
+export const NotificationsAppIcon = () => (
+  <Tile from="#ff6b6b" to="#e5383b">
+    <path d="M9.2 17.6V13a4.8 4.8 0 0 1 9.6 0v4.6l1.6 1.7H7.6z" fill="#fff" />
+    <path d="M12.2 20.6a1.9 1.9 0 0 0 3.6 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+  </Tile>
+)
+
 /** Claude: the orange sunburst. */
 export const ClaudeAppIcon = () => {
   const rays = [0, 40, 75, 115, 160, 200, 235, 280, 320]

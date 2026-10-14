@@ -7,7 +7,7 @@ import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
 import {
   ClaudeAppIcon,
-  ControlsAppIcon,
+  ControlsAppIcon, NotificationsAppIcon,
   CrmAppIcon,
   DocsAppIcon,
   MailAppIcon,
@@ -19,6 +19,7 @@ import {
 
 const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'controls', label: 'Controls', icon: <ControlsAppIcon /> },
+  { id: 'alerts', label: 'Notifications', icon: <NotificationsAppIcon /> },
   { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
   { id: 'music', label: 'Music', icon: <SpotifyAppIcon /> },
   { id: 'chats', label: 'Chats', icon: <WhatsAppIcon /> },
@@ -105,15 +106,28 @@ function usageTitle(usage?: ClaudeUsage): string {
 }
 
 /** Detached glass pill of section icons beside the panel. */
-export function Rail({ tab, onTab, usage, hidden = [] }: { tab: HubTab; onTab: (t: HubTab) => void; usage?: ClaudeUsage; hidden?: HubTab[] }) {
+export function Rail({
+  tab,
+  onTab,
+  usage,
+  hidden = [],
+  alerts = 0,
+}: {
+  tab: HubTab
+  onTab: (t: HubTab) => void
+  usage?: ClaudeUsage
+  hidden?: HubTab[]
+  /** Notifications not yet seen in the Notifications tab. */
+  alerts?: number
+}) {
   const unread = useUnread()
-  const badge = (id: HubTab) => (id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : '')
+  const badge = (id: HubTab) => (id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : '')
   return (
     <div className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
       {ITEMS.filter((it) => !hidden.includes(it.id)).map((it) => {
         const b = badge(it.id)
-        const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : null
-        const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} unread` : it.label
+        const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : it.id === 'alerts' ? alerts : null
+        const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} ${it.id === 'alerts' ? 'new' : 'unread'}` : it.label
         return (
           <button
             key={it.id}

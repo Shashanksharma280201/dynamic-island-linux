@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { SystemState, SysCmd } from '@shared/types'
-import { SpeakerIcon, SunIcon, WifiIcon, BluetoothIcon, GearIcon } from '../icons'
+import { SpeakerIcon, SunIcon, WifiIcon, BluetoothIcon, GearIcon, MoonIcon } from '../icons'
 
 function send(cmd: SysCmd) {
   window.island.sendSysCmd(cmd)
@@ -106,16 +106,15 @@ function Toggle({
   )
 }
 
-export function ControlCenter({ sys }: { sys: SystemState | null }) {
-  const hasRadios = sys && (sys.wifi !== null || sys.bluetooth !== null)
+export function ControlCenter({ sys, dnd = false }: { sys: SystemState | null; dnd?: boolean }) {
   return (
     <div className="cc" onClick={(e) => e.stopPropagation()}>
       {!sys ? (
         <div className="module caption">Loading…</div>
       ) : (
         <>
-          {hasRadios && (
-            <div className="module toggles">
+          <div className="module toggles">
+              <Toggle label="Do Not Disturb" on={dnd} icon={<MoonIcon />} onToggle={() => void window.island.notifications.setDnd(!dnd)} />
               {sys.wifi !== null && (
                 <Toggle
                   label="Wi-Fi"
@@ -132,8 +131,7 @@ export function ControlCenter({ sys }: { sys: SystemState | null }) {
                   onToggle={() => send({ type: 'bluetooth', value: !sys.bluetooth })}
                 />
               )}
-            </div>
-          )}
+          </div>
           {sys.brightness !== null && (
             <div className="module">
               <Slider

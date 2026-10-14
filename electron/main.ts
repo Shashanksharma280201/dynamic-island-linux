@@ -53,6 +53,7 @@ import { homedir } from 'node:os'
 import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
+import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
@@ -167,6 +168,26 @@ async function main() {
   }, 66)
   store.onChange(pushState)
   const transient = new TransientCards(store)
+  // Everything shown (or kept quiet in Do Not Disturb) stays here until cleared.
+  const center = new NotificationCenter(join(app.getPath('userData'), 'notification-center.json'), () => config.dnd)
+  let settings: SettingsController | null = null
+  let tray: IslandTray | null = null
+  // Wired before anything can arrive, so the island can ask for the list as soon as it loads.
+  center.onChange(() => {
+    send(win, NOTIFS.CHANGED, center.view())
+    tray?.refresh()
+  })
+  const setDnd = (on: boolean) => {
+    if (config.dnd === on) return
+    config.dnd = on
+    saveConfig(config)
+    center.changed()
+    settings?.changed()
+  }
+  const clearCards = () => {
+    for (const a of store.list()) if (a.kind === 'notification' || a.kind === 'message') transient.dismiss(a.id)
+  }
+  wireNotificationCenter(center, { clearCards, setDnd })
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
   // ---- documents: files you add, and what's made from them ----
   // LibreOffice (deb, snap or flatpak), for exact Office → PDF conversions.
@@ -476,7 +497,10 @@ async function main() {
   transient.onDismiss((id) => invokes.delete(id))
   let notifSeq = 0
   const showNotification = (n: NotificationData, invoke?: GtkInvoke) => {
-    const id = `notif-${notifSeq++}`
+    // Unique across restarts: the notification center keeps them.
+    const id = `notif-${Date.now().toString(36)}-${notifSeq++}`
+    center.add({ id, at: Date.now(), source: 'notification', app: n.app || 'Notification', icon: n.icon, title: n.summary, body: n.body, urgency: n.urgency })
+    if (config.dnd) return
     if (invoke) invokes.set(id, invoke)
     const priority = n.urgency === 'critical' ? 6 : 5
     transient.show({ kind: 'notification', id, priority, notification: n }, displayMs(n))
@@ -504,9 +528,11 @@ async function main() {
   const crmTimer = setInterval(remindFollowUps, Number(process.env.DI_CRM_REMIND_MS) || 60_000)
 
   // ---- messages: WhatsApp + mail ----
-  const hub = new MessageHub(transient)
-  let settings: SettingsController | null = null
-  let tray: IslandTray | null = null
+  const hub = new MessageHub(
+    transient,
+    (m) => center.add({ id: m.id, at: m.at, source: m.source, app: m.app, icon: m.icon, title: m.title, body: m.body, thread: m.thread }),
+    () => config.dnd,
+  )
   let inbox: ReturnType<typeof wireInbox> | null = null
   const mail = new MailManager(
     (m, account) => {
@@ -798,6 +824,7 @@ async function main() {
     pushAppearance()
     pushCharacter()
     pushPackages()
+    send(win, NOTIFS.CHANGED, center.view())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -822,8 +849,15 @@ async function main() {
       notifications: config.notifications,
       hookInstalled: isHookInstalled(),
       autostart: isAutostartEnabled(),
+      dnd: config.dnd,
+      centerCount: center.view().entries.length,
     }),
     {
+      setDnd,
+      clearAll: () => {
+        clearCards()
+        center.clearAll()
+      },
       setNotifications: (on) => {
         config.notifications = on
         saveConfig(config)
@@ -851,6 +885,7 @@ async function main() {
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
+    center.flush()
     clearInterval(crmTimer)
     crm.flush()
     claudeCode.dispose()

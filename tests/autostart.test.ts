@@ -25,6 +25,7 @@ test('autostartFile honours XDG_CONFIG_HOME', () => {
 test('mergeConfig ignores unknown and mistyped keys', () => {
   const d = {
     notifications: true,
+    dnd: false,
     whatsapp: false,
     mail: [],
     dock: { side: 'right', y: 0.3 },

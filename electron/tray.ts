@@ -5,9 +5,14 @@ export type TrayState = {
   notifications: boolean
   hookInstalled: boolean
   autostart: boolean
+  dnd: boolean
+  /** How many notifications the notification center holds. */
+  centerCount: number
 }
 
 export type TrayActions = {
+  setDnd: (on: boolean) => void
+  clearAll: () => void
   setNotifications: (on: boolean) => void
   setHook: (on: boolean) => Promise<void>
   setAutostart: (on: boolean) => void
@@ -54,6 +59,21 @@ export class IslandTray {
         { label: 'Dynamic Island', enabled: false },
         { type: 'separator' },
         { label: 'Settings… (WhatsApp, Mail)', click: () => this.actions.openSettings() },
+        { type: 'separator' },
+        {
+          label: 'Do Not Disturb',
+          type: 'checkbox',
+          checked: s.dnd,
+          click: (i) => {
+            this.actions.setDnd(i.checked)
+            this.refresh()
+          },
+        },
+        {
+          label: s.centerCount ? `Clear all notifications (${s.centerCount})` : 'Clear all notifications',
+          enabled: s.centerCount > 0,
+          click: () => this.actions.clearAll(),
+        },
         { type: 'separator' },
         {
           label: 'Show desktop notifications',
