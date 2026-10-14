@@ -5,6 +5,7 @@ import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import { createDecoder } from '@shared/protocol'
+import { testSocket } from './testSocket'
 import { applyEvent, canonicalTool, type AgentEvent } from '../shared/sessions'
 import { parseQuestions, questionAnswer } from '../shared/questions'
 const require = createRequire(import.meta.url)
@@ -61,7 +62,7 @@ test('the installer writes the file, backs it up and removes itself', () => {
 /** Run the session hook as another agent would; resolves to what the island got. */
 async function asAgent(args: string[], input: object, env: Record<string, string> = {}): Promise<any[]> {
   const got: any[] = []
-  const sock = path.join(os.tmpdir(), `di-ag-${process.pid}-${Math.random()}.sock`)
+  const sock = testSocket('di-ag')
   const server = net.createServer((socket) => {
     const decode = createDecoder()
     socket.on('data', (c) => got.push(...(decode(c) as any[])))

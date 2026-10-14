@@ -108,7 +108,7 @@ test('hook answers a Claude question with the island\'s answers', async () => {
 /** Run the session hook with `input` on stdin; resolves to [what it printed, what the island got]. */
 async function runEvents(input: object, env: Record<string, string> = {}): Promise<[string, any[]]> {
   const got: any[] = []
-  const sock = join(tmpdir(), `di-ev-${process.pid}-${Math.random()}.sock`)
+  const sock = testSocket('di-ev')
   const server = net.createServer((socket) => {
     const decode = createDecoder()
     socket.on('data', (c) => got.push(...(decode(c) as any[])))
