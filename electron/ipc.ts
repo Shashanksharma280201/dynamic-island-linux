@@ -24,6 +24,10 @@ export function parseDecisionMsg(m: any): DecisionMsg | null {
   if (m.decision === 'deny' && typeof m.message === 'string' && m.message.trim())
     out.message = m.message.trim().slice(0, 2000)
   if (m.decision === 'allow' && m.always === true) out.always = true
+  if (m.decision === 'allow' && m.answers && typeof m.answers === 'object' && !Array.isArray(m.answers)) {
+    const entries = Object.entries(m.answers).filter(([k, v]) => k.length <= 2000 && typeof v === 'string' && v.trim() && v.length <= 2000)
+    if (entries.length && entries.length <= 10) out.answers = Object.fromEntries(entries.map(([k, v]) => [k, (v as string).trim()]))
+  }
   return out
 }
 

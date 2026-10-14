@@ -2,7 +2,7 @@ import { describeTool } from '../shared/toolDetail'
 
 test('Bash shows the full command', () => {
   const d = describeTool('Bash', { command: 'rm -rf /tmp/build && npm ci' })
-  expect(d.label).toMatch(/Bash/)
+  expect(d.label).toBe('Run a command')
   expect(d.body).toBe('rm -rf /tmp/build && npm ci')
 })
 

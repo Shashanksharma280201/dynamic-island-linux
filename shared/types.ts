@@ -1,3 +1,4 @@
+import type { AgentSession } from './sessions'
 import type { CharacterConfig } from './character'
 import type { AiSettings, ProviderId } from './ai'
 import type { PackageId, PackageTab, PackagesConfig } from './packages'
@@ -10,6 +11,8 @@ export type ToolRequest = {
   cwd?: string
   /** Claude's `permission_suggestions` (rules offered for "always allow"). */
   suggestions?: unknown[]
+  /** The Claude Code session asking (to show its project and steps). */
+  sessionId?: string
   /** Asked by a command started from the island (there's no terminal to answer in). */
   fromIsland?: boolean
   /** The island's own agent asking before it acts for you (not Claude Code). */
@@ -82,6 +85,8 @@ export type Activity =
   | (Base & { kind: 'notification'; notification: NotificationData })
   | (Base & { kind: 'message'; message: MessageData })
   | (Base & { kind: 'claude'; run: ClaudeRun })
+  /** A Claude Code (or other agent) session in a terminal; `others` are also working. */
+  | (Base & { kind: 'session'; session: AgentSession; others?: number })
 
 export type SystemState = {
   volume: number // 0-100
@@ -147,6 +152,8 @@ export type DecisionMsg = {
   message?: string
   /** Allow and apply Claude's suggested permission rules. */
   always?: boolean
+  /** Your answers to Claude's questions (AskUserQuestion), by question text. */
+  answers?: Record<string, string>
 }
 export type MediaCmd =
   | 'playpause'

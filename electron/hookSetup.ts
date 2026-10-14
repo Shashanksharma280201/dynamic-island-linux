@@ -4,7 +4,7 @@ import { accessSync, constants, cpSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 
-const FILES = ['claude-island-hook.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs']
+const FILES = ['claude-island-hook.cjs', 'claude-island-hook-events.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs']
 
 function settingsPath(): string {
   return join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'settings.json')
@@ -72,6 +72,11 @@ function runInstaller(script: string, on: boolean): Promise<string> {
 
 export function isHookInstalled(): boolean {
   return JSON.stringify(readSettings().hooks?.PermissionRequest ?? []).includes('claude-island-hook')
+}
+
+/** Installed before the island followed sessions live (approvals only). */
+export function hookNeedsUpgrade(): boolean {
+  return isHookInstalled() && !JSON.stringify(readSettings().hooks?.Stop ?? []).includes('claude-island-hook-events')
 }
 
 /** Run the bundled installer with Electron acting as Node. */

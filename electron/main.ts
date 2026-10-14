@@ -1,4 +1,4 @@
-import { app, dialog, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, dialog, ipcMain, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
 import { readFileSync } from 'node:fs'
@@ -26,6 +26,7 @@ import { isAutostartEnabled, setAutostart } from './autostart'
 import {
   findExecutable,
   hookDir,
+  hookNeedsUpgrade,
   isHookInstalled,
   isUsageBridgeInstalled,
   nodeRunner,
@@ -54,6 +55,9 @@ import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
+import { SessionTracker } from './sessions'
+import { SESSIONS } from './sessionChannels'
+import { focusTerminal, terminalFocused } from './terminal'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
@@ -291,6 +295,48 @@ async function main() {
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
   claude.onCancel((id) => store.remove(id))
   claude.onUsage((u) => claudeCode.setUsage(u))
+
+  // ---- Claude Code sessions in your terminals, live ----
+  const sessions = new SessionTracker({
+    onChange: (list) => {
+      send(win, SESSIONS.CHANGED, list)
+      // While any work: one small orb for all of them, the busiest first.
+      const working = list.filter((x) => x.phase === 'working')
+      if (working.length) store.upsert({ kind: 'session', id: 'agent-sessions', priority: 2, session: working[0], others: working.length - 1 })
+      else store.remove('agent-sessions')
+      for (const a of store.list()) {
+        if (a.kind !== 'session' || a.id === 'agent-sessions') continue
+        const now = sessions.get(a.session.id)
+        // Its card goes once it's back at work (or gone); a waiting card follows it.
+        if (a.id.startsWith('session-wait-')) {
+          if (now?.phase !== 'waiting') store.remove(a.id)
+          else store.upsert({ ...a, session: now })
+        } else if (!now || now.phase === 'working' || now.phase === 'waiting') transient.dismiss(a.id)
+      }
+    },
+    onFinished: async (x) => {
+      // You're looking at its terminal already: no need to tell you.
+      if (x.pid && (await terminalFocused(x.pid))) return
+      const now = sessions.get(x.id)
+      if (now?.phase !== 'done') return
+      transient.show({ kind: 'session', id: `session-done-${x.id}`, priority: 4, session: now }, 15_000)
+    },
+    onWaiting: (x) => store.upsert({ kind: 'session', id: `session-wait-${x.id}`, priority: 7, session: x }),
+  })
+  claude.onEvent((e) => sessions.event(e))
+  sessions.start()
+  ipcMain.handle(SESSIONS.LIST, () => sessions.list())
+  ipcMain.handle(SESSIONS.FOCUS, async (_e, id: unknown) => {
+    const x = typeof id === 'string' ? sessions.get(id) : undefined
+    return !!x?.pid && focusTerminal(x.pid)
+  })
+  ipcMain.handle(SESSIONS.FORGET, (_e, id: unknown) => {
+    if (typeof id !== 'string') return
+    for (const a of store.list()) if (a.kind === 'session' && a.id !== 'agent-sessions' && a.session.id === id) transient.has(a.id) ? transient.dismiss(a.id) : store.remove(a.id)
+    sessions.forget(id)
+  })
+  // Approvals set up before the island followed sessions: add the session hook.
+  if (hookNeedsUpgrade()) setHookInstalled(true).then(() => console.log('[island] Claude Code hook updated to follow sessions live'), (e) => console.error('[island] hook update failed:', e.message ?? e))
 
   // ---- Claude Code commands from the island (voice / typed) ----
   const findClaude = (): string | null => {
@@ -825,6 +871,7 @@ async function main() {
     pushCharacter()
     pushPackages()
     send(win, NOTIFS.CHANGED, center.view())
+    send(win, SESSIONS.CHANGED, sessions.list())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -885,6 +932,7 @@ async function main() {
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
+    sessions.stop()
     center.flush()
     clearInterval(crmTimer)
     crm.flush()

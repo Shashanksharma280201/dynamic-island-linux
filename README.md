@@ -332,8 +332,11 @@ Code setup behind; Uninstall… removes those too.
 | **Documents** | **Drop files on the island** (PDF, Word, Excel, CSV, PowerPoint, Markdown, text) and they appear in the **Documents** tab, newest first, with pages and sizes. Files made from them are marked and saved in `~/Documents/Dynamic Island`; your originals are never changed | Without any AI: **merge** PDFs, keep / delete / reorder **pages**, **rotate**, **split**, **number pages**, **convert** (Word / Excel / Markdown / text to PDF, CSV ↔ Excel, anything to text). Or ask the agent: “fix the spelling and grammar” (it marks its corrections as **tracked changes** you accept or reject in Word or LibreOffice), “summarize this”, “compare these two versions”, “add a DRAFT watermark”, “write a cover letter as a Word file”. Save a request you use often as a **recipe** for one tap next time |
 | **CRM** | Your own simple CRM in the **CRM** tab: **People** (search, Lead / Customer / Partner, when you last talked), each person's page (details, follow-ups, deals and a timeline of calls, meetings and notes), **Deals** (your pipeline and its total, by stage) and **Follow-ups** (overdue, today, upcoming). All of it is stored on this computer | Works fully without AI: add and edit people, log a call or note, add follow-ups with due dates (a card pops up on the island when one is due), move deals through the stages, import contacts from **Google Contacts, Outlook, Excel or a phone's vCard**, export to CSV. Or let the agent run it: “log a call with Rahul, he wants a quote, remind me Friday”, “who should I follow up with this week?”, “move the Acme deal to won”. What the agent changes shows in a bar with **Undo**, and deleting asks you first |
 | **Claude: talk or type to Claude Code** | The **Claude** tab: a conversation with Claude Code in the project folder you pick. Your character shows what it's doing: listening, working out what you said, thinking, searching, editing, writing | Tap the mic (or press **Ctrl+Alt+Space** anywhere), say what you want, and stop talking: it's transcribed on your computer and sent to Claude Code. Or type it. Follow-ups continue the same conversation; **Stop** ends a run; the ✎ button starts a new conversation. When the panel is closed, the character on the capsule shows Claude working with a step count; rest the pointer on it to see the current step roll by, and a card pops up with the answer |
+| **Claude Code sessions** | Every Claude Code session in your terminals, live: while one works, the capsule shows your character with an orb for what it's doing (searching, editing, running) and a step count (or how many sessions are working). Rest the pointer on it for the current step. When a session needs you, a card says so; when it finishes, a card shows its last answer, how long it took and what it changed (**+12 −3**, which files) | **Open terminal** brings that session's terminal (or editor) to the front. The **Sessions** tab lists every session with its status, time and changes; open one for its steps and a **diff of every file** it touched. The finished card stays quiet if you're already looking at that terminal |
+| **Claude asks, plans** | Claude's questions (`AskUserQuestion`) as a card, one question at a time with its options and their descriptions; its plan in full before it starts | Pick an option (several for multi-select), or type your own answer under **Something else**, then **Send**; it goes straight back to Claude. For a plan: **Start** or **Keep planning**. **Answer in terminal** leaves either to the terminal |
 | **Claude Code approvals** | When Claude Code needs permission, the island expands with the tool, the exact command / file / diff, and the working directory | **Allow**, **Deny**, **Always allow** (saves Claude's suggested rule, e.g. `Bash(npm test:*)`), or **Answer in terminal**. Or press **Ctrl+Alt+Y** (allow), **Ctrl+Alt+N** (deny) or **Ctrl+Alt+A** (always) from any app: the island never takes your keyboard, so a stray key can't approve anything. Several waiting requests are answered in order, with a `+N` badge and the next cards peeking out below |
-| **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer | Click to dismiss. Newest shows first, `+N` badge for more. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
+| **Desktop notifications** | Every app's notifications appear on the island with the app icon; critical ones get a red outline and stay longer. When several are waiting, a pill under the card says how many | Click (or **×**) to dismiss; **Clear all** on the pill clears every card at once, with **Undo**. For apps that use GNOME's notification API, their buttons (e.g. "Open log", "Reply") appear and work |
+| **Notifications tab** | Everything that arrived (app notifications, WhatsApp and mail), grouped by app, newest first, with how long ago; a red badge on the bell counts what you haven't seen. Kept on this computer between restarts | **×** or swipe left to dismiss one, clear one app, or **Clear all** (with **Undo**). Click a chat or mail to open it. **Do Not Disturb** (here, in the Control Center or the tray) keeps cards from popping up: they wait in the list, and the resting island shows a moon with how many are waiting |
 | **Control Center** | macOS-style modules: round Wi-Fi / Bluetooth toggles and large Display / Sound sliders | Drag the sliders, click the volume value to mute, toggle Wi-Fi / Bluetooth, open Settings. Closes by itself shortly after the cursor leaves |
 | **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), frosted glass on/off, sounds on/off (soft tones, off by default), island position, open the notes folder, Ctrl+I shortcut on/off, link WhatsApp, add mail accounts, and the general toggles |
 | **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
@@ -415,15 +418,18 @@ DI_DEMO=4 npm run dev   # WhatsApp messages (fake account) and a mail you can re
 
 ### 4. Connect Claude Code (optional)
 
-To approve Claude Code's permission prompts from the island, either tick
-**Claude Code approvals** in the tray menu, or run:
+To follow your Claude Code sessions on the island and answer their permission
+prompts, questions and plans there, either tick **Claude Code approvals** in the
+tray menu (or **Follow every Claude Code session on the island** in Settings →
+Claude), or run:
 
 ```bash
-npm run hook:install      # adds the hook to ~/.claude/settings.json (backs it up first)
+npm run hook:install      # adds the hooks to ~/.claude/settings.json (backs it up first)
 ```
 
-Restart any running Claude Code sessions. From now on, whenever Claude asks for
-permission, the island expands with the request. To remove it:
+Restart any running Claude Code sessions. From now on each session shows on the
+island while it works (and in the **Sessions** tab), and whenever Claude asks for
+permission or asks you a question, the island expands with it. To remove it:
 `npm run hook:uninstall` (or untick it in the tray menu).
 
 The hook **fails open**: if the island isn't running, or you don't answer within

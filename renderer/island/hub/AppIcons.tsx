@@ -60,6 +60,14 @@ export const ClaudeAppIcon = () => {
   )
 }
 
+/** Sessions: a terminal prompt on dark slate, with Claude's orange cursor. */
+export const SessionsAppIcon = () => (
+  <Tile from="#3a3a3c" to="#1c1c1e">
+    <path d="m8 10 4 4-4 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <rect x="14" y="17" width="6.5" height="2.4" rx="1.2" fill="#e08a67" />
+  </Tile>
+)
+
 /** Spotify: the green disc with three arcs. */
 export const SpotifyAppIcon = () => (
   <svg className="app-icon" width={26} height={26} viewBox="0 0 28 28" aria-hidden>

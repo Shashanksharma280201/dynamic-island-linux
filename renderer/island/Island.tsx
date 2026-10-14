@@ -28,6 +28,8 @@ import type { DocsIncoming } from './hub/DocsView'
 import { errorText } from './hub/common'
 import { useNotifications } from './useNotifications'
 import { clearedText } from '@shared/notifCenter'
+import { useSessions } from './useSessions'
+import { CompactSession, SessionCard } from './states/SessionActivity'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
@@ -63,12 +65,13 @@ export function Island({ activities }: { activities: Activity[] }) {
   const center = useNotifications()
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
+  const [hover, setHover] = useState(false)
+  // It stays while the pointer is on the island (you may be reaching for Undo).
   useEffect(() => {
-    if (cleared === null) return
+    if (cleared === null || hover) return
     const t = setTimeout(() => setCleared(null), 5000)
     return () => clearTimeout(t)
-  }, [cleared])
-  const [hover, setHover] = useState(false)
+  }, [cleared, hover])
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
   const [replying, setReplying] = useState(false)
@@ -181,6 +184,12 @@ export function Island({ activities }: { activities: Activity[] }) {
     setTab('claude')
     setPanel(true)
   }
+  // Claude Code in your terminals.
+  const sessions = useSessions()
+  const openSessions = () => {
+    setTab('sessions')
+    setPanel(true)
+  }
   // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
   useEffect(
     () =>
@@ -211,7 +220,8 @@ export function Island({ activities }: { activities: Activity[] }) {
   useEffect(() => window.island.onHover(setHover), [])
 
   // Hover intent: a short rest peeks, a longer one opens the full card.
-  const stage = useHoverIntent(hover && !panel && !dropping)
+  // No peek while the Undo note is up: the island growing would move it from under the pointer.
+  const stage = useHoverIntent(hover && !panel && !dropping && cleared === null)
   const p = present(activities, { expanded: stage === 'full' })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
@@ -223,7 +233,7 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Keep a notification / message open while it's hovered or being answered.
   const transientId =
     p.mode !== 'idle' &&
-    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done')
+    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done' || p.primary.id.startsWith('session-done-'))
       ? p.primary.id
       : null
   // Only while the card is actually on screen (not hidden behind the panel).
@@ -342,6 +352,8 @@ export function Island({ activities }: { activities: Activity[] }) {
     if (was === key) return
     if (key.startsWith('expanded:approval:')) return sound('ask')
     if (key === 'expanded:claude:claude-done' && p.mode === 'expanded' && p.primary.kind === 'claude') return sound(p.primary.run.phase === 'error' ? 'error' : 'done')
+    if (key.startsWith('expanded:session:session-done-')) return sound('done')
+    if (key.startsWith('expanded:session:session-wait-')) return sound('ask')
     if (key.startsWith('peek:')) return sound('peek')
     if (sizeRank(key) > sizeRank(was)) sound('open')
     else if (sizeRank(key) < sizeRank(was) && !was.startsWith('peek:')) sound('close')
@@ -369,6 +381,10 @@ export function Island({ activities }: { activities: Activity[] }) {
       if (p.primary.kind === 'claude') {
         if (p.mode === 'expanded') return // card has its own buttons
         return openClaude()
+      }
+      if (p.primary.kind === 'session') {
+        if (p.mode === 'expanded') return // card has its own buttons
+        return openSessions()
       }
     }
     if (!isApproval) {
@@ -403,7 +419,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTab={setTab} center={center} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (
@@ -442,6 +458,12 @@ export function Island({ activities }: { activities: Activity[] }) {
                 />
               ) : (
                 <CompactClaude run={p.primary.run} />
+              )
+            ) : p.primary.kind === 'session' ? (
+              p.mode === 'expanded' ? (
+                <SessionCard id={p.primary.id} session={p.primary.session} others={p.primary.others} onOpen={openSessions} />
+              ) : (
+                <CompactSession session={p.primary.session} others={p.primary.others} />
               )
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
@@ -531,7 +553,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             // Follows the panel a beat later.
             transition={{ ...pop, delay: 0.04 }}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>
         )}
       </AnimatePresence>

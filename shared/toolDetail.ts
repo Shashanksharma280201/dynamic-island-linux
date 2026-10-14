@@ -7,7 +7,7 @@ function cap(s: string): string {
 }
 
 /**
- * Human-readable description of what a Claude tool call will do — the label
+ * Human-readable description of what a Claude tool call will do: the label
  * (what tool + target) and a monospace body (the command / content / diff).
  * Pure and tested.
  */
@@ -15,20 +15,20 @@ export function describeTool(toolName: string, input: any): Detail {
   const i = input ?? {}
   switch (toolName) {
     case 'Bash':
-      return { label: 'Bash — run command', body: cap(String(i.command ?? '')) }
+      return { label: 'Run a command', body: cap(String(i.command ?? '')) }
     case 'Write':
       return {
-        label: `Write — ${i.file_path ?? ''}`,
+        label: `Write ${i.file_path ?? ''}`,
         body: cap(String(i.content ?? '')),
       }
     case 'Edit':
       return {
-        label: `Edit — ${i.file_path ?? ''}`,
+        label: `Edit ${i.file_path ?? ''}`,
         body: cap(`- ${i.old_string ?? ''}\n+ ${i.new_string ?? ''}`),
       }
     case 'MultiEdit':
       return {
-        label: `MultiEdit — ${i.file_path ?? ''}`,
+        label: `Edit ${i.file_path ?? ''}`,
         body: cap(
           Array.isArray(i.edits)
             ? i.edits
@@ -42,6 +42,12 @@ export function describeTool(toolName: string, input: any): Detail {
       return { label: toolName, body: cap(String(i.file_path ?? i.pattern ?? '')) }
     case 'Grep':
       return { label: 'Grep', body: cap(String(i.pattern ?? '')) }
+    case 'WebFetch':
+      return { label: 'Open a web page', body: cap(String(i.url ?? '')) }
+    case 'WebSearch':
+      return { label: 'Search the web', body: cap(String(i.query ?? '')) }
+    case 'ExitPlanMode':
+      return { label: 'Claude has a plan', body: cap(String(i.plan ?? '')) }
     default:
       return { label: toolName, body: cap(JSON.stringify(i, null, 2)) }
   }

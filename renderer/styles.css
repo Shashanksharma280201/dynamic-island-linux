@@ -4320,3 +4320,399 @@ button .spinner-orb,
   vertical-align: -2px;
   margin-right: 5px;
 }
+
+/* ---------------------------------------------------------------------------
+   Agent sessions in your terminals: capsule, card, Sessions tab and diffs
+   --------------------------------------------------------------------------- */
+.diffstat {
+  font: 600 11px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  flex: none;
+}
+.diffstat .add {
+  color: var(--green);
+}
+.diffstat .del {
+  color: var(--red);
+}
+.sessions-count {
+  background: var(--claude, #d97757);
+  color: #fff;
+  border-radius: 999px;
+  padding: 2px 5px;
+  margin-top: -4px;
+}
+.session-time {
+  font-size: 11.5px;
+  color: var(--label-3);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.session-card .claude-steps li {
+  gap: 6px;
+}
+.session-card .claude-steps li .ellipsis,
+.session-steps li .ellipsis {
+  min-width: 0;
+  flex: 0 1 auto;
+}
+.session-needs {
+  margin-top: 6px;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ffd9a8;
+  background: rgba(255, 159, 10, 0.16);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 159, 10, 0.4);
+}
+.session-card.waiting {
+  box-shadow: inset 0 0 0 1px rgba(255, 159, 10, 0.35);
+  border-radius: var(--radius-card);
+}
+.session-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  color: var(--label-2);
+  min-width: 0;
+}
+.session-meta span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-lost {
+  margin-top: 6px;
+  color: var(--orange);
+}
+.terminal-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Claude asks: one question at a time, its options as buttons. */
+.question-card .q-count {
+  font-size: 11.5px;
+  color: var(--label-3);
+  font-variant-numeric: tabular-nums;
+}
+.q-header {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--claude, #d97757);
+  margin-bottom: 4px;
+}
+.q-text {
+  margin-bottom: 10px;
+}
+.q-options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.q-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  color: var(--label);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s,
+    transform 0.15s;
+}
+.q-option:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+.q-option:active {
+  transform: scale(0.985);
+}
+.q-option.on {
+  background: rgba(10, 132, 255, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.7);
+}
+.q-mark {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 11px/1 var(--font);
+  color: var(--label-2);
+  background: var(--fill-3);
+}
+.q-options.multi .q-mark {
+  border-radius: 6px;
+}
+.q-option.on .q-mark {
+  background: var(--blue);
+  color: #fff;
+}
+.q-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-weight: 600;
+  line-height: 20px;
+}
+.q-desc {
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--label-2);
+}
+.q-other .q-label {
+  font-weight: 500;
+  color: var(--label-2);
+}
+.q-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--label);
+  background: rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.6);
+  outline: none;
+}
+.pill:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Claude's plan, to read before it starts. */
+.plan-body {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border: 0.5px solid var(--separator);
+  font-size: 12.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  user-select: text;
+}
+
+/* The Sessions tab. */
+.sessions-view .section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.session-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  color: var(--label);
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  cursor: pointer;
+}
+.session-row:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+.session-row.waiting {
+  box-shadow: inset 0 0 0 1px rgba(255, 159, 10, 0.5);
+}
+.session-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.session-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.session-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 600;
+  min-width: 0;
+}
+.session-title.large {
+  font-size: 16px;
+}
+.agent-tag {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: var(--label-2);
+  background: var(--fill-3);
+}
+.session-status {
+  font-size: 12px;
+  color: var(--label-2);
+}
+.session-status.waiting {
+  color: var(--orange);
+  font-weight: 600;
+}
+.session-status.done {
+  color: var(--green);
+}
+.session-side {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.session-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.session-prompt {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  padding: 8px 11px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+}
+.session-final {
+  max-height: 160px;
+  overflow-y: auto;
+  user-select: text;
+}
+.group-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--label-3);
+}
+.session-steps {
+  margin: 0;
+}
+.diff-files {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.diff-file {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.diff-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: var(--label);
+  font: 600 12.5px/1.2 var(--font);
+  padding: 8px 11px;
+  cursor: pointer;
+  text-align: left;
+}
+.diff-name .chev {
+  display: inline-block;
+  color: var(--label-3);
+  transition: transform 0.18s;
+}
+.diff-file.open .chev {
+  transform: rotate(90deg);
+}
+.diff-body {
+  max-height: 260px;
+  overflow: auto;
+  background: rgba(0, 0, 0, 0.3);
+  font: 11.5px/1.5 var(--mono);
+  user-select: text;
+}
+.hunk + .hunk {
+  border-top: 0.5px solid var(--separator);
+}
+.hunk-head {
+  padding: 3px 10px;
+  color: var(--label-3);
+  background: rgba(10, 132, 255, 0.08);
+}
+.dl {
+  white-space: pre;
+  padding: 0 10px 0 0;
+  min-width: max-content;
+}
+.dl .dm {
+  display: inline-block;
+  width: 18px;
+  text-align: center;
+  user-select: none;
+  color: var(--label-3);
+}
+.dl.add {
+  background: rgba(48, 209, 88, 0.14);
+  color: #b5f5c4;
+}
+.dl.add .dm {
+  color: var(--green);
+}
+.dl.del {
+  background: rgba(255, 69, 58, 0.14);
+  color: #ffc1bc;
+}
+.dl.del .dm {
+  color: var(--red);
+}
+.dl.ctx {
+  color: rgba(255, 255, 255, 0.62);
+}

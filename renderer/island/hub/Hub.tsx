@@ -13,11 +13,13 @@ import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 import { DocsAppIcon } from './AppIcons'
 import { NotificationsView } from './NotificationsView'
+import { SessionsView } from './SessionsView'
+import type { AgentSession } from '@shared/sessions'
 import type { CenterView } from '@shared/notifCenter'
 
-export type HubTab = 'controls' | 'alerts' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
+export type HubTab = 'controls' | 'alerts' | 'claude' | 'sessions' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
+export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'sessions', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {
@@ -50,11 +52,14 @@ export function Hub({
   dropping,
   center,
   onTab,
+  sessions,
 }: {
   sys: SystemState | null
   tab: HubTab
   /** The notification center (Notifications tab, Do Not Disturb). */
   center: CenterView
+  /** Claude Code sessions in your terminals. */
+  sessions: AgentSession[]
   onTab: (t: HubTab) => void
   onTyping: (on: boolean) => void
   claude: ClaudeView | null
@@ -84,6 +89,7 @@ export function Hub({
       {tab === 'mail' && sources && <MailView sources={sources} onTyping={onTyping} />}
       {tab === 'notes' && <NotesView onTyping={onTyping} />}
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
+      {tab === 'sessions' && <SessionsView sessions={sessions} claude={claude} />}
       {tab === 'music' && <MusicView onTyping={onTyping} />}
       {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}
       {tab === 'crm' && <CrmView claude={claude} onTyping={onTyping} />}

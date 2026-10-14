@@ -7,7 +7,9 @@ import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
 import {
   ClaudeAppIcon,
-  ControlsAppIcon, NotificationsAppIcon,
+  ControlsAppIcon,
+  NotificationsAppIcon,
+  SessionsAppIcon,
   CrmAppIcon,
   DocsAppIcon,
   MailAppIcon,
@@ -21,6 +23,7 @@ const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'controls', label: 'Controls', icon: <ControlsAppIcon /> },
   { id: 'alerts', label: 'Notifications', icon: <NotificationsAppIcon /> },
   { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
+  { id: 'sessions', label: 'Sessions', icon: <SessionsAppIcon /> },
   { id: 'music', label: 'Music', icon: <SpotifyAppIcon /> },
   { id: 'chats', label: 'Chats', icon: <WhatsAppIcon /> },
   { id: 'mail', label: 'Mail', icon: <MailAppIcon /> },
@@ -112,6 +115,7 @@ export function Rail({
   usage,
   hidden = [],
   alerts = 0,
+  sessions = 0,
 }: {
   tab: HubTab
   onTab: (t: HubTab) => void
@@ -119,15 +123,18 @@ export function Rail({
   hidden?: HubTab[]
   /** Notifications not yet seen in the Notifications tab. */
   alerts?: number
+  /** Sessions in your terminals that need you. */
+  sessions?: number
 }) {
   const unread = useUnread()
-  const badge = (id: HubTab) => (id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : '')
+  const badge = (id: HubTab) =>
+    id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : id === 'sessions' ? badgeText(sessions) : ''
   return (
     <div className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
       {ITEMS.filter((it) => !hidden.includes(it.id)).map((it) => {
         const b = badge(it.id)
-        const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : it.id === 'alerts' ? alerts : null
-        const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} ${it.id === 'alerts' ? 'new' : 'unread'}` : it.label
+        const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : it.id === 'alerts' ? alerts : it.id === 'sessions' ? sessions : null
+        const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} ${it.id === 'alerts' ? 'new' : it.id === 'sessions' ? 'need you' : 'unread'}` : it.label
         return (
           <button
             key={it.id}

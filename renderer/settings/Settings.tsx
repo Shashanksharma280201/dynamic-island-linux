@@ -101,8 +101,8 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
         onChange={(v) => run(() => window.settings.setUsageBridge(v))}
       />
       <Toggle
-        label="Approvals on the island for every Claude Code session"
-        hint="Installs a PermissionRequest hook in ~/.claude/settings.json. Commands started from the island always ask here."
+        label="Follow every Claude Code session on the island"
+        hint="Adds hooks to ~/.claude/settings.json: each session in your terminals shows live (steps, changes, when it needs you) and its approvals, questions and plans can be answered here. Commands started from the island always ask here."
         on={hookInstalled}
         onChange={(v) => run(() => window.settings.setHook(v))}
       />

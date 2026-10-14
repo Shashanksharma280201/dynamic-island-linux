@@ -21,6 +21,8 @@ import type {
   TaskSummary,
 } from '@shared/crm'
 import { IPC } from '@shared/types'
+import type { AgentSession } from '@shared/sessions'
+import { SESSIONS } from './sessionChannels'
 import type {
   Activity,
   DecisionMsg,
@@ -90,6 +92,14 @@ const api = {
   /** Artwork as a data URL (to sample its colours). */
   imageData: (url: string): Promise<string | null> => ipcRenderer.invoke(SPOTIFY.IMAGE, url),
   /** The notification center: history, Clear all, Do Not Disturb. */
+  /** Claude Code (and other agent) sessions in your terminals. */
+  sessions: {
+    list: (): Promise<AgentSession[]> => ipcRenderer.invoke(SESSIONS.LIST),
+    /** Bring its terminal to the front; false if it couldn't be found. */
+    focus: (id: string): Promise<boolean> => ipcRenderer.invoke(SESSIONS.FOCUS, id),
+    forget: (id: string): Promise<void> => ipcRenderer.invoke(SESSIONS.FORGET, id),
+    onChanged: (cb: (list: AgentSession[]) => void) => on(SESSIONS.CHANGED, cb),
+  },
   notifications: {
     view: (): Promise<CenterView> => ipcRenderer.invoke(NOTIFS.VIEW),
     dismiss: (id: string): Promise<void> => ipcRenderer.invoke(NOTIFS.DISMISS, id),

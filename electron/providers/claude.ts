@@ -3,6 +3,7 @@ import { chmod, unlink } from 'node:fs/promises'
 import { encode, createDecoder } from '@shared/protocol'
 import type { ToolRequest, DecisionMsg } from '@shared/types'
 import { parseUsage, type ClaudeUsage } from '@shared/claude'
+import { parseEvent, type AgentEvent } from '@shared/sessions'
 
 /** Validate an untrusted request from the socket. Pure. */
 export function parseRequest(raw: any): ToolRequest | null {
@@ -16,6 +17,7 @@ export function parseRequest(raw: any): ToolRequest | null {
     toolInput:
       raw.toolInput && typeof raw.toolInput === 'object' ? raw.toolInput : undefined,
     cwd: typeof raw.cwd === 'string' ? raw.cwd : undefined,
+    sessionId: typeof raw.sessionId === 'string' && raw.sessionId ? raw.sessionId.slice(0, 200) : undefined,
     suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : undefined,
     fromIsland: raw.fromIsland === true || undefined,
   }
@@ -45,6 +47,7 @@ export class ClaudeServer {
   private reqCb: ((req: ToolRequest) => void) | null = null
   private cancelCb: ((id: string) => void) | null = null
   private usageCb: ((u: ClaudeUsage) => void) | null = null
+  private eventCb: ((e: AgentEvent) => void) | null = null
 
   constructor(private socketPath: string) {}
 
@@ -61,6 +64,11 @@ export class ClaudeServer {
     this.usageCb = cb
   }
 
+  /** What a session in a terminal is doing (the session hook). */
+  onEvent(cb: (e: AgentEvent) => void): void {
+    this.eventCb = cb
+  }
+
   async start(): Promise<void> {
     if (await isListening(this.socketPath)) {
       throw new Error(`another island is already listening on ${this.socketPath}`)
@@ -74,6 +82,11 @@ export class ClaudeServer {
           if (m.type === 'usage') {
             const u = parseUsage(m.usage, Date.now())
             if (u) this.usageCb?.(u)
+            continue
+          }
+          if (m.type === 'event') {
+            const e = parseEvent(m.event)
+            if (e) this.eventCb?.(e)
             continue
           }
           if (m.type !== 'request') continue

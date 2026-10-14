@@ -1,6 +1,16 @@
-# Claude Code approval hook
+# Claude Code hooks
 
-Approve or deny Claude Code's permission prompts **from the Dynamic Island**.
+Two small scripts connect Claude Code to the **Dynamic Island**:
+
+- `claude-island-hook.cjs` (on `PermissionRequest`): approve or deny Claude's
+  permission prompts, answer its questions (`AskUserQuestion`) and start its
+  plans (`ExitPlanMode`) from the island.
+- `claude-island-hook-events.cjs` (on `SessionStart`, `UserPromptSubmit`,
+  `PreToolUse`, `PostToolUse`, `Notification`, `Stop`, `SessionEnd`): tells the
+  island what each session is doing, so it can show it live (its steps, the files
+  it changes with their diffs, when it needs you, its last answer). It is fire
+  and forget: it never prints anything, never blocks or changes what Claude does,
+  and always exits 0 within a second.
 
 ## Install
 
@@ -15,9 +25,11 @@ The installer backs up `settings.json` to `settings.json.bak`, refuses to touch 
 file that isn't valid JSON, honours `CLAUDE_CONFIG_DIR`, and removes older island
 entries (including the old broken `PreToolUse` `"*"` wiring) so it's idempotent.
 
-Why `PermissionRequest` (not `PreToolUse`): it fires only when Claude is about to
-ask for permission, so the island shows exactly the prompts Claude would show.
-(Claude matchers are regex, so the installer uses `".*"`, not `"*"`.)
+Why approvals use `PermissionRequest` (not `PreToolUse`): it fires only when
+Claude is about to ask for permission, so the island shows exactly the prompts
+Claude would show. (Claude matchers are regex, so the installer uses `".*"`, not
+`"*"`.) An island that was set up before sessions were followed adds the session
+hook by itself the next time it starts.
 
 ## Manual install
 
@@ -50,6 +62,9 @@ Add to `~/.claude/settings.json`, using the absolute path of your checkout:
 - **Decisions:** `allow`, `deny` (optionally with a `message` for Claude), or
   `allow` with the `permission_suggestions` Claude offered echoed back as
   `updatedPermissions` (**Always allow**). "Answer in terminal" is a no-op.
+- **Questions:** the answers go back as `updatedInput` (Claude's own input with
+  `answers` filled in, by question text), and only when they answer every
+  question; otherwise the hook prints nothing and Claude asks in the terminal.
 - The island drops the card as soon as the hook disconnects.
 
 ## Environment overrides
@@ -58,6 +73,9 @@ Add to `~/.claude/settings.json`, using the absolute path of your checkout:
   else `/tmp/dynamic-island-<uid>.sock`).
 - `DYNAMIC_ISLAND_TIMEOUT`: seconds to wait for an answer (default 45).
 - `DYNAMIC_ISLAND_DEBUG_LOG`: append hook invocations to this file for troubleshooting.
+- `DI_AGENT`: what the session hook calls the agent (default `claude-code`).
+- Runs the island starts itself (`DYNAMIC_ISLAND_RUN=1`) aren't reported as
+  sessions: the Claude tab shows them already.
 
 # Plan-limits status line
 
