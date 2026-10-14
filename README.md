@@ -317,6 +317,8 @@ Code setup behind; Uninstall… removes those too.
 
 | Feature | What you see | What you can do |
 | --- | --- | --- |
+| **Services** | The **Services** tab: GitHub (pull requests to review, yours with their CI), Vercel (deployments), Stripe (balance and payments), Resend (emails), Notion (recently edited pages), Cal.com (upcoming calls) and n8n (workflow runs). A heads-up pops up on the island for a failed deploy, CI breaking on your PR, a review request, a new payment or a failed workflow, and waits in Notifications | Turn each on and paste its key in **Settings → Services** (a wrong key is refused, with why). Click a row to open it on the service's site |
+| **Weekly recap** | Every Monday, last week with your coding agents: time, sessions, files, lines, commands, your top agent and project, the busiest day | **Share image** makes a picture of the week (with your character) to save to Pictures or copy; **Hide project names** leaves them out. Any time from the tray menu or Settings |
 | **Wardrobe and desktop companion** | 13 outfits plus a **Seasonal** one that changes with the date (a witch hat at Halloween, a Santa hat in December…), and a body colour. Turn on **On your desktop too** and the character also sits on your desktop, acting out what's going on and dozing when it's quiet | Pick an outfit and colour in **Settings → Character**, or right-click the resting island. Drag the desktop character anywhere (it remembers the spot); click it to open the island. Put your own sound files (done.mp3, ask.wav…) in the sounds folder (Settings → General → Sounds → Open Folder) to replace the built-in tones |
 | **Character** | The island's agent has a face: pick **Orbit** (the orb, with a face), **Bolt** (a little robot) or **Puff** (a soft dumpling) in **Settings → Character** and give it a name. It acts out what the agent is doing: listening, thinking, searching, writing, working, done, needs you, something went wrong, and it sleeps on the resting capsule late at night. A coloured ring around it shows the mood (spinning while it works, breathing when it needs you), its eyes follow your pointer anywhere on screen, and it says hello once a day | Click a character in Settings to switch; the previews act out every mood. In the Claude tab, boop it; boop it three times quickly and it gets dizzy. Rest the pointer on it and it shows some love |
 | **Edge or top capsule** | A slim black capsule docked to the right or left edge of the screen, or **at the top center, below the camera**, as a horizontal pill that grows downward like a phone's Dynamic Island. With music playing it shows the album art and a waveform | Rest the pointer on it and it **peeks**: one line about what's going on (Claude's current step, the song playing); keep resting and the full card opens. Click it (or press **Ctrl+I** anywhere) to open the panel. **Drag it** up or down the edge, across the screen to the other side, or up to the top center; it remembers the spot. Or pick **Left / Top / Right** in Settings → General |
@@ -740,6 +742,21 @@ is available, Settings warns you that they are only obfuscated.
 - **Plan limits** come from the data Claude Code gives status line scripts
   (`rate_limits`) and from Claude Code's own output; the island never reads
   your Claude login.
+- **Services** (GitHub, Vercel, Stripe, Resend, Notion, Cal.com, n8n): their
+  keys are stored encrypted with the desktop keyring and sent only to that
+  service's own API; the island only reads (pull requests, deploys, payments,
+  emails, pages, bookings, executions) and never changes anything there. A
+  wrong key is tried before it's kept. Links open only on the service's own
+  sites.
+- **Claude Code sessions** are followed through hooks that send the island
+  what each step is and the diff of edits, over the same private socket as
+  approvals; nothing goes over the network.
+- The **weekly recap** keeps only counts and project folder names for 12 weeks
+  (no prompts, no code), on this computer. Turn it off or clear it in
+  Settings → General. **Attach the window you were in** saves that screenshot
+  in the profile folder (the newest 20) for Claude to look at.
+- **Dictation** uses the same local Whisper as voice; the text goes to the app
+  you're in through the clipboard, which is put back right after.
 - The frosted-glass snapshot is a small, low-resolution image of the strip of
   screen behind the island, kept only in memory. It is taken only while the
   island is collapsed, so the island never captures itself or your open panel.

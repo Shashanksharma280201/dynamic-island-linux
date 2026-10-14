@@ -25,6 +25,9 @@ import type { AgentSession } from '@shared/sessions'
 import type { Shortcuts } from '@shared/shortcuts'
 import { SESSIONS } from './sessionChannels'
 import { COMPANION } from './companionChannels'
+import { SERVICES } from './servicesChannels'
+import type { ServiceState } from '@shared/services'
+import type { RecapCard } from '@shared/recap'
 import type {
   Activity,
   DecisionMsg,
@@ -85,6 +88,13 @@ const api = {
   onKeys: (cb: (k: Shortcuts) => void) => on(IPC.KEYS, cb),
   /** Dress the character from the island (right-click wardrobe). */
   setLook: (patch: { outfit?: Outfit; color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
+  /** Services you follow: their cards, a fresh look, opening their pages. */
+  services: {
+    view: (): Promise<ServiceState[]> => ipcRenderer.invoke(SERVICES.VIEW),
+    refresh: (id: string): Promise<void> => ipcRenderer.invoke(SERVICES.REFRESH, id),
+    open: (url: string): Promise<void> => ipcRenderer.invoke(SERVICES.OPEN, url),
+    onChanged: (cb: (v: ServiceState[]) => void) => on(SERVICES.CHANGED, cb),
+  },
   /** Ctrl+Alt+1…9 / Allow while one of Claude's questions is on the island. */
   onQuestionKey: (cb: (k: { n?: number; send?: boolean }) => void) => on(IPC.QUESTION_KEY, cb),
   /** Dictate anywhere: the shortcut, and typing what you said into the focused app. */
@@ -99,6 +109,13 @@ const api = {
     drop: () => ipcRenderer.send(COMPANION.DROP),
     click: () => ipcRenderer.send(COMPANION.CLICK),
     ready: () => ipcRenderer.send(COMPANION.READY),
+  },
+  /** The weekly recap: shown by the main process; the image saved or copied. */
+  recap: {
+    onShow: (cb: (r: { card: RecapCard; shareCard: RecapCard; name: string }) => void) => on(IPC.RECAP, cb),
+    save: (png: string): Promise<string | null> => ipcRenderer.invoke(IPC.RECAP_SAVE, png),
+    copy: (png: string): Promise<boolean> => ipcRenderer.invoke(IPC.RECAP_COPY, png),
+    show: (file: string): Promise<void> => ipcRenderer.invoke(IPC.RECAP_SHOW, file),
   },
   /** Start the tour (tray, Settings). */
   onTour: (cb: () => void) => on(IPC.TOUR, cb),
@@ -248,6 +265,11 @@ const settings = {
   openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
   setCompanion: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_COMPANION, on),
   setDisplay: (pref: string) => ipcRenderer.invoke(SETTINGS.SET_DISPLAY, pref),
+  setRecap: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_RECAP, on),
+  clearRecap: () => ipcRenderer.invoke(SETTINGS.CLEAR_RECAP),
+  showRecap: () => ipcRenderer.invoke(SETTINGS.SHOW_RECAP),
+  /** Turn a service on/off, or set its address or key; resolves to an error to show, or null. */
+  setService: (id: string, patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_SERVICE, id, patch),
   setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),

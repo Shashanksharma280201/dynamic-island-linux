@@ -8,6 +8,7 @@ import { parseAiConfig, type AiConfig } from '@shared/ai'
 import { parsePackages, type PackagesConfig } from '@shared/packages'
 import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
 import { parseDisplayPref, type DisplayPref } from '@shared/displays'
+import { parseServices, type ServicesConfig } from './services'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -30,6 +31,10 @@ export type Config = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island (no click needed). */
   openOnHover: boolean
+  /** Keep a weekly recap of your coding sessions (counts only). */
+  recap: boolean
+  /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
+  services: ServicesConfig
   /** Which display the island lives on: 'primary', 'cursor' or a monitor's key. */
   display: DisplayPref
   /** Dictate anywhere with a shortcut (typed into the app you're in). */
@@ -105,6 +110,8 @@ const DEFAULTS: Config = {
   companion: { on: false, at: null },
   dictation: true,
   display: 'primary',
+  services: parseServices(null),
+  recap: true,
   frosted: true,
   sounds: false,
   greeted: '',
@@ -142,7 +149,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, keys: parseShortcuts(null), companion: { on: false, at: null }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), keys: parseShortcuts(null), companion: { on: false, at: null }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -159,6 +166,8 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
   if (typeof r.dictation === 'boolean') c.dictation = r.dictation
   c.display = parseDisplayPref(r.display)
+  c.services = parseServices(r.services)
+  if (typeof r.recap === 'boolean') c.recap = r.recap
   c.companion = {
     on: r.companion?.on === true,
     at: Number.isFinite(r.companion?.at?.x) && Number.isFinite(r.companion?.at?.y) ? { x: Math.round(r.companion.at.x), y: Math.round(r.companion.at.y) } : null,

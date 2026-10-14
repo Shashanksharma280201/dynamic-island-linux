@@ -35,7 +35,20 @@ const until = async (fn, ms = 5000) => {
   return fn()
 }
 const xt = (...a) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), ...a.map(String)])
-const runs = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [])
+// (A line the fake claude is still writing is skipped until it's whole.)
+const runs = () =>
+  fs.existsSync(LOG)
+    ? fs
+        .readFileSync(LOG, 'utf8')
+        .split('\n')
+        .flatMap((l) => {
+          try {
+            return l.trim() ? [JSON.parse(l)] : []
+          } catch {
+            return []
+          }
+        })
+    : []
 
 // Voice needs a Whisper model and a speech synthesizer.
 const STT = process.env.E2E_STT_MODELS
@@ -333,6 +346,10 @@ function speechWav(text, file) {
     // The resting capsule shows it (asleep at night, awake by day).
     await page.evaluate(() => window.island.claude.stop()).catch(() => {})
     if (await page.$('.hub')) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    // Playwright's clicks leave its mouse "over" the island, which would keep
+    // the last answer card open: take it off (and say so).
+    await page.mouse.move(4, (await page.evaluate(() => innerHeight)) - 4)
+    await page.evaluate(() => document.querySelector('.island-outer')?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
     check(
       'the resting island shows the character',
       await page.waitForSelector('.capsule.idle .character[data-character="bolt"]', { timeout: 15000 }).then(() => true, () => false),

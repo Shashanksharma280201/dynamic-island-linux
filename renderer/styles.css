@@ -5032,3 +5032,219 @@ button .spinner-orb,
 .attach-btn.on {
   color: var(--blue);
 }
+
+/* The Services tab. */
+.svc-card {
+  border-radius: 16px;
+  padding: 10px 12px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+}
+.svc-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.svc-badge {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--svc);
+  box-shadow: 0 0 8px var(--svc);
+}
+.svc-name {
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.svc-big {
+  margin: 6px 0 2px;
+  font-size: 12px;
+  color: var(--label-2);
+}
+.svc-big b {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--label);
+  font-variant-numeric: tabular-nums;
+}
+.svc-section .group-label {
+  margin-top: 8px;
+}
+.svc-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  font: inherit;
+  color: var(--label);
+  padding: 5px 4px;
+  border-radius: 10px;
+}
+.svc-row.opens {
+  cursor: pointer;
+}
+.svc-row.opens:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+.svc-row:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.svc-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--label-3);
+}
+.svc-dot.good {
+  background: var(--green);
+}
+.svc-dot.bad {
+  background: var(--red);
+}
+.svc-dot.busy {
+  background: var(--orange);
+  animation: svc-pulse 1.2s ease-in-out infinite;
+}
+@keyframes svc-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+.svc-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.svc-title {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.svc-sub {
+  font-size: 11px;
+  color: var(--label-3);
+}
+.svc-side {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.svc-side.good {
+  color: var(--green);
+}
+.svc-side.bad {
+  color: var(--red);
+}
+.svc-note,
+.svc-empty {
+  font-size: 12px;
+  color: var(--label-2);
+  padding: 4px 0;
+}
+.svc-note.bad {
+  color: #ff8a80;
+}
+.svc-note .link {
+  border: 0;
+  background: none;
+  color: var(--blue);
+  padding: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* The weekly recap. */
+.card.recap-card {
+  width: 380px;
+}
+.recap-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.recap-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+.recap-chips {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+.recap-chip {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.07);
+}
+.recap-chip b {
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+.recap-chip span {
+  font-size: 10.5px;
+  color: var(--label-2);
+}
+.recap-lines {
+  margin-top: 10px;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+}
+.recap-lines span {
+  color: var(--label-2);
+}
+.recap-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--label-2);
+}
+.recap-empty b {
+  color: var(--label);
+  font-size: 14px;
+}
+.recap-share {
+  display: flex;
+  gap: 14px;
+}
+.recap-thumb {
+  width: 72px;
+  height: 128px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: rgba(255, 255, 255, 0.07);
+  flex: none;
+}
+.recap-share-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+}
+.recap-hide {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--label-2);
+}
+.recap-note .link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--blue);
+  font: inherit;
+  cursor: pointer;
+}

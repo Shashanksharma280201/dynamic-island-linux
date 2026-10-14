@@ -131,6 +131,10 @@ export const IPC = {
   DICTATE: 'island:dictate', // main -> renderer: start / finish dictating
   DICTATE_TYPE: 'island:dictate-type', // invoke(text) -> boolean: typed into the focused app
   SET_LOOK: 'island:set-look', // renderer -> main: { outfit?, color? } from the island's wardrobe
+  RECAP: 'island:recap', // main -> renderer: { card, name } show a weekly recap
+  RECAP_SAVE: 'island:recap-save', // invoke(png data URL) -> saved path
+  RECAP_COPY: 'island:recap-copy', // invoke(png data URL) -> copied?
+  RECAP_SHOW: 'island:recap-show', // invoke(path): show it in its folder
   TOUR: 'island:tour', // main -> renderer: start "Show me around"
   KEYS: 'island:keys', // main -> renderer: Shortcuts (the global shortcuts' keys)
   PIN: 'island:pin', // renderer -> main: activity id (keep a transient card until it's closed)
@@ -295,6 +299,10 @@ export type SettingsState = {
   customSounds: string[]
   /** The character also sits on the desktop. */
   companion: boolean
+  /** Keep the weekly recap's history. */
+  recap: boolean
+  /** Services you follow, and how the last look went. */
+  services: { id: string; on: boolean; hasKey: boolean; url: string; error?: string; checkedAt?: number }[]
   /** Which display the island lives on, and the displays there are. */
   display: string
   displays: { key: string; name: string }[]

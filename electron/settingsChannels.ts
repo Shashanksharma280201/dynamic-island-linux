@@ -11,6 +11,10 @@ export const SETTINGS = {
   TOUR: 'settings:tour', // start the island's tour
   OPEN_SOUNDS: 'settings:open-sounds', // open the folder for your own sounds
   SET_DICTATION: 'settings:set-dictation', // boolean: dictate anywhere
+  SET_RECAP: 'settings:set-recap', // boolean: keep the weekly recap's history
+  CLEAR_RECAP: 'settings:clear-recap', // forget it
+  SHOW_RECAP: 'settings:show-recap', // show last week's on the island
+  SET_SERVICE: 'settings:set-service', // (id, { on?, url?, token? }) -> error | null
   SET_DISPLAY: 'settings:set-display', // 'primary' | 'cursor' | a display's key
   SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
   RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys

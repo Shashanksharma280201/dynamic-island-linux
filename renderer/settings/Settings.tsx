@@ -6,6 +6,7 @@ import { AiSection } from './AiSection'
 import { PackagesSection } from './PackagesSection'
 import { SettingsProblem } from './Problem'
 import { ShortcutsSection } from './ShortcutsSection'
+import { ServicesSection } from './ServicesSection'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -447,6 +448,28 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setShortcut(v))}
         />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
+        <Toggle
+          label="Weekly recap"
+          hint="Every Monday, a short recap of last week with your coding agents: time, sessions, files, lines, commands. Only counts and project folder names are kept (12 weeks, on this computer)"
+          on={s.recap}
+          onChange={(v) => general.run(() => window.settings.setRecap(v))}
+        />
+        {s.recap && (
+          <div className="toggle-row">
+            <div>
+              <div>Last week’s recap</div>
+              <div className="hint">Or from the tray menu, any time</div>
+            </div>
+            <div className="key-actions">
+              <button className="link" onClick={() => general.run(() => window.settings.clearRecap())}>
+                Clear history
+              </button>
+              <button className="secondary" onClick={() => general.run(() => window.settings.showRecap())}>
+                Show
+              </button>
+            </div>
+          </div>
+        )}
         <div className="toggle-row">
           <div>
             <div>Show me around</div>
@@ -469,6 +492,8 @@ export function Settings() {
       </section>
 
       <ShortcutsSection s={s} />
+
+      <ServicesSection s={s} />
 
       {s.claude && <ClaudeSection s={s} hookInstalled={s.hookInstalled} />}
 

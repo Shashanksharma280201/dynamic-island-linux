@@ -12,6 +12,8 @@ import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import type { ShortcutId } from '@shared/shortcuts'
 import { parseDisplayPref } from '@shared/displays'
+import { SERVICE_IDS, type ServiceId } from '@shared/services'
+import type { ServiceHub } from './services'
 import { displayChoices } from './window'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
@@ -48,6 +50,9 @@ type Deps = {
   startTour: () => void
   setCompanion: (on: boolean) => void
   setDisplay: (pref: string) => void
+  services: () => ServiceHub
+  clearRecap: () => void
+  showRecap: () => void
   setDictation: (on: boolean) => void
   dictationActive: () => boolean
   /** Sounds you replaced with your own files, and their folder. */
@@ -98,6 +103,11 @@ export class SettingsController {
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
       display: config.display,
+      recap: config.recap,
+      services: SERVICE_IDS.map((id) => {
+        const st = this.d.services().view().find((v) => v.id === id)
+        return { id, on: config.services[id].on, hasKey: !!config.services[id].secret, url: config.services[id].url, error: st?.error, checkedAt: st?.checkedAt }
+      }),
       displays: displayChoices(),
       dictation: config.dictation,
       dictationActive: this.d.dictationActive(),
@@ -242,6 +252,38 @@ export class SettingsController {
     ipcMain.handle(SETTINGS.SET_DICTATION, (_e, on) => {
       this.d.setDictation(on === true)
       this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_RECAP, (_e, on) => {
+      config.recap = on === true
+      this.save()
+    })
+    ipcMain.handle(SETTINGS.CLEAR_RECAP, () => this.d.clearRecap())
+    ipcMain.handle(SETTINGS.SHOW_RECAP, () => this.d.showRecap())
+    ipcMain.handle(SETTINGS.SET_SERVICE, async (_e, id, patch) => {
+      if (!(SERVICE_IDS as readonly unknown[]).includes(id) || !patch || typeof patch !== 'object') return 'Unknown service'
+      const sid = id as ServiceId
+      const cur = config.services[sid]
+      const next = { ...cur }
+      if (typeof patch.on === 'boolean') next.on = patch.on
+      if (typeof patch.url === 'string') {
+        const url = patch.url.trim().replace(/\/$/, '')
+        if (url && !/^https?:\/\/[^\s/]+/.test(url)) return 'That doesn’t look like an address (https://…)'
+        next.url = url
+      }
+      const token = typeof patch.token === 'string' ? patch.token.trim() : null
+      // A new key (or address) is tried before it's kept.
+      if ((token || (typeof patch.url === 'string' && next.url !== cur.url)) && next.on) {
+        const key = token || (cur.secret ? decryptSecret(cur.secret) : '')
+        if (key) {
+          const err = await this.d.services().verify(sid, next, key)
+          if (err) return err
+        }
+      }
+      if (token !== null) next.secret = token ? encryptSecret(token) : ''
+      config.services = { ...config.services, [sid]: next }
+      this.save()
+      this.d.services().restart(sid)
+      return null
     })
     ipcMain.handle(SETTINGS.SET_DISPLAY, (_e, pref) => {
       this.d.setDisplay(parseDisplayPref(pref))

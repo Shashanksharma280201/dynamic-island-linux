@@ -68,6 +68,16 @@ export const SessionsAppIcon = () => (
   </Tile>
 )
 
+/** Services: four coloured dots, like their badges. */
+export const ServicesAppIcon = () => (
+  <Tile from="#2c2c2e" to="#1c1c1e">
+    <circle cx="10" cy="10" r="3.4" fill="#f4505e" />
+    <circle cx="18" cy="10" r="3.4" fill="#7c5cff" />
+    <circle cx="10" cy="18" r="3.4" fill="#22c55e" />
+    <circle cx="18" cy="18" r="3.4" fill="#0570de" />
+  </Tile>
+)
+
 /** Spotify: the green disc with three arcs. */
 export const SpotifyAppIcon = () => (
   <svg className="app-icon" width={26} height={26} viewBox="0 0 28 28" aria-hidden>

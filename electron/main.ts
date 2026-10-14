@@ -1,7 +1,7 @@
-import { app, dialog, ipcMain, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
@@ -60,6 +60,9 @@ import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
 import { SessionTracker } from './sessions'
+import { RecapStore } from './recap'
+import { recapCard, recapDue, weekBefore, weekOf } from '@shared/recap'
+import { agentName } from '@shared/sessions'
 import { CustomSounds } from './sounds'
 import { Companion } from './companion'
 import { dictatedText, pasteIntoFocusedApp } from './paste'
@@ -67,6 +70,9 @@ import { companionMood } from '@shared/companion'
 import { SESSIONS } from './sessionChannels'
 import { focusTerminal, frontWindow, terminalFocused } from './terminal'
 import { captureWindow, type FrontWindow } from './attach'
+import { ServiceHub } from './services'
+import { SERVICES } from './servicesChannels'
+import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
 import { CLAUDE } from './claudeChannels'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
@@ -340,6 +346,9 @@ async function main() {
   })
   claude.onUsage((u) => claudeCode.setUsage(u))
 
+  // ---- The weekly recap: counts of what your agents did, 12 weeks ----
+  const recap = new RecapStore(join(app.getPath('userData'), 'recap.json'), () => config.recap)
+
   // ---- Claude Code sessions in your terminals, live ----
   const sessions = new SessionTracker({
     onChange: (list) => {
@@ -359,6 +368,7 @@ async function main() {
       }
     },
     onFinished: async (x) => {
+      recap.turn({ at: x.finishedAt ?? Date.now(), session: x.id, agent: x.agent, project: x.project, ms: (x.finishedAt ?? Date.now()) - (x.turnStartedAt ?? x.startedAt), files: x.files.length, added: x.added, removed: x.removed, commands: x.commands ?? 0 })
       // You're looking at its terminal already: no need to tell you.
       if (x.pid && (await terminalFocused(x.pid))) return
       const now = sessions.get(x.id)
@@ -399,6 +409,8 @@ async function main() {
   }
   const agentFinished = (run: ClaudeRun) => {
     store.remove('claude-run')
+    if (run.phase === 'done')
+      recap.turn({ at: Date.now(), session: run.sessionId ?? run.id, agent: config.ai.provider, project: run.cwd.split(/[\\/]/).filter(Boolean).pop() ?? '', ms: Date.now() - run.startedAt, files: 0, added: 0, removed: 0, commands: 0 })
     // A card with the answer, which closes by itself (hover keeps it).
     if (run.phase !== 'stopped') {
       transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
@@ -692,6 +704,9 @@ async function main() {
     onOpenOnHover: () => pushAppearance(),
     setCompanion: (on) => setCompanion(on),
     setDisplay: (pref) => setDisplay(pref),
+    services: () => serviceHub,
+    clearRecap: () => recap.clear(),
+    showRecap: () => showRecap(true),
     setDictation: (on) => {
       config.dictation = on
       saveConfig(config)
@@ -860,6 +875,8 @@ async function main() {
 
   const decide = (m: DecisionMsg) => {
     if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    if (m.answers) recap.answer('question')
+    else if (m.decision === 'allow' || m.decision === 'deny') recap.answer(m.decision)
     claude.resolve(m)
     store.remove(m.id)
   }
@@ -981,6 +998,25 @@ async function main() {
   }
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   const pushKeys = () => send(win, IPC.KEYS, config.keys)
+  // ---- Services you follow (GitHub, Vercel, Stripe, …) ----
+  const serviceHub = new ServiceHub({
+    config: () => config.services,
+    token: (id) => {
+      try {
+        return config.services[id].secret ? decryptSecret(config.services[id].secret) : ''
+      } catch {
+        return ''
+      }
+    },
+    onChange: () => send(win, SERVICES.CHANGED, serviceHub.view()),
+    onEvent: (e) => showNotificationLater({ app: serviceInfo(e.service).name, summary: e.title, body: e.body, urgency: e.urgency }),
+  })
+  serviceHub.start()
+  ipcMain.handle(SERVICES.VIEW, () => serviceHub.view())
+  ipcMain.handle(SERVICES.REFRESH, (_e, id: unknown) => ((SERVICE_IDS as readonly unknown[]).includes(id) ? serviceHub.refresh(id as ServiceId) : undefined))
+  ipcMain.handle(SERVICES.OPEN, (_e, url: unknown) => {
+    if (typeof url === 'string' && safeServiceUrl(url, config.services.n8n.url)) void shell.openExternal(url)
+  })
   // Attach the window you were in, for Claude (the Claude tab's paperclip).
   let lastFront: FrontWindow | null = null
   ipcMain.handle(CLAUDE.ATTACH, async () => (lastFront ? captureWindow(lastFront, join(app.getPath('userData'), 'attachments')) : null))
@@ -998,6 +1034,48 @@ async function main() {
   ipcMain.handle(IPC.DICTATE_TYPE, async (_e, text: unknown) => {
     if (typeof text !== 'string' || !text.trim() || text.length > 5000) return false
     return pasteIntoFocusedApp(dictatedText(text))
+  })
+  // The weekly recap: by itself once a week (Monday from 8 am, when nothing
+  // needs you), or from the tray any time. Shows last week.
+  const showRecap = (manual: boolean) => {
+    const now = Date.now()
+    const week = weekBefore(weekOf(now))
+    const w = recap.weeks.find((x) => x.week === week)
+    const card = recapCard(w, week, agentName)
+    if (!manual) {
+      recap.markShown(weekOf(now))
+      if (card.empty) return
+    }
+    send(win, IPC.RECAP, { card, shareCard: recapCard(w, week, agentName, true), name: config.character.name })
+  }
+  const checkRecap = () => {
+    if (!config.recap || !recapDue(Date.now(), recap.lastShown) || frontApproval(store.list())) return
+    showRecap(false)
+  }
+  const recapTimer = setInterval(checkRecap, 10 * 60_000)
+  setTimeout(checkRecap, 20_000)
+  const recapImage = (dataUrl: unknown): Buffer | null =>
+    typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length < 20_000_000 ? Buffer.from(dataUrl.slice(22), 'base64') : null
+  ipcMain.handle(IPC.RECAP_SAVE, (_e, dataUrl: unknown) => {
+    const png = recapImage(dataUrl)
+    if (!png) return null
+    let dir = app.getPath('pictures')
+    if (!existsSync(dir)) dir = app.getPath('downloads')
+    mkdirSync(dir, { recursive: true })
+    const base = `Weekly recap ${weekOf(Date.now())}`
+    let file = join(dir, `${base}.png`)
+    for (let i = 2; existsSync(file); i++) file = join(dir, `${base} (${i}).png`)
+    writeFileSync(file, png)
+    return file
+  })
+  ipcMain.handle(IPC.RECAP_COPY, (_e, dataUrl: unknown) => {
+    const png = recapImage(dataUrl)
+    if (!png) return false
+    clipboard.writeImage(nativeImage.createFromBuffer(png))
+    return true
+  })
+  ipcMain.handle(IPC.RECAP_SHOW, (_e, file: unknown) => {
+    if (typeof file === 'string' && /Weekly recap .*\.png$/.test(file) && existsSync(file)) shell.showItemInFolder(file)
   })
   // The desktop companion: the character on your desktop too (Settings → Character).
   let lastBusy = Date.now()
@@ -1055,6 +1133,7 @@ async function main() {
     pushKeys()
     send(win, NOTIFS.CHANGED, center.view())
     send(win, SESSIONS.CHANGED, sessions.list())
+    send(win, SERVICES.CHANGED, serviceHub.view())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -1103,6 +1182,7 @@ async function main() {
       },
       openSettings: () => settings?.open(),
       tour: () => send(win, IPC.TOUR, null),
+      recap: () => showRecap(true),
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
@@ -1119,6 +1199,9 @@ async function main() {
     sessions.stop()
     customSounds.close()
     clearInterval(followTimer)
+    clearInterval(recapTimer)
+    recap.flush()
+    serviceHub.stop()
     clearInterval(companionTimer)
     companion.hide()
     center.flush()

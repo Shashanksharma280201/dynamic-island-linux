@@ -44,6 +44,8 @@ export type AgentSession = {
   removed: number
   /** Edits this turn. */
   edits: number
+  /** Commands it ran this turn. */
+  commands?: number
   /** The files changed this turn, with their diffs, most recently changed first. */
   files: FileDiff[]
   startedAt: number
@@ -206,7 +208,7 @@ export function applyEvent(sessions: Record<string, AgentSession>, e: AgentEvent
     case 'SessionStart':
       break
     case 'UserPromptSubmit':
-      s = { ...s, phase: 'working', prompt: e.prompt ?? s.prompt, steps: [], turnSteps: 0, added: 0, removed: 0, edits: 0, files: [], turnStartedAt: e.at, finishedAt: undefined, final: undefined, message: undefined }
+      s = { ...s, phase: 'working', prompt: e.prompt ?? s.prompt, steps: [], turnSteps: 0, added: 0, removed: 0, edits: 0, commands: 0, files: [], turnStartedAt: e.at, finishedAt: undefined, final: undefined, message: undefined }
       break
     case 'PreToolUse': {
       const { tool, input } = e.agent === 'claude-code' ? { tool: e.tool ?? 'tool', input: e.input } : canonicalTool(e.tool ?? 'tool', e.input)
@@ -219,6 +221,7 @@ export function applyEvent(sessions: Record<string, AgentSession>, e: AgentEvent
         turnStartedAt: s.turnStartedAt ?? e.at,
         steps: steps.slice(-MAX_STEPS),
         turnSteps: s.turnSteps + 1,
+        commands: (s.commands ?? 0) + (tool === 'Bash' ? 1 : 0),
         message: undefined,
         finishedAt: undefined,
       }

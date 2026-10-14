@@ -35,6 +35,7 @@ import { tourSteps } from './tour'
 import { WardrobePicker } from './character/Wardrobe'
 import { useDictation } from './voice/useDictation'
 import { DictationPill } from './voice/DictationPill'
+import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
 
 /** A tab whose package is turned off. */
@@ -222,6 +223,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       }),
     [],
   )
+  // The weekly recap, when the main process shows it.
+  const [recapShow, closeRecap] = useRecap()
   // Right-click the resting island: dress the character up.
   const [wardrobe, setWardrobe] = useState(false)
   // "Show me around": example cards, one step at a time (nothing real is touched).
@@ -392,9 +395,12 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   )
 
   const dressing = wardrobe && !showPanel && p.mode === 'idle' && !dropping
+  const recapping = !!recapShow && !showPanel && !isApproval && !dropping && !tourStep
   const key = showPanel
     ? 'panel'
-    : dressing
+    : recapping
+      ? 'recap'
+      : dressing
       ? 'wardrobe'
       : dropping || adding
       ? 'drop'
@@ -491,6 +497,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           >
             {showPanel ? (
               <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+            ) : recapping ? (
+              <RecapCard r={recapShow!} onClose={closeRecap} />
             ) : dressing ? (
               <div className="card wardrobe-card" onClick={(e) => e.stopPropagation()}>
                 <div className="card-head">

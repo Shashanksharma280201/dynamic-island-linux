@@ -70,6 +70,15 @@ or install it with one command (see the [README](https://github.com/shashankshar
   screenshot of the app you opened the island from (and its title) to your
   next message, so Claude can see what you mean.
 
+**Services and your week**
+
+- New **Services** tab: GitHub, Vercel, Stripe, Resend, Notion, Cal.com and
+  n8n, each with its own card. A failed deploy, CI breaking on your pull
+  request, a review request, a new payment or a failed workflow pops up on the
+  island. Set them up in Settings → Services; keys are stored encrypted.
+- **Weekly recap:** on Monday mornings, last week with your coding agents at a
+  glance, with an image to share. From the tray any time, too.
+
 **Your character**
 
 - **Wardrobe:** 13 outfits (beanie, cap, crown, headphones, glasses,
