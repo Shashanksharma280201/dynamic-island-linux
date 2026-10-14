@@ -7,6 +7,7 @@ import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { parseAiConfig, type AiConfig } from '@shared/ai'
 import { parsePackages, type PackagesConfig } from '@shared/packages'
 import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
+import { parseDisplayPref, type DisplayPref } from '@shared/displays'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -29,6 +30,10 @@ export type Config = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island (no click needed). */
   openOnHover: boolean
+  /** Which display the island lives on: 'primary', 'cursor' or a monitor's key. */
+  display: DisplayPref
+  /** Dictate anywhere with a shortcut (typed into the app you're in). */
+  dictation: boolean
   /** The character also sits on the desktop, where you put it. */
   companion: { on: boolean; at: { x: number; y: number } | null }
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
@@ -98,6 +103,8 @@ const DEFAULTS: Config = {
   keys: parseShortcuts(null),
   openOnHover: false,
   companion: { on: false, at: null },
+  dictation: true,
+  display: 'primary',
   frosted: true,
   sounds: false,
   greeted: '',
@@ -150,6 +157,8 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
   c.keys = parseShortcuts(r.keys)
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
+  if (typeof r.dictation === 'boolean') c.dictation = r.dictation
+  c.display = parseDisplayPref(r.display)
   c.companion = {
     on: r.companion?.on === true,
     at: Number.isFinite(r.companion?.at?.x) && Number.isFinite(r.companion?.at?.y) ? { x: Math.round(r.companion.at.x), y: Math.round(r.companion.at.y) } : null,

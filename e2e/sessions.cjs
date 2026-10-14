@@ -214,6 +214,32 @@ function approval(input) {
     await page.click('.question-card button:has-text("Answer in terminal")')
     check('"Answer in terminal" leaves it to the terminal', (await skip) === null)
 
+    // With the keyboard, from any app: Ctrl+Alt+number picks, Ctrl+Alt+Y moves on / sends.
+    const byKeys = approval({ tool_name: 'AskUserQuestion', tool_input: QUESTIONS })
+    await page.waitForSelector('.question-card .q-text:has-text("Which database?")', { timeout: 4000 })
+    check('the card says which keys answer it', await seen(page, '.question-card .q-keys:has-text("Ctrl+Alt+1–2")'))
+    await sleep(300)
+    key('ctrl+alt+2')
+    check('Ctrl+Alt+2 picks the second option and moves on', await seen(page, '.question-card .q-text:has-text("Which extras?")'))
+    key('ctrl+alt+1')
+    key('ctrl+alt+3')
+    await sleep(200)
+    key('ctrl+alt+y')
+    const keyed = await byKeys
+    check(
+      'Ctrl+Alt+Y sends what was picked',
+      JSON.stringify(keyed?.hookSpecificOutput?.decision?.updatedInput?.answers) === JSON.stringify({ 'Which database?': 'SQLite', 'Which extras?': 'Auth, Admin' }),
+      JSON.stringify(keyed?.hookSpecificOutput?.decision?.updatedInput?.answers),
+    )
+
+    // Answered in the terminal instead: the card goes, and says why.
+    const gone1 = spawn('node', [path.join(ROOT, 'hook/claude-island-hook.cjs')], { env })
+    gone1.stdin.end(JSON.stringify({ hook_event_name: 'PermissionRequest', session_id: 's1', cwd: '/home/me/shop', tool_name: 'Bash', tool_input: { command: 'npm run lint' } }))
+    await page.waitForSelector('.card.approval', { timeout: 4000 })
+    gone1.kill()
+    check('a request answered in the terminal leaves a short note', await seen(page, '.card.notification:has-text("Answered in the terminal")'))
+    await page.waitForSelector('.card.notification', { state: 'detached', timeout: 6000 }).catch(() => {})
+
     // ---- Claude's plan ----
     const plan = approval({ tool_name: 'ExitPlanMode', tool_input: { plan: '1. Add tax to the total\n2. Test the cart' } })
     check('a plan shows in full', await seen(page, '.plan-card .plan-body:has-text("Test the cart")'))

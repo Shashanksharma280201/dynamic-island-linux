@@ -1,11 +1,12 @@
 /** The island's global keyboard shortcuts, which you can change in Settings. */
 
-export type ShortcutId = 'panel' | 'voice' | 'allow' | 'deny' | 'always'
+export type ShortcutId = 'panel' | 'voice' | 'dictate' | 'allow' | 'deny' | 'always'
 export type Shortcuts = Record<ShortcutId, string>
 
 export const DEFAULT_SHORTCUTS: Shortcuts = {
   panel: 'CommandOrControl+I',
   voice: 'Control+Alt+Space',
+  dictate: 'Control+Alt+D',
   allow: 'Control+Alt+Y',
   deny: 'Control+Alt+N',
   always: 'Control+Alt+A',
@@ -15,6 +16,7 @@ export const DEFAULT_SHORTCUTS: Shortcuts = {
 export const SHORTCUT_INFO: Record<ShortcutId, { label: string; hint: string }> = {
   panel: { label: 'Open or close the island', hint: 'From any app' },
   voice: { label: 'Talk to Claude', hint: 'Press again (or stop talking) to send' },
+  dictate: { label: 'Dictate anywhere', hint: 'Speak, and it’s typed into the app you’re in' },
   allow: { label: 'Allow', hint: 'While Claude Code asks for permission' },
   deny: { label: 'Don’t Allow', hint: 'While Claude Code asks for permission' },
   always: { label: 'Always Allow', hint: 'While Claude Code asks for permission' },

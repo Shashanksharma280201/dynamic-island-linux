@@ -127,6 +127,9 @@ export const IPC = {
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
+  QUESTION_KEY: 'island:question-key', // main -> renderer: { n } pick option n, or { send: true }
+  DICTATE: 'island:dictate', // main -> renderer: start / finish dictating
+  DICTATE_TYPE: 'island:dictate-type', // invoke(text) -> boolean: typed into the focused app
   SET_LOOK: 'island:set-look', // renderer -> main: { outfit?, color? } from the island's wardrobe
   TOUR: 'island:tour', // main -> renderer: start "Show me around"
   KEYS: 'island:keys', // main -> renderer: Shortcuts (the global shortcuts' keys)
@@ -292,6 +295,12 @@ export type SettingsState = {
   customSounds: string[]
   /** The character also sits on the desktop. */
   companion: boolean
+  /** Which display the island lives on, and the displays there are. */
+  display: string
+  displays: { key: string; name: string }[]
+  /** Dictate anywhere, and whether its shortcut could be registered. */
+  dictation: boolean
+  dictationActive: boolean
   mac: boolean
   /** Other coding agents (Codex, Gemini CLI, Cursor) whose sessions show on the island. */
   agentHooks: { id: string; name: string; installed: boolean; path: string; note: string }[]

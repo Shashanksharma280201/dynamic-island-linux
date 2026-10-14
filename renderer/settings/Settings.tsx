@@ -405,6 +405,31 @@ export function Settings() {
             ))}
           </div>
         </div>
+        <div className="toggle-row">
+          <div>
+            <div>Island lives on</div>
+            <div className="hint">With “the display with the pointer” it moves to whichever screen you’re working on</div>
+          </div>
+          <select className="display-select" value={s.displays.some((d) => d.key === s.display) || s.display === 'cursor' ? s.display : 'primary'} onChange={(e) => general.run(() => window.settings.setDisplay(e.target.value))}>
+            <option value="primary">Main display</option>
+            <option value="cursor">The display with the pointer</option>
+            {s.displays.length > 1 && s.displays.map((d) => (
+              <option key={d.key} value={d.key}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Toggle
+          label={`Dictate anywhere with ${shortcutLabel(s.keys.dictate, s.mac)}`}
+          hint={
+            s.dictation && !s.dictationActive
+              ? `Another app is already using ${shortcutLabel(s.keys.dictate, s.mac)}, so it could not be registered. Pick other keys under Keyboard shortcuts`
+              : 'Press it, speak, and what you said is typed into the app you’re in. It stops when you stop talking (or press it again). Speech stays on this computer'
+          }
+          on={s.dictation}
+          onChange={(v) => general.run(() => window.settings.setDictation(v))}
+        />
         <Toggle
           label="Open the panel when the pointer rests on the island"
           hint="No click needed: rest on the resting island for a moment and it opens"

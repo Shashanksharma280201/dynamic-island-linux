@@ -50,7 +50,7 @@ export function warmUp(model: string): void {
   getWorker().postMessage({ type: 'load', id: 0, model })
 }
 
-function transcribe(model: string, audio: Float32Array): Promise<string> {
+export function transcribe(model: string, audio: Float32Array): Promise<string> {
   const id = ++seq
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject })
@@ -59,7 +59,7 @@ function transcribe(model: string, audio: Float32Array): Promise<string> {
 }
 
 /** Whisper sometimes "hears" these in silence or noise. */
-const NOISE = /^[\s.,!?]*$|^\[(blank_audio|music|noise|silence)\]$|^\((.*)\)$/i
+export const NOISE = /^[\s.,!?]*$|^\[(blank_audio|music|noise|silence)\]$|^\((.*)\)$/i
 
 /**
  * Talk to Claude: record until you stop speaking, transcribe locally, send.

@@ -11,6 +11,8 @@ import { saveConfig, parseMailAccount, type Config, type StoredMailAccount } fro
 import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import type { ShortcutId } from '@shared/shortcuts'
+import { parseDisplayPref } from '@shared/displays'
+import { displayChoices } from './window'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
@@ -45,6 +47,9 @@ type Deps = {
   pauseShortcuts: (on: boolean) => void
   startTour: () => void
   setCompanion: (on: boolean) => void
+  setDisplay: (pref: string) => void
+  setDictation: (on: boolean) => void
+  dictationActive: () => boolean
   /** Sounds you replaced with your own files, and their folder. */
   customSounds: () => string[]
   openSounds: () => void
@@ -92,6 +97,10 @@ export class SettingsController {
       openOnHover: config.openOnHover,
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
+      display: config.display,
+      displays: displayChoices(),
+      dictation: config.dictation,
+      dictationActive: this.d.dictationActive(),
       mac: process.platform === 'darwin',
       frosted: config.frosted,
       sounds: config.sounds,
@@ -230,6 +239,14 @@ export class SettingsController {
     ipcMain.handle(SETTINGS.RECORDING, (_e, on) => this.d.pauseShortcuts(on === true))
     ipcMain.handle(SETTINGS.TOUR, () => this.d.startTour())
     ipcMain.handle(SETTINGS.OPEN_SOUNDS, () => this.d.openSounds())
+    ipcMain.handle(SETTINGS.SET_DICTATION, (_e, on) => {
+      this.d.setDictation(on === true)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_DISPLAY, (_e, pref) => {
+      this.d.setDisplay(parseDisplayPref(pref))
+      this.changed()
+    })
     ipcMain.handle(SETTINGS.SET_COMPANION, (_e, on) => {
       this.d.setCompanion(on === true)
       this.changed()

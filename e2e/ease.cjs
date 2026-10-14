@@ -141,6 +141,19 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await settings.click('#shortcuts .toggle-row:has(.key-recorder[data-shortcut="voice"]) button.link:has-text("Reset")')
     check('Reset puts the default back', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+Space")'))
 
+    // ---- Which display ----
+    check('Settings offers where the island lives', (await settings.$$eval('#general select.display-select option', (o) => o.map((x) => x.value))).join() === 'primary,cursor')
+    await settings.selectOption('#general select.display-select', 'cursor')
+    check('"the display with the pointer" is saved', await (async () => {
+      for (let i = 0; i < 30; i++) {
+        if (cfg().display === 'cursor') return true
+        await sleep(100)
+      }
+      return false
+    })())
+    check('and the island is still on screen', await seen(page, '.island-outer'))
+    await settings.selectOption('#general select.display-select', 'primary')
+
     // ---- Your own sounds ----
     await settings.click('#general .toggle-row:has-text("Sounds") input.switch')
     check('with sounds on, Settings says which files it uses', await seen(settings, '#general .hint:has-text("Using yours for: done")'))
@@ -283,6 +296,38 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('and the island wears them', await seen(page, '.capsule.idle svg.character[data-outfit="crown"]'))
     await sleep(400)
     await shot(page, '10-capsule-crown')
+
+    // ---- Dictate anywhere: what you said is typed into the app you're in ----
+    const fakeApp = (cls) => {
+      const p = require('child_process').spawn('node', [path.join(__dirname, 'fake-keys-app.cjs'), cls], { stdio: ['ignore', 'pipe', 'inherit'] })
+      let out = ''
+      p.stdout.on('data', (d) => (out += d))
+      return { out: () => out, ready: async () => { for (let i = 0; i < 50 && !/window/.test(out); i++) await sleep(100) }, close: () => p.kill() }
+    }
+    await app.evaluate(({ clipboard }) => clipboard.writeText('my own clipboard'))
+    const editor = fakeApp('gedit')
+    await editor.ready()
+    await sleep(300)
+    const typed = await page.evaluate(() => window.island.dictate.type('hello from the island'))
+    await sleep(300)
+    check('dictated text is pasted into the focused app', typed === true && /KEY 76 4\b/.test(editor.out()), editor.out().trim().split('\n').slice(-3).join(' | '))
+    check('through the clipboard', (await app.evaluate(({ clipboard }) => clipboard.readText())) === 'hello from the island')
+    await sleep(1000)
+    check('which is put back afterwards', (await app.evaluate(({ clipboard }) => clipboard.readText())) === 'my own clipboard')
+    editor.close()
+    const term = fakeApp('gnome-terminal-server')
+    await term.ready()
+    await sleep(300)
+    await page.evaluate(() => window.island.dictate.type('ls -la'))
+    await sleep(300)
+    check('in a terminal it pastes with Ctrl+Shift+V', /KEY 76 5\b/.test(term.out()), term.out().trim().split('\n').slice(-2).join(' | '))
+    term.close()
+    key('ctrl+alt+d')
+    check('the dictate shortcut shows the dictation pill', await seen(page, '.dictate-pill .dictate'))
+    await sleep(400)
+    await shot(page, '12-dictate')
+    const x = await page.$('.dictate-x')
+    if (x) await x.click()
   } catch (e) {
     check('unexpected error', false, e.message)
   } finally {

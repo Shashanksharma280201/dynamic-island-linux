@@ -35,6 +35,9 @@ export class Companion {
       const [x, y] = this.win.getPosition()
       this.d.saveSpot({ x, y })
     })
+    ipcMain.on(COMPANION.READY, (e) => {
+      if (this.win && e.sender === this.win.webContents) this.push()
+    })
     ipcMain.on(COMPANION.CLICK, (e) => {
       if (this.win && e.sender === this.win.webContents) this.d.onClick()
     })

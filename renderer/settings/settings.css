@@ -370,7 +370,8 @@ button.link {
 }
 
 /* AI */
-#ai select {
+#ai select,
+select.display-select {
   max-width: 240px;
   background: var(--field);
   border: 0.5px solid var(--separator);

@@ -33,6 +33,8 @@ import { CompactSession, SessionCard } from './states/SessionActivity'
 import { CloseBar } from './states/CloseBar'
 import { tourSteps } from './tour'
 import { WardrobePicker } from './character/Wardrobe'
+import { useDictation } from './voice/useDictation'
+import { DictationPill } from './voice/DictationPill'
 import { useShortcutLabel } from './useShortcuts'
 
 /** A tab whose package is turned off. */
@@ -192,6 +194,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     }
   }, [])
   const voice = useVoice(claude)
+  // Dictate anywhere (its shortcut): typed into the app you're in.
+  const dictation = useDictation(claude)
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {
@@ -608,6 +612,24 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             >
               Undo
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {dictation.phase !== 'idle' && (
+          <motion.div
+            key="dictate"
+            className="island dictate-pill"
+            initial={{ opacity: 0, y: -10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.9, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="status"
+            aria-live="polite"
+          >
+            <DictationPill d={dictation} />
           </motion.div>
         )}
       </AnimatePresence>

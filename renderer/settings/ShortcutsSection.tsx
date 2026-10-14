@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SettingsState } from '@shared/types'
 import { accelFromKeys, DEFAULT_SHORTCUTS, SHORTCUT_INFO, sameAccel, shortcutLabel, type ShortcutId } from '@shared/shortcuts'
 
-const ORDER: ShortcutId[] = ['panel', 'voice', 'allow', 'deny', 'always']
+const ORDER: ShortcutId[] = ['panel', 'voice', 'dictate', 'allow', 'deny', 'always']
 
 /**
  * The global shortcuts, each with its keys: click, press the new keys, done.
@@ -45,7 +45,7 @@ export function ShortcutsSection({ s }: { s: SettingsState }) {
         const info = SHORTCUT_INFO[id]
         const keys = s.keys[id]
         const custom = !sameAccel(keys, DEFAULT_SHORTCUTS[id], s.mac)
-        const off = (id === 'panel' && !s.shortcut) || (id === 'voice' && !s.claude?.voiceShortcut)
+        const off = (id === 'panel' && !s.shortcut) || (id === 'voice' && !s.claude?.voiceShortcut) || (id === 'dictate' && !s.dictation)
         return (
           <div className="toggle-row" key={id}>
             <div>

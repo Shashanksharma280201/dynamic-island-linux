@@ -3,10 +3,26 @@ import { createRoot } from 'react-dom/client'
 import { parseCharacter, type CharacterConfig, type CharacterMood } from '@shared/character'
 import { Character, CharacterContext } from '../island/character/Character'
 
+type State = { mood: CharacterMood; character: CharacterConfig }
+
+// Listening from the very start (before React mounts), so the first state isn't missed.
+let latest: State | null = null
+const subscribers = new Set<(s: State) => void>()
+window.island.companion.onState((s) => {
+  latest = { mood: s.mood, character: parseCharacter(s.character) }
+  for (const f of subscribers) f(latest)
+})
+
 /** The desktop companion: drag it anywhere; a click (without dragging) opens the island. */
 function Companion() {
-  const [state, setState] = useState<{ mood: CharacterMood; character: CharacterConfig } | null>(null)
-  useEffect(() => window.island.companion.onState((s) => setState({ mood: s.mood, character: parseCharacter(s.character) })), [])
+  const [state, setState] = useState<State | null>(latest)
+  useEffect(() => {
+    subscribers.add(setState)
+    if (latest) setState(latest)
+    // And ask, in case it was sent before anyone was listening.
+    window.island.companion.ready()
+    return () => void subscribers.delete(setState)
+  }, [])
   const drag = useRef<{ x: number; y: number; moved: number } | null>(null)
   if (!state) return null
   return (

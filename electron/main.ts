@@ -34,8 +34,10 @@ import {
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
-import type { DecisionMsg, MediaState } from '@shared/types'
+import type { DecisionMsg, MediaState, ToolRequest } from '@shared/types'
 import { canAlways, frontApproval, type ApprovalKey } from '@shared/approvalKeys'
+import { parseQuestions } from '@shared/questions'
+import { describeTool } from '@shared/toolDetail'
 import { clash, DEFAULT_SHORTCUTS, sameAccel, SHORTCUT_INFO, shortcutLabel, validAccel } from '@shared/shortcuts'
 import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
@@ -60,6 +62,7 @@ import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCente
 import { SessionTracker } from './sessions'
 import { CustomSounds } from './sounds'
 import { Companion } from './companion'
+import { dictatedText, pasteIntoFocusedApp } from './paste'
 import { companionMood } from '@shared/companion'
 import { SESSIONS } from './sessionChannels'
 import { focusTerminal, terminalFocused } from './terminal'
@@ -129,7 +132,7 @@ function cdpUrl(): string {
 async function main() {
   const config = bootConfig
   const store = new ActivityStore()
-  const win = createIslandWindow(config.dock.side)
+  const win = createIslandWindow(config.dock.side, config.display)
   const claudeStateReady = earlyClaudeState()
   // The island may use the microphone (talking to Claude); nothing else.
   win.webContents.session.setPermissionRequestHandler((wc, permission, cb, details) => {
@@ -150,7 +153,7 @@ async function main() {
   const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
   serveMedia(() => waForMedia, (kind) => customSounds.read(kind))
   let claudeUi: ClaudeController | null = null
-  let display: Display = placeIslandWindow(win, config.dock.side)
+  let display: Display = placeIslandWindow(win, config.dock.side, config.display)
   // The side actually shown: config.dock.side, or a preview while dragging.
   let shownSide: Side = config.dock.side
   const pushDock = () =>
@@ -279,7 +282,7 @@ async function main() {
       `scale: ${display.scaleFactor}, bounds: ${JSON.stringify(win.getBounds())}`,
   )
   const replace = () => {
-    display = placeIslandWindow(win, shownSide)
+    display = placeIslandWindow(win, shownSide, config.display)
     updateHitArea()
     pushDock()
   }
@@ -293,14 +296,52 @@ async function main() {
   screen.on('display-metrics-changed', replace)
   screen.on('display-added', replace)
   screen.on('display-removed', replace)
+  // "The display with the pointer": move over when the pointer does (not while the panel is open).
+  let panelOpen = false
+  const followTimer = setInterval(() => {
+    if (config.display !== 'cursor' || panelOpen || win.isDestroyed()) return
+    const here = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    if (here.id !== display.id) replace()
+  }, 500)
+  const setDisplay = (pref: string) => {
+    config.display = pref
+    saveConfig(config)
+    replace()
+  }
 
   // ---- Claude approvals ----
   const claude = new ClaudeServer(SOCK)
+  // When each request came (its hook gives up after DYNAMIC_ISLAND_TIMEOUT, 45 s).
+  const askedAt = new Map<string, number>()
+  const HOOK_TIMEOUT_MS = (Number(process.env.DYNAMIC_ISLAND_TIMEOUT) || 45) * 1000
   claude.onRequest((req) => {
+    askedAt.set(req.id, Date.now())
     store.upsert({ kind: 'approval', id: req.id, priority: 10, request: req })
   })
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
-  claude.onCancel((id) => store.remove(id))
+  // Hook gave up: answered in the terminal, or waited too long and asked there.
+  claude.onCancel((id) => {
+    const at = askedAt.get(id)
+    askedAt.delete(id)
+    const a = store.list().find((x) => x.id === id)
+    store.remove(id)
+    if (a?.kind !== 'approval' || at === undefined || a.request.fromIsland) return
+    const waited = Date.now() - at > HOOK_TIMEOUT_MS - 2000
+    transient.show(
+      {
+        kind: 'notification',
+        id: `handled-${id}`,
+        priority: 3,
+        notification: {
+          app: 'Claude Code',
+          summary: waited ? 'Waiting for you in the terminal' : 'Answered in the terminal',
+          body: waited ? 'It waited here a while, so Claude asked there instead.' : describeTool(a.request.toolName, a.request.toolInput ?? {}).label,
+          urgency: 'low',
+        },
+      },
+      waited ? 6000 : 2500,
+    )
+  })
   claude.onUsage((u) => claudeCode.setUsage(u))
 
   // ---- Claude Code sessions in your terminals, live ----
@@ -644,6 +685,7 @@ async function main() {
       config.keys = { ...config.keys, [id]: next }
       saveConfig(config)
       if (id === 'panel') applyShortcut()
+      else if (id === 'dictate') applyDictate()
       else if (id === 'voice') {
         claudeUi?.applyVoiceShortcut()
         claudeUi?.push()
@@ -653,6 +695,13 @@ async function main() {
     },
     onOpenOnHover: () => pushAppearance(),
     setCompanion: (on) => setCompanion(on),
+    setDisplay: (pref) => setDisplay(pref),
+    setDictation: (on) => {
+      config.dictation = on
+      saveConfig(config)
+      applyDictate()
+    },
+    dictationActive: () => !!dictateKey,
     customSounds: () => customSounds.kinds(),
     openSounds: () => void shell.openPath(customSounds.ensureDir()),
     startTour: () => send(win, IPC.TOUR, null),
@@ -661,9 +710,11 @@ async function main() {
         globalShortcut.unregisterAll()
         shortcutActive = false
         approvalKeys = null
+        dictateKey = ''
         return
       }
       applyShortcut()
+      applyDictate()
       claudeUi?.applyVoiceShortcut()
       syncApprovalKeys(true)
     },
@@ -819,20 +870,40 @@ async function main() {
   // Answer the approval on screen from anywhere: Ctrl+Alt+Y / N / A. Grabbed
   // only while one waits, and never by taking focus (a stray "y" typed in
   // another app must not approve anything).
+  // For Claude's questions: Ctrl+Alt+1…9 pick an option, Allow sends, Deny leaves it to the terminal.
   let approvalKeys: Record<ApprovalKey, string> | null = null
+  let questionKeys: string[] = []
+  let keyMode = ''
+  const isQuestion = (r: ToolRequest | null) => !!r && r.toolName === 'AskUserQuestion' && !r.fromIsland && !!parseQuestions(r.toolInput)
   const syncApprovalKeys = (force = false) => {
-    const waiting = !!frontApproval(store.list())
-    if (waiting === !!approvalKeys && !force) return
+    const front = frontApproval(store.list())
+    const mode = !front ? '' : isQuestion(front) ? 'question' : 'approval'
+    if (mode === keyMode && !force) return
+    keyMode = mode
     if (approvalKeys) for (const accel of Object.values(approvalKeys)) globalShortcut.unregister(accel)
-    approvalKeys = waiting ? { allow: config.keys.allow, deny: config.keys.deny, always: config.keys.always } : null
+    for (const accel of questionKeys) globalShortcut.unregister(accel)
+    questionKeys = []
+    approvalKeys = front ? { allow: config.keys.allow, deny: config.keys.deny, always: config.keys.always } : null
     if (!approvalKeys) return
     for (const [key, accel] of Object.entries(approvalKeys)) {
       const ok = globalShortcut.register(accel, () => {
         const r = frontApproval(store.list())
         if (!r || (key === 'always' && !canAlways(r))) return
+        if (isQuestion(r)) {
+          // Allow sends the answers picked on the card; Deny leaves it to the terminal.
+          if (key === 'allow') send(win, IPC.QUESTION_KEY, { send: true })
+          else if (key === 'deny') decide({ id: r.id, decision: 'ask' })
+          return
+        }
         decide({ id: r.id, decision: key === 'deny' ? 'deny' : 'allow', ...(key === 'always' ? { always: true } : {}) })
       })
       if (!ok) console.error(`[island] couldn't register ${accel} for approvals; another app may own it`)
+    }
+    if (mode === 'question') {
+      for (let n = 1; n <= 9; n++) {
+        const accel = `Control+Alt+${n}`
+        if (globalShortcut.register(accel, () => send(win, IPC.QUESTION_KEY, { n }))) questionKeys.push(accel)
+      }
     }
   }
   store.onChange(() => syncApprovalKeys())
@@ -848,6 +919,7 @@ async function main() {
       backdrop.setExpanded(!!r && r.width > 80)
     },
     onPanel: (open) => {
+      panelOpen = open
       if (sysTimer) clearInterval(sysTimer)
       sysTimer = null
       if (!open) return
@@ -911,6 +983,21 @@ async function main() {
   }
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   const pushKeys = () => send(win, IPC.KEYS, config.keys)
+  // Dictate anywhere: the shortcut starts / finishes; what you said is typed into the focused app.
+  let dictateKey = ''
+  const applyDictate = () => {
+    if (dictateKey) globalShortcut.unregister(dictateKey)
+    dictateKey = ''
+    if (!config.dictation) return
+    const accel = config.keys.dictate
+    if (globalShortcut.register(accel, () => send(win, IPC.DICTATE, null))) dictateKey = accel
+    else console.error(`[island] couldn't register ${accel} for dictation; another app may own it`)
+  }
+  applyDictate()
+  ipcMain.handle(IPC.DICTATE_TYPE, async (_e, text: unknown) => {
+    if (typeof text !== 'string' || !text.trim() || text.length > 5000) return false
+    return pasteIntoFocusedApp(dictatedText(text))
+  })
   // The desktop companion: the character on your desktop too (Settings → Character).
   let lastBusy = Date.now()
   const companion = new Companion({
@@ -1030,6 +1117,7 @@ async function main() {
     transient.clear()
     sessions.stop()
     customSounds.close()
+    clearInterval(followTimer)
     clearInterval(companionTimer)
     companion.hide()
     center.flush()

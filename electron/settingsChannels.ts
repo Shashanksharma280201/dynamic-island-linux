@@ -10,6 +10,8 @@ export const SETTINGS = {
   SET_OPEN_ON_HOVER: 'settings:set-open-on-hover', // boolean
   TOUR: 'settings:tour', // start the island's tour
   OPEN_SOUNDS: 'settings:open-sounds', // open the folder for your own sounds
+  SET_DICTATION: 'settings:set-dictation', // boolean: dictate anywhere
+  SET_DISPLAY: 'settings:set-display', // 'primary' | 'cursor' | a display's key
   SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
   RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys
   SET_DOCK_SIDE: 'settings:set-dock-side',

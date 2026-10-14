@@ -4922,3 +4922,66 @@ button .spinner-orb,
   border-color: #fff;
   box-shadow: 0 0 0 2px var(--blue);
 }
+
+/* Dictate anywhere: a pill under the island while you speak. */
+.island.dictate-pill {
+  border-radius: 999px;
+  padding: 6px 10px 6px 8px;
+  max-width: 340px;
+  box-sizing: border-box;
+}
+.island-outer.right .island.dictate-pill {
+  align-self: flex-end;
+}
+.dictate {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  min-height: 28px;
+}
+.dictate-text {
+  font-weight: 600;
+  min-width: 0;
+}
+.dictate-text.typed {
+  font-weight: 500;
+  color: var(--label-2);
+}
+.dictate.error .dictate-text {
+  color: #ff8a80;
+}
+.dictate-hint {
+  color: var(--label-3);
+  font-size: 11px;
+  white-space: nowrap;
+}
+.dictate-x {
+  border: 0;
+  background: var(--fill-3);
+  color: var(--label-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  font-size: 13px;
+  line-height: 1;
+}
+.voice-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  height: 22px;
+}
+.voice-dots span {
+  width: 3px;
+  border-radius: 2px;
+  background: #ffb35c;
+  transition: height 0.06s linear;
+}
+.q-keys {
+  margin-top: 8px;
+  color: var(--label-3);
+  font-size: 11px;
+}

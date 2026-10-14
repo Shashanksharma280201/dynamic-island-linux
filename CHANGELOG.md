@@ -49,6 +49,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Shortcuts** in the Control Center lists them all, as they're set now.
 - **Open on hover** (Settings → General): rest on the island and the panel
   opens, no click needed.
+- **Island lives on** (Settings → General): the main display, the display with
+  the pointer (it follows you between screens), or a monitor you pick. A
+  monitor is found again after you replug it.
+
+**Dictate anywhere**
+
+- Press **Ctrl+Alt+D** in any app and speak: what you said is typed into that
+  app (terminals included) when you stop talking, or press it again. Speech is
+  recognised on this computer. A pill under the island shows your voice as you
+  speak. Turn it off or change the keys in Settings.
+
+**Claude Code, continued**
+
+- Answer Claude's questions from the keyboard without leaving your app:
+  **Ctrl+Alt+1…9** picks an option, **Ctrl+Alt+Y** moves on or sends.
+- When you answer a request in the terminal instead, the island says so as the
+  card goes (or that Claude is now asking there, if you were away).
 
 **Your character**
 

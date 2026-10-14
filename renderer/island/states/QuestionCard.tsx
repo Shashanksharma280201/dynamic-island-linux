@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from 'react'
 import type { ToolRequest } from '@shared/types'
 import { parseQuestions, questionAnswer, type Question } from '@shared/questions'
 import { Badge } from './Badge'
+import { useShortcutLabel } from '../useShortcuts'
 import { sound } from '../../sound'
 
 /**
@@ -20,14 +21,14 @@ export function QuestionCard({ request, queued, project }: { request: ToolReques
   const answer = (i: number) => questionAnswer(questions[i], picked[i], other[i])
   const ready = questions.every((_q, i) => !!answer(i))
 
-  const send = (e: MouseEvent) => {
-    e.stopPropagation()
+  const send = (e?: MouseEvent) => {
+    e?.stopPropagation()
     if (!ready) return
     sound('ok')
     window.island.sendDecision({ id: request.id, decision: 'allow', answers: Object.fromEntries(questions.map((qq, i) => [qq.question, answer(i)!])) })
   }
-  const pick = (e: MouseEvent, label: string) => {
-    e.stopPropagation()
+  const pick = (e: MouseEvent | null, label: string) => {
+    e?.stopPropagation()
     setTyping(false)
     setOther((o) => o.map((v, i) => (i === at ? '' : v)))
     setPicked((p) =>
@@ -40,6 +41,28 @@ export function QuestionCard({ request, queued, project }: { request: ToolReques
     // One choice made: on to the next question.
     if (!q?.multiSelect && !last) setTimeout(() => setAt((a) => Math.min(a + 1, questions.length - 1)), 160)
   }
+
+  // Ctrl+Alt+1…9 pick an option of this question; Allow (Ctrl+Alt+Y) moves on, or sends on the last one.
+  const keys = useRef({ pick, send, next: () => {} })
+  keys.current = {
+    pick,
+    send,
+    next: () => {
+      if (!answer(at)) return
+      setTyping(false)
+      setAt(at + 1)
+    },
+  }
+  useEffect(
+    () =>
+      window.island.onQuestionKey?.(({ n, send: go }) => {
+        if (go) return last ? keys.current.send() : keys.current.next()
+        const o = q?.options[(n ?? 0) - 1]
+        if (o) keys.current.pick(null, o.label)
+      }),
+    [last, q],
+  )
+  const allowKey = useShortcutLabel('allow')
 
   if (!q) return null
   return (
@@ -97,6 +120,9 @@ export function QuestionCard({ request, queued, project }: { request: ToolReques
             <span className="q-label">{other[at] ? other[at] : 'Something else'}</span>
           </button>
         )}
+      </div>
+      <div className="q-keys caption">
+        Ctrl+Alt+1{q.options.length > 1 ? `–${Math.min(9, q.options.length)}` : ''} to pick · {allowKey} {last ? 'to send' : 'for the next'}
       </div>
       <div className="actions">
         <button

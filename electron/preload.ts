@@ -85,12 +85,20 @@ const api = {
   onKeys: (cb: (k: Shortcuts) => void) => on(IPC.KEYS, cb),
   /** Dress the character from the island (right-click wardrobe). */
   setLook: (patch: { outfit?: Outfit; color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
+  /** Ctrl+Alt+1…9 / Allow while one of Claude's questions is on the island. */
+  onQuestionKey: (cb: (k: { n?: number; send?: boolean }) => void) => on(IPC.QUESTION_KEY, cb),
+  /** Dictate anywhere: the shortcut, and typing what you said into the focused app. */
+  dictate: {
+    onToggle: (cb: () => void) => on(IPC.DICTATE, cb),
+    type: (text: string): Promise<boolean> => ipcRenderer.invoke(IPC.DICTATE_TYPE, text),
+  },
   /** The desktop companion's page. */
   companion: {
     onState: (cb: (s: { mood: CharacterMood; character: CharacterConfig }) => void) => on(COMPANION.STATE, cb),
     move: (dx: number, dy: number) => ipcRenderer.send(COMPANION.MOVE, { dx, dy }),
     drop: () => ipcRenderer.send(COMPANION.DROP),
     click: () => ipcRenderer.send(COMPANION.CLICK),
+    ready: () => ipcRenderer.send(COMPANION.READY),
   },
   /** Start the tour (tray, Settings). */
   onTour: (cb: () => void) => on(IPC.TOUR, cb),
@@ -237,6 +245,8 @@ const settings = {
   tour: () => ipcRenderer.invoke(SETTINGS.TOUR),
   openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
   setCompanion: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_COMPANION, on),
+  setDisplay: (pref: string) => ipcRenderer.invoke(SETTINGS.SET_DISPLAY, pref),
+  setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
   setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),

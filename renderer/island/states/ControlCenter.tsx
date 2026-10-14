@@ -114,7 +114,7 @@ function Toggle({
 function ShortcutSheet() {
   const keys = useShortcuts()
   const rows: [string, string][] = [
-    ...(['panel', 'voice', 'allow', 'deny', 'always'] as ShortcutId[]).map((id): [string, string] => [SHORTCUT_INFO[id].label, shortcutLabel(keys[id], MAC)]),
+    ...(['panel', 'voice', 'dictate', 'allow', 'deny', 'always'] as ShortcutId[]).map((id): [string, string] => [SHORTCUT_INFO[id].label, shortcutLabel(keys[id], MAC)]),
     ['Move the island', 'Drag it'],
     ['Peek at what’s going on', 'Rest the pointer on it'],
   ]
