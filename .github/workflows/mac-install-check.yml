@@ -1,0 +1,102 @@
+name: Mac install check
+
+# Every way a person installs the island on a Mac, on several macOS versions
+# and on Intel: the one-line command from the README, the .dmg downloaded in a
+# browser (what Gatekeeper says about it), and building it from the code with
+# only the Command Line Tools (no Xcode).
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/mac-install-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  mac:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 40
+    steps:
+      - name: This Mac
+        run: |
+          sw_vers
+          uname -m
+          spctl --status || true
+          xcode-select -p || true
+          ls /Library/Developer/CommandLineTools/usr/bin/git /Applications/Xcode*.app 2>&1 | head -5 || true
+
+      - name: One-line install, exactly as in the README
+        id: oneline
+        continue-on-error: true
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/shashanksharma280201/dynamic-island-linux/main/scripts/install.sh | DI_NO_LAUNCH=1 bash
+          APP="/Applications/Dynamic Island.app"
+          test -d "$APP"
+          xattr -l "$APP" || true
+          codesign --verify --deep --strict --verbose=2 "$APP"
+          open "$APP"
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null && break; sleep 1; done
+          sleep 6
+          pgrep -fl "Dynamic Island.app/Contents/MacOS/" | head -3
+          pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null
+          osascript -e 'quit app "Dynamic Island"' || true
+          sleep 2; pkill -f "Dynamic Island.app/Contents/MacOS/" || true
+          rm -rf "$APP"
+
+      - name: Downloaded in a browser, dragged to Applications, double-clicked
+        id: browser
+        continue-on-error: true
+        run: |
+          case "$(uname -m)" in arm64) F=dynamic-island-mac-MSeries-0.2.0-arm64.dmg ;; *) F=dynamic-island-mac-intel-0.2.0-x64.dmg ;; esac
+          curl -fsSL -o "$RUNNER_TEMP/$F" "https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/$F"
+          # What Safari or Chrome puts on a download.
+          xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" "$RUNNER_TEMP/$F"
+          MNT=$(hdiutil attach -nobrowse -readonly "$RUNNER_TEMP/$F" | grep -o '/Volumes/.*' | head -1)
+          ls -la "$MNT"
+          ditto "$MNT/Dynamic Island.app" "/Applications/Dynamic Island.app"
+          hdiutil detach "$MNT"
+          APP="/Applications/Dynamic Island.app"
+          xattr -l "$APP" | head -3
+          echo "--- codesign"
+          codesign -dvv "$APP" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier|flags|Authority" || true
+          codesign --verify --deep --strict --verbose=2 "$APP" || true
+          echo "--- spctl (Gatekeeper's verdict)"
+          spctl --assess --type execute -vvv "$APP" 2>&1 || true
+          echo "--- syspolicy_check"
+          syspolicy_check distribution "$APP" 2>&1 | head -30 || true
+          echo "--- double-click"
+          open "$APP" 2>&1 || true
+          sleep 12
+          if pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null; then echo "RESULT: it opened"; else echo "RESULT: macOS blocked it"; fi
+          log show --last 2m --style compact --predicate 'subsystem == "com.apple.syspolicy" OR process == "syspolicyd" OR process == "CoreServicesUIAgent"' 2>/dev/null | grep -i -E "dynamic|island|notar|damaged|malware|assess" | tail -25 || true
+          pkill -f "Dynamic Island.app/Contents/MacOS/" || true
+          rm -rf "$APP"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build from the code with only the Command Line Tools (no Xcode)
+        id: source
+        continue-on-error: true
+        run: |
+          sudo xcode-select -s /Library/Developer/CommandLineTools
+          xcode-select -p
+          node -v
+          git clone -q -b mac https://github.com/shashanksharma280201/dynamic-island-linux.git "$RUNNER_TEMP/di"
+          cd "$RUNNER_TEMP/di"
+          npm install --no-audit --no-fund 2>&1 | tail -15
+          npm run build 2>&1 | tail -5
+          CSC_IDENTITY_AUTO_DISCOVERY=false npm run package 2>&1 | tail -15
+          ls -la dist/*.dmg
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "$(sw_vers -productVersion) $(uname -m): one-line=${{ steps.oneline.outcome }} browser=${{ steps.browser.outcome }} from-source=${{ steps.source.outcome }}"
+          [ "${{ steps.oneline.outcome }}" = success ] && [ "${{ steps.source.outcome }}" = success ]
