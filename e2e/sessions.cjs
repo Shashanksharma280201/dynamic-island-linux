@@ -232,13 +232,12 @@ function approval(input) {
       JSON.stringify(keyed?.hookSpecificOutput?.decision?.updatedInput?.answers),
     )
 
-    // Answered in the terminal instead: the card goes, and says why.
+    // Claude stops asking (you interrupted it): the card just goes.
     const gone1 = spawn('node', [path.join(ROOT, 'hook/claude-island-hook.cjs')], { env })
     gone1.stdin.end(JSON.stringify({ hook_event_name: 'PermissionRequest', session_id: 's1', cwd: '/home/me/shop', tool_name: 'Bash', tool_input: { command: 'npm run lint' } }))
     await page.waitForSelector('.card.approval', { timeout: 4000 })
     gone1.kill()
-    check('a request answered in the terminal leaves a short note', await seen(page, '.card.notification:has-text("Answered in the terminal")'))
-    await page.waitForSelector('.card.notification', { state: 'detached', timeout: 6000 }).catch(() => {})
+    check('a request Claude stopped asking goes quietly', (await gone(page, '.card.approval')) && !(await page.$('.card.notification')))
 
     // ---- Claude's plan ----
     const plan = approval({ tool_name: 'ExitPlanMode', tool_input: { plan: '1. Add tax to the total\n2. Test the cart' } })

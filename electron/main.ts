@@ -311,22 +311,16 @@ async function main() {
 
   // ---- Claude approvals ----
   const claude = new ClaudeServer(SOCK)
-  // When each request came (its hook gives up after DYNAMIC_ISLAND_TIMEOUT, 45 s).
-  const askedAt = new Map<string, number>()
-  const HOOK_TIMEOUT_MS = (Number(process.env.DYNAMIC_ISLAND_TIMEOUT) || 45) * 1000
   claude.onRequest((req) => {
-    askedAt.set(req.id, Date.now())
     store.upsert({ kind: 'approval', id: req.id, priority: 10, request: req })
   })
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
-  // Hook gave up: answered in the terminal, or waited too long and asked there.
-  claude.onCancel((id) => {
-    const at = askedAt.get(id)
-    askedAt.delete(id)
+  // The hook went away: Claude stopped asking (quietly drop the card), or it
+  // waited too long here and Claude now asks in the terminal (say so).
+  claude.onCancel((id, why) => {
     const a = store.list().find((x) => x.id === id)
     store.remove(id)
-    if (a?.kind !== 'approval' || at === undefined || a.request.fromIsland) return
-    const waited = Date.now() - at > HOOK_TIMEOUT_MS - 2000
+    if (why !== 'timeout' || a?.kind !== 'approval' || a.request.fromIsland) return
     transient.show(
       {
         kind: 'notification',
@@ -334,12 +328,12 @@ async function main() {
         priority: 3,
         notification: {
           app: 'Claude Code',
-          summary: waited ? 'Waiting for you in the terminal' : 'Answered in the terminal',
-          body: waited ? 'It waited here a while, so Claude asked there instead.' : describeTool(a.request.toolName, a.request.toolInput ?? {}).label,
+          summary: 'Claude is asking in the terminal now',
+          body: `${describeTool(a.request.toolName, a.request.toolInput ?? {}).label}: it waited here a while.`,
           urgency: 'low',
         },
       },
-      waited ? 6000 : 2500,
+      6000,
     )
   })
   claude.onUsage((u) => claudeCode.setUsage(u))

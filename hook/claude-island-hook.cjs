@@ -66,12 +66,17 @@ process.stdin.on('end', () => {
     fromIsland: process.env.DYNAMIC_ISLAND_RUN === '1' || undefined,
   }
 
+  let client = null
   setTimeout(() => {
     debug('timeout -> noop')
-    emit(null)
+    // Tell the island it's now up to the terminal, then go.
+    if (client && !client.destroyed && client.writable) {
+      setTimeout(() => emit(null), 300).unref()
+      client.end(JSON.stringify({ type: 'gave-up', id: request.id }) + '\n', () => emit(null))
+    } else emit(null)
   }, TIMEOUT_MS).unref()
 
-  const client = net.createConnection(SOCK, () => {
+  client = net.createConnection(SOCK, () => {
     client.write(JSON.stringify({ type: 'request', request }) + '\n')
   })
 

@@ -172,6 +172,9 @@ function hook(input, env = {}) {
     await h
     await page.waitForSelector('.card.approval', { state: 'detached', timeout: 3000 })
     check('timed-out hook removes its card', true)
+    check('and says Claude asks in the terminal now', await page.waitForSelector('.card.notification:has-text("asking in the terminal")', { timeout: 3000 }).then(() => true, () => false))
+    await page.click('.card.notification')
+    await page.waitForSelector('.card.notification', { state: 'detached', timeout: 3000 })
 
     // 9. desktop notification via D-Bus Notify (monitor)
     try {

@@ -71,7 +71,9 @@ Add to `~/.claude/settings.json`, using the absolute path of your checkout:
 - **Questions:** the answers go back as `updatedInput` (Claude's own input with
   `answers` filled in, by question text), and only when they answer every
   question; otherwise the hook prints nothing and Claude asks in the terminal.
-- The island drops the card as soon as the hook disconnects.
+- The island drops the card as soon as the hook disconnects. On a timeout the
+  hook first sends `{"type":"gave-up"}`, so the island can say Claude is
+  asking in the terminal now.
 
 ## Environment overrides
 

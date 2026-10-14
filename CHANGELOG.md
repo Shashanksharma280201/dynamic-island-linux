@@ -64,8 +64,8 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 - Answer Claude's questions from the keyboard without leaving your app:
   **Ctrl+Alt+1…9** picks an option, **Ctrl+Alt+Y** moves on or sends.
-- When you answer a request in the terminal instead, the island says so as the
-  card goes (or that Claude is now asking there, if you were away).
+- If a request waits on the island too long, Claude asks in the terminal
+  instead, and the island now says so as the card goes.
 
 **Your character**
 

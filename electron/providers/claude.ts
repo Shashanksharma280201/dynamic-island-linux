@@ -45,7 +45,9 @@ export class ClaudeServer {
   private server: net.Server | null = null
   private pending = new Map<string, net.Socket>()
   private reqCb: ((req: ToolRequest) => void) | null = null
-  private cancelCb: ((id: string) => void) | null = null
+  private cancelCb: ((id: string, why: 'timeout' | 'gone') => void) | null = null
+  /** Requests whose hook said it gave up waiting (Claude asks in the terminal now). */
+  private gaveUp = new Set<string>()
   private usageCb: ((u: ClaudeUsage) => void) | null = null
   private eventCb: ((e: AgentEvent) => void) | null = null
 
@@ -55,7 +57,8 @@ export class ClaudeServer {
     this.reqCb = cb
   }
 
-  onCancel(cb: (id: string) => void): void {
+  /** A request's hook went away: it timed out ('timeout'), or Claude stopped asking ('gone'). */
+  onCancel(cb: (id: string, why: 'timeout' | 'gone') => void): void {
     this.cancelCb = cb
   }
 
@@ -84,6 +87,10 @@ export class ClaudeServer {
             if (u) this.usageCb?.(u)
             continue
           }
+          if (m.type === 'gave-up' && typeof m.id === 'string' && ids.has(m.id)) {
+            this.gaveUp.add(m.id)
+            continue
+          }
           if (m.type === 'event') {
             const e = parseEvent(m.event)
             if (e) this.eventCb?.(e)
@@ -101,7 +108,8 @@ export class ClaudeServer {
         for (const id of ids) {
           if (this.pending.get(id) !== socket) continue
           this.pending.delete(id)
-          this.cancelCb?.(id)
+          const why = this.gaveUp.delete(id) ? 'timeout' : 'gone'
+          this.cancelCb?.(id, why)
         }
       })
       socket.on('error', () => {})
