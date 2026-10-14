@@ -11,7 +11,8 @@ import { useKeyboard } from './useKeyboard'
 import { Character, useCharacter } from '../character/Character'
 import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
-import { ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
+import { ClipIcon, ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
+import { attachmentNote } from '@shared/attachment'
 
 const folderName = (p: string) => p.split('/').filter(Boolean).pop() ?? '~'
 
@@ -147,13 +148,29 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
   const kb = useKeyboard(onTyping)
   const ref = useRef<HTMLTextAreaElement>(null)
   const busy = runActive(view.run)
+  // The window you were in, attached to your next message (Claude Code only).
+  const [attached, setAttached] = useState<{ title: string; path: string | null; preview: string | null } | null>(null)
+  const [attaching, setAttaching] = useState(false)
+  const attach = async () => {
+    setAttaching(true)
+    try {
+      const a = await window.island.claude.attach()
+      if (a) setAttached(a)
+      else setErr('Open the panel from the app you want to show Claude, then attach it.')
+    } catch (e) {
+      setErr(errorText(e))
+    } finally {
+      setAttaching(false)
+    }
+  }
   const send = async () => {
     const t = text.trim()
     if (!t || busy) return
     setErr(null)
     try {
-      await window.island.claude.ask(t)
+      await window.island.claude.ask(attached ? `${t}\n\n${attachmentNote(attached)}` : t)
       setText('')
+      setAttached(null)
     } catch (e) {
       setErr(errorText(e))
     }
@@ -166,7 +183,21 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
           {err || voice.error}
         </div>
       )}
+      {attached && (
+        <div className="attached" title={attached.path ?? attached.title}>
+          {attached.preview ? <img src={attached.preview} alt="" /> : <span className="attached-icon">▢</span>}
+          <span className="ellipsis">{attached.title || 'The window you were in'}</span>
+          <button className="attached-x" aria-label="Remove" title="Remove" onClick={() => setAttached(null)}>
+            ×
+          </button>
+        </div>
+      )}
       <div className="reply-field claude-field">
+        {usesClaudeCode(view) && !busy && (
+          <button className={`round-btn attach-btn${attached ? ' on' : ''}`} title="Attach the window you were in" aria-label="Attach the window you were in" disabled={attaching} onClick={() => void attach()}>
+            <ClipIcon />
+          </button>
+        )}
         <textarea
           ref={ref}
           rows={1}

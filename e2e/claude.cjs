@@ -230,6 +230,30 @@ function speechWav(text, file) {
     const noteDir = path.join(USER_DATA, 'notes')
     check('and the note is really there', fs.existsSync(noteDir) && fs.readdirSync(noteDir).some((f) => fs.readFileSync(path.join(noteDir, f), 'utf8') === 'Pick up the dry cleaning'))
     await idle()
+
+    // ---- Attach the window you were in ----
+    // An app with the keyboard; then the panel opens over it.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).catch(() => {})
+    const browser = require('child_process').spawn('node', [path.join(__dirname, 'fake-keys-app.cjs'), 'firefox', 'Pull request #12 - Firefox'], { stdio: ['ignore', 'pipe', 'inherit'] })
+    await sleep(800)
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { timeout: 3000 })
+    await sleep(600)
+    await page.click('.claude-field .attach-btn')
+    check('the paperclip attaches the window you were in', await page.waitForSelector('.attached:has-text("Pull request #12")', { timeout: 6000 }).then(() => true, () => false))
+    const shotSrc = await page.getAttribute('.attached img', 'src').catch(() => null)
+    check('with a picture of it', !!shotSrc && shotSrc.startsWith('data:image/png'))
+    await page.fill('.claude-field textarea', 'what is on my screen')
+    await page.press('.claude-field textarea', 'Enter')
+    await until(() => runs().some((r) => r.args.some((a) => /what is on my screen/.test(a))), 5000)
+    const asked = runs().find((r) => r.args.some((a) => /what is on my screen/.test(a)))?.args.find((a) => /what is on my screen/.test(a)) ?? ''
+    const pic = /at (\S+\.png)\./.exec(asked)?.[1]
+    check('and Claude gets it with the message', /\(Attached: a screenshot of the window I was in \("Pull request #12 - Firefox"\)/.test(asked) && !!pic && fs.existsSync(pic), asked.slice(-160))
+    check('then the attachment is cleared', !(await page.$('.attached')))
+    browser.kill()
+    await until(async () => /Done: what is on my screen/.test(await threadText()), 8000)
+    await idle()
     await islandAsk('crm_add_contact', { name: 'Asha Rao', company: 'Globex' })
     check('and run the CRM', await until(async () => /Island said: Added Asha Rao \(c1\)/.test(await threadText()), 8000))
     await idle()

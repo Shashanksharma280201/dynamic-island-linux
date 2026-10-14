@@ -1,7 +1,7 @@
 // A stand-in app for the dictation e2e test: an X window with the WM_CLASS
 // given on the command line that takes the keyboard and prints each key it
 // gets ("KEY <keysym> <modifier state>"), so the test sees the paste keystroke.
-//   node fake-keys-app.cjs gedit
+//   node fake-keys-app.cjs gedit ["window title"]
 const x11 = require('x11')
 const cls = process.argv[2] || 'gedit'
 x11.createClient((err, display) => {
@@ -12,6 +12,7 @@ x11.createClient((err, display) => {
   X.CreateWindow(wid, root, 600, 300, 300, 200, 0, 0, 0, 0, { backgroundPixel: 0xeeeeee, eventMask: x11.eventMask.KeyPress | x11.eventMask.Exposure })
   const name = Buffer.from(`${cls}\0${cls}\0`, 'latin1')
   X.ChangeProperty(0, wid, 67 /* WM_CLASS */, 31 /* STRING */, 8, name)
+  if (process.argv[3]) X.ChangeProperty(0, wid, 39 /* WM_NAME */, 31 /* STRING */, 8, Buffer.from(process.argv[3], 'latin1'))
   X.MapWindow(wid)
   const min = display.min_keycode
   X.GetKeyboardMapping(min, display.max_keycode - min, (e, map) => {

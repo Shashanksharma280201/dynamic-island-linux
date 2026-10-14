@@ -65,7 +65,9 @@ import { Companion } from './companion'
 import { dictatedText, pasteIntoFocusedApp } from './paste'
 import { companionMood } from '@shared/companion'
 import { SESSIONS } from './sessionChannels'
-import { focusTerminal, terminalFocused } from './terminal'
+import { focusTerminal, frontWindow, terminalFocused } from './terminal'
+import { captureWindow, type FrontWindow } from './attach'
+import { CLAUDE } from './claudeChannels'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
@@ -914,6 +916,8 @@ async function main() {
     },
     onPanel: (open) => {
       panelOpen = open
+      // The app you were in when you opened the panel (to attach for Claude).
+      if (open) void frontWindow().then((w) => (lastFront = w && w.pid !== process.pid ? w : lastFront))
       if (sysTimer) clearInterval(sysTimer)
       sysTimer = null
       if (!open) return
@@ -977,6 +981,9 @@ async function main() {
   }
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
   const pushKeys = () => send(win, IPC.KEYS, config.keys)
+  // Attach the window you were in, for Claude (the Claude tab's paperclip).
+  let lastFront: FrontWindow | null = null
+  ipcMain.handle(CLAUDE.ATTACH, async () => (lastFront ? captureWindow(lastFront, join(app.getPath('userData'), 'attachments')) : null))
   // Dictate anywhere: the shortcut starts / finishes; what you said is typed into the focused app.
   let dictateKey = ''
   const applyDictate = () => {

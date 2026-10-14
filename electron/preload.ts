@@ -162,6 +162,8 @@ const api = {
     setApprovals: (on: boolean): Promise<void> => ipcRenderer.invoke(CLAUDE.SET_APPROVALS, on),
     ensureSpeechModel: (): Promise<void> => ipcRenderer.invoke(CLAUDE.STT_ENSURE),
     onVoice: (cb: () => void) => on(CLAUDE.VOICE, cb),
+    /** A screenshot and the title of the window you were in (null if none known). */
+    attach: (): Promise<{ title: string; path: string | null; preview: string | null } | null> => ipcRenderer.invoke(CLAUDE.ATTACH),
   },
   notes: {
     list: (): Promise<NoteSummary[]> => ipcRenderer.invoke(INBOX.NOTES_LIST),

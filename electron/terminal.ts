@@ -144,3 +144,49 @@ export async function terminalFocused(pid: number): Promise<boolean> {
     return false
   }
 }
+
+/**
+ * The window you're working in (X11): the active one, or the one with the
+ * keyboard when there's no window manager to say. Its title, process and
+ * place on screen. Null elsewhere or when it can't be told.
+ */
+export function frontWindow(): Promise<{ xid: number; title: string; pid: number; rect: { x: number; y: number; width: number; height: number } } | null> {
+  return new Promise((resolve) => {
+    if (process.platform !== 'linux' || !process.env.DISPLAY) return resolve(null)
+    const timer = setTimeout(() => resolve(null), 2000)
+    x11.createClient((err: unknown, d: any) => {
+      if (err || !d) {
+        clearTimeout(timer)
+        return resolve(null)
+      }
+      const X = d.client
+      const root = d.screen[0].root
+      X.on('error', () => {})
+      const finish = (v: any) => {
+        clearTimeout(timer)
+        X.terminate()
+        resolve(v)
+      }
+      const atom = (name: string) => new Promise<number>((res) => X.InternAtom(false, name, (e: unknown, a: number) => res(e ? 0 : a)))
+      const prop = (win: number, a: number, type = 0) =>
+        new Promise<Buffer | null>((res) => X.GetProperty(0, win, a, type, 0, 10_000, (e: unknown, p: any) => res(e || !p?.data?.length ? null : p.data)))
+      // Plain callbacks only: the x11 library drops async ones.
+      const run = async () => {
+        const [active, netName, utf8, wmPid] = await Promise.all([atom('_NET_ACTIVE_WINDOW'), atom('_NET_WM_NAME'), atom('UTF8_STRING'), atom('_NET_WM_PID')])
+        let xid = (await prop(root, active))?.readUInt32LE(0) ?? 0
+        if (!xid) xid = await new Promise<number>((res) => X.GetInputFocus((e: unknown, f: any) => res(e ? 0 : f.focus)))
+        if (!xid || xid <= 1) return finish(null)
+        const title = ((await prop(xid, netName, utf8))?.toString('utf8') || (await prop(xid, 39 /* WM_NAME */))?.toString('latin1') || '').replace(/\0/g, '').trim()
+        const pid = (await prop(xid, wmPid))?.readUInt32LE(0) ?? 0
+        const rect = await new Promise<any>((res) =>
+          X.GetGeometry(xid, (e: unknown, g: any) => {
+            if (e || !g) return res(null)
+            X.TranslateCoordinates(xid, root, 0, 0, (e2: unknown, t: any) => res(e2 || !t ? null : { x: t.destX, y: t.destY, width: g.width, height: g.height }))
+          }),
+        )
+        finish(rect ? { xid, title, pid, rect } : null)
+      }
+      run().catch(() => finish(null))
+    })
+  })
+}

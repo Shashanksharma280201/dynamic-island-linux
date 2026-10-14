@@ -99,6 +99,11 @@ export const BellIcon = () => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </Svg>
 )
+export const ClipIcon = () => (
+  <Svg size={16}>
+    <path d="M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.3 3.3 0 0 1 4.7 4.7l-8.1 8.1a1.7 1.7 0 0 1-2.4-2.4l7.4-7.4" />
+  </Svg>
+)
 export const KeyboardIcon = () => (
   <Svg size={14}>
     <rect x="2.5" y="6" width="19" height="12" rx="2.5" />

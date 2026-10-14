@@ -66,6 +66,9 @@ or install it with one command (see the [README](https://github.com/shashankshar
   **Ctrl+Alt+1…9** picks an option, **Ctrl+Alt+Y** moves on or sends.
 - If a request waits on the island too long, Claude asks in the terminal
   instead, and the island now says so as the card goes.
+- **Attach the window you were in:** the paperclip in the Claude tab adds a
+  screenshot of the app you opened the island from (and its title) to your
+  next message, so Claude can see what you mean.
 
 **Your character**
 
