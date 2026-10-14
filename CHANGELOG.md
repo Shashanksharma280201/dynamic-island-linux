@@ -4,6 +4,100 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**Claude Code, live from your terminals**
+
+- Every Claude Code session you run in a terminal shows on the island while it
+  works: your character with an orb for what it's doing and a step count, or
+  how many sessions are working. A card pops up when one needs you, and when
+  one finishes, with its last answer, how long it took and what it changed
+  (**+12 −3**). **Open terminal** brings its window to the front.
+- New **Sessions** tab: every session with its status and changes; open one to
+  see its steps and the diff of every file it touched.
+- Answer Claude's **questions** on the island, one at a time, picking options or
+  typing your own answer, and read its **plan** before you let it start.
+- If you had approvals on, the island adds the new session hook by itself.
+- **Codex, Gemini CLI and Cursor Agent** sessions can show too: turn each on in
+  Settings → Claude. Their steps read the same way ("Running npm test",
+  "Editing app.ts").
+
+**Fixes**
+
+- After you used the icons beside the panel and closed it, an invisible strip
+  under the island could keep catching clicks meant for the app below. Gone.
+- Typing in a card no longer leaves the island's content shifted.
+
+**Notifications**
+
+- **Clear all**: when several notifications wait on the island, a pill says how
+  many and clears them all at once, with **Undo**.
+- New **Notifications** tab with everything that arrived, grouped by app, kept
+  between restarts. Dismiss one (× or swipe), clear an app, or clear all.
+- **Do Not Disturb** in the tab, the Control Center and the tray: nothing pops
+  up, and the resting island shows a moon with how many are waiting.
+
+**Easier to use**
+
+- **Show me around:** a one-minute tour on the island with example cards. It's
+  offered the first time, and is in the tray menu and Settings any time.
+- Cards that close by themselves show a thin countdown. It stops while you
+  hover, and the pin keeps the card until you close it.
+- **Change any shortcut** in Settings → Keyboard shortcuts: click it and press
+  the new keys. Keys another shortcut (or another app) already uses are refused,
+  with why.
+- **Shortcuts** in the Control Center lists them all, as they're set now.
+- **Open on hover** (Settings → General): rest on the island and the panel
+  opens, no click needed.
+- **Island lives on** (Settings → General): the main display, the display with
+  the pointer (it follows you between screens), or a monitor you pick. A
+  monitor is found again after you replug it.
+
+**Dictate anywhere**
+
+- Press **Ctrl+Alt+D** in any app and speak: what you said is typed into that
+  app (terminals included) when you stop talking, or press it again. Speech is
+  recognised on this computer. A pill under the island shows your voice as you
+  speak. Turn it off or change the keys in Settings.
+
+**Claude Code, continued**
+
+- Answer Claude's questions from the keyboard without leaving your app:
+  **Ctrl+Alt+1…9** picks an option, **Ctrl+Alt+Y** moves on or sends.
+- If a request waits on the island too long, Claude asks in the terminal
+  instead, and the island now says so as the card goes.
+- **Attach the window you were in:** the paperclip in the Claude tab adds a
+  screenshot of the app you opened the island from (and its title) to your
+  next message, so Claude can see what you mean.
+
+**Services and your week**
+
+- New **Services** tab: GitHub, Vercel, Stripe, Resend, Notion, Cal.com and
+  n8n, each with its own card. A failed deploy, CI breaking on your pull
+  request, a review request, a new payment or a failed workflow pops up on the
+  island. Set them up in Settings → Services; keys are stored encrypted.
+- **Weekly recap:** on Monday mornings, last week with your coding agents at a
+  glance, with an image to share. From the tray any time, too.
+
+**Your character**
+
+- **Wardrobe:** 13 outfits (beanie, cap, crown, headphones, glasses,
+  sunglasses, bow tie, party hat, flower, Santa hat, witch hat, top hat, scarf)
+  and a **Seasonal** one that changes with the date, plus a body colour. Pick
+  them in Settings → Character, or right-click the island.
+- **On your desktop too:** the character can sit on the desktop, acting out
+  what's going on (working along with Claude, waving when something needs you,
+  dancing to music, dozing when it's quiet). Drag it anywhere; click it to open
+  the island.
+- **Your own sounds:** put a file named after a sound (done.mp3, ask.wav…) in
+  the sounds folder (Settings → General → Sounds) and it plays instead.
+
+**Looks**
+
+- Dotted "thinking orbs" show what's going on: on the capsule and the cards
+  while Claude works (a different motion for searching, editing, running),
+  around your character while you talk, and wherever something is loading.
+
 ## 0.2.0 (2026-10-08)
 
 **A livelier island**

@@ -29,12 +29,17 @@ function applyUninstall(settings) {
   return s
 }
 
+/** The session events the island follows live (tools take a matcher). */
+const SESSION_EVENTS = ['SessionStart', 'UserPromptSubmit', 'PreToolUse', 'PostToolUse', 'Notification', 'Stop', 'SessionEnd']
+const TOOL_EVENTS = ['PreToolUse', 'PostToolUse']
+
 /**
  * Pure transform: return a new settings object with the island hook registered
- * on PermissionRequest and any prior island entries removed. Idempotent;
- * preserves unrelated hooks.
+ * on PermissionRequest and any prior island entries removed. With `eventsCmd`
+ * the session hook is registered too, so the island can show what each
+ * session is doing. Idempotent; preserves unrelated hooks.
  */
-function applyInstall(settings, hookCmd) {
+function applyInstall(settings, hookCmd, eventsCmd) {
   const s = applyUninstall(settings)
   s.hooks = s.hooks || {}
   s.hooks.PermissionRequest = s.hooks.PermissionRequest || []
@@ -42,6 +47,15 @@ function applyInstall(settings, hookCmd) {
     matcher: '.*',
     hooks: [{ type: 'command', command: hookCmd, timeout: 60 }],
   })
+  if (eventsCmd) {
+    for (const event of SESSION_EVENTS) {
+      s.hooks[event] = s.hooks[event] || []
+      s.hooks[event].push({
+        ...(TOOL_EVENTS.includes(event) ? { matcher: '.*' } : {}),
+        hooks: [{ type: 'command', command: eventsCmd, timeout: 5 }],
+      })
+    }
+  }
   return s
 }
 
@@ -78,15 +92,16 @@ function main() {
   }
 
   const hookCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook.cjs'), process.env.DI_NODE_RUNNER)
-  const next = uninstall ? applyUninstall(current) : applyInstall(current, hookCmd)
+  const eventsCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook-events.cjs'), process.env.DI_NODE_RUNNER)
+  const next = uninstall ? applyUninstall(current) : applyInstall(current, hookCmd, eventsCmd)
   fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2) + '\n')
   console.log(
     uninstall
       ? `Removed the island hook from ${settingsPath}`
-      : `Installed island hook on PermissionRequest (matcher ".*") -> ${hookCmd}`,
+      : `Installed island hooks on PermissionRequest (matcher ".*") and ${SESSION_EVENTS.join(', ')} -> ${hookCmd}`,
   )
 }
 
-module.exports = { applyInstall, applyUninstall, hookCommand }
+module.exports = { applyInstall, applyUninstall, hookCommand, SESSION_EVENTS }
 
 if (require.main === module) main()

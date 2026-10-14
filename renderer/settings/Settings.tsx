@@ -5,6 +5,10 @@ import { CharacterSection } from './CharacterSection'
 import { AiSection } from './AiSection'
 import { PackagesSection } from './PackagesSection'
 import { SettingsProblem } from './Problem'
+import { ShortcutsSection } from './ShortcutsSection'
+import { ServicesSection } from './ServicesSection'
+import { shortcutLabel } from '@shared/shortcuts'
+import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
 function Toggle({
   on,
@@ -101,16 +105,30 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
         onChange={(v) => run(() => window.settings.setUsageBridge(v))}
       />
       <Toggle
-        label="Approvals on the island for every Claude Code session"
-        hint="Installs a PermissionRequest hook in ~/.claude/settings.json. Commands started from the island always ask here."
+        label="Follow every Claude Code session on the island"
+        hint="Adds hooks to ~/.claude/settings.json: each session in your terminals shows live (steps, changes, when it needs you) and its approvals, questions and plans can be answered here. Commands started from the island always ask here."
         on={hookInstalled}
         onChange={(v) => run(() => window.settings.setHook(v))}
       />
+      {s.agentHooks?.length > 0 && (
+        <>
+          <div className="hint">Other coding agents: show their sessions on the island too (their approvals stay in the agent).</div>
+          {s.agentHooks.map((a) => (
+            <Toggle
+              key={a.id}
+              label={a.name}
+              hint={a.installed ? `On, in ${a.path}. ${a.note}` : `Adds a hook to ${a.path} (backed up first).`}
+              on={a.installed}
+              onChange={(v) => run(() => window.settings.setAgentHook(a.id, v))}
+            />
+          ))}
+        </>
+      )}
       <Toggle
-        label="Talk shortcut Ctrl+Alt+Space"
+        label={`Talk shortcut ${shortcutLabel(s.keys.voice, s.mac)}`}
         hint={
           c.voiceShortcut && !c.voiceShortcutActive
-            ? 'Another app is already using Ctrl+Alt+Space, so it could not be registered'
+            ? `Another app is already using ${shortcutLabel(s.keys.voice, s.mac)}, so it could not be registered`
             : 'Press it anywhere to start talking to Claude; press again (or stop talking) to send'
         }
         on={c.voiceShortcut}
@@ -355,6 +373,22 @@ export function Settings() {
           on={s.sounds}
           onChange={(v) => general.run(() => window.settings.setSounds(v))}
         />
+        {s.sounds && (
+          <div className="toggle-row">
+            <div>
+              <div>Your own sounds</div>
+              <div className="hint">
+                {s.customSounds?.length
+                  ? `Using yours for: ${s.customSounds.join(', ')}. `
+                  : 'Put a sound file in the folder named after what it replaces: '}
+                {s.customSounds?.length ? 'Add or remove files any time.' : `${SOUND_KINDS.slice(3, 7).map((k) => `${k}.mp3 (${SOUND_INFO[k]})`).join(', ')}, and more. WAV, MP3, OGG or M4A.`}
+              </div>
+            </div>
+            <button className="secondary" onClick={() => general.run(() => window.settings.openSounds())}>
+              Open Folder
+            </button>
+          </div>
+        )}
         <div className="toggle-row">
           <div>
             <div>Island position</div>
@@ -372,17 +406,79 @@ export function Settings() {
             ))}
           </div>
         </div>
+        <div className="toggle-row">
+          <div>
+            <div>Island lives on</div>
+            <div className="hint">With “the display with the pointer” it moves to whichever screen you’re working on</div>
+          </div>
+          <select className="display-select" value={s.displays.some((d) => d.key === s.display) || s.display === 'cursor' ? s.display : 'primary'} onChange={(e) => general.run(() => window.settings.setDisplay(e.target.value))}>
+            <option value="primary">Main display</option>
+            <option value="cursor">The display with the pointer</option>
+            {s.displays.length > 1 && s.displays.map((d) => (
+              <option key={d.key} value={d.key}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <Toggle
-          label="Keyboard shortcut Ctrl+I"
+          label={`Dictate anywhere with ${shortcutLabel(s.keys.dictate, s.mac)}`}
+          hint={
+            s.dictation && !s.dictationActive
+              ? `Another app is already using ${shortcutLabel(s.keys.dictate, s.mac)}, so it could not be registered. Pick other keys under Keyboard shortcuts`
+              : 'Press it, speak, and what you said is typed into the app you’re in. It stops when you stop talking (or press it again). Speech stays on this computer'
+          }
+          on={s.dictation}
+          onChange={(v) => general.run(() => window.settings.setDictation(v))}
+        />
+        <Toggle
+          label="Open the panel when the pointer rests on the island"
+          hint="No click needed: rest on the resting island for a moment and it opens"
+          on={s.openOnHover}
+          onChange={(v) => general.run(() => window.settings.setOpenOnHover(v))}
+        />
+        <Toggle
+          label={`Keyboard shortcut ${shortcutLabel(s.keys.panel, s.mac)}`}
           hint={
             s.shortcut && !s.shortcutActive
-              ? 'Another app is already using Ctrl+I, so it could not be registered'
-              : 'Opens and closes the island from any app (Ctrl+I then no longer reaches other apps)'
+              ? `Another app is already using ${shortcutLabel(s.keys.panel, s.mac)}, so it could not be registered`
+              : `Opens and closes the island from any app (${shortcutLabel(s.keys.panel, s.mac)} then no longer reaches other apps). Change the keys under Keyboard shortcuts`
           }
           on={s.shortcut}
           onChange={(v) => general.run(() => window.settings.setShortcut(v))}
         />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
+        <Toggle
+          label="Weekly recap"
+          hint="Every Monday, a short recap of last week with your coding agents: time, sessions, files, lines, commands. Only counts and project folder names are kept (12 weeks, on this computer)"
+          on={s.recap}
+          onChange={(v) => general.run(() => window.settings.setRecap(v))}
+        />
+        {s.recap && (
+          <div className="toggle-row">
+            <div>
+              <div>Last week’s recap</div>
+              <div className="hint">Or from the tray menu, any time</div>
+            </div>
+            <div className="key-actions">
+              <button className="link" onClick={() => general.run(() => window.settings.clearRecap())}>
+                Clear history
+              </button>
+              <button className="secondary" onClick={() => general.run(() => window.settings.showRecap())}>
+                Show
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="toggle-row">
+          <div>
+            <div>Show me around</div>
+            <div className="hint">A one-minute tour on the island of what it can do, with example cards</div>
+          </div>
+          <button className="secondary" onClick={() => general.run(() => window.settings.tour())}>
+            Start Tour
+          </button>
+        </div>
         <div className="toggle-row">
           <div>
             <div>Uninstall</div>
@@ -394,6 +490,10 @@ export function Settings() {
         </div>
         {general.error && <p className="error">{general.error}</p>}
       </section>
+
+      <ShortcutsSection s={s} />
+
+      <ServicesSection s={s} />
 
       {s.claude && <ClaudeSection s={s} hookInstalled={s.hookInstalled} />}
 

@@ -102,8 +102,15 @@ export function byteRange(header: string | null, size: number): { start: number;
  * Serve WhatsApp attachments to the island. Call after app 'ready' but before
  * the island page loads: a page only knows the schemes handled when it loaded.
  */
-export function serveMedia(whatsapp: () => WhatsAppService | null): void {
+export function serveMedia(whatsapp: () => WhatsAppService | null, sound?: (kind: string) => { data: Buffer; mime: string } | null): void {
   protocol.handle(MEDIA_SCHEME, async (req) => {
+    // Your own sounds: island-media://sound/<kind>
+    const u = new URL(req.url)
+    if (u.host === 'sound') {
+      const f = sound?.(u.pathname.replace(/^\//, ''))
+      if (!f) return new Response('Not found', { status: 404 })
+      return new Response(new Uint8Array(f.data), { status: 200, headers: { 'Content-Type': f.mime, 'Access-Control-Allow-Origin': '*' } })
+    }
     const ids = parseMediaUrl(req.url)
     const wa = whatsapp()
     if (!ids || !wa) return new Response('Not found', { status: 404 })

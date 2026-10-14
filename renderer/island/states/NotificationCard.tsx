@@ -1,6 +1,6 @@
 import type { NotificationData } from '@shared/types'
 import { Badge } from './Badge'
-import { BellIcon } from '../icons'
+import { BellIcon, XIcon } from '../icons'
 
 /** A desktop notification, styled like an Apple notification banner. */
 export function NotificationCard({
@@ -22,6 +22,17 @@ export function NotificationCard({
         <span className="spacer" />
         <Badge count={queued} />
         <span className="when">now</span>
+        <button
+          className="close-btn"
+          title="Dismiss (it stays in Notifications)"
+          aria-label="Dismiss"
+          onClick={(e) => {
+            e.stopPropagation()
+            window.island.dismiss(id)
+          }}
+        >
+          <XIcon size={10} />
+        </button>
       </div>
       <div className="title ellipsis">{n.summary}</div>
       {n.body && <div className="notif-body clamp2">{n.body}</div>}

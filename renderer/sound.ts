@@ -2,7 +2,8 @@
 // sound files). Off unless turned on in Settings → Appearance. Quiet (15%),
 // and each kind plays at most once every 400 ms, so a burst of events chimes once.
 
-export type SoundKind = 'peek' | 'open' | 'close' | 'ask' | 'ok' | 'done' | 'error' | 'gulp' | 'boop' | 'dizzy'
+import type { SoundKind } from '@shared/sounds'
+export type { SoundKind }
 
 /** Notes of each sound: [frequency Hz, start s, length s, wave]. */
 export const TONES: Record<SoundKind, [number, number, number, OscillatorType][]> = {
@@ -45,6 +46,14 @@ let enabled = false
 let ctx: AudioContext | null = null
 const last = new Map<SoundKind, number>()
 
+// Your own files for some sounds (Settings → General → Sounds), by kind.
+let custom: Partial<Record<SoundKind, string>> = {}
+
+/** Use your own sound files instead of the built-in tones, where there are some. */
+export function setCustomSounds(urls: Partial<Record<SoundKind, string>> | undefined): void {
+  custom = urls ?? {}
+}
+
 /** Turn the sounds on or off (Settings → Appearance → Sounds). */
 export function setSoundsOn(on: boolean): void {
   enabled = on
@@ -61,6 +70,12 @@ export function sound(kind: SoundKind): void {
   const now = performance.now()
   if (!mayPlay(now, last.get(kind))) return
   last.set(kind, now)
+  if (custom[kind]) {
+    const a = new Audio(custom[kind])
+    a.volume = 0.6
+    a.play().catch(() => {})
+    return
+  }
   try {
     ctx ??= new AudioContext()
     const t0 = ctx.currentTime + 0.01

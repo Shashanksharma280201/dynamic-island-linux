@@ -93,7 +93,7 @@ const made = (name) => path.join(MADE, name)
   }
   const action = async (label) => {
     await page.click(`.doc-actions .chip:has-text("${label}")`)
-    await until(async () => !(await page.$('.docs-result .spinner')) && (await result()) !== '', 15000)
+    await until(async () => !(await page.$('.docs-result[aria-busy="true"]')) && (await result()) !== '', 15000)
     return result()
   }
 

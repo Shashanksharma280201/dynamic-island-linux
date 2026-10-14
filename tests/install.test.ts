@@ -4,7 +4,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 const require = createRequire(import.meta.url)
-const { applyInstall, applyUninstall, hookCommand } = require('../hook/install.cjs')
+const { applyInstall, applyUninstall, hookCommand, SESSION_EVENTS } = require('../hook/install.cjs')
 
 const CMD = 'node /abs/hook/claude-island-hook.cjs'
 
@@ -54,6 +54,21 @@ test('applyUninstall removes island entries and empty event lists only', () => {
   expect(applyUninstall(applyInstall({}, CMD))).toEqual({})
 })
 
+test('the session hook follows every session event, and uninstalls with the rest', () => {
+  const EV = 'node /abs/hook/claude-island-hook-events.cjs'
+  const mine = { hooks: { Stop: [{ hooks: [{ type: 'command', command: 'keep' }] }] } }
+  const after = applyInstall(mine, CMD, EV)
+  for (const event of SESSION_EVENTS) {
+    const entry = after.hooks[event].find((e: any) => JSON.stringify(e).includes('claude-island-hook-events'))
+    expect(entry.hooks[0]).toEqual({ type: 'command', command: EV, timeout: 5 })
+    expect('matcher' in entry).toBe(event === 'PreToolUse' || event === 'PostToolUse')
+  }
+  expect(after.hooks.Stop).toHaveLength(2)
+  // Installing again doesn't add twice.
+  expect(applyInstall(after, CMD, EV).hooks.PreToolUse).toHaveLength(1)
+  expect(applyUninstall(after)).toEqual(mine)
+})
+
 test('hookCommand quotes paths with spaces', () => {
   expect(hookCommand('/home/a b/hook.cjs')).toBe('node "/home/a b/hook.cjs"')
 })
@@ -66,9 +81,9 @@ test('installer creates settings.json when missing and uninstalls cleanly', () =
     })
   run()
   const file = path.join(dir, 'settings.json')
-  expect(JSON.stringify(JSON.parse(fs.readFileSync(file, 'utf8')))).toContain(
-    'claude-island-hook',
-  )
+  const installed = JSON.parse(fs.readFileSync(file, 'utf8'))
+  expect(JSON.stringify(installed.hooks.PermissionRequest)).toContain('claude-island-hook.cjs')
+  expect(JSON.stringify(installed.hooks.Stop)).toContain('claude-island-hook-events.cjs')
   run('--uninstall')
   expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({})
 })

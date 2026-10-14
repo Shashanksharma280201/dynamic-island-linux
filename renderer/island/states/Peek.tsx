@@ -1,3 +1,5 @@
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { orbForRun, orbForTool } from '@shared/orbs'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { pop } from '../../anim/spring'
@@ -6,6 +8,8 @@ import { moodFor, type CharacterMood } from '@shared/character'
 import { Character, useCharacter } from '../character/Character'
 import { formatTime, partOfDay } from '@shared/format'
 import { runStatus } from './ClaudeActivity'
+import { sessionMood, turnTime } from './SessionActivity'
+import { currentStep, sessionStatus } from '@shared/sessions'
 
 /** What a peek says about the island's state, in two short lines. Pure. */
 export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number }): { title: string; sub: string; mood: CharacterMood } {
@@ -17,6 +21,11 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
     const steps = r.steps ? `${r.steps} step${r.steps === 1 ? '' : 's'} · ` : ''
     return { title: runStatus(r), sub: `${steps}${formatTime((o.now - r.startedAt) / 1000)} · ${project}`, mood: moodFor(r.phase, r.tool?.name) }
   }
+  if (a.kind === 'session') {
+    const x = a.session
+    const more = a.others ? ` · ${a.others} more` : ''
+    return { title: sessionStatus(x, o.now), sub: `${x.project || '~'} · ${turnTime(x, o.now)}${more}`, mood: sessionMood(x) }
+  }
   return { title: a.kind === 'notification' ? a.notification.summary : 'Activity', sub: '', mood: 'idle' }
 }
 
@@ -27,7 +36,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
 export function Peek({ activity, canDrop }: { activity: Activity | null; canDrop: boolean }) {
   const { name } = useCharacter()
   const [now, setNow] = useState(Date.now)
-  const ticking = activity?.kind === 'claude'
+  const ticking = activity?.kind === 'claude' || activity?.kind === 'session'
   useEffect(() => {
     if (!ticking) return
     const t = setInterval(() => setNow(Date.now()), 1000)
@@ -39,6 +48,10 @@ export function Peek({ activity, canDrop }: { activity: Activity | null; canDrop
       <div className="peek-text">
         {/* A new step rolls up from below, like a departures board. */}
         <div className="peek-title-row">
+          {activity?.kind === 'claude' && <Orb state={orbForRun(activity.run.phase, activity.run.tool?.name)} size={16} color={AGENT_INK} className="peek-orb" />}
+          {activity?.kind === 'session' && activity.session.phase === 'working' && (
+            <Orb state={currentStep(activity.session) ? orbForTool(currentStep(activity.session)!.tool) : 'solving'} size={16} color={AGENT_INK} className="peek-orb" />
+          )}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div key={l.title} className="peek-title ellipsis" initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={pop}>
               {l.title}

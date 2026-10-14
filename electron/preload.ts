@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { CharacterConfig, CharacterId } from '@shared/character'
+import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
 import type { PackageId, PackageTab } from '@shared/packages'
 import type { DocAction, DocActionResult, DocEntry, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
@@ -21,6 +21,13 @@ import type {
   TaskSummary,
 } from '@shared/crm'
 import { IPC } from '@shared/types'
+import type { AgentSession } from '@shared/sessions'
+import type { Shortcuts } from '@shared/shortcuts'
+import { SESSIONS } from './sessionChannels'
+import { COMPANION } from './companionChannels'
+import { SERVICES } from './servicesChannels'
+import type { ServiceState } from '@shared/services'
+import type { RecapCard } from '@shared/recap'
 import type {
   Activity,
   DecisionMsg,
@@ -49,6 +56,8 @@ import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
 import { DOCS } from '../electron/docsChannels'
 import { CRM } from '../electron/crmChannels'
+import { NOTIFS } from '../electron/notifChannels'
+import type { CenterView } from '@shared/notifCenter'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
@@ -73,6 +82,43 @@ const api = {
   setPanel: (open: boolean) => ipcRenderer.send(IPC.PANEL, open),
   dismiss: (id: string) => ipcRenderer.send(IPC.DISMISS, id),
   hold: (id: string, hold: boolean) => ipcRenderer.send(IPC.HOLD, { id, hold }),
+  /** Keep a card that closes by itself until you close it. */
+  pin: (id: string) => ipcRenderer.send(IPC.PIN, id),
+  /** The global shortcuts' keys (they can be changed in Settings). */
+  onKeys: (cb: (k: Shortcuts) => void) => on(IPC.KEYS, cb),
+  /** Dress the character from the island (right-click wardrobe). */
+  setLook: (patch: { outfit?: Outfit; color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
+  /** Services you follow: their cards, a fresh look, opening their pages. */
+  services: {
+    view: (): Promise<ServiceState[]> => ipcRenderer.invoke(SERVICES.VIEW),
+    refresh: (id: string): Promise<void> => ipcRenderer.invoke(SERVICES.REFRESH, id),
+    open: (url: string): Promise<void> => ipcRenderer.invoke(SERVICES.OPEN, url),
+    onChanged: (cb: (v: ServiceState[]) => void) => on(SERVICES.CHANGED, cb),
+  },
+  /** Ctrl+Alt+1…9 / Allow while one of Claude's questions is on the island. */
+  onQuestionKey: (cb: (k: { n?: number; send?: boolean }) => void) => on(IPC.QUESTION_KEY, cb),
+  /** Dictate anywhere: the shortcut, and typing what you said into the focused app. */
+  dictate: {
+    onToggle: (cb: () => void) => on(IPC.DICTATE, cb),
+    type: (text: string): Promise<boolean> => ipcRenderer.invoke(IPC.DICTATE_TYPE, text),
+  },
+  /** The desktop companion's page. */
+  companion: {
+    onState: (cb: (s: { mood: CharacterMood; character: CharacterConfig }) => void) => on(COMPANION.STATE, cb),
+    move: (dx: number, dy: number) => ipcRenderer.send(COMPANION.MOVE, { dx, dy }),
+    drop: () => ipcRenderer.send(COMPANION.DROP),
+    click: () => ipcRenderer.send(COMPANION.CLICK),
+    ready: () => ipcRenderer.send(COMPANION.READY),
+  },
+  /** The weekly recap: shown by the main process; the image saved or copied. */
+  recap: {
+    onShow: (cb: (r: { card: RecapCard; shareCard: RecapCard; name: string }) => void) => on(IPC.RECAP, cb),
+    save: (png: string): Promise<string | null> => ipcRenderer.invoke(IPC.RECAP_SAVE, png),
+    copy: (png: string): Promise<boolean> => ipcRenderer.invoke(IPC.RECAP_COPY, png),
+    show: (file: string): Promise<void> => ipcRenderer.invoke(IPC.RECAP_SHOW, file),
+  },
+  /** Start the tour (tray, Settings). */
+  onTour: (cb: () => void) => on(IPC.TOUR, cb),
   setFocus: (focus: boolean) => ipcRenderer.send(IPC.FOCUS, focus),
   reply: (id: string, text: string) => ipcRenderer.send(IPC.REPLY, { id, text }),
   markRead: (id: string) => ipcRenderer.send(IPC.MESSAGE_ACTION, { id, action: 'read' }),
@@ -87,6 +133,25 @@ const api = {
   onBackdrop: (cb: (dataUrl: string | null) => void) => on(IPC.BACKDROP, cb),
   /** Artwork as a data URL (to sample its colours). */
   imageData: (url: string): Promise<string | null> => ipcRenderer.invoke(SPOTIFY.IMAGE, url),
+  /** The notification center: history, Clear all, Do Not Disturb. */
+  /** Claude Code (and other agent) sessions in your terminals. */
+  sessions: {
+    list: (): Promise<AgentSession[]> => ipcRenderer.invoke(SESSIONS.LIST),
+    /** Bring its terminal to the front; false if it couldn't be found. */
+    focus: (id: string): Promise<boolean> => ipcRenderer.invoke(SESSIONS.FOCUS, id),
+    forget: (id: string): Promise<void> => ipcRenderer.invoke(SESSIONS.FORGET, id),
+    onChanged: (cb: (list: AgentSession[]) => void) => on(SESSIONS.CHANGED, cb),
+  },
+  notifications: {
+    view: (): Promise<CenterView> => ipcRenderer.invoke(NOTIFS.VIEW),
+    dismiss: (id: string): Promise<void> => ipcRenderer.invoke(NOTIFS.DISMISS, id),
+    /** Clears the list and the island's cards; resolves to how many were cleared. */
+    clearAll: (): Promise<number> => ipcRenderer.invoke(NOTIFS.CLEAR_ALL),
+    undo: (): Promise<void> => ipcRenderer.invoke(NOTIFS.UNDO),
+    seen: (): Promise<void> => ipcRenderer.invoke(NOTIFS.SEEN),
+    setDnd: (on: boolean): Promise<void> => ipcRenderer.invoke(NOTIFS.SET_DND, on),
+    onChanged: (cb: (v: CenterView) => void) => on(NOTIFS.CHANGED, cb),
+  },
   spotify: {
     state: (): Promise<SpotifyView> => ipcRenderer.invoke(SPOTIFY.STATE),
     onChange: (cb: (v: SpotifyView) => void) => on(SPOTIFY.CHANGED, cb),
@@ -114,6 +179,8 @@ const api = {
     setApprovals: (on: boolean): Promise<void> => ipcRenderer.invoke(CLAUDE.SET_APPROVALS, on),
     ensureSpeechModel: (): Promise<void> => ipcRenderer.invoke(CLAUDE.STT_ENSURE),
     onVoice: (cb: () => void) => on(CLAUDE.VOICE, cb),
+    /** A screenshot and the title of the window you were in (null if none known). */
+    attach: (): Promise<{ title: string; path: string | null; preview: string | null } | null> => ipcRenderer.invoke(CLAUDE.ATTACH),
   },
   notes: {
     list: (): Promise<NoteSummary[]> => ipcRenderer.invoke(INBOX.NOTES_LIST),
@@ -156,7 +223,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string> }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -189,9 +256,24 @@ const settings = {
   setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
   setAutostart: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AUTOSTART, on),
   setHook: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_HOOK, on),
+  setAgentHook: (id: string, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_AGENT_HOOK, id, on),
+  /** Resolves to an error to show, or null once it's set. */
+  setKey: (id: string, accel: string | null): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_KEY, id, accel),
+  setOpenOnHover: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_OPEN_ON_HOVER, on),
+  setRecording: (on: boolean) => ipcRenderer.invoke(SETTINGS.RECORDING, on),
+  tour: () => ipcRenderer.invoke(SETTINGS.TOUR),
+  openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
+  setCompanion: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_COMPANION, on),
+  setDisplay: (pref: string) => ipcRenderer.invoke(SETTINGS.SET_DISPLAY, pref),
+  setRecap: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_RECAP, on),
+  clearRecap: () => ipcRenderer.invoke(SETTINGS.CLEAR_RECAP),
+  showRecap: () => ipcRenderer.invoke(SETTINGS.SHOW_RECAP),
+  /** Turn a service on/off, or set its address or key; resolves to an error to show, or null. */
+  setService: (id: string, patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_SERVICE, id, patch),
+  setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
-  setCharacter: (patch: { id?: CharacterId; name?: string }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
+  setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),

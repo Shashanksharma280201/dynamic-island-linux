@@ -99,6 +99,29 @@ export const BellIcon = () => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </Svg>
 )
+export const ClipIcon = () => (
+  <Svg size={16}>
+    <path d="M20 11.5 12.2 19.3a5 5 0 0 1-7.1-7.1l8.1-8.1a3.3 3.3 0 0 1 4.7 4.7l-8.1 8.1a1.7 1.7 0 0 1-2.4-2.4l7.4-7.4" />
+  </Svg>
+)
+export const KeyboardIcon = () => (
+  <Svg size={14}>
+    <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+    <path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9" />
+  </Svg>
+)
+/** Keep this card: a pushpin. */
+export const PinIcon = ({ size = 12 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M9 3.5h6M10 3.5v5.2L6.5 13h11L14 8.7V3.5M12 13v7.5" />
+  </Svg>
+)
+/** Do Not Disturb: a crescent moon. */
+export const MoonIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>
+    <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7z" fill="currentColor" />
+  </svg>
+)
 export const ChatIcon = () => (
   <Svg size={14}>
     <path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.5L3.5 20.5l1.5-4.3A8.5 8.5 0 1 1 20.5 11.5z" />
@@ -116,8 +139,8 @@ export const TerminalIcon = () => (
     <path d="m7.5 9.5 3 2.5-3 2.5M12.5 15h4" />
   </Svg>
 )
-export const XIcon = () => (
-  <Svg size={12}>
+export const XIcon = ({ size = 12 }: { size?: number }) => (
+  <Svg size={size}>
     <path d="M6 6l12 12M18 6 6 18" />
   </Svg>
 )

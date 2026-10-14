@@ -370,7 +370,8 @@ button.link {
 }
 
 /* AI */
-#ai select {
+#ai select,
+select.display-select {
   max-width: 240px;
   background: var(--field);
   border: 0.5px solid var(--separator);
@@ -431,4 +432,113 @@ button.link {
 }
 .package-row .switch {
   margin-top: 4px;
+}
+/* Keyboard shortcuts: the keys as a field you click, then press new keys. */
+.key-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+button.key-recorder {
+  min-width: 118px;
+  background: var(--field);
+  color: var(--text);
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+button.key-recorder.recording {
+  border-color: var(--blue);
+  color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
+}
+button.link {
+  background: none;
+  color: var(--blue);
+  padding: 4px 6px;
+  font-weight: 500;
+}
+.error-text {
+  color: #ff6961;
+}
+/* Character → outfit and colour. */
+.wardrobe-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.wardrobe-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
+  gap: 6px;
+}
+.wardrobe-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px 6px;
+  border-radius: 12px;
+  background: var(--field);
+  color: var(--text);
+  border: 1.5px solid transparent;
+  font-size: 11px;
+  font-weight: 500;
+}
+.wardrobe-item.on {
+  border-color: var(--blue);
+  background: rgba(10, 132, 255, 0.14);
+}
+.swatches {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+}
+.swatch.own {
+  background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
+}
+.swatch.on {
+  border-color: #fff;
+  box-shadow: 0 0 0 2px var(--blue);
+}
+/* Services */
+.service-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.service-row .toggle-row {
+  background: none;
+  padding: 0;
+}
+.service-row .toggle-row::after {
+  display: none;
+}
+.service-fields {
+  display: flex;
+  gap: 8px;
+}
+.service-status.ok {
+  color: var(--green);
+}
+.service-status.bad {
+  color: #ff6961;
+}
+.svc-swatch {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 4px;
 }

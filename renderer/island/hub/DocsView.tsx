@@ -1,3 +1,4 @@
+import { Orb } from '../../orb/Orb'
 import { useEffect, useRef, useState } from 'react'
 import type { ClaudeView } from '@shared/claude'
 import { fileSize, relativeTime } from '@shared/format'
@@ -233,10 +234,10 @@ export function DocsView({
       }} />}
 
       {(busy || result) && (
-        <div className={`docs-result${result?.error ? ' error' : ''}`} role="status">
+        <div className={`docs-result${result?.error ? ' error' : ''}`} role="status" aria-busy={busy}>
           {busy ? (
             <>
-              <span className="spinner small" /> <span>Working…</span>
+              <Orb state="weaving" size={18} /> <span>Working…</span>
             </>
           ) : (
             result && (

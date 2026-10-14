@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 const require = createRequire(import.meta.url)
-const { buildDecision, allowSuggestions, summarize } = require('../hook/decision.cjs')
+const { buildDecision, allowSuggestions, answersFit, summarize } = require('../hook/decision.cjs')
 
 test('allow/deny build PermissionRequest hookSpecificOutput', () => {
   expect(buildDecision('allow')).toEqual({
@@ -64,4 +64,33 @@ test('allowSuggestions keeps only allow addRules entries', () => {
   expect(allowSuggestions([SUGGESTION, { type: 'addRules', behavior: 'deny', rules: [] }])).toEqual(
     [SUGGESTION],
   )
+})
+
+const QUESTIONS = {
+  questions: [
+    { question: 'Which database?', header: 'DB', multiSelect: false, options: [{ label: 'Postgres', description: '' }, { label: 'SQLite', description: '' }] },
+    { question: 'Which extras?', header: 'Extras', multiSelect: true, options: [{ label: 'Auth', description: '' }, { label: 'Billing', description: '' }] },
+  ],
+}
+
+test('answers to Claude questions go back as the updated input', () => {
+  const answers = { 'Which database?': 'SQLite', 'Which extras?': 'Auth, Billing' }
+  const out = buildDecision({ decision: 'allow', answers }, [], { toolName: 'AskUserQuestion', toolInput: QUESTIONS })
+  expect(out).toEqual({
+    hookSpecificOutput: {
+      hookEventName: 'PermissionRequest',
+      decision: { behavior: 'allow', updatedInput: { ...QUESTIONS, answers } },
+    },
+  })
+})
+
+test('answers that do not fit the questions fall back to the terminal', () => {
+  const ask = (answers: unknown) => buildDecision({ decision: 'allow', answers }, [], { toolName: 'AskUserQuestion', toolInput: QUESTIONS })
+  expect(ask(undefined)).toBeNull() // Allow with no answers (e.g. the shortcut)
+  expect(ask({ 'Which database?': 'SQLite' })).toBeNull() // one missing
+  expect(ask({ 'Which database?': 'SQLite', 'Which extras?': '' })).toBeNull() // empty
+  expect(ask({ 'Which database?': 'SQLite', 'Which extras?': 'Auth', Other: 'x' })).toBeNull() // extra
+  expect(answersFit([], {})).toBe(false)
+  // Other tools are unaffected by answers.
+  expect(buildDecision({ decision: 'allow', answers: { a: 'b' } }, [], { toolName: 'Bash', toolInput: {} })!.hookSpecificOutput.decision).toEqual({ behavior: 'allow' })
 })

@@ -35,7 +35,20 @@ const until = async (fn, ms = 5000) => {
   return fn()
 }
 const xt = (...a) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), ...a.map(String)])
-const runs = () => (fs.existsSync(LOG) ? fs.readFileSync(LOG, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : [])
+// (A line the fake claude is still writing is skipped until it's whole.)
+const runs = () =>
+  fs.existsSync(LOG)
+    ? fs
+        .readFileSync(LOG, 'utf8')
+        .split('\n')
+        .flatMap((l) => {
+          try {
+            return l.trim() ? [JSON.parse(l)] : []
+          } catch {
+            return []
+          }
+        })
+    : []
 
 // Voice needs a Whisper model and a speech synthesizer.
 const STT = process.env.E2E_STT_MODELS
@@ -171,6 +184,7 @@ function speechWav(text, file) {
     check('and asks for approvals on the island', !!first && JSON.parse(first.args[first.args.indexOf('--settings') + 1]).hooks.PermissionRequest[0].hooks[0].command.includes('claude-island-hook'))
     const sawTool = await until(async () => /Reading README\.md/.test(await threadText()), 4000)
     check('the character shows what Claude is doing (searching while it reads)', sawTool && !!(await page.$('.claude-turn.live .character[data-mood="searching"]')))
+    check('and so does its orb', !!(await page.$('.claude-turn.live .orb[data-state="searching"]')))
     await shot('03-working')
     check('the answer appears', await until(async () => /Done: summarize the readme/.test(await threadText()), 8000))
     await idle()
@@ -228,6 +242,30 @@ function speechWav(text, file) {
     check('Claude Code can save a note through the island', await until(async () => /Island said: Saved the note/.test(await threadText()), 8000), (await threadText()).slice(-120))
     const noteDir = path.join(USER_DATA, 'notes')
     check('and the note is really there', fs.existsSync(noteDir) && fs.readdirSync(noteDir).some((f) => fs.readFileSync(path.join(noteDir, f), 'utf8') === 'Pick up the dry cleaning'))
+    await idle()
+
+    // ---- Attach the window you were in ----
+    // An app with the keyboard; then the panel opens over it.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).catch(() => {})
+    const browser = require('child_process').spawn('node', [path.join(__dirname, 'fake-keys-app.cjs'), 'firefox', 'Pull request #12 - Firefox'], { stdio: ['ignore', 'pipe', 'inherit'] })
+    await sleep(800)
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { timeout: 3000 })
+    await sleep(600)
+    await page.click('.claude-field .attach-btn')
+    check('the paperclip attaches the window you were in', await page.waitForSelector('.attached:has-text("Pull request #12")', { timeout: 6000 }).then(() => true, () => false))
+    const shotSrc = await page.getAttribute('.attached img', 'src').catch(() => null)
+    check('with a picture of it', !!shotSrc && shotSrc.startsWith('data:image/png'))
+    await page.fill('.claude-field textarea', 'what is on my screen')
+    await page.press('.claude-field textarea', 'Enter')
+    await until(() => runs().some((r) => r.args.some((a) => /what is on my screen/.test(a))), 5000)
+    const asked = runs().find((r) => r.args.some((a) => /what is on my screen/.test(a)))?.args.find((a) => /what is on my screen/.test(a)) ?? ''
+    const pic = /at (\S+\.png)\./.exec(asked)?.[1]
+    check('and Claude gets it with the message', /\(Attached: a screenshot of the window I was in \("Pull request #12 - Firefox"\)/.test(asked) && !!pic && fs.existsSync(pic), asked.slice(-160))
+    check('then the attachment is cleared', !(await page.$('.attached')))
+    browser.kill()
+    await until(async () => /Done: what is on my screen/.test(await threadText()), 8000)
     await idle()
     await islandAsk('crm_add_contact', { name: 'Asha Rao', company: 'Globex' })
     check('and run the CRM', await until(async () => /Island said: Added Asha Rao \(c1\)/.test(await threadText()), 8000))
@@ -308,6 +346,10 @@ function speechWav(text, file) {
     // The resting capsule shows it (asleep at night, awake by day).
     await page.evaluate(() => window.island.claude.stop()).catch(() => {})
     if (await page.$('.hub')) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    // Playwright's clicks leave its mouse "over" the island, which would keep
+    // the last answer card open: take it off (and say so).
+    await page.mouse.move(4, (await page.evaluate(() => innerHeight)) - 4)
+    await page.evaluate(() => document.querySelector('.island-outer')?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
     check(
       'the resting island shows the character',
       await page.waitForSelector('.capsule.idle .character[data-character="bolt"]', { timeout: 15000 }).then(() => true, () => false),

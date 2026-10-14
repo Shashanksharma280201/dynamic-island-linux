@@ -28,10 +28,11 @@ function debug(m) {
 }
 
 let done = false
+let asked = null
 function emit(reply, suggestions) {
   if (done) return
   done = true
-  const obj = buildDecision(reply, suggestions)
+  const obj = buildDecision(reply, suggestions, asked)
   if (obj) process.stdout.write(JSON.stringify(obj))
   process.exit(0)
 }
@@ -54,23 +55,30 @@ process.stdin.on('end', () => {
   }
 
   const suggestions = allowSuggestions(hook.permission_suggestions)
+  asked = { toolName: hook.tool_name, toolInput: hook.tool_input }
   const request = {
     id: `${process.pid}-${Date.now()}`,
     toolName: hook.tool_name || 'unknown',
     inputSummary: summarize(hook.tool_input),
     toolInput: hook.tool_input,
     cwd: hook.cwd,
+    sessionId: typeof hook.session_id === 'string' ? hook.session_id : undefined,
     suggestions,
     // Started from the island (no terminal to answer in).
     fromIsland: process.env.DYNAMIC_ISLAND_RUN === '1' || undefined,
   }
 
+  let client = null
   setTimeout(() => {
     debug('timeout -> noop')
-    emit(null)
+    // Tell the island it's now up to the terminal, then go.
+    if (client && !client.destroyed && client.writable) {
+      setTimeout(() => emit(null), 300).unref()
+      client.end(JSON.stringify({ type: 'gave-up', id: request.id }) + '\n', () => emit(null))
+    } else emit(null)
   }, TIMEOUT_MS).unref()
 
-  const client = net.createConnection(SOCK, () => {
+  client = net.createConnection(SOCK, () => {
     client.write(JSON.stringify({ type: 'request', request }) + '\n')
   })
 

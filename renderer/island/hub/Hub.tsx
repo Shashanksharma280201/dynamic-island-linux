@@ -12,10 +12,15 @@ import type { ClaudeView } from '@shared/claude'
 import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 import { DocsAppIcon } from './AppIcons'
+import { NotificationsView } from './NotificationsView'
+import { SessionsView } from './SessionsView'
+import { ServicesView, useServices } from './ServicesView'
+import type { AgentSession } from '@shared/sessions'
+import type { CenterView } from '@shared/notifCenter'
 
-export type HubTab = 'controls' | 'claude' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
+export type HubTab = 'controls' | 'alerts' | 'claude' | 'sessions' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'claude', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
+export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'sessions', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {
@@ -46,9 +51,17 @@ export function Hub({
   voice,
   incoming,
   dropping,
+  center,
+  onTab,
+  sessions,
 }: {
   sys: SystemState | null
   tab: HubTab
+  /** The notification center (Notifications tab, Do Not Disturb). */
+  center: CenterView
+  /** Claude Code sessions in your terminals. */
+  sessions: AgentSession[]
+  onTab: (t: HubTab) => void
   onTyping: (on: boolean) => void
   claude: ClaudeView | null
   voice: Voice
@@ -66,16 +79,20 @@ export function Hub({
       }),
     'sources',
   )
+  const services = useServices()
   // A new tab slides in from the direction you went on the rail.
   const last = useRef({ tab, dir: '' })
   if (last.current.tab !== tab) last.current = { tab, dir: HUB_TABS.indexOf(tab) > HUB_TABS.indexOf(last.current.tab) ? 'from-below' : 'from-above' }
   return (
     <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`} onClick={(e) => e.stopPropagation()}>
-      {tab === 'controls' && <ControlCenter sys={sys} />}
+      {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
+      {tab === 'alerts' && <NotificationsView center={center} onOpen={onTab} />}
       {tab === 'chats' && sources && <ChatsView sources={sources} onTyping={onTyping} />}
       {tab === 'mail' && sources && <MailView sources={sources} onTyping={onTyping} />}
       {tab === 'notes' && <NotesView onTyping={onTyping} />}
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
+      {tab === 'sessions' && <SessionsView sessions={sessions} claude={claude} />}
+      {tab === 'services' && <ServicesView list={services} />}
       {tab === 'music' && <MusicView onTyping={onTyping} />}
       {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}
       {tab === 'crm' && <CrmView claude={claude} onTyping={onTyping} />}

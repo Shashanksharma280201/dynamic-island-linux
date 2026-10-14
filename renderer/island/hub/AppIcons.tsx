@@ -36,6 +36,14 @@ export const ControlsAppIcon = () => (
   </Tile>
 )
 
+/** Notifications: a white bell on red, like the system's. */
+export const NotificationsAppIcon = () => (
+  <Tile from="#ff6b6b" to="#e5383b">
+    <path d="M9.2 17.6V13a4.8 4.8 0 0 1 9.6 0v4.6l1.6 1.7H7.6z" fill="#fff" />
+    <path d="M12.2 20.6a1.9 1.9 0 0 0 3.6 0" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" fill="none" />
+  </Tile>
+)
+
 /** Claude: the orange sunburst. */
 export const ClaudeAppIcon = () => {
   const rays = [0, 40, 75, 115, 160, 200, 235, 280, 320]
@@ -51,6 +59,24 @@ export const ClaudeAppIcon = () => {
     </Tile>
   )
 }
+
+/** Sessions: a terminal prompt on dark slate, with Claude's orange cursor. */
+export const SessionsAppIcon = () => (
+  <Tile from="#3a3a3c" to="#1c1c1e">
+    <path d="m8 10 4 4-4 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    <rect x="14" y="17" width="6.5" height="2.4" rx="1.2" fill="#e08a67" />
+  </Tile>
+)
+
+/** Services: four coloured dots, like their badges. */
+export const ServicesAppIcon = () => (
+  <Tile from="#2c2c2e" to="#1c1c1e">
+    <circle cx="10" cy="10" r="3.4" fill="#f4505e" />
+    <circle cx="18" cy="10" r="3.4" fill="#7c5cff" />
+    <circle cx="10" cy="18" r="3.4" fill="#22c55e" />
+    <circle cx="18" cy="18" r="3.4" fill="#0570de" />
+  </Tile>
+)
 
 /** Spotify: the green disc with three arcs. */
 export const SpotifyAppIcon = () => (

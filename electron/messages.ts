@@ -22,15 +22,24 @@ export function withLine(lines: ChatLine[], line: ChatLine): ChatLine[] {
   return [...lines, line].slice(-MAX_LINES)
 }
 
+/** What the notification center hears about a new message. */
+export type MessageArrival = { id: string; source: MessageSource; app: string; icon?: string; title: string; body: string; thread: string; at: number }
+
 /**
  * Turns incoming WhatsApp messages and mail into island cards, and routes
- * replies / mark-as-read back to the right backend.
+ * replies / mark-as-read back to the right backend. Every arrival is also
+ * told to `record` (the notification center); while `quiet()` (Do Not
+ * Disturb) no card is shown.
  */
 export class MessageHub {
   private cards = new Map<string, MessageData>()
   private backends: Partial<Record<MessageSource, MessageBackend>> = {}
 
-  constructor(private transient: TransientCards) {
+  constructor(
+    private transient: TransientCards,
+    private record: (m: MessageArrival) => void = () => {},
+    private quiet: () => boolean = () => false,
+  ) {
     transient.onDismiss((id) => this.cards.delete(id))
   }
 
@@ -47,12 +56,24 @@ export class MessageHub {
   /** A WhatsApp message: one card per chat, accumulating lines. */
   addWhatsApp(w: WaIncoming): void {
     const id = messageId('whatsapp', w.chatId)
+    const sender = w.isGroup ? (w.chatName ?? w.sender) : w.sender
+    this.record({
+      id,
+      source: 'whatsapp',
+      app: 'WhatsApp',
+      icon: w.avatar,
+      title: sender,
+      body: w.isGroup ? `${w.sender}: ${w.text}` : w.text,
+      thread: w.chatId,
+      at: w.time,
+    })
+    if (this.quiet()) return
     const prev = this.cards.get(id)
     const line: ChatLine = { text: w.text, time: w.time, author: w.isGroup ? w.sender : undefined }
     this.show(id, {
       source: 'whatsapp',
       threadId: w.chatId,
-      sender: w.isGroup ? (w.chatName ?? w.sender) : w.sender,
+      sender,
       title: w.isGroup ? w.chatName : undefined,
       avatar: w.avatar ?? prev?.avatar,
       lines: withLine(prev?.lines ?? [], line),
@@ -63,6 +84,16 @@ export class MessageHub {
   /** A new mail: one card per message. */
   addMail(m: IncomingMail, accountLabel?: string): void {
     const threadId = `${m.accountId}:${m.uid}`
+    this.record({
+      id: messageId('mail', threadId),
+      source: 'mail',
+      app: accountLabel ? `Mail · ${accountLabel}` : 'Mail',
+      title: m.from.name || m.from.address,
+      body: [m.subject, m.snippet].filter(Boolean).join(' · '),
+      thread: threadId,
+      at: m.date || Date.now(),
+    })
+    if (this.quiet()) return
     this.show(messageId('mail', threadId), {
       source: 'mail',
       threadId,
