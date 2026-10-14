@@ -24,12 +24,14 @@ import { dayOf, greeting, loadConfig, saveConfig } from './config'
 import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
+  agentHooks,
   findExecutable,
   hookDir,
   hookNeedsUpgrade,
   isHookInstalled,
   isUsageBridgeInstalled,
   nodeRunner,
+  setAgentHook,
   setHookInstalled,
   setUsageBridgeInstalled,
 } from './hookSetup'
@@ -1332,7 +1334,7 @@ async function runUninstall(argv: string[] = []): Promise<void> {
       type: 'warning',
       message: 'Uninstall Dynamic Island?',
       detail:
-        'This removes the app, starting it at login, and the Claude Code approvals and status line it set up. Files it saved in your Documents folder are kept.',
+        'This removes the app, starting it at login, and the hooks and status line it set up for Claude Code (and Codex, Gemini CLI or Cursor). Files it saved in your Documents folder are kept.',
       checkboxLabel: 'Also delete my settings, notes, CRM and sign-ins',
       checkboxChecked: false,
       buttons: ['Uninstall', 'Cancel'],
@@ -1351,7 +1353,11 @@ async function runUninstall(argv: string[] = []): Promise<void> {
         appId: 'io.github.shashanksharma280201.dynamicisland',
         productName: 'Dynamic Island',
         debPackage: 'dynamic-island-linux',
-        removeHook: async () => isHookInstalled() && setHookInstalled(false),
+        // Claude Code's hooks, and those added for Codex, Gemini CLI or Cursor.
+        removeHook: async () => {
+          if (isHookInstalled()) await setHookInstalled(false)
+          for (const a of agentHooks()) if (a.installed) await setAgentHook(a.id, false).catch((e) => console.error(`uninstall: ${a.id} hook`, e))
+        },
         removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
         removeLoginItem: () => setAutostart(false),
         trash: (p) => shell.trashItem(p),
