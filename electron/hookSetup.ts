@@ -4,7 +4,7 @@ import { accessSync, constants, cpSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 
-const FILES = ['claude-island-hook.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs']
+const FILES = ['claude-island-hook.cjs', 'claude-island-hook-events.cjs', 'agents.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs']
 
 function settingsPath(): string {
   return join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'settings.json')
@@ -64,8 +64,8 @@ export function nodeRunner(): string {
   return `ELECTRON_RUN_AS_NODE=1 ${JSON.stringify(self)}`
 }
 
-function runInstaller(script: string, on: boolean): Promise<string> {
-  const args = [join(hookDir(), script), ...(on ? [] : ['--uninstall'])]
+function runInstaller(script: string, on: boolean, extra: string[] = []): Promise<string> {
+  const args = [join(hookDir(), script), ...extra, ...(on ? [] : ['--uninstall'])]
   return new Promise((resolve, reject) => {
     execFile(
       process.execPath,
@@ -80,6 +80,11 @@ export function isHookInstalled(): boolean {
   return JSON.stringify(readSettings().hooks?.PermissionRequest ?? []).includes('claude-island-hook')
 }
 
+/** Installed before the island followed sessions live (approvals only). */
+export function hookNeedsUpgrade(): boolean {
+  return isHookInstalled() && !JSON.stringify(readSettings().hooks?.Stop ?? []).includes('claude-island-hook-events')
+}
+
 /** Run the bundled installer with Electron acting as Node. */
 export function setHookInstalled(on: boolean): Promise<string> {
   return runInstaller('install.cjs', on)
@@ -92,4 +97,35 @@ export function isUsageBridgeInstalled(): boolean {
 
 export function setUsageBridgeInstalled(on: boolean): Promise<string> {
   return runInstaller('statusline.cjs', on)
+}
+
+/** Other coding agents whose sessions the island can follow (hook/agents.cjs). */
+export const OTHER_AGENTS = [
+  { id: 'codex', name: 'Codex', file: ['.codex', 'hooks.json'], note: 'Then start Codex and trust the new hooks once with /hooks.' },
+  { id: 'gemini', name: 'Gemini CLI', file: ['.gemini', 'settings.json'], note: 'Start a new Gemini CLI session to pick it up.' },
+  { id: 'cursor', name: 'Cursor Agent', file: ['.cursor', 'hooks.json'], note: 'Start a new Cursor Agent session to pick it up.' },
+] as const
+
+export type AgentHookId = (typeof OTHER_AGENTS)[number]['id']
+
+export type AgentHookStatus = { id: AgentHookId; name: string; installed: boolean; path: string; note: string }
+
+/** Whether each agent's hook file has the island's session hook. */
+export function agentHooks(): AgentHookStatus[] {
+  return OTHER_AGENTS.map((a) => {
+    const path = join(process.env.DI_HOME || homedir(), ...a.file)
+    let installed = false
+    try {
+      const hooks = JSON.stringify(JSON.parse(readFileSync(path, 'utf8').replace(/^\uFEFF/, '')).hooks ?? {})
+      installed = hooks.includes('claude-island-hook-events') && hooks.includes(`--agent ${a.id}`)
+    } catch {
+      // no file yet, or not JSON
+    }
+    return { id: a.id, name: a.name, installed, path, note: a.note }
+  })
+}
+
+export function setAgentHook(id: string, on: boolean): Promise<string> {
+  if (!OTHER_AGENTS.some((a) => a.id === id)) return Promise.reject(new Error(`unknown agent ${id}`))
+  return runInstaller('agents.cjs', on, [id])
 }

@@ -24,6 +24,10 @@ export function parseDecisionMsg(m: any): DecisionMsg | null {
   if (m.decision === 'deny' && typeof m.message === 'string' && m.message.trim())
     out.message = m.message.trim().slice(0, 2000)
   if (m.decision === 'allow' && m.always === true) out.always = true
+  if (m.decision === 'allow' && m.answers && typeof m.answers === 'object' && !Array.isArray(m.answers)) {
+    const entries = Object.entries(m.answers).filter(([k, v]) => k.length <= 2000 && typeof v === 'string' && v.trim() && v.length <= 2000)
+    if (entries.length && entries.length <= 10) out.answers = Object.fromEntries(entries.map(([k, v]) => [k, (v as string).trim()]))
+  }
   return out
 }
 
@@ -77,6 +81,7 @@ export function wireIpc(h: {
   onPanel: (open: boolean) => void
   onDismiss: (id: string) => void
   onHold: (id: string, hold: boolean) => void
+  onPin: (id: string) => void
   onFocus: (focus: boolean) => void
   onReply: (m: ReplyMsg) => void
   onMessageAction: (m: MessageActionMsg) => void
@@ -105,6 +110,9 @@ export function wireIpc(h: {
   })
   ipcMain.on(IPC.HOLD, (_e, m) => {
     if (m && typeof m.id === 'string') h.onHold(m.id, m.hold === true)
+  })
+  ipcMain.on(IPC.PIN, (_e, id) => {
+    if (typeof id === 'string') h.onPin(id)
   })
   ipcMain.on(IPC.FOCUS, (_e, f) => h.onFocus(f === true))
   ipcMain.on(IPC.REPLY, (_e, m) => {

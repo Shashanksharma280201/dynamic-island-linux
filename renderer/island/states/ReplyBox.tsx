@@ -26,8 +26,8 @@ export function ReplyBox({
   useEffect(() => {
     window.island.setFocus(true)
     // The window becomes focusable asynchronously; focus the field once it is.
-    const t = setTimeout(() => ref.current?.focus(), 50)
-    ref.current?.focus()
+    const t = setTimeout(() => ref.current?.focus({ preventScroll: true }), 50)
+    ref.current?.focus({ preventScroll: true })
     return () => {
       clearTimeout(t)
       window.island.setFocus(false)

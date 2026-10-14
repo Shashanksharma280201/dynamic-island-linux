@@ -26,6 +26,17 @@ import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 import type { DocsAdded } from '@shared/docs'
 import type { DocsIncoming } from './hub/DocsView'
 import { errorText } from './hub/common'
+import { useNotifications } from './useNotifications'
+import { clearedText } from '@shared/notifCenter'
+import { useSessions } from './useSessions'
+import { CompactSession, SessionCard } from './states/SessionActivity'
+import { CloseBar } from './states/CloseBar'
+import { tourSteps } from './tour'
+import { WardrobePicker } from './character/Wardrobe'
+import { useDictation } from './voice/useDictation'
+import { DictationPill } from './voice/DictationPill'
+import { RecapCard, useRecap } from './recap/RecapCard'
+import { useShortcutLabel } from './useShortcuts'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
@@ -53,12 +64,31 @@ function DropCard({ count, adding }: { count: number; adding: boolean }) {
 /** How far the blurred backdrop extends past each glass piece (see styles.css). */
 const FROST_BLEED = 40
 
+/**
+ * The island's glass clips its content (overflow: hidden), but focusing a field
+ * near its edge still scrolls it, leaving everything shifted. Undo that.
+ */
+const unscroll = (e: { currentTarget: HTMLElement; target: EventTarget }) => {
+  if (e.target !== e.currentTarget) return // a list scrolling inside is fine
+  e.currentTarget.scrollTop = 0
+  e.currentTarget.scrollLeft = 0
+}
+
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
 
-export function Island({ activities }: { activities: Activity[] }) {
+export function Island({ activities: real }: { activities: Activity[] }) {
   const character = useCharacter()
+  const center = useNotifications()
+  // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
+  const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
+  // It stays while the pointer is on the island (you may be reaching for Undo).
+  useEffect(() => {
+    if (cleared === null || hover) return
+    const t = setTimeout(() => setCleared(null), 5000)
+    return () => clearTimeout(t)
+  }, [cleared, hover])
   const [panel, setPanel] = useState(false)
   const [sys, setSys] = useState<SystemState | null>(null)
   const [replying, setReplying] = useState(false)
@@ -165,10 +195,18 @@ export function Island({ activities }: { activities: Activity[] }) {
     }
   }, [])
   const voice = useVoice(claude)
+  // Dictate anywhere (its shortcut): typed into the app you're in.
+  const dictation = useDictation(claude)
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {
     setTab('claude')
+    setPanel(true)
+  }
+  // Claude Code in your terminals.
+  const sessions = useSessions()
+  const openSessions = () => {
+    setTab('sessions')
     setPanel(true)
   }
   // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
@@ -185,6 +223,30 @@ export function Island({ activities }: { activities: Activity[] }) {
       }),
     [],
   )
+  // The weekly recap, when the main process shows it.
+  const [recapShow, closeRecap] = useRecap()
+  // Right-click the resting island: dress the character up.
+  const [wardrobe, setWardrobe] = useState(false)
+  // "Show me around": example cards, one step at a time (nothing real is touched).
+  const panelKey = useShortcutLabel('panel')
+  const steps = tourSteps(character.name, panelKey)
+  const [tour, setTour] = useState<number | null>(null)
+  const [tourOffer, setTourOffer] = useState(false)
+  const tourStep = tour === null ? null : steps[tour]
+  const tourNow = useRef(Date.now())
+  const startTour = () => {
+    tourNow.current = Date.now()
+    setTourOffer(false)
+    setPanel(false)
+    setTour(0)
+  }
+  useEffect(() => window.island.onTour?.(startTour), []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Something real that needs you ends the tour.
+  const urgent = real.some((a) => a.kind === 'approval' || (a.kind === 'session' && a.session.phase === 'waiting'))
+  useEffect(() => {
+    if (urgent) setTour(null)
+  }, [urgent])
+  const activities = tourStep ? tourStep.activities(tourNow.current) : real
   // Hello, once a day: a short introduction that hover or a click ends.
   const [hello, setHello] = useState<{ first: boolean; tip: boolean } | null>(null)
   useEffect(
@@ -193,6 +255,8 @@ export function Island({ activities }: { activities: Activity[] }) {
         setHello({ first: g.first, tip: false })
         if (g.first) setTimeout(() => setHello((h) => h && { ...h, tip: true }), 1600)
         setTimeout(() => setHello(null), g.first ? 3800 : 2400)
+        // The very first time, offer the tour once the hello is done.
+        if (g.first) setTimeout(() => setTourOffer(true), 4000)
       }),
     [],
   )
@@ -201,8 +265,9 @@ export function Island({ activities }: { activities: Activity[] }) {
   useEffect(() => window.island.onHover(setHover), [])
 
   // Hover intent: a short rest peeks, a longer one opens the full card.
-  const stage = useHoverIntent(hover && !panel && !dropping)
-  const p = present(activities, { expanded: stage === 'full' })
+  // No peek while the Undo note is up: the island growing would move it from under the pointer.
+  const stage = useHoverIntent(hover && !panel && !dropping && cleared === null)
+  const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
@@ -210,10 +275,32 @@ export function Island({ activities }: { activities: Activity[] }) {
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
 
+  // The wardrobe closes once the pointer has left for a moment.
+  useEffect(() => {
+    if (!wardrobe || hover) return
+    const t = setTimeout(() => setWardrobe(false), PANEL_CLOSE_MS * 2)
+    return () => clearTimeout(t)
+  }, [wardrobe, hover])
+
+  // "Open on hover" (Settings): resting on the resting island opens the panel.
+  // Only on a fresh rest: closing the panel (or the wardrobe) under the pointer
+  // mustn't open it again until the pointer has left.
+  const hoverArmed = useRef(true)
+  useEffect(() => {
+    if (!hover) hoverArmed.current = true
+  }, [hover])
+  useEffect(() => {
+    if (panel || wardrobe) hoverArmed.current = false
+  }, [panel, wardrobe])
+  useEffect(() => {
+    if (stage !== 'full' || p.mode !== 'idle' || panel || wardrobe || !hoverArmed.current || document.documentElement.dataset.openOnHover !== 'yes') return
+    setPanel(true)
+  }, [stage, p.mode, panel, wardrobe])
+
   // Keep a notification / message open while it's hovered or being answered.
   const transientId =
     p.mode !== 'idle' &&
-    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done')
+    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done' || p.primary.id.startsWith('session-done-'))
       ? p.primary.id
       : null
   // Only while the card is actually on screen (not hidden behind the panel).
@@ -307,9 +394,15 @@ export function Island({ activities }: { activities: Activity[] }) {
     [],
   )
 
+  const dressing = wardrobe && !showPanel && p.mode === 'idle' && !dropping
+  const recapping = !!recapShow && !showPanel && !isApproval && !dropping && !tourStep
   const key = showPanel
     ? 'panel'
-    : dropping || adding
+    : recapping
+      ? 'recap'
+      : dressing
+      ? 'wardrobe'
+      : dropping || adding
       ? 'drop'
       : peeking
         ? `peek:${p.mode === 'idle' ? 'idle' : p.primary.id}`
@@ -332,6 +425,8 @@ export function Island({ activities }: { activities: Activity[] }) {
     if (was === key) return
     if (key.startsWith('expanded:approval:')) return sound('ask')
     if (key === 'expanded:claude:claude-done' && p.mode === 'expanded' && p.primary.kind === 'claude') return sound(p.primary.run.phase === 'error' ? 'error' : 'done')
+    if (key.startsWith('expanded:session:session-done-')) return sound('done')
+    if (key.startsWith('expanded:session:session-wait-')) return sound('ask')
     if (key.startsWith('peek:')) return sound('peek')
     if (sizeRank(key) > sizeRank(was)) sound('open')
     else if (sizeRank(key) < sizeRank(was) && !was.startsWith('peek:')) sound('close')
@@ -346,6 +441,10 @@ export function Island({ activities }: { activities: Activity[] }) {
   const enter = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, ...toward, ...(soft ? { filter: 'blur(4px)' } : {}) }
   const leave = reduce ? { opacity: 0, transition: { duration: 0.16 } } : { opacity: 0, scale: 0.97, ...(soft ? { filter: 'blur(4px)' } : {}), transition: contentOut }
 
+  // Notification and message cards waiting on the island.
+  const notifCards = activities.filter((a) => a.kind === 'notification' || a.kind === 'message').length
+  const onNotifCard = !showPanel && p.mode === 'expanded' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
+
   const onClick = () => {
     if (consumeDragClick()) return
     setHello(null)
@@ -355,6 +454,10 @@ export function Island({ activities }: { activities: Activity[] }) {
       if (p.primary.kind === 'claude') {
         if (p.mode === 'expanded') return // card has its own buttons
         return openClaude()
+      }
+      if (p.primary.kind === 'session') {
+        if (p.mode === 'expanded') return // card has its own buttons
+        return openSessions()
       }
     }
     if (!isApproval) {
@@ -369,6 +472,10 @@ export function Island({ activities }: { activities: Activity[] }) {
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      onContextMenu={(e) => {
+        e.preventDefault()
+        if (p.mode === 'idle' && !showPanel) setWardrobe(true)
+      }}
       onClick={onClick}
       {...handlers}
       {...dropHandlers}
@@ -376,7 +483,7 @@ export function Island({ activities }: { activities: Activity[] }) {
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
           border-radius for it, so the corners stay round while it grows. */}
-      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }}>
+      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }} onScroll={unscroll}>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
@@ -389,7 +496,27 @@ export function Island({ activities }: { activities: Activity[] }) {
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+            ) : recapping ? (
+              <RecapCard r={recapShow!} onClose={closeRecap} />
+            ) : dressing ? (
+              <div className="card wardrobe-card" onClick={(e) => e.stopPropagation()}>
+                <div className="card-head">
+                  <span className="app-name">Dress up {character.name}</span>
+                  <span className="spacer" />
+                  <button className="pill primary small" onClick={() => setWardrobe(false)}>
+                    Done
+                  </button>
+                </div>
+                <WardrobePicker
+                  id={character.id}
+                  outfit={character.outfit ?? 'auto'}
+                  color={character.color ?? null}
+                  size={38}
+                  onOutfit={(outfit) => window.island.setLook({ outfit })}
+                  onColor={(color) => window.island.setLook({ color })}
+                />
+              </div>
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (
@@ -397,20 +524,21 @@ export function Island({ activities }: { activities: Activity[] }) {
             ) : hello && p.mode === 'idle' ? (
               <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
-              <IdlePill />
+              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} />
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (
               <NotificationCard
                 id={p.primary.id}
                 notification={p.primary.notification}
-                queued={p.queued}
+                // The "N more · Clear all" pill below counts what's waiting.
+                queued={notifCards >= 2 ? 0 : p.queued}
               />
             ) : p.primary.kind === 'message' ? (
               <MessageCard
                 id={p.primary.id}
                 message={p.primary.message}
-                queued={p.queued}
+                queued={notifCards >= 2 ? 0 : p.queued}
                 onReplying={setReplying}
                 onOpen={() => {
                   setTab(p.primary.kind === 'message' && p.primary.message.source === 'mail' ? 'mail' : 'chats')
@@ -428,14 +556,154 @@ export function Island({ activities }: { activities: Activity[] }) {
               ) : (
                 <CompactClaude run={p.primary.run} />
               )
+            ) : p.primary.kind === 'session' ? (
+              p.mode === 'expanded' ? (
+                <SessionCard id={p.primary.id} session={p.primary.session} others={p.primary.others} onOpen={openSessions} />
+              ) : (
+                <CompactSession session={p.primary.session} others={p.primary.others} />
+              )
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
             ) : (
               <CompactMedia media={p.primary.media} />
             )}
+            {!showPanel && !dropping && !peeking && p.mode === 'expanded' && transientId && p.primary.closes && !p.primary.pinned && (
+              <CloseBar id={transientId} ms={p.primary.closes} held={holding} showPin={hover} />
+            )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
+
+      <AnimatePresence>
+        {notifCards >= 2 && onNotifCard && (
+          // More notifications waiting behind this one: say how many, and clear them all at once.
+          <motion.div
+            key="notif-stack"
+            className="island notif-stack"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">{notifCards - 1} more</span>
+            <button
+              className="clear"
+              onClick={async () => {
+                // The tour's cards are examples: clearing them just moves on.
+                if (tourStep) return setTour((t) => (t === null ? null : t + 1))
+                const n = await window.island.notifications.clearAll()
+                setCleared(n > 0 ? n : null)
+              }}
+            >
+              Clear all
+            </button>
+          </motion.div>
+        )}
+        {cleared !== null && !showPanel && !onNotifCard && (
+          <motion.div
+            key="notif-cleared"
+            className="island notif-stack toast"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">{clearedText(cleared)}</span>
+            <button
+              className="clear undo"
+              onClick={() => {
+                void window.island.notifications.undo()
+                setCleared(null)
+              }}
+            >
+              Undo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {dictation.phase !== 'idle' && (
+          <motion.div
+            key="dictate"
+            className="island dictate-pill"
+            initial={{ opacity: 0, y: -10, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.9, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="status"
+            aria-live="polite"
+          >
+            <DictationPill d={dictation} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {tourStep && !showPanel && (
+          <motion.div
+            key="tour"
+            className="island tour-bar"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Tour"
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div key={tour} className="tour-text" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={pop}>
+                <div className="tour-title">{tourStep.title}</div>
+                <div className="tour-body">{tourStep.body}</div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="tour-foot">
+              <span className="tour-dots" aria-label={`Step ${tour! + 1} of ${steps.length}`}>
+                {steps.map((_s, i) => (
+                  <span key={i} className={i === tour ? 'on' : ''} />
+                ))}
+              </span>
+              <span className="spacer" />
+              {tour! < steps.length - 1 && (
+                <button className="plain muted" onClick={() => setTour(null)}>
+                  Skip
+                </button>
+              )}
+              {tour! > 0 && (
+                <button className="pill" onClick={() => setTour(tour! - 1)}>
+                  Back
+                </button>
+              )}
+              <button className="pill primary tour-next" onClick={() => setTour(tour! < steps.length - 1 ? tour! + 1 : null)}>
+                {tour! < steps.length - 1 ? 'Next' : 'Done'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {tourOffer && !tourStep && !showPanel && p.mode === 'idle' && (
+          <motion.div
+            key="tour-offer"
+            className="island notif-stack tour-offer"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">New here? A one-minute tour</span>
+            <button className="clear" onClick={startTour}>
+              Show me
+            </button>
+            <button className="clear undo" aria-label="Not now" onClick={() => setTourOffer(false)}>
+              Later
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isApproval && !showPanel && !atTop && p.mode === 'expanded' && p.queued > 0 && (
@@ -460,6 +728,7 @@ export function Island({ activities }: { activities: Activity[] }) {
           <motion.div
             key="rail"
             className="island rail-shell"
+            onScroll={unscroll}
             initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             // A short fixed fade out: the rail must be gone promptly, or its
@@ -468,7 +737,7 @@ export function Island({ activities }: { activities: Activity[] }) {
             // Follows the panel a beat later.
             transition={{ ...pop, delay: 0.04 }}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
           </motion.div>
         )}
       </AnimatePresence>

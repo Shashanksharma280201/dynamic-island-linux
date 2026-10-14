@@ -3,6 +3,7 @@ import { chmod, unlink } from 'node:fs/promises'
 import { encode, createDecoder } from '@shared/protocol'
 import type { ToolRequest, DecisionMsg } from '@shared/types'
 import { parseUsage, type ClaudeUsage } from '@shared/claude'
+import { parseEvent, type AgentEvent } from '@shared/sessions'
 
 /** Validate an untrusted request from the socket. Pure. */
 export function parseRequest(raw: any): ToolRequest | null {
@@ -16,6 +17,7 @@ export function parseRequest(raw: any): ToolRequest | null {
     toolInput:
       raw.toolInput && typeof raw.toolInput === 'object' ? raw.toolInput : undefined,
     cwd: typeof raw.cwd === 'string' ? raw.cwd : undefined,
+    sessionId: typeof raw.sessionId === 'string' && raw.sessionId ? raw.sessionId.slice(0, 200) : undefined,
     suggestions: Array.isArray(raw.suggestions) ? raw.suggestions : undefined,
     fromIsland: raw.fromIsland === true || undefined,
   }
@@ -43,8 +45,11 @@ export class ClaudeServer {
   private server: net.Server | null = null
   private pending = new Map<string, net.Socket>()
   private reqCb: ((req: ToolRequest) => void) | null = null
-  private cancelCb: ((id: string) => void) | null = null
+  private cancelCb: ((id: string, why: 'timeout' | 'gone') => void) | null = null
+  /** Requests whose hook said it gave up waiting (Claude asks in the terminal now). */
+  private gaveUp = new Set<string>()
   private usageCb: ((u: ClaudeUsage) => void) | null = null
+  private eventCb: ((e: AgentEvent) => void) | null = null
 
   constructor(private socketPath: string) {}
 
@@ -52,13 +57,19 @@ export class ClaudeServer {
     this.reqCb = cb
   }
 
-  onCancel(cb: (id: string) => void): void {
+  /** A request's hook went away: it timed out ('timeout'), or Claude stopped asking ('gone'). */
+  onCancel(cb: (id: string, why: 'timeout' | 'gone') => void): void {
     this.cancelCb = cb
   }
 
   /** Plan usage reported by the status line bridge. */
   onUsage(cb: (u: ClaudeUsage) => void): void {
     this.usageCb = cb
+  }
+
+  /** What a session in a terminal is doing (the session hook). */
+  onEvent(cb: (e: AgentEvent) => void): void {
+    this.eventCb = cb
   }
 
   async start(): Promise<void> {
@@ -76,6 +87,15 @@ export class ClaudeServer {
             if (u) this.usageCb?.(u)
             continue
           }
+          if (m.type === 'gave-up' && typeof m.id === 'string' && ids.has(m.id)) {
+            this.gaveUp.add(m.id)
+            continue
+          }
+          if (m.type === 'event') {
+            const e = parseEvent(m.event)
+            if (e) this.eventCb?.(e)
+            continue
+          }
           if (m.type !== 'request') continue
           const req = parseRequest(m.request)
           if (!req) continue
@@ -88,7 +108,8 @@ export class ClaudeServer {
         for (const id of ids) {
           if (this.pending.get(id) !== socket) continue
           this.pending.delete(id)
-          this.cancelCb?.(id)
+          const why = this.gaveUp.delete(id) ? 'timeout' : 'gone'
+          this.cancelCb?.(id, why)
         }
       })
       socket.on('error', () => {})

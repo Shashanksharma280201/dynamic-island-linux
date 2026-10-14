@@ -6,11 +6,13 @@ import { Badge } from './Badge'
 import { TerminalIcon } from '../icons'
 import { Character } from '../character/Character'
 import { sound } from '../../sound'
-import { APPROVAL_KEYS, keyLabel, type ApprovalKey } from '@shared/approvalKeys'
+import type { ApprovalKey } from '@shared/approvalKeys'
+import { useShortcutLabel } from '../useShortcuts'
+import { parseQuestions } from '@shared/questions'
+import { QuestionCard } from './QuestionCard'
 
-const MAC = navigator.userAgent.includes('Macintosh')
 /** The shortcut that presses this button from anywhere. */
-const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{keyLabel(APPROVAL_KEYS[k], MAC)}</kbd>
+const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{useShortcutLabel(k)}</kbd>
 
 /** Claude Code permission prompt, styled like an Apple permission dialog. */
 export function ApprovalCard({ request, queued }: { request: ToolRequest; queued: number }) {
@@ -20,6 +22,9 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
     window.island.sendDecision({ id: request.id, ...msg })
   }
   if (request.ask) return <AgentAsk request={request} ask={request.ask} queued={queued} decide={decide} />
+  const project = request.cwd?.split(/[\\/]/).filter(Boolean).pop()
+  if (request.toolName === 'AskUserQuestion' && !request.fromIsland && parseQuestions(request.toolInput)) return <QuestionCard request={request} queued={queued} project={project} />
+  if (request.toolName === 'ExitPlanMode' && typeof request.toolInput?.plan === 'string') return <PlanCard request={request} queued={queued} project={project} decide={decide} />
   const detail = describeTool(request.toolName, request.toolInput ?? {})
   const rule = ruleLabel(request.suggestions)
 
@@ -72,6 +77,51 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
           <Key k="always" />
         </button>
       )}
+    </div>
+  )
+}
+
+/** Claude finished planning and wants to start: read the plan, then go or keep planning. */
+function PlanCard({
+  request,
+  queued,
+  project,
+  decide,
+}: {
+  request: ToolRequest
+  queued: number
+  project?: string
+  decide: (e: MouseEvent, msg: Omit<DecisionMsg, 'id'>) => void
+}) {
+  return (
+    <div className="card approval plan-card" data-tool="ExitPlanMode">
+      <div className="card-head">
+        <span className="claude-mark" aria-hidden>
+          ✳
+        </span>
+        <span className="app-name ellipsis">Claude has a plan{project ? ` · ${project}` : ''}</span>
+        <span className="spacer" />
+        <Badge count={queued} />
+      </div>
+      <div className="plan-body" onWheel={(e) => e.stopPropagation()}>
+        {String(request.toolInput?.plan ?? '')}
+      </div>
+      <div className="actions">
+        {!request.fromIsland && (
+          <button className="plain muted" title="Dismiss here and answer in Claude's terminal" onClick={(e) => decide(e, { decision: 'ask' })}>
+            Answer in terminal
+          </button>
+        )}
+        <span className="spacer" />
+        <button className="pill deny" onClick={(e) => decide(e, { decision: 'deny', message: 'Keep planning: the user wants to change the plan before you start.' })}>
+          Keep planning
+          <Key k="deny" />
+        </button>
+        <button className="pill primary allow" onClick={(e) => decide(e, { decision: 'allow' })}>
+          Start
+          <Key k="allow" />
+        </button>
+      </div>
     </div>
   )
 }

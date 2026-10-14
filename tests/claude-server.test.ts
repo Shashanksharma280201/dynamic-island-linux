@@ -52,6 +52,25 @@ test('hook hanging up cancels its pending request', async () => {
   await server.stop()
 })
 
+test('a hook that gave up waiting says so; one that just went away does not', async () => {
+  const sock = sockPath()
+  const server = new ClaudeServer(sock)
+  const why: [string, string][] = []
+  server.onCancel((id, w) => why.push([id, w]))
+  await server.start()
+  const a = connect(sock, [encode({ type: 'request', request: { id: 'slow', toolName: 'Bash' } }), encode({ type: 'gave-up', id: 'slow' })])
+  setTimeout(() => a.client.end(), 100)
+  await a.replies
+  const b = connect(sock, [encode({ type: 'request', request: { id: 'stopped', toolName: 'Bash' } })])
+  setTimeout(() => b.client.destroy(), 100)
+  await new Promise((r) => setTimeout(r, 300))
+  expect(why).toEqual([
+    ['slow', 'timeout'],
+    ['stopped', 'gone'],
+  ])
+  await server.stop()
+})
+
 test('malformed input does not crash the server', async () => {
   const sock = sockPath()
   const server = new ClaudeServer(sock)

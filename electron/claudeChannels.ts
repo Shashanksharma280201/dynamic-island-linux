@@ -10,4 +10,5 @@ export const CLAUDE = {
   SET_APPROVALS: 'claude:set-approvals', // invoke(on): install the approvals hook
   STT_ENSURE: 'claude:stt-ensure', // invoke: download the speech model if needed
   VOICE: 'claude:voice', // main -> renderer: talk shortcut pressed
+  ATTACH: 'claude:attach', // invoke -> Attachment | null: the window you were in
 } as const

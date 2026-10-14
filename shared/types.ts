@@ -1,3 +1,5 @@
+import type { AgentSession } from './sessions'
+import type { Shortcuts } from './shortcuts'
 import type { CharacterConfig } from './character'
 import type { AiSettings, ProviderId } from './ai'
 import type { PackageId, PackageTab, PackagesConfig } from './packages'
@@ -10,6 +12,8 @@ export type ToolRequest = {
   cwd?: string
   /** Claude's `permission_suggestions` (rules offered for "always allow"). */
   suggestions?: unknown[]
+  /** The Claude Code session asking (to show its project and steps). */
+  sessionId?: string
   /** Asked by a command started from the island (there's no terminal to answer in). */
   fromIsland?: boolean
   /** The island's own agent asking before it acts for you (not Claude Code). */
@@ -74,7 +78,16 @@ export type MessageData = {
   status?: { kind: 'sending' | 'sent' | 'error'; text?: string }
 }
 
-type Base = { id: string; priority: number; /** insertion order, newer = larger */ seq?: number }
+type Base = {
+  id: string
+  priority: number
+  /** insertion order, newer = larger */
+  seq?: number
+  /** A card that closes by itself: how long it stays up (ms) from when it shows. */
+  closes?: number
+  /** Pinned: it stays until you close it. */
+  pinned?: boolean
+}
 
 export type Activity =
   | (Base & { kind: 'media'; media: MediaState })
@@ -82,6 +95,8 @@ export type Activity =
   | (Base & { kind: 'notification'; notification: NotificationData })
   | (Base & { kind: 'message'; message: MessageData })
   | (Base & { kind: 'claude'; run: ClaudeRun })
+  /** A Claude Code (or other agent) session in a terminal; `others` are also working. */
+  | (Base & { kind: 'session'; session: AgentSession; others?: number })
 
 export type SystemState = {
   volume: number // 0-100
@@ -112,6 +127,17 @@ export const IPC = {
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
+  QUESTION_KEY: 'island:question-key', // main -> renderer: { n } pick option n, or { send: true }
+  DICTATE: 'island:dictate', // main -> renderer: start / finish dictating
+  DICTATE_TYPE: 'island:dictate-type', // invoke(text) -> boolean: typed into the focused app
+  SET_LOOK: 'island:set-look', // renderer -> main: { outfit?, color? } from the island's wardrobe
+  RECAP: 'island:recap', // main -> renderer: { card, name } show a weekly recap
+  RECAP_SAVE: 'island:recap-save', // invoke(png data URL) -> saved path
+  RECAP_COPY: 'island:recap-copy', // invoke(png data URL) -> copied?
+  RECAP_SHOW: 'island:recap-show', // invoke(path): show it in its folder
+  TOUR: 'island:tour', // main -> renderer: start "Show me around"
+  KEYS: 'island:keys', // main -> renderer: Shortcuts (the global shortcuts' keys)
+  PIN: 'island:pin', // renderer -> main: activity id (keep a transient card until it's closed)
   FOCUS: 'island:focus', // renderer -> main: boolean (take keyboard focus for typing)
   REPLY: 'island:reply', // renderer -> main: { id, text }
   MESSAGE_ACTION: 'island:message-action', // renderer -> main: { id, action }
@@ -147,6 +173,8 @@ export type DecisionMsg = {
   message?: string
   /** Allow and apply Claude's suggested permission rules. */
   always?: boolean
+  /** Your answers to Claude's questions (AskUserQuestion), by question text. */
+  answers?: Record<string, string>
 }
 export type MediaCmd =
   | 'playpause'
@@ -263,6 +291,27 @@ export type SettingsState = {
   notifications: boolean
   autostart: boolean
   hookInstalled: boolean
+  /** The global shortcuts' keys. */
+  keys: Shortcuts
+  /** Open the panel when the pointer rests on the resting island. */
+  openOnHover: boolean
+  /** Sounds replaced by your own files. */
+  customSounds: string[]
+  /** The character also sits on the desktop. */
+  companion: boolean
+  /** Keep the weekly recap's history. */
+  recap: boolean
+  /** Services you follow, and how the last look went. */
+  services: { id: string; on: boolean; hasKey: boolean; url: string; error?: string; checkedAt?: number }[]
+  /** Which display the island lives on, and the displays there are. */
+  display: string
+  displays: { key: string; name: string }[]
+  /** Dictate anywhere, and whether its shortcut could be registered. */
+  dictation: boolean
+  dictationActive: boolean
+  mac: boolean
+  /** Other coding agents (Codex, Gemini CLI, Cursor) whose sessions show on the island. */
+  agentHooks: { id: string; name: string; installed: boolean; path: string; note: string }[]
   /** False when passwords can only be obfuscated (no desktop keyring). */
   secureStorage: boolean
   dockSide: 'left' | 'right' | 'top'

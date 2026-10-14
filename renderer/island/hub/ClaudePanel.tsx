@@ -1,3 +1,6 @@
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { OrbHalo } from '../../orb/OrbHalo'
+import { orbForRun, orbForVoice } from '@shared/orbs'
 import { useEffect, useRef, useState } from 'react'
 import type { ClaudeView, ClaudeUsage, UsageWindow } from '@shared/claude'
 import { currentWindow } from '@shared/claude'
@@ -8,7 +11,8 @@ import { useKeyboard } from './useKeyboard'
 import { Character, useCharacter } from '../character/Character'
 import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
-import { ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
+import { ClipIcon, ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
+import { attachmentNote } from '@shared/attachment'
 
 const folderName = (p: string) => p.split('/').filter(Boolean).pop() ?? '~'
 
@@ -105,7 +109,10 @@ function Conversation({ view }: { view: ClaudeView }) {
           <div className="claude-answer live">
             <Character mood={moodFor(run.phase, run.tool?.name)} size={24} label={runStatus(run)} />
             <div className="claude-answer-text">
-              <div className="claude-status">{runStatus(run)}</div>
+              <div className="claude-status">
+                <Orb state={orbForRun(run.phase, run.tool?.name)} size={15} color={AGENT_INK} className="status-orb" />
+                {runStatus(run)}
+              </div>
               {run.reply && <div className="claude-live-reply">{run.reply}</div>}
             </div>
           </div>
@@ -141,13 +148,29 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
   const kb = useKeyboard(onTyping)
   const ref = useRef<HTMLTextAreaElement>(null)
   const busy = runActive(view.run)
+  // The window you were in, attached to your next message (Claude Code only).
+  const [attached, setAttached] = useState<{ title: string; path: string | null; preview: string | null } | null>(null)
+  const [attaching, setAttaching] = useState(false)
+  const attach = async () => {
+    setAttaching(true)
+    try {
+      const a = await window.island.claude.attach()
+      if (a) setAttached(a)
+      else setErr('Open the panel from the app you want to show Claude, then attach it.')
+    } catch (e) {
+      setErr(errorText(e))
+    } finally {
+      setAttaching(false)
+    }
+  }
   const send = async () => {
     const t = text.trim()
     if (!t || busy) return
     setErr(null)
     try {
-      await window.island.claude.ask(t)
+      await window.island.claude.ask(attached ? `${t}\n\n${attachmentNote(attached)}` : t)
       setText('')
+      setAttached(null)
     } catch (e) {
       setErr(errorText(e))
     }
@@ -160,7 +183,21 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
           {err || voice.error}
         </div>
       )}
+      {attached && (
+        <div className="attached" title={attached.path ?? attached.title}>
+          {attached.preview ? <img src={attached.preview} alt="" /> : <span className="attached-icon">▢</span>}
+          <span className="ellipsis">{attached.title || 'The window you were in'}</span>
+          <button className="attached-x" aria-label="Remove" title="Remove" onClick={() => setAttached(null)}>
+            ×
+          </button>
+        </div>
+      )}
       <div className="reply-field claude-field">
+        {usesClaudeCode(view) && !busy && (
+          <button className={`round-btn attach-btn${attached ? ' on' : ''}`} title="Attach the window you were in" aria-label="Attach the window you were in" disabled={attaching} onClick={() => void attach()}>
+            <ClipIcon />
+          </button>
+        )}
         <textarea
           ref={ref}
           rows={1}
@@ -210,6 +247,7 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
 
 /** The Claude tab: plan limits, the conversation, and voice / text input. */
 export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null; voice: Voice; onTyping: (on: boolean) => void }) {
+  const levelRef = useRef(0)
   const { name } = useCharacter()
   const code = !!view && usesClaudeCode(view)
   const usable = !!view && (code ? !!view.binary : !view.assistant.problem)
@@ -252,6 +290,8 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       </div>
     )
   const voiceOn = voice.phase !== 'idle'
+  // The halo reads the microphone every frame, without re-rendering the panel.
+  levelRef.current = voice.level
   const hasHistory = view.turns.length > 0 || runActive(view.run)
   return (
     <div className="view claude-panel">
@@ -289,7 +329,10 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       {code && <Limits usage={view.usage} bridge={view.usageBridge} />}
       {voiceOn ? (
         <div className={`voice-stage ${voice.phase}`}>
-          <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
+          {/* The orb swells with your voice while it listens. */}
+          <OrbHalo state={orbForVoice(voice.phase)} size={132} color={voice.phase === 'listening' ? '#ffb35c' : undefined} level={voice.phase === 'listening' ? () => levelRef.current : undefined}>
+            <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
+          </OrbHalo>
           <div className="caption voice-caption">{voiceCaption(voice, view)}</div>
           {voice.phase === 'preparing' && view.stt.downloading && (
             <div className="meter-bar download">

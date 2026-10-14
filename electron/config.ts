@@ -6,6 +6,9 @@ import { DEFAULT_DOCK, parseDock, type Dock } from '@shared/dock'
 import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { parseAiConfig, type AiConfig } from '@shared/ai'
 import { parsePackages, type PackagesConfig } from '@shared/packages'
+import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
+import { parseDisplayPref, type DisplayPref } from '@shared/displays'
+import { parseServices, type ServicesConfig } from './services'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -13,6 +16,8 @@ export type StoredMailAccount = MailAccount & { secret: string }
 export type Config = {
   /** Mirror desktop notifications on the island. */
   notifications: boolean
+  /** Do Not Disturb: notifications and messages go quietly to the notification center. */
+  dnd: boolean
   /** Run the built-in WhatsApp (linked device). */
   whatsapp: boolean
   mail: StoredMailAccount[]
@@ -22,6 +27,20 @@ export type Config = {
   appearance: Appearance
   /** Global Ctrl+I shortcut to open / close the island panel. */
   shortcut: boolean
+  /** The keys of the global shortcuts (you can change them in Settings). */
+  keys: Shortcuts
+  /** Open the panel when the pointer rests on the resting island (no click needed). */
+  openOnHover: boolean
+  /** Keep a weekly recap of your coding sessions (counts only). */
+  recap: boolean
+  /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
+  services: ServicesConfig
+  /** Which display the island lives on: 'primary', 'cursor' or a monitor's key. */
+  display: DisplayPref
+  /** Dictate anywhere with a shortcut (typed into the app you're in). */
+  dictation: boolean
+  /** The character also sits on the desktop, where you put it. */
+  companion: { on: boolean; at: { x: number; y: number } | null }
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
   /** The island's little sounds (off unless turned on). */
@@ -80,11 +99,19 @@ export function parseClaudeConfig(raw: any): ClaudeConfig {
 
 const DEFAULTS: Config = {
   notifications: true,
+  dnd: false,
   whatsapp: false,
   mail: [],
   dock: DEFAULT_DOCK,
   appearance: 'glass',
   shortcut: true,
+  keys: parseShortcuts(null),
+  openOnHover: false,
+  companion: { on: false, at: null },
+  dictation: true,
+  display: 'primary',
+  services: parseServices(null),
+  recap: true,
   frosted: true,
   sounds: false,
   greeted: '',
@@ -122,7 +149,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), keys: parseShortcuts(null), companion: { on: false, at: null }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -135,10 +162,21 @@ export function mergeConfig(raw: unknown): Config {
   if (r.dock) c.dock = parseDock(r.dock)
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
+  c.keys = parseShortcuts(r.keys)
+  if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
+  if (typeof r.dictation === 'boolean') c.dictation = r.dictation
+  c.display = parseDisplayPref(r.display)
+  c.services = parseServices(r.services)
+  if (typeof r.recap === 'boolean') c.recap = r.recap
+  c.companion = {
+    on: r.companion?.on === true,
+    at: Number.isFinite(r.companion?.at?.x) && Number.isFinite(r.companion?.at?.y) ? { x: Math.round(r.companion.at.x), y: Math.round(r.companion.at.y) } : null,
+  }
   if (typeof r.frosted === 'boolean') c.frosted = r.frosted
   if (typeof r.sounds === 'boolean') c.sounds = r.sounds
   if (typeof r.greeted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.greeted)) c.greeted = r.greeted
   if (typeof r.notifications === 'boolean') c.notifications = r.notifications
+  if (typeof r.dnd === 'boolean') c.dnd = r.dnd
   if (typeof r.whatsapp === 'boolean') c.whatsapp = r.whatsapp
   if (Array.isArray(r.mail)) {
     c.mail = r.mail.map(parseMailAccount).filter((a: StoredMailAccount | null) => !!a)

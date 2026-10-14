@@ -1,3 +1,5 @@
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { orbForRun } from '@shared/orbs'
 import { useRef, useState, type ReactNode } from 'react'
 import type { ClaudeRun, ClaudeView } from '@shared/claude'
 import { moodFor } from '@shared/character'
@@ -98,7 +100,10 @@ export function AskBar({
         <div className={`ask-run${working ? ' live' : ''}${ours.phase === 'error' ? ' failed' : ''}`}>
           <Character mood={moodFor(ours.phase, ours.tool?.name)} size={26} label={runStatus(ours)} />
           <div className="ask-run-text">
-            <div className="claude-status">{working ? runStatus(ours) : ours.phase === 'error' ? 'Couldn’t finish' : runStatus(ours)}</div>
+            <div className="claude-status">
+              {working && <Orb state={orbForRun(ours.phase, ours.tool?.name)} size={15} color={AGENT_INK} className="status-orb" />}
+              {working ? runStatus(ours) : ours.phase === 'error' ? 'Couldn’t finish' : runStatus(ours)}
+            </div>
             {(ours.reply || ours.error) && <div className="ask-run-reply">{ours.phase === 'error' ? ours.error : ours.reply}</div>}
             {!working && afterRun?.(ours)}
           </div>

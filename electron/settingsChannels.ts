@@ -5,6 +5,19 @@ export const SETTINGS = {
   SET_NOTIFICATIONS: 'settings:set-notifications',
   SET_AUTOSTART: 'settings:set-autostart',
   SET_HOOK: 'settings:set-hook',
+  SET_AGENT_HOOK: 'settings:set-agent-hook', // (agent id, on)
+  SET_KEY: 'settings:set-key', // (shortcut id, accelerator | null for the default) -> error text | null
+  SET_OPEN_ON_HOVER: 'settings:set-open-on-hover', // boolean
+  TOUR: 'settings:tour', // start the island's tour
+  OPEN_SOUNDS: 'settings:open-sounds', // open the folder for your own sounds
+  SET_DICTATION: 'settings:set-dictation', // boolean: dictate anywhere
+  SET_RECAP: 'settings:set-recap', // boolean: keep the weekly recap's history
+  CLEAR_RECAP: 'settings:clear-recap', // forget it
+  SHOW_RECAP: 'settings:show-recap', // show last week's on the island
+  SET_SERVICE: 'settings:set-service', // (id, { on?, url?, token? }) -> error | null
+  SET_DISPLAY: 'settings:set-display', // 'primary' | 'cursor' | a display's key
+  SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
+  RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',
   SET_SHORTCUT: 'settings:set-shortcut',
@@ -28,7 +41,7 @@ export const SETTINGS = {
   SPOTIFY_SIGN_OUT: 'settings:spotify-sign-out',
   SET_CHARACTER: 'settings:set-character', // { id?, name? }
   SET_AI: 'settings:set-ai', // { provider?, model?, baseUrl? } (model / baseUrl for the given or current provider)
-  SET_AI_KEY: 'settings:set-ai-key', // (provider, key | '') — '' removes it
+  SET_AI_KEY: 'settings:set-ai-key', // (provider, key | ''): '' removes it
   SET_PACKAGE: 'settings:set-package', // (id, on)
   AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
 } as const

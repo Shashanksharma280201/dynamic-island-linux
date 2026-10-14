@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { SystemState, SysCmd } from '@shared/types'
-import { SpeakerIcon, SunIcon, WifiIcon, BluetoothIcon, GearIcon } from '../icons'
+import { SpeakerIcon, SunIcon, WifiIcon, BluetoothIcon, GearIcon, MoonIcon, KeyboardIcon } from '../icons'
+import { SHORTCUT_INFO, shortcutLabel, type ShortcutId } from '@shared/shortcuts'
+import { useShortcuts } from '../useShortcuts'
+
+const MAC = navigator.userAgent.includes('Macintosh')
 
 function send(cmd: SysCmd) {
   window.island.sendSysCmd(cmd)
@@ -106,16 +110,39 @@ function Toggle({
   )
 }
 
-export function ControlCenter({ sys }: { sys: SystemState | null }) {
-  const hasRadios = sys && (sys.wifi !== null || sys.bluetooth !== null)
+/** Every shortcut with its keys as they're set now, plus the island's gestures. */
+function ShortcutSheet() {
+  const keys = useShortcuts()
+  const rows: [string, string][] = [
+    ...(['panel', 'voice', 'dictate', 'allow', 'deny', 'always'] as ShortcutId[]).map((id): [string, string] => [SHORTCUT_INFO[id].label, shortcutLabel(keys[id], MAC)]),
+    ['Move the island', 'Drag it'],
+    ['Peek at what’s going on', 'Rest the pointer on it'],
+  ]
+  return (
+    <div className="module shortcut-sheet" role="list" aria-label="Keyboard shortcuts">
+      {rows.map(([what, how]) => (
+        <div className="sheet-row" role="listitem" key={what}>
+          <span className="ellipsis">{what}</span>
+          {how.includes(' ') && !/[+⌃⌥⌘⇧]/.test(how) ? <span className="sheet-how">{how}</span> : <kbd className="key">{how}</kbd>}
+        </div>
+      ))}
+      <button className="plain sheet-change" onClick={() => window.island.openSettings('shortcuts')}>
+        Change keys…
+      </button>
+    </div>
+  )
+}
+
+export function ControlCenter({ sys, dnd = false }: { sys: SystemState | null; dnd?: boolean }) {
+  const [sheet, setSheet] = useState(false)
   return (
     <div className="cc" onClick={(e) => e.stopPropagation()}>
       {!sys ? (
         <div className="module caption">Loading…</div>
       ) : (
         <>
-          {hasRadios && (
-            <div className="module toggles">
+          <div className="module toggles">
+              <Toggle label="Do Not Disturb" on={dnd} icon={<MoonIcon />} onToggle={() => void window.island.notifications.setDnd(!dnd)} />
               {sys.wifi !== null && (
                 <Toggle
                   label="Wi-Fi"
@@ -132,8 +159,7 @@ export function ControlCenter({ sys }: { sys: SystemState | null }) {
                   onToggle={() => send({ type: 'bluetooth', value: !sys.bluetooth })}
                 />
               )}
-            </div>
-          )}
+          </div>
           {sys.brightness !== null && (
             <div className="module">
               <Slider
@@ -165,7 +191,12 @@ export function ControlCenter({ sys }: { sys: SystemState | null }) {
           </div>
         </>
       )}
+      {sheet && <ShortcutSheet />}
       <div className="panel-foot">
+        <button className={`plain muted row${sheet ? ' on' : ''}`} aria-expanded={sheet} onClick={() => setSheet(!sheet)}>
+          <KeyboardIcon /> Shortcuts
+        </button>
+        <span className="spacer" />
         <button
           className="plain muted row"
           style={{ gap: 6 }}

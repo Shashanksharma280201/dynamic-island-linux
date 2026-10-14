@@ -10,7 +10,12 @@ import type { ClaudeSettings, SettingsState } from '@shared/types'
 import { saveConfig, parseMailAccount, type Config, type StoredMailAccount } from './config'
 import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
-import { isHookInstalled, setHookInstalled } from './hookSetup'
+import type { ShortcutId } from '@shared/shortcuts'
+import { parseDisplayPref } from '@shared/displays'
+import { SERVICE_IDS, type ServiceId } from '@shared/services'
+import type { ServiceHub } from './services'
+import { displayChoices } from './window'
+import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
 import type { WhatsAppService } from './providers/whatsapp'
@@ -38,6 +43,22 @@ type Deps = {
   onAppearance: () => void
   /** Re-register the global shortcut; returns whether it is active. */
   applyShortcut: () => boolean
+  /** Change a shortcut's keys (null: back to the default); an error to show, or null. */
+  setKey: (id: ShortcutId, accel: string | null) => string | null
+  /** Let go of our global shortcuts while new keys are recorded (and take them back). */
+  pauseShortcuts: (on: boolean) => void
+  startTour: () => void
+  setCompanion: (on: boolean) => void
+  setDisplay: (pref: string) => void
+  services: () => ServiceHub
+  clearRecap: () => void
+  showRecap: () => void
+  setDictation: (on: boolean) => void
+  dictationActive: () => boolean
+  /** Sounds you replaced with your own files, and their folder. */
+  customSounds: () => string[]
+  openSounds: () => void
+  onOpenOnHover: () => void
   shortcutActive: () => boolean
   onFrosted: () => void
   /** Ask, then remove the island from this computer. */
@@ -72,10 +93,25 @@ export class SettingsController {
       notifications: config.notifications,
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),
+      agentHooks: agentHooks(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
       shortcut: config.shortcut,
+      keys: config.keys,
+      openOnHover: config.openOnHover,
+      customSounds: this.d.customSounds(),
+      companion: config.companion.on,
+      display: config.display,
+      recap: config.recap,
+      services: SERVICE_IDS.map((id) => {
+        const st = this.d.services().view().find((v) => v.id === id)
+        return { id, on: config.services[id].on, hasKey: !!config.services[id].secret, url: config.services[id].url, error: st?.error, checkedAt: st?.checkedAt }
+      }),
+      displays: displayChoices(),
+      dictation: config.dictation,
+      dictationActive: this.d.dictationActive(),
+      mac: process.platform === 'darwin',
       frosted: config.frosted,
       sounds: config.sounds,
       frostedAvailable: this.d.frostedAvailable,
@@ -111,6 +147,8 @@ export class SettingsController {
 
   open(section?: string): void {
     if (this.win && !this.win.isDestroyed()) {
+      // Already open: just go to the section asked for.
+      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(section)})?.scrollIntoView({ behavior: 'smooth' })`)
       this.win.show()
       this.win.focus()
       return
@@ -202,12 +240,72 @@ export class SettingsController {
       this.d.applyShortcut()
       this.changed()
     })
+    ipcMain.handle(SETTINGS.SET_KEY, (_e, id, accel) => {
+      if (!(id in config.keys) || (accel !== null && typeof accel !== 'string')) return 'Unknown shortcut'
+      const error = this.d.setKey(id as ShortcutId, accel)
+      this.changed()
+      return error
+    })
+    ipcMain.handle(SETTINGS.RECORDING, (_e, on) => this.d.pauseShortcuts(on === true))
+    ipcMain.handle(SETTINGS.TOUR, () => this.d.startTour())
+    ipcMain.handle(SETTINGS.OPEN_SOUNDS, () => this.d.openSounds())
+    ipcMain.handle(SETTINGS.SET_DICTATION, (_e, on) => {
+      this.d.setDictation(on === true)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_RECAP, (_e, on) => {
+      config.recap = on === true
+      this.save()
+    })
+    ipcMain.handle(SETTINGS.CLEAR_RECAP, () => this.d.clearRecap())
+    ipcMain.handle(SETTINGS.SHOW_RECAP, () => this.d.showRecap())
+    ipcMain.handle(SETTINGS.SET_SERVICE, async (_e, id, patch) => {
+      if (!(SERVICE_IDS as readonly unknown[]).includes(id) || !patch || typeof patch !== 'object') return 'Unknown service'
+      const sid = id as ServiceId
+      const cur = config.services[sid]
+      const next = { ...cur }
+      if (typeof patch.on === 'boolean') next.on = patch.on
+      if (typeof patch.url === 'string') {
+        const url = patch.url.trim().replace(/\/$/, '')
+        if (url && !/^https?:\/\/[^\s/]+/.test(url)) return 'That doesn’t look like an address (https://…)'
+        next.url = url
+      }
+      const token = typeof patch.token === 'string' ? patch.token.trim() : null
+      // A new key (or address) is tried before it's kept.
+      if ((token || (typeof patch.url === 'string' && next.url !== cur.url)) && next.on) {
+        const key = token || (cur.secret ? decryptSecret(cur.secret) : '')
+        if (key) {
+          const err = await this.d.services().verify(sid, next, key)
+          if (err) return err
+        }
+      }
+      if (token !== null) next.secret = token ? encryptSecret(token) : ''
+      config.services = { ...config.services, [sid]: next }
+      this.save()
+      this.d.services().restart(sid)
+      return null
+    })
+    ipcMain.handle(SETTINGS.SET_DISPLAY, (_e, pref) => {
+      this.d.setDisplay(parseDisplayPref(pref))
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_COMPANION, (_e, on) => {
+      this.d.setCompanion(on === true)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_OPEN_ON_HOVER, (_e, on) => {
+      config.openOnHover = on === true
+      this.save()
+      this.d.onOpenOnHover()
+    })
     ipcMain.handle(SETTINGS.SET_CHARACTER, (_e, patch) => {
       const switching = typeof patch?.id === 'string' && patch.id !== config.character.id
       config.character = parseCharacter({
         id: typeof patch?.id === 'string' ? patch.id : config.character.id,
         // Switching without renaming takes the new character's own name.
         name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
+        outfit: patch && 'outfit' in patch ? patch.outfit : config.character.outfit,
+        color: patch && 'color' in patch ? patch.color : config.character.color,
       })
       this.save()
       this.d.onCharacter()
@@ -267,6 +365,11 @@ export class SettingsController {
       await setHookInstalled(on === true)
       this.changed()
       this.d.onConfigChanged()
+    })
+    ipcMain.handle(SETTINGS.SET_AGENT_HOOK, async (_e, id, on) => {
+      if (typeof id !== 'string') return
+      await setAgentHook(id, on === true)
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_WHATSAPP, async (_e, on) => {
       config.whatsapp = on === true

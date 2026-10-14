@@ -12,6 +12,8 @@ export class TransientCards {
   private held = new Set<string>()
   /** Cards on their way out (e.g. "Sent"); hovering no longer keeps them. */
   private closing = new Set<string>()
+  /** Pinned cards: no timer until they're closed. */
+  private pinned = new Set<string>()
   private onDismissCbs: Array<(id: string) => void> = []
 
   constructor(
@@ -26,13 +28,15 @@ export class TransientCards {
 
   /** Show (or refresh) a card for `ms`. Re-showing the same id restarts its timer. */
   show(a: Activity, ms: number): void {
-    this.store.upsert(a)
+    // A pinned card that's updated stays pinned; otherwise it says how long it stays.
+    const pinned = this.pinned.has(a.id)
+    this.store.upsert(pinned ? { ...a, closes: undefined, pinned: true } : { ...a, closes: ms, pinned: undefined })
     this.durations.set(a.id, ms)
-    this.arm(a.id, ms)
+    if (!pinned) this.arm(a.id, ms)
     let excess = this.durations.size - this.max
     for (const old of [...this.durations.keys()]) {
       if (excess <= 0) break
-      if (old === a.id || this.held.has(old)) continue
+      if (old === a.id || this.held.has(old) || this.pinned.has(old)) continue
       this.dismiss(old)
       excess--
     }
@@ -42,8 +46,19 @@ export class TransientCards {
     return this.durations.has(id)
   }
 
+  /** Keep a card until it's closed (no timer, holds no longer matter). */
+  pin(id: string): void {
+    if (!this.durations.has(id) || this.closing.has(id) || this.pinned.has(id)) return
+    this.pinned.add(id)
+    clearTimeout(this.timers.get(id))
+    this.timers.delete(id)
+    this.held.delete(id)
+    const a = this.store.list().find((x) => x.id === id)
+    if (a) this.store.upsert({ ...a, closes: undefined, pinned: true })
+  }
+
   hold(id: string, on: boolean): void {
-    if (!this.durations.has(id) || this.closing.has(id)) return
+    if (!this.durations.has(id) || this.closing.has(id) || this.pinned.has(id)) return
     if (on) {
       this.held.add(id)
       clearTimeout(this.timers.get(id))
@@ -57,6 +72,7 @@ export class TransientCards {
   dismissIn(id: string, ms: number): void {
     if (!this.durations.has(id)) return
     this.held.delete(id)
+    this.pinned.delete(id)
     this.closing.add(id)
     this.arm(id, ms)
   }
@@ -67,6 +83,7 @@ export class TransientCards {
     this.durations.delete(id)
     this.held.delete(id)
     this.closing.delete(id)
+    this.pinned.delete(id)
     this.store.remove(id)
     for (const cb of this.onDismissCbs) cb(id)
   }

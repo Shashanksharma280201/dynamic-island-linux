@@ -1,7 +1,7 @@
-import { app, dialog, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, resolve } from 'node:path'
-import { readFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import {
@@ -24,21 +24,28 @@ import { dayOf, greeting, loadConfig, saveConfig } from './config'
 import { decryptSecret } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
+  agentHooks,
   findExecutable,
   hookDir,
+  hookNeedsUpgrade,
   isHookInstalled,
   isUsageBridgeInstalled,
   nodeRunner,
+  setAgentHook,
   setHookInstalled,
   setUsageBridgeInstalled,
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
-import type { DecisionMsg, MediaState } from '@shared/types'
-import { APPROVAL_KEYS, canAlways, frontApproval } from '@shared/approvalKeys'
+import type { DecisionMsg, MediaState, ToolRequest } from '@shared/types'
+import { canAlways, frontApproval, type ApprovalKey } from '@shared/approvalKeys'
+import { parseQuestions } from '@shared/questions'
+import { describeTool } from '@shared/toolDetail'
+import { clash, DEFAULT_SHORTCUTS, sameAccel, SHORTCUT_INFO, shortcutLabel, validAccel } from '@shared/shortcuts'
 import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
 import { enabledPackages, enabledTabs } from '@shared/packages'
+import { parseCharacter } from '@shared/character'
 import { friendlyError, listModels } from './agent/providers'
 import { agentSystemPrompt } from './agent/prompt'
 import { baseUrlFor, modelFor, providerInfo, setupProblem } from '@shared/ai'
@@ -53,6 +60,22 @@ import { homedir } from 'node:os'
 import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
+import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
+import { SessionTracker } from './sessions'
+import { RecapStore } from './recap'
+import { recapCard, recapDue, weekBefore, weekOf } from '@shared/recap'
+import { agentName } from '@shared/sessions'
+import { CustomSounds } from './sounds'
+import { Companion } from './companion'
+import { dictatedText, pasteIntoFocusedApp } from './paste'
+import { companionMood } from '@shared/companion'
+import { SESSIONS } from './sessionChannels'
+import { focusTerminal, frontWindow, terminalFocused } from './terminal'
+import { captureWindow, type FrontWindow } from './attach'
+import { ServiceHub } from './services'
+import { SERVICES } from './servicesChannels'
+import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
+import { CLAUDE } from './claudeChannels'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
@@ -89,7 +112,6 @@ const DEMO = process.env.DI_DEMO
 const FAKE_WA = process.env.DI_WHATSAPP_ENGINE === 'fake' || DEMO === '4'
 
 const bootConfig = loadConfig()
-const SHORTCUT = 'CommandOrControl+I'
 // whatsapp-web.js drives a hidden window of this app over the Chrome DevTools
 // Protocol, which Chromium only offers when started with a debugging port.
 // Only opened when WhatsApp is enabled, bound to localhost, on a random port.
@@ -125,7 +147,7 @@ async function main() {
   // A menu-bar app on macOS: no Dock icon.
   if (process.platform === 'darwin') app.dock?.hide()
   const store = new ActivityStore()
-  const win = createIslandWindow(config.dock.side)
+  const win = createIslandWindow(config.dock.side, config.display)
   const claudeStateReady = earlyClaudeState()
   // The island may use the microphone (talking to Claude); nothing else.
   win.webContents.session.setPermissionRequestHandler((wc, permission, cb, details) => {
@@ -141,9 +163,12 @@ async function main() {
   )
   speech.serve()
   let waForMedia: WhatsAppService | null = null
-  serveMedia(() => waForMedia)
+  // Your own sounds (Settings → General → Sounds → Open Folder).
+  let onSounds = () => {}
+  const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
+  serveMedia(() => waForMedia, (kind) => customSounds.read(kind))
   let claudeUi: ClaudeController | null = null
-  let display: Display = placeIslandWindow(win, config.dock.side)
+  let display: Display = placeIslandWindow(win, config.dock.side, config.display)
   // The side actually shown: config.dock.side, or a preview while dragging.
   let shownSide: Side = config.dock.side
   const pushDock = () =>
@@ -172,6 +197,26 @@ async function main() {
   }, 66)
   store.onChange(pushState)
   const transient = new TransientCards(store)
+  // Everything shown (or kept quiet in Do Not Disturb) stays here until cleared.
+  const center = new NotificationCenter(join(app.getPath('userData'), 'notification-center.json'), () => config.dnd)
+  let settings: SettingsController | null = null
+  let tray: IslandTray | null = null
+  // Wired before anything can arrive, so the island can ask for the list as soon as it loads.
+  center.onChange(() => {
+    send(win, NOTIFS.CHANGED, center.view())
+    tray?.refresh()
+  })
+  const setDnd = (on: boolean) => {
+    if (config.dnd === on) return
+    config.dnd = on
+    saveConfig(config)
+    center.changed()
+    settings?.changed()
+  }
+  const clearCards = () => {
+    for (const a of store.list()) if (a.kind === 'notification' || a.kind === 'message') transient.dismiss(a.id)
+  }
+  wireNotificationCenter(center, { clearCards, setDnd })
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
   // ---- documents: files you add, and what's made from them ----
   // LibreOffice (deb, snap or flatpak), for exact Office → PDF conversions.
@@ -256,7 +301,7 @@ async function main() {
       `scale: ${display.scaleFactor}, bounds: ${JSON.stringify(win.getBounds())}`,
   )
   const replace = () => {
-    display = placeIslandWindow(win, shownSide)
+    display = placeIslandWindow(win, shownSide, config.display)
     updateHitArea()
     pushDock()
   }
@@ -270,6 +315,18 @@ async function main() {
   screen.on('display-metrics-changed', replace)
   screen.on('display-added', replace)
   screen.on('display-removed', replace)
+  // "The display with the pointer": move over when the pointer does (not while the panel is open).
+  let panelOpen = false
+  const followTimer = setInterval(() => {
+    if (config.display !== 'cursor' || panelOpen || win.isDestroyed()) return
+    const here = screen.getDisplayNearestPoint(screen.getCursorScreenPoint())
+    if (here.id !== display.id) replace()
+  }, 500)
+  const setDisplay = (pref: string) => {
+    config.display = pref
+    saveConfig(config)
+    replace()
+  }
 
   // ---- Claude approvals ----
   const claude = new ClaudeServer(SOCK)
@@ -277,8 +334,74 @@ async function main() {
     store.upsert({ kind: 'approval', id: req.id, priority: 10, request: req })
   })
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
-  claude.onCancel((id) => store.remove(id))
+  // The hook went away: Claude stopped asking (quietly drop the card), or it
+  // waited too long here and Claude now asks in the terminal (say so).
+  claude.onCancel((id, why) => {
+    const a = store.list().find((x) => x.id === id)
+    store.remove(id)
+    if (why !== 'timeout' || a?.kind !== 'approval' || a.request.fromIsland) return
+    transient.show(
+      {
+        kind: 'notification',
+        id: `handled-${id}`,
+        priority: 3,
+        notification: {
+          app: 'Claude Code',
+          summary: 'Claude is asking in the terminal now',
+          body: `${describeTool(a.request.toolName, a.request.toolInput ?? {}).label}: it waited here a while.`,
+          urgency: 'low',
+        },
+      },
+      6000,
+    )
+  })
   claude.onUsage((u) => claudeCode.setUsage(u))
+
+  // ---- The weekly recap: counts of what your agents did, 12 weeks ----
+  const recap = new RecapStore(join(app.getPath('userData'), 'recap.json'), () => config.recap)
+
+  // ---- Claude Code sessions in your terminals, live ----
+  const sessions = new SessionTracker({
+    onChange: (list) => {
+      send(win, SESSIONS.CHANGED, list)
+      // While any work: one small orb for all of them, the busiest first.
+      const working = list.filter((x) => x.phase === 'working')
+      if (working.length) store.upsert({ kind: 'session', id: 'agent-sessions', priority: 2, session: working[0], others: working.length - 1 })
+      else store.remove('agent-sessions')
+      for (const a of store.list()) {
+        if (a.kind !== 'session' || a.id === 'agent-sessions') continue
+        const now = sessions.get(a.session.id)
+        // Its card goes once it's back at work (or gone); a waiting card follows it.
+        if (a.id.startsWith('session-wait-')) {
+          if (now?.phase !== 'waiting') store.remove(a.id)
+          else store.upsert({ ...a, session: now })
+        } else if (!now || now.phase === 'working' || now.phase === 'waiting') transient.dismiss(a.id)
+      }
+    },
+    onFinished: async (x) => {
+      recap.turn({ at: x.finishedAt ?? Date.now(), session: x.id, agent: x.agent, project: x.project, ms: (x.finishedAt ?? Date.now()) - (x.turnStartedAt ?? x.startedAt), files: x.files.length, added: x.added, removed: x.removed, commands: x.commands ?? 0 })
+      // You're looking at its terminal already: no need to tell you.
+      if (x.pid && (await terminalFocused(x.pid))) return
+      const now = sessions.get(x.id)
+      if (now?.phase !== 'done') return
+      transient.show({ kind: 'session', id: `session-done-${x.id}`, priority: 4, session: now }, 15_000)
+    },
+    onWaiting: (x) => store.upsert({ kind: 'session', id: `session-wait-${x.id}`, priority: 7, session: x }),
+  })
+  claude.onEvent((e) => sessions.event(e))
+  sessions.start()
+  ipcMain.handle(SESSIONS.LIST, () => sessions.list())
+  ipcMain.handle(SESSIONS.FOCUS, async (_e, id: unknown) => {
+    const x = typeof id === 'string' ? sessions.get(id) : undefined
+    return !!x?.pid && focusTerminal(x.pid)
+  })
+  ipcMain.handle(SESSIONS.FORGET, (_e, id: unknown) => {
+    if (typeof id !== 'string') return
+    for (const a of store.list()) if (a.kind === 'session' && a.id !== 'agent-sessions' && a.session.id === id) transient.has(a.id) ? transient.dismiss(a.id) : store.remove(a.id)
+    sessions.forget(id)
+  })
+  // Approvals set up before the island followed sessions: add the session hook.
+  if (hookNeedsUpgrade()) setHookInstalled(true).then(() => console.log('[island] Claude Code hook updated to follow sessions live'), (e) => console.error('[island] hook update failed:', e.message ?? e))
 
   // ---- Claude Code commands from the island (voice / typed) ----
   const findClaude = (): string | null => {
@@ -297,6 +420,8 @@ async function main() {
   }
   const agentFinished = (run: ClaudeRun) => {
     store.remove('claude-run')
+    if (run.phase === 'done')
+      recap.turn({ at: Date.now(), session: run.sessionId ?? run.id, agent: config.ai.provider, project: run.cwd.split(/[\\/]/).filter(Boolean).pop() ?? '', ms: Date.now() - run.startedAt, files: 0, added: 0, removed: 0, commands: 0 })
     // A card with the answer, which closes by itself (hover keeps it).
     if (run.phase !== 'stopped') {
       transient.show({ kind: 'claude', id: 'claude-done', priority: 4, run }, run.phase === 'error' ? 12_000 : 15_000)
@@ -486,7 +611,10 @@ async function main() {
   transient.onDismiss((id) => invokes.delete(id))
   let notifSeq = 0
   const showNotification = (n: NotificationData, invoke?: GtkInvoke) => {
-    const id = `notif-${notifSeq++}`
+    // Unique across restarts: the notification center keeps them.
+    const id = `notif-${Date.now().toString(36)}-${notifSeq++}`
+    center.add({ id, at: Date.now(), source: 'notification', app: n.app || 'Notification', icon: n.icon, title: n.summary, body: n.body, urgency: n.urgency })
+    if (config.dnd) return
     if (invoke) invokes.set(id, invoke)
     const priority = n.urgency === 'critical' ? 6 : 5
     transient.show({ kind: 'notification', id, priority, notification: n }, displayMs(n))
@@ -515,9 +643,11 @@ async function main() {
   const crmTimer = setInterval(remindFollowUps, Number(process.env.DI_CRM_REMIND_MS) || 60_000)
 
   // ---- messages: WhatsApp + mail ----
-  const hub = new MessageHub(transient)
-  let settings: SettingsController | null = null
-  let tray: IslandTray | null = null
+  const hub = new MessageHub(
+    transient,
+    (m) => center.add({ id: m.id, at: m.at, source: m.source, app: m.app, icon: m.icon, title: m.title, body: m.body, thread: m.thread }),
+    () => config.dnd,
+  )
   let inbox: ReturnType<typeof wireInbox> | null = null
   const mail = new MailManager(
     (m, account) => {
@@ -563,6 +693,55 @@ async function main() {
     onConfigChanged: () => tray?.refresh(),
     onDockSide: (side) => setDock({ ...config.dock, side }),
     applyShortcut: () => applyShortcut(),
+    setKey: (id, accel) => {
+      const mac = process.platform === 'darwin'
+      const next = accel ?? DEFAULT_SHORTCUTS[id]
+      if (!validAccel(next)) return 'That can’t be a shortcut'
+      const other = clash(config.keys, id, next, mac)
+      if (other) return `${SHORTCUT_INFO[other].label} already uses ${shortcutLabel(next, mac)}`
+      if (sameAccel(config.keys[id], next, mac)) return null
+      // Free? (Another app may hold it; then registering fails.)
+      if (!globalShortcut.register(next, () => {})) return `Another app is using ${shortcutLabel(next, mac)}`
+      globalShortcut.unregister(next)
+      config.keys = { ...config.keys, [id]: next }
+      saveConfig(config)
+      if (id === 'panel') applyShortcut()
+      else if (id === 'dictate') applyDictate()
+      else if (id === 'voice') {
+        claudeUi?.applyVoiceShortcut()
+        claudeUi?.push()
+      } else syncApprovalKeys(true)
+      pushKeys()
+      return null
+    },
+    onOpenOnHover: () => pushAppearance(),
+    setCompanion: (on) => setCompanion(on),
+    setDisplay: (pref) => setDisplay(pref),
+    services: () => serviceHub,
+    clearRecap: () => recap.clear(),
+    showRecap: () => showRecap(true),
+    setDictation: (on) => {
+      config.dictation = on
+      saveConfig(config)
+      applyDictate()
+    },
+    dictationActive: () => !!dictateKey,
+    customSounds: () => customSounds.kinds(),
+    openSounds: () => void shell.openPath(customSounds.ensureDir()),
+    startTour: () => send(win, IPC.TOUR, null),
+    pauseShortcuts: (on) => {
+      if (on) {
+        globalShortcut.unregisterAll()
+        shortcutActive = false
+        approvalKeys = null
+        dictateKey = ''
+        return
+      }
+      applyShortcut()
+      applyDictate()
+      claudeUi?.applyVoiceShortcut()
+      syncApprovalKeys(true)
+    },
     shortcutActive: () => shortcutActive,
     onFrosted: () => backdrop.refresh(),
     uninstall: () => void runUninstall(),
@@ -709,31 +888,51 @@ async function main() {
 
   const decide = (m: DecisionMsg) => {
     if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    if (m.answers) recap.answer('question')
+    else if (m.decision === 'allow' || m.decision === 'deny') recap.answer(m.decision)
     claude.resolve(m)
     store.remove(m.id)
   }
   // Answer the approval on screen from anywhere: Ctrl+Alt+Y / N / A. Grabbed
   // only while one waits, and never by taking focus (a stray "y" typed in
   // another app must not approve anything).
-  let approvalKeys = false
-  const syncApprovalKeys = () => {
-    const waiting = !!frontApproval(store.list())
-    if (waiting === approvalKeys) return
-    approvalKeys = waiting
-    for (const [key, accel] of Object.entries(APPROVAL_KEYS)) {
-      if (!waiting) {
-        globalShortcut.unregister(accel)
-        continue
-      }
+  // For Claude's questions: Ctrl+Alt+1…9 pick an option, Allow sends, Deny leaves it to the terminal.
+  let approvalKeys: Record<ApprovalKey, string> | null = null
+  let questionKeys: string[] = []
+  let keyMode = ''
+  const isQuestion = (r: ToolRequest | null) => !!r && r.toolName === 'AskUserQuestion' && !r.fromIsland && !!parseQuestions(r.toolInput)
+  const syncApprovalKeys = (force = false) => {
+    const front = frontApproval(store.list())
+    const mode = !front ? '' : isQuestion(front) ? 'question' : 'approval'
+    if (mode === keyMode && !force) return
+    keyMode = mode
+    if (approvalKeys) for (const accel of Object.values(approvalKeys)) globalShortcut.unregister(accel)
+    for (const accel of questionKeys) globalShortcut.unregister(accel)
+    questionKeys = []
+    approvalKeys = front ? { allow: config.keys.allow, deny: config.keys.deny, always: config.keys.always } : null
+    if (!approvalKeys) return
+    for (const [key, accel] of Object.entries(approvalKeys)) {
       const ok = globalShortcut.register(accel, () => {
         const r = frontApproval(store.list())
         if (!r || (key === 'always' && !canAlways(r))) return
+        if (isQuestion(r)) {
+          // Allow sends the answers picked on the card; Deny leaves it to the terminal.
+          if (key === 'allow') send(win, IPC.QUESTION_KEY, { send: true })
+          else if (key === 'deny') decide({ id: r.id, decision: 'ask' })
+          return
+        }
         decide({ id: r.id, decision: key === 'deny' ? 'deny' : 'allow', ...(key === 'always' ? { always: true } : {}) })
       })
       if (!ok) console.error(`[island] couldn't register ${accel} for approvals; another app may own it`)
     }
+    if (mode === 'question') {
+      for (let n = 1; n <= 9; n++) {
+        const accel = `Control+Alt+${n}`
+        if (globalShortcut.register(accel, () => send(win, IPC.QUESTION_KEY, { n }))) questionKeys.push(accel)
+      }
+    }
   }
-  store.onChange(syncApprovalKeys)
+  store.onChange(() => syncApprovalKeys())
 
   wireIpc({
     onDecision: decide,
@@ -746,6 +945,9 @@ async function main() {
       backdrop.setExpanded(!!r && r.width > 80)
     },
     onPanel: (open) => {
+      panelOpen = open
+      // The app you were in when you opened the panel (to attach for Claude).
+      if (open) void frontWindow().then((w) => (lastFront = w && w.pid !== process.pid ? w : lastFront))
       if (sysTimer) clearInterval(sysTimer)
       sysTimer = null
       if (!open) return
@@ -757,6 +959,7 @@ async function main() {
       if (process.env.DI_DEBUG) console.error('[hold]', id, hold)
       transient.hold(id, hold)
     },
+    onPin: (id) => transient.pin(id),
     onFocus: setFocus,
     onReply: (m) => void hub.reply(m.id, m.text).finally(() => inbox?.changed('unread')),
     onMessageAction: (m) => void hub.markRead(m.id).finally(() => inbox?.changed('unread')),
@@ -787,21 +990,152 @@ async function main() {
   // KWin blurs behind windows that set _KDE_NET_WM_BLUR_BEHIND_REGION.
   const blurBehind = !!shape && /kde/i.test(process.env.XDG_CURRENT_DESKTOP ?? '')
   // Ctrl+I opens / closes the island panel from anywhere (X11 key grab).
+  let panelKey = ''
   const applyShortcut = (): boolean => {
-    if (shortcutActive) globalShortcut.unregister(SHORTCUT)
+    if (shortcutActive) globalShortcut.unregister(panelKey)
     shortcutActive = false
+    panelKey = config.keys.panel
     if (config.shortcut) {
-      shortcutActive = globalShortcut.register(SHORTCUT, () => send(win, IPC.TOGGLE_PANEL, null))
-      if (!shortcutActive) console.error(`[island] couldn't register ${SHORTCUT}; another app may own it`)
+      shortcutActive = globalShortcut.register(panelKey, () => send(win, IPC.TOGGLE_PANEL, null))
+      if (!shortcutActive) console.error(`[island] couldn't register ${panelKey}; another app may own it`)
     }
     return shortcutActive
   }
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds })
-  const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds, openOnHover: config.openOnHover, customSounds: customSounds.urls() })
+  const pushCharacter = () => {
+    send(win, IPC.CHARACTER, config.character)
+    updateCompanion()
+  }
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
+  const pushKeys = () => send(win, IPC.KEYS, config.keys)
+  // ---- Services you follow (GitHub, Vercel, Stripe, …) ----
+  const serviceHub = new ServiceHub({
+    config: () => config.services,
+    token: (id) => {
+      try {
+        return config.services[id].secret ? decryptSecret(config.services[id].secret) : ''
+      } catch {
+        return ''
+      }
+    },
+    onChange: () => send(win, SERVICES.CHANGED, serviceHub.view()),
+    onEvent: (e) => showNotificationLater({ app: serviceInfo(e.service).name, summary: e.title, body: e.body, urgency: e.urgency }),
+  })
+  serviceHub.start()
+  ipcMain.handle(SERVICES.VIEW, () => serviceHub.view())
+  ipcMain.handle(SERVICES.REFRESH, (_e, id: unknown) => ((SERVICE_IDS as readonly unknown[]).includes(id) ? serviceHub.refresh(id as ServiceId) : undefined))
+  ipcMain.handle(SERVICES.OPEN, (_e, url: unknown) => {
+    if (typeof url === 'string' && safeServiceUrl(url, config.services.n8n.url)) void shell.openExternal(url)
+  })
+  // Attach the window you were in, for Claude (the Claude tab's paperclip).
+  let lastFront: FrontWindow | null = null
+  ipcMain.handle(CLAUDE.ATTACH, async () => (lastFront ? captureWindow(lastFront, join(app.getPath('userData'), 'attachments')) : null))
+  // Dictate anywhere: the shortcut starts / finishes; what you said is typed into the focused app.
+  let dictateKey = ''
+  const applyDictate = () => {
+    if (dictateKey) globalShortcut.unregister(dictateKey)
+    dictateKey = ''
+    if (!config.dictation) return
+    const accel = config.keys.dictate
+    if (globalShortcut.register(accel, () => send(win, IPC.DICTATE, null))) dictateKey = accel
+    else console.error(`[island] couldn't register ${accel} for dictation; another app may own it`)
+  }
+  applyDictate()
+  ipcMain.handle(IPC.DICTATE_TYPE, async (_e, text: unknown) => {
+    if (typeof text !== 'string' || !text.trim() || text.length > 5000) return false
+    return pasteIntoFocusedApp(dictatedText(text))
+  })
+  // The weekly recap: by itself once a week (Monday from 8 am, when nothing
+  // needs you), or from the tray any time. Shows last week.
+  const showRecap = (manual: boolean) => {
+    const now = Date.now()
+    const week = weekBefore(weekOf(now))
+    const w = recap.weeks.find((x) => x.week === week)
+    const card = recapCard(w, week, agentName)
+    if (!manual) {
+      recap.markShown(weekOf(now))
+      if (card.empty) return
+    }
+    send(win, IPC.RECAP, { card, shareCard: recapCard(w, week, agentName, true), name: config.character.name })
+  }
+  const checkRecap = () => {
+    if (!config.recap || !recapDue(Date.now(), recap.lastShown) || frontApproval(store.list())) return
+    showRecap(false)
+  }
+  const recapTimer = setInterval(checkRecap, 10 * 60_000)
+  setTimeout(checkRecap, 20_000)
+  const recapImage = (dataUrl: unknown): Buffer | null =>
+    typeof dataUrl === 'string' && dataUrl.startsWith('data:image/png;base64,') && dataUrl.length < 20_000_000 ? Buffer.from(dataUrl.slice(22), 'base64') : null
+  ipcMain.handle(IPC.RECAP_SAVE, (_e, dataUrl: unknown) => {
+    const png = recapImage(dataUrl)
+    if (!png) return null
+    let dir = app.getPath('pictures')
+    if (!existsSync(dir)) dir = app.getPath('downloads')
+    mkdirSync(dir, { recursive: true })
+    const base = `Weekly recap ${weekOf(Date.now())}`
+    let file = join(dir, `${base}.png`)
+    for (let i = 2; existsSync(file); i++) file = join(dir, `${base} (${i}).png`)
+    writeFileSync(file, png)
+    return file
+  })
+  ipcMain.handle(IPC.RECAP_COPY, (_e, dataUrl: unknown) => {
+    const png = recapImage(dataUrl)
+    if (!png) return false
+    clipboard.writeImage(nativeImage.createFromBuffer(png))
+    return true
+  })
+  ipcMain.handle(IPC.RECAP_SHOW, (_e, file: unknown) => {
+    if (typeof file === 'string' && /Weekly recap .*\.png$/.test(file) && existsSync(file)) shell.showItemInFolder(file)
+  })
+  // The desktop companion: the character on your desktop too (Settings → Character).
+  let lastBusy = Date.now()
+  const companion = new Companion({
+    spot: () => config.companion.at,
+    saveSpot: (at) => {
+      config.companion = { ...config.companion, at }
+      saveConfig(config)
+    },
+    onClick: () => send(win, IPC.TOGGLE_PANEL, null),
+  })
+  const updateCompanion = () => {
+    if (!config.companion.on) return
+    const list = store.list()
+    if (list.length) lastBusy = Date.now()
+    companion.set(companionMood(list, lastBusy, new Date()), config.character)
+  }
+  const setCompanion = (on: boolean) => {
+    config.companion = { ...config.companion, on }
+    saveConfig(config)
+    if (on) {
+      companion.show()
+      updateCompanion()
+    } else companion.hide()
+  }
+  store.onChange(updateCompanion)
+  const companionTimer = setInterval(updateCompanion, 15_000)
+  if (config.companion.on) {
+    companion.show()
+    updateCompanion()
+  }
+  onSounds = () => {
+    pushAppearance()
+    settings?.changed()
+  }
+  // The wardrobe on the island (right-click the character).
+  ipcMain.on(IPC.SET_LOOK, (_e, patch) => {
+    if (!patch || typeof patch !== 'object') return
+    config.character = parseCharacter({
+      ...config.character,
+      ...('outfit' in patch ? { outfit: patch.outfit } : {}),
+      ...('color' in patch ? { color: patch.color } : {}),
+    })
+    saveConfig(config)
+    pushCharacter()
+    settings?.changed()
+  })
   win.webContents.on('did-finish-load', () => {
     claudeUi?.push()
     pushState()
@@ -809,6 +1143,10 @@ async function main() {
     pushAppearance()
     pushCharacter()
     pushPackages()
+    pushKeys()
+    send(win, NOTIFS.CHANGED, center.view())
+    send(win, SESSIONS.CHANGED, sessions.list())
+    send(win, SERVICES.CHANGED, serviceHub.view())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -833,8 +1171,15 @@ async function main() {
       notifications: config.notifications,
       hookInstalled: isHookInstalled(),
       autostart: isAutostartEnabled(),
+      dnd: config.dnd,
+      centerCount: center.view().entries.length,
     }),
     {
+      setDnd,
+      clearAll: () => {
+        clearCards()
+        center.clearAll()
+      },
       setNotifications: (on) => {
         config.notifications = on
         saveConfig(config)
@@ -849,6 +1194,8 @@ async function main() {
         settings?.changed()
       },
       openSettings: () => settings?.open(),
+      tour: () => send(win, IPC.TOUR, null),
+      recap: () => showRecap(true),
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
@@ -862,6 +1209,15 @@ async function main() {
     shape?.close()
     if (sysTimer) clearInterval(sysTimer)
     transient.clear()
+    sessions.stop()
+    customSounds.close()
+    clearInterval(followTimer)
+    clearInterval(recapTimer)
+    recap.flush()
+    serviceHub.stop()
+    clearInterval(companionTimer)
+    companion.hide()
+    center.flush()
     clearInterval(crmTimer)
     crm.flush()
     claudeCode.dispose()
@@ -989,7 +1345,7 @@ async function runUninstall(argv: string[] = []): Promise<void> {
       type: 'warning',
       message: 'Uninstall Dynamic Island?',
       detail:
-        'This removes the app, starting it at login, and the Claude Code approvals and status line it set up. Files it saved in your Documents folder are kept.',
+        'This removes the app, starting it at login, and the hooks and status line it set up for Claude Code (and Codex, Gemini CLI or Cursor). Files it saved in your Documents folder are kept.',
       checkboxLabel: 'Also delete my settings, notes, CRM and sign-ins',
       checkboxChecked: false,
       buttons: ['Uninstall', 'Cancel'],
@@ -1008,7 +1364,11 @@ async function runUninstall(argv: string[] = []): Promise<void> {
         appId: 'io.github.shashanksharma280201.dynamicisland',
         productName: 'Dynamic Island',
         debPackage: 'dynamic-island-linux',
-        removeHook: async () => isHookInstalled() && setHookInstalled(false),
+        // Claude Code's hooks, and those added for Codex, Gemini CLI or Cursor.
+        removeHook: async () => {
+          if (isHookInstalled()) await setHookInstalled(false)
+          for (const a of agentHooks()) if (a.installed) await setAgentHook(a.id, false).catch((e) => console.error(`uninstall: ${a.id} hook`, e))
+        },
         removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),
         removeLoginItem: () => setAutostart(false),
         trash: (p) => shell.trashItem(p),
