@@ -1,3 +1,6 @@
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { OrbHalo } from '../../orb/OrbHalo'
+import { orbForRun, orbForVoice } from '@shared/orbs'
 import { useEffect, useRef, useState } from 'react'
 import type { ClaudeView, ClaudeUsage, UsageWindow } from '@shared/claude'
 import { currentWindow } from '@shared/claude'
@@ -105,7 +108,10 @@ function Conversation({ view }: { view: ClaudeView }) {
           <div className="claude-answer live">
             <Character mood={moodFor(run.phase, run.tool?.name)} size={24} label={runStatus(run)} />
             <div className="claude-answer-text">
-              <div className="claude-status">{runStatus(run)}</div>
+              <div className="claude-status">
+                <Orb state={orbForRun(run.phase, run.tool?.name)} size={15} color={AGENT_INK} className="status-orb" />
+                {runStatus(run)}
+              </div>
               {run.reply && <div className="claude-live-reply">{run.reply}</div>}
             </div>
           </div>
@@ -210,6 +216,7 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
 
 /** The Claude tab: plan limits, the conversation, and voice / text input. */
 export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null; voice: Voice; onTyping: (on: boolean) => void }) {
+  const levelRef = useRef(0)
   const { name } = useCharacter()
   const code = !!view && usesClaudeCode(view)
   const usable = !!view && (code ? !!view.binary : !view.assistant.problem)
@@ -252,6 +259,8 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       </div>
     )
   const voiceOn = voice.phase !== 'idle'
+  // The halo reads the microphone every frame, without re-rendering the panel.
+  levelRef.current = voice.level
   const hasHistory = view.turns.length > 0 || runActive(view.run)
   return (
     <div className="view claude-panel">
@@ -289,7 +298,10 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
       {code && <Limits usage={view.usage} bridge={view.usageBridge} />}
       {voiceOn ? (
         <div className={`voice-stage ${voice.phase}`}>
-          <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
+          {/* The orb swells with your voice while it listens. */}
+          <OrbHalo state={orbForVoice(voice.phase)} size={132} color={voice.phase === 'listening' ? '#ffb35c' : undefined} level={voice.phase === 'listening' ? () => levelRef.current : undefined}>
+            <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
+          </OrbHalo>
           <div className="caption voice-caption">{voiceCaption(voice, view)}</div>
           {voice.phase === 'preparing' && view.stt.downloading && (
             <div className="meter-bar download">

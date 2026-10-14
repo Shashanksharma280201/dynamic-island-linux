@@ -156,7 +156,7 @@ function Voice({ chatId, m }: { chatId: string; m: ChatMessage & { media: ChatMe
   return (
     <div className="wa-voice" data-pos={pos.toFixed(2)}>
       <button className="wa-voice-btn" onClick={(e) => void toggle(e)} aria-label={playing ? 'Pause' : 'Play voice message'}>
-        {loading ? <Spinner /> : playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
+        {loading ? <Spinner size={16} state="working" /> : playing ? <PauseIcon size={16} /> : <PlayIcon size={16} />}
       </button>
       <div className="wa-voice-main">
         <div className="wa-voice-track">

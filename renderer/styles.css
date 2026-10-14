@@ -784,9 +784,9 @@ button {
     rise 0.22s cubic-bezier(0, 0, 0.2, 1) both,
     shimmer 2.4s linear infinite;
 }
+/* The current step leads with its orb instead of a chevron. */
 .claude-steps li.cur::before {
-  content: '›';
-  color: var(--label);
+  content: none;
 }
 @keyframes shimmer {
   to {
@@ -4263,4 +4263,60 @@ button.crm-menu-item:hover {
   bottom: 2px;
   right: auto;
   left: 34px;
+}
+
+/* ---------------------------------------------------------------------------
+   Orbs (thinking-orbs): loading, an agent's steps, the voice halo
+   --------------------------------------------------------------------------- */
+.spinner-orb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 0;
+  opacity: 0.9;
+}
+button .spinner-orb,
+.empty-icon .spinner-orb {
+  padding: 0;
+}
+.orb-halo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+}
+.orb-halo-orb {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.orb-halo-body {
+  position: relative;
+}
+.peek-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.peek-orb {
+  margin-left: -1px;
+}
+.capsule-orb {
+  opacity: 0.95;
+}
+.step-orb {
+  margin-left: -2px;
+}
+.docs-result .orb {
+  display: inline-block;
+  vertical-align: middle;
+}
+.status-orb {
+  display: inline-block !important;
+  vertical-align: -2px;
+  margin-right: 5px;
 }

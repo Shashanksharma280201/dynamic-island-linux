@@ -1,3 +1,5 @@
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { orbForRun } from '@shared/orbs'
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { pop } from '../../anim/spring'
@@ -39,6 +41,7 @@ export function Peek({ activity, canDrop }: { activity: Activity | null; canDrop
       <div className="peek-text">
         {/* A new step rolls up from below, like a departures board. */}
         <div className="peek-title-row">
+          {activity?.kind === 'claude' && <Orb state={orbForRun(activity.run.phase, activity.run.tool?.name)} size={16} color={AGENT_INK} className="peek-orb" />}
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.div key={l.title} className="peek-title ellipsis" initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -14, opacity: 0 }} transition={pop}>
               {l.title}

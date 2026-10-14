@@ -1,3 +1,4 @@
+import { Orb, type OrbState } from '../../orb/Orb'
 import { useEffect, useState, type ReactNode } from 'react'
 import { avatarGradient, initialsOf } from '@shared/avatar'
 
@@ -49,8 +50,13 @@ export function useLoad<T>(
 }
 
 /** Apple-style activity indicator. */
-export function Spinner() {
-  return <span className="spinner" aria-label="Loading" />
+/** Loading: a small dotted orb (connecting for things coming from elsewhere). */
+export function Spinner({ size = 28, state = 'connecting' }: { size?: number; state?: OrbState }) {
+  return (
+    <span className="spinner-orb" role="status" aria-label="Loading">
+      <Orb state={state} size={size} />
+    </span>
+  )
 }
 
 /** Centered empty / error state with an optional action. */

@@ -3,6 +3,8 @@ import type { ClaudeRun } from '@shared/claude'
 import { moodFor } from '@shared/character'
 import { Character } from '../character/Character'
 import { XIcon } from '../icons'
+import { AGENT_INK, Orb } from '../../orb/Orb'
+import { orbForRun, orbForTool } from '@shared/orbs'
 
 export const runActive = (r?: ClaudeRun) => !!r && ['starting', 'thinking', 'tool', 'writing'].includes(r.phase)
 
@@ -31,6 +33,7 @@ export function CompactClaude({ run }: { run: ClaudeRun }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
       <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} track />
+      {runActive(run) && <Orb state={orbForRun(run.phase, run.tool?.name)} size={20} color={AGENT_INK} className="capsule-orb" title={runStatus(run)} />}
       {run.steps > 0 && <span className="step-count">{run.steps}</span>}
     </div>
   )
@@ -66,10 +69,16 @@ export function ClaudeCard({ id, run, onOpen, title }: { id: string; run: Claude
             <ol className="claude-steps">
               {run.trail.slice(-4).map((t, i, all) => (
                 <li key={`${run.steps}-${i}`} className={i === all.length - 1 && run.phase === 'tool' ? 'cur' : 'done'}>
+                  {i === all.length - 1 && run.phase === 'tool' && <Orb state={orbForTool(run.tool?.name)} size={15} color={AGENT_INK} className="step-orb" />}
                   {t}
                 </li>
               ))}
-              {run.phase !== 'tool' && <li className="cur">{runStatus(run)}</li>}
+              {run.phase !== 'tool' && (
+                <li className="cur">
+                  <Orb state={orbForRun(run.phase)} size={15} color={AGENT_INK} className="step-orb" />
+                  {runStatus(run)}
+                </li>
+              )}
             </ol>
           ) : (
             <div className={`claude-status ${run.phase}`}>{runStatus(run)}</div>

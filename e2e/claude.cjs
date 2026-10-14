@@ -171,6 +171,7 @@ function speechWav(text, file) {
     check('and asks for approvals on the island', !!first && JSON.parse(first.args[first.args.indexOf('--settings') + 1]).hooks.PermissionRequest[0].hooks[0].command.includes('claude-island-hook'))
     const sawTool = await until(async () => /Reading README\.md/.test(await threadText()), 4000)
     check('the character shows what Claude is doing (searching while it reads)', sawTool && !!(await page.$('.claude-turn.live .character[data-mood="searching"]')))
+    check('and so does its orb', !!(await page.$('.claude-turn.live .orb[data-state="searching"]')))
     await shot('03-working')
     check('the answer appears', await until(async () => /Done: summarize the readme/.test(await threadText()), 8000))
     await idle()
