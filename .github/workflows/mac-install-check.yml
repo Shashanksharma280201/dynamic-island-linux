@@ -31,6 +31,7 @@ jobs:
           ls /Library/Developer/CommandLineTools/usr/bin/git /Applications/Xcode*.app 2>&1 | head -5 || true
 
       - name: One-line install, exactly as in the README
+        timeout-minutes: 12
         id: oneline
         continue-on-error: true
         run: |
@@ -49,6 +50,7 @@ jobs:
           rm -rf "$APP"
 
       - name: Downloaded in a browser, dragged to Applications, double-clicked
+        timeout-minutes: 12
         id: browser
         continue-on-error: true
         run: |
@@ -64,17 +66,20 @@ jobs:
           xattr -l "$APP" | head -3
           # Each finding as an annotation (readable without the log).
           note() { printf '::notice title=%s::%s\n' "$1" "$(printf '%s' "$2" | head -c 3000 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"; }
+          t() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
           note "codesign" "$(codesign -dvv "$APP" 2>&1 | grep -E "Identifier|Signature|TeamIdentifier|flags|Authority"; codesign --verify --deep --strict --verbose=2 "$APP" 2>&1)"
-          note "spctl (Gatekeeper)" "$(spctl --status 2>&1); $(spctl --assess --type execute -vvv "$APP" 2>&1)"
-          note "syspolicy_check" "$(syspolicy_check distribution "$APP" 2>&1 | head -30)"
-          open "$APP" 2>&1 || true
-          sleep 12
+          note "spctl (Gatekeeper)" "$(spctl --status 2>&1); $(t 60 spctl --assess --type execute -vvv "$APP" 2>&1)"
+          note "syspolicy_check" "$(t 90 syspolicy_check distribution "$APP" 2>&1 | head -30)"
+          # On a blocked app, open waits for someone to close the warning.
+          oc=0; o=$(t 30 open "$APP" 2>&1) || oc=$?
+          sleep 5
           if pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null; then r="it opened"; else r="macOS blocked it"; fi
-          note "double-click: $r" "$(log show --last 2m --style compact --predicate 'subsystem == "com.apple.syspolicy" OR process == "syspolicyd" OR process == "CoreServicesUIAgent"' 2>/dev/null | grep -i -E "dynamic|island|notar|damaged|malware|assess|adhoc|ad-hoc" | tail -20)"
+          note "double-click: $r" "open exit $oc ($o); $(t 90 log show --last 2m --style compact --predicate 'subsystem == "com.apple.syspolicy" OR process == "syspolicyd" OR process == "CoreServicesUIAgent"' 2>/dev/null | grep -i -E "dynamic|island|notar|damaged|malware|assess|adhoc|ad-hoc" | tail -20)"
           pkill -f "Dynamic Island.app/Contents/MacOS/" || true
           rm -rf "$APP"
 
       - name: The same app as a .pkg, downloaded in a browser and installed
+        timeout-minutes: 12
         id: pkg
         continue-on-error: true
         run: |
@@ -87,12 +92,13 @@ jobs:
           hdiutil detach "$MNT"
           pkgbuild --component "$RUNNER_TEMP/root/Dynamic Island.app" --install-location /Applications --identifier io.github.shashanksharma280201.dynamicisland "$RUNNER_TEMP/DI.pkg"
           xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" "$RUNNER_TEMP/DI.pkg"
-          note "pkg: spctl (Gatekeeper)" "$(spctl --assess --type install -vvv "$RUNNER_TEMP/DI.pkg" 2>&1)"
+          t() { perl -e 'alarm shift @ARGV; exec @ARGV' "$@"; }
+          note "pkg: spctl (Gatekeeper)" "$(t 60 spctl --assess --type install -vvv "$RUNNER_TEMP/DI.pkg" 2>&1)"
           sudo installer -pkg "$RUNNER_TEMP/DI.pkg" -target /
           APP="/Applications/Dynamic Island.app"
           q=$(xattr -p com.apple.quarantine "$APP" 2>&1 || true)
           note "pkg: installed app" "quarantine: $q; $(spctl --assess --type execute -vv "$APP" 2>&1); $(codesign --verify --deep --strict "$APP" 2>&1 && echo signature ok)"
-          open "$APP"
+          t 30 open "$APP" || true
           for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null && break; sleep 1; done
           sleep 6
           if pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null; then note "pkg: it opened" "ok"; else note "pkg: it did not open" "-"; exit 1; fi
@@ -104,6 +110,7 @@ jobs:
           node-version: 22
 
       - name: Build from the code with only the Command Line Tools (no Xcode)
+        timeout-minutes: 12
         id: source
         continue-on-error: true
         run: |
