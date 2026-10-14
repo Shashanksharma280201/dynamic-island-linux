@@ -10,6 +10,7 @@ import type { ClaudeSettings, SettingsState } from '@shared/types'
 import { saveConfig, parseMailAccount, type Config, type StoredMailAccount } from './config'
 import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
+import type { ShortcutId } from '@shared/shortcuts'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
@@ -38,6 +39,12 @@ type Deps = {
   onAppearance: () => void
   /** Re-register the global shortcut; returns whether it is active. */
   applyShortcut: () => boolean
+  /** Change a shortcut's keys (null: back to the default); an error to show, or null. */
+  setKey: (id: ShortcutId, accel: string | null) => string | null
+  /** Let go of our global shortcuts while new keys are recorded (and take them back). */
+  pauseShortcuts: (on: boolean) => void
+  startTour: () => void
+  onOpenOnHover: () => void
   shortcutActive: () => boolean
   onFrosted: () => void
   /** Ask, then remove the island from this computer. */
@@ -77,6 +84,9 @@ export class SettingsController {
       dockSide: config.dock.side,
       appearance: config.appearance,
       shortcut: config.shortcut,
+      keys: config.keys,
+      openOnHover: config.openOnHover,
+      mac: process.platform === 'darwin',
       frosted: config.frosted,
       sounds: config.sounds,
       frostedAvailable: this.d.frostedAvailable,
@@ -112,6 +122,8 @@ export class SettingsController {
 
   open(section?: string): void {
     if (this.win && !this.win.isDestroyed()) {
+      // Already open: just go to the section asked for.
+      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(section)})?.scrollIntoView({ behavior: 'smooth' })`)
       this.win.show()
       this.win.focus()
       return
@@ -202,6 +214,19 @@ export class SettingsController {
       this.save()
       this.d.applyShortcut()
       this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_KEY, (_e, id, accel) => {
+      if (!(id in config.keys) || (accel !== null && typeof accel !== 'string')) return 'Unknown shortcut'
+      const error = this.d.setKey(id as ShortcutId, accel)
+      this.changed()
+      return error
+    })
+    ipcMain.handle(SETTINGS.RECORDING, (_e, on) => this.d.pauseShortcuts(on === true))
+    ipcMain.handle(SETTINGS.TOUR, () => this.d.startTour())
+    ipcMain.handle(SETTINGS.SET_OPEN_ON_HOVER, (_e, on) => {
+      config.openOnHover = on === true
+      this.save()
+      this.d.onOpenOnHover()
     })
     ipcMain.handle(SETTINGS.SET_CHARACTER, (_e, patch) => {
       const switching = typeof patch?.id === 'string' && patch.id !== config.character.id

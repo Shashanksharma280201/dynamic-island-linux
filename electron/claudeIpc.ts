@@ -6,8 +6,8 @@ import { modelFor, providerInfo, setupProblem } from '@shared/ai'
 import type { SpeechModels } from './stt'
 import type { Config } from './config'
 import type { ClaudeView } from '@shared/claude'
+import { shortcutLabel } from '@shared/shortcuts'
 
-export const VOICE_SHORTCUT = 'Control+Alt+Space'
 
 type Deps = {
   win: BrowserWindow
@@ -37,6 +37,8 @@ export function earlyClaudeState(): (c: ClaudeController) => void {
 /** Wires the island's Claude tab to Claude Code, speech models and settings. */
 export class ClaudeController {
   private voiceActive: string | null = null
+  /** The accelerator registered for talking ('' when none). */
+  private voiceAccel = ''
 
   constructor(private d: Deps) {}
 
@@ -71,12 +73,15 @@ export class ClaudeController {
 
   /** (Re)register the global talk shortcut. */
   applyVoiceShortcut(): string | null {
-    if (this.voiceActive) globalShortcut.unregister(this.voiceActive)
+    if (this.voiceAccel) globalShortcut.unregister(this.voiceAccel)
+    this.voiceAccel = ''
     this.voiceActive = null
     if (this.d.config.claude.voiceShortcut) {
-      const ok = globalShortcut.register(VOICE_SHORTCUT, () => this.d.win.webContents.send(CLAUDE.VOICE))
-      this.voiceActive = ok ? 'Ctrl+Alt+Space' : null
-      if (!ok) console.error(`[island] couldn't register ${VOICE_SHORTCUT}; another app may own it`)
+      const accel = this.d.config.keys.voice
+      const ok = globalShortcut.register(accel, () => this.d.win.webContents.send(CLAUDE.VOICE))
+      this.voiceAccel = ok ? accel : ''
+      this.voiceActive = ok ? shortcutLabel(accel, process.platform === 'darwin') : null
+      if (!ok) console.error(`[island] couldn't register ${accel}; another app may own it`)
     }
     return this.voiceActive
   }

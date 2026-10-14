@@ -432,6 +432,35 @@ button.link {
 .package-row .switch {
   margin-top: 4px;
 }
-.group-hint {
-  margin: 14px 0 2px;
+/* Keyboard shortcuts: the keys as a field you click, then press new keys. */
+.key-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+button.key-recorder {
+  min-width: 118px;
+  background: var(--field);
+  color: var(--text);
+  border: 1px solid var(--separator);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+button.key-recorder.recording {
+  border-color: var(--blue);
+  color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
+}
+button.link {
+  background: none;
+  color: var(--blue);
+  padding: 4px 6px;
+  font-weight: 500;
+}
+.error-text {
+  color: #ff6961;
 }

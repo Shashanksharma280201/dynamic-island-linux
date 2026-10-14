@@ -35,7 +35,8 @@ import {
 } from './hookSetup'
 import { ClaudeCode, claudeSearchDirs } from './claudeCode'
 import type { DecisionMsg, MediaState } from '@shared/types'
-import { APPROVAL_KEYS, canAlways, frontApproval } from '@shared/approvalKeys'
+import { canAlways, frontApproval, type ApprovalKey } from '@shared/approvalKeys'
+import { clash, DEFAULT_SHORTCUTS, sameAccel, SHORTCUT_INFO, shortcutLabel, validAccel } from '@shared/shortcuts'
 import { ApiAgent } from './agent/agent'
 import { IslandMcp } from './agent/mcpServer'
 import { packageTools } from './packages/tools'
@@ -94,7 +95,6 @@ const DEMO = process.env.DI_DEMO
 const FAKE_WA = process.env.DI_WHATSAPP_ENGINE === 'fake' || DEMO === '4'
 
 const bootConfig = loadConfig()
-const SHORTCUT = 'CommandOrControl+I'
 // whatsapp-web.js drives a hidden window of this app over the Chrome DevTools
 // Protocol, which Chromium only offers when started with a debugging port.
 // Only opened when WhatsApp is enabled, bound to localhost, on a random port.
@@ -624,6 +624,39 @@ async function main() {
     onConfigChanged: () => tray?.refresh(),
     onDockSide: (side) => setDock({ ...config.dock, side }),
     applyShortcut: () => applyShortcut(),
+    setKey: (id, accel) => {
+      const mac = process.platform === 'darwin'
+      const next = accel ?? DEFAULT_SHORTCUTS[id]
+      if (!validAccel(next)) return 'That can’t be a shortcut'
+      const other = clash(config.keys, id, next, mac)
+      if (other) return `${SHORTCUT_INFO[other].label} already uses ${shortcutLabel(next, mac)}`
+      if (sameAccel(config.keys[id], next, mac)) return null
+      // Free? (Another app may hold it; then registering fails.)
+      if (!globalShortcut.register(next, () => {})) return `Another app is using ${shortcutLabel(next, mac)}`
+      globalShortcut.unregister(next)
+      config.keys = { ...config.keys, [id]: next }
+      saveConfig(config)
+      if (id === 'panel') applyShortcut()
+      else if (id === 'voice') {
+        claudeUi?.applyVoiceShortcut()
+        claudeUi?.push()
+      } else syncApprovalKeys(true)
+      pushKeys()
+      return null
+    },
+    onOpenOnHover: () => pushAppearance(),
+    startTour: () => send(win, IPC.TOUR, null),
+    pauseShortcuts: (on) => {
+      if (on) {
+        globalShortcut.unregisterAll()
+        shortcutActive = false
+        approvalKeys = null
+        return
+      }
+      applyShortcut()
+      claudeUi?.applyVoiceShortcut()
+      syncApprovalKeys(true)
+    },
     shortcutActive: () => shortcutActive,
     onFrosted: () => backdrop.refresh(),
     uninstall: () => void runUninstall(),
@@ -776,16 +809,14 @@ async function main() {
   // Answer the approval on screen from anywhere: Ctrl+Alt+Y / N / A. Grabbed
   // only while one waits, and never by taking focus (a stray "y" typed in
   // another app must not approve anything).
-  let approvalKeys = false
-  const syncApprovalKeys = () => {
+  let approvalKeys: Record<ApprovalKey, string> | null = null
+  const syncApprovalKeys = (force = false) => {
     const waiting = !!frontApproval(store.list())
-    if (waiting === approvalKeys) return
-    approvalKeys = waiting
-    for (const [key, accel] of Object.entries(APPROVAL_KEYS)) {
-      if (!waiting) {
-        globalShortcut.unregister(accel)
-        continue
-      }
+    if (waiting === !!approvalKeys && !force) return
+    if (approvalKeys) for (const accel of Object.values(approvalKeys)) globalShortcut.unregister(accel)
+    approvalKeys = waiting ? { allow: config.keys.allow, deny: config.keys.deny, always: config.keys.always } : null
+    if (!approvalKeys) return
+    for (const [key, accel] of Object.entries(approvalKeys)) {
       const ok = globalShortcut.register(accel, () => {
         const r = frontApproval(store.list())
         if (!r || (key === 'always' && !canAlways(r))) return
@@ -794,7 +825,7 @@ async function main() {
       if (!ok) console.error(`[island] couldn't register ${accel} for approvals; another app may own it`)
     }
   }
-  store.onChange(syncApprovalKeys)
+  store.onChange(() => syncApprovalKeys())
 
   wireIpc({
     onDecision: decide,
@@ -818,6 +849,7 @@ async function main() {
       if (process.env.DI_DEBUG) console.error('[hold]', id, hold)
       transient.hold(id, hold)
     },
+    onPin: (id) => transient.pin(id),
     onFocus: setFocus,
     onReply: (m) => void hub.reply(m.id, m.text).finally(() => inbox?.changed('unread')),
     onMessageAction: (m) => void hub.markRead(m.id).finally(() => inbox?.changed('unread')),
@@ -848,21 +880,24 @@ async function main() {
   // KWin blurs behind windows that set _KDE_NET_WM_BLUR_BEHIND_REGION.
   const blurBehind = !!shape && /kde/i.test(process.env.XDG_CURRENT_DESKTOP ?? '')
   // Ctrl+I opens / closes the island panel from anywhere (X11 key grab).
+  let panelKey = ''
   const applyShortcut = (): boolean => {
-    if (shortcutActive) globalShortcut.unregister(SHORTCUT)
+    if (shortcutActive) globalShortcut.unregister(panelKey)
     shortcutActive = false
+    panelKey = config.keys.panel
     if (config.shortcut) {
-      shortcutActive = globalShortcut.register(SHORTCUT, () => send(win, IPC.TOGGLE_PANEL, null))
-      if (!shortcutActive) console.error(`[island] couldn't register ${SHORTCUT}; another app may own it`)
+      shortcutActive = globalShortcut.register(panelKey, () => send(win, IPC.TOGGLE_PANEL, null))
+      if (!shortcutActive) console.error(`[island] couldn't register ${panelKey}; another app may own it`)
     }
     return shortcutActive
   }
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds })
+    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds, openOnHover: config.openOnHover })
   const pushCharacter = () => send(win, IPC.CHARACTER, config.character)
   const pushPackages = () => send(win, IPC.PACKAGES, enabledTabs(config.packages))
+  const pushKeys = () => send(win, IPC.KEYS, config.keys)
   win.webContents.on('did-finish-load', () => {
     claudeUi?.push()
     pushState()
@@ -870,6 +905,7 @@ async function main() {
     pushAppearance()
     pushCharacter()
     pushPackages()
+    pushKeys()
     send(win, NOTIFS.CHANGED, center.view())
     send(win, SESSIONS.CHANGED, sessions.list())
     send(win, IPC.RECT_REQUEST, null)
@@ -919,6 +955,7 @@ async function main() {
         settings?.changed()
       },
       openSettings: () => settings?.open(),
+      tour: () => send(win, IPC.TOUR, null),
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },

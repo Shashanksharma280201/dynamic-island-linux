@@ -99,6 +99,18 @@ export const BellIcon = () => (
     <path d="M10 20a2 2 0 0 0 4 0" />
   </Svg>
 )
+export const KeyboardIcon = () => (
+  <Svg size={14}>
+    <rect x="2.5" y="6" width="19" height="12" rx="2.5" />
+    <path d="M6 10h.01M9.5 10h.01M13 10h.01M16.5 10h.01M7.5 14h9" />
+  </Svg>
+)
+/** Keep this card: a pushpin. */
+export const PinIcon = ({ size = 12 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M9 3.5h6M10 3.5v5.2L6.5 13h11L14 8.7V3.5M12 13v7.5" />
+  </Svg>
+)
 /** Do Not Disturb: a crescent moon. */
 export const MoonIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden>

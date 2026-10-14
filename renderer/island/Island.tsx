@@ -30,6 +30,9 @@ import { useNotifications } from './useNotifications'
 import { clearedText } from '@shared/notifCenter'
 import { useSessions } from './useSessions'
 import { CompactSession, SessionCard } from './states/SessionActivity'
+import { CloseBar } from './states/CloseBar'
+import { tourSteps } from './tour'
+import { useShortcutLabel } from './useShortcuts'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
@@ -70,7 +73,7 @@ const unscroll = (e: { currentTarget: HTMLElement; target: EventTarget }) => {
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
 
-export function Island({ activities }: { activities: Activity[] }) {
+export function Island({ activities: real }: { activities: Activity[] }) {
   const character = useCharacter()
   const center = useNotifications()
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
@@ -214,6 +217,26 @@ export function Island({ activities }: { activities: Activity[] }) {
       }),
     [],
   )
+  // "Show me around": example cards, one step at a time (nothing real is touched).
+  const panelKey = useShortcutLabel('panel')
+  const steps = tourSteps(character.name, panelKey)
+  const [tour, setTour] = useState<number | null>(null)
+  const [tourOffer, setTourOffer] = useState(false)
+  const tourStep = tour === null ? null : steps[tour]
+  const tourNow = useRef(Date.now())
+  const startTour = () => {
+    tourNow.current = Date.now()
+    setTourOffer(false)
+    setPanel(false)
+    setTour(0)
+  }
+  useEffect(() => window.island.onTour?.(startTour), []) // eslint-disable-line react-hooks/exhaustive-deps
+  // Something real that needs you ends the tour.
+  const urgent = real.some((a) => a.kind === 'approval' || (a.kind === 'session' && a.session.phase === 'waiting'))
+  useEffect(() => {
+    if (urgent) setTour(null)
+  }, [urgent])
+  const activities = tourStep ? tourStep.activities(tourNow.current) : real
   // Hello, once a day: a short introduction that hover or a click ends.
   const [hello, setHello] = useState<{ first: boolean; tip: boolean } | null>(null)
   useEffect(
@@ -222,6 +245,8 @@ export function Island({ activities }: { activities: Activity[] }) {
         setHello({ first: g.first, tip: false })
         if (g.first) setTimeout(() => setHello((h) => h && { ...h, tip: true }), 1600)
         setTimeout(() => setHello(null), g.first ? 3800 : 2400)
+        // The very first time, offer the tour once the hello is done.
+        if (g.first) setTimeout(() => setTourOffer(true), 4000)
       }),
     [],
   )
@@ -232,13 +257,19 @@ export function Island({ activities }: { activities: Activity[] }) {
   // Hover intent: a short rest peeks, a longer one opens the full card.
   // No peek while the Undo note is up: the island growing would move it from under the pointer.
   const stage = useHoverIntent(hover && !panel && !dropping && cleared === null)
-  const p = present(activities, { expanded: stage === 'full' })
+  const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
   const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
+
+  // "Open on hover" (Settings): resting on the resting island opens the panel.
+  useEffect(() => {
+    if (stage !== 'full' || p.mode !== 'idle' || panel || document.documentElement.dataset.openOnHover !== 'yes') return
+    setPanel(true)
+  }, [stage, p.mode, panel])
 
   // Keep a notification / message open while it's hovered or being answered.
   const transientId =
@@ -480,6 +511,9 @@ export function Island({ activities }: { activities: Activity[] }) {
             ) : (
               <CompactMedia media={p.primary.media} />
             )}
+            {!showPanel && !dropping && !peeking && p.mode === 'expanded' && transientId && p.primary.closes && !p.primary.pinned && (
+              <CloseBar id={transientId} ms={p.primary.closes} held={holding} showPin={hover} />
+            )}
           </motion.div>
         </AnimatePresence>
       </motion.div>
@@ -500,6 +534,8 @@ export function Island({ activities }: { activities: Activity[] }) {
             <button
               className="clear"
               onClick={async () => {
+                // The tour's cards are examples: clearing them just moves on.
+                if (tourStep) return setTour((t) => (t === null ? null : t + 1))
                 const n = await window.island.notifications.clearAll()
                 setCleared(n > 0 ? n : null)
               }}
@@ -527,6 +563,69 @@ export function Island({ activities }: { activities: Activity[] }) {
               }}
             >
               Undo
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {tourStep && !showPanel && (
+          <motion.div
+            key="tour"
+            className="island tour-bar"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-label="Tour"
+          >
+            <AnimatePresence mode="popLayout" initial={false}>
+              <motion.div key={tour} className="tour-text" initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -12 }} transition={pop}>
+                <div className="tour-title">{tourStep.title}</div>
+                <div className="tour-body">{tourStep.body}</div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="tour-foot">
+              <span className="tour-dots" aria-label={`Step ${tour! + 1} of ${steps.length}`}>
+                {steps.map((_s, i) => (
+                  <span key={i} className={i === tour ? 'on' : ''} />
+                ))}
+              </span>
+              <span className="spacer" />
+              {tour! < steps.length - 1 && (
+                <button className="plain muted" onClick={() => setTour(null)}>
+                  Skip
+                </button>
+              )}
+              {tour! > 0 && (
+                <button className="pill" onClick={() => setTour(tour! - 1)}>
+                  Back
+                </button>
+              )}
+              <button className="pill primary tour-next" onClick={() => setTour(tour! < steps.length - 1 ? tour! + 1 : null)}>
+                {tour! < steps.length - 1 ? 'Next' : 'Done'}
+              </button>
+            </div>
+          </motion.div>
+        )}
+        {tourOffer && !tourStep && !showPanel && p.mode === 'idle' && (
+          <motion.div
+            key="tour-offer"
+            className="island notif-stack tour-offer"
+            initial={{ opacity: 0, y: -10, scale: 0.92 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.92, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <span className="more">New here? A one-minute tour</span>
+            <button className="clear" onClick={startTour}>
+              Show me
+            </button>
+            <button className="clear undo" aria-label="Not now" onClick={() => setTourOffer(false)}>
+              Later
             </button>
           </motion.div>
         )}

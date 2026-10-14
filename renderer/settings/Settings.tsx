@@ -5,6 +5,8 @@ import { CharacterSection } from './CharacterSection'
 import { AiSection } from './AiSection'
 import { PackagesSection } from './PackagesSection'
 import { SettingsProblem } from './Problem'
+import { ShortcutsSection } from './ShortcutsSection'
+import { shortcutLabel } from '@shared/shortcuts'
 
 function Toggle({
   on,
@@ -108,7 +110,7 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
       />
       {s.agentHooks?.length > 0 && (
         <>
-          <div className="hint group-hint">Other coding agents: show their sessions on the island too (their approvals stay in the agent).</div>
+          <div className="hint">Other coding agents: show their sessions on the island too (their approvals stay in the agent).</div>
           {s.agentHooks.map((a) => (
             <Toggle
               key={a.id}
@@ -121,10 +123,10 @@ function ClaudeSection({ s, hookInstalled }: { s: SettingsState; hookInstalled: 
         </>
       )}
       <Toggle
-        label="Talk shortcut Ctrl+Alt+Space"
+        label={`Talk shortcut ${shortcutLabel(s.keys.voice, s.mac)}`}
         hint={
           c.voiceShortcut && !c.voiceShortcutActive
-            ? 'Another app is already using Ctrl+Alt+Space, so it could not be registered'
+            ? `Another app is already using ${shortcutLabel(s.keys.voice, s.mac)}, so it could not be registered`
             : 'Press it anywhere to start talking to Claude; press again (or stop talking) to send'
         }
         on={c.voiceShortcut}
@@ -387,16 +389,31 @@ export function Settings() {
           </div>
         </div>
         <Toggle
-          label="Keyboard shortcut Ctrl+I"
+          label="Open the panel when the pointer rests on the island"
+          hint="No click needed: rest on the resting island for a moment and it opens"
+          on={s.openOnHover}
+          onChange={(v) => general.run(() => window.settings.setOpenOnHover(v))}
+        />
+        <Toggle
+          label={`Keyboard shortcut ${shortcutLabel(s.keys.panel, s.mac)}`}
           hint={
             s.shortcut && !s.shortcutActive
-              ? 'Another app is already using Ctrl+I, so it could not be registered'
-              : 'Opens and closes the island from any app (Ctrl+I then no longer reaches other apps)'
+              ? `Another app is already using ${shortcutLabel(s.keys.panel, s.mac)}, so it could not be registered`
+              : `Opens and closes the island from any app (${shortcutLabel(s.keys.panel, s.mac)} then no longer reaches other apps). Change the keys under Keyboard shortcuts`
           }
           on={s.shortcut}
           onChange={(v) => general.run(() => window.settings.setShortcut(v))}
         />
         <Toggle label="Start at login" on={s.autostart} onChange={(v) => general.run(() => window.settings.setAutostart(v))} />
+        <div className="toggle-row">
+          <div>
+            <div>Show me around</div>
+            <div className="hint">A one-minute tour on the island of what it can do, with example cards</div>
+          </div>
+          <button className="secondary" onClick={() => general.run(() => window.settings.tour())}>
+            Start Tour
+          </button>
+        </div>
         <div className="toggle-row">
           <div>
             <div>Uninstall</div>
@@ -408,6 +425,8 @@ export function Settings() {
         </div>
         {general.error && <p className="error">{general.error}</p>}
       </section>
+
+      <ShortcutsSection s={s} />
 
       {s.claude && <ClaudeSection s={s} hookInstalled={s.hookInstalled} />}
 

@@ -6,6 +6,7 @@ import { DEFAULT_DOCK, parseDock, type Dock } from '@shared/dock'
 import { parseCharacter, type CharacterConfig } from '@shared/character'
 import { parseAiConfig, type AiConfig } from '@shared/ai'
 import { parsePackages, type PackagesConfig } from '@shared/packages'
+import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -24,6 +25,10 @@ export type Config = {
   appearance: Appearance
   /** Global Ctrl+I shortcut to open / close the island panel. */
   shortcut: boolean
+  /** The keys of the global shortcuts (you can change them in Settings). */
+  keys: Shortcuts
+  /** Open the panel when the pointer rests on the resting island (no click needed). */
+  openOnHover: boolean
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
   /** The island's little sounds (off unless turned on). */
@@ -88,6 +93,8 @@ const DEFAULTS: Config = {
   dock: DEFAULT_DOCK,
   appearance: 'glass',
   shortcut: true,
+  keys: parseShortcuts(null),
+  openOnHover: false,
   frosted: true,
   sounds: false,
   greeted: '',
@@ -125,7 +132,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, keys: parseShortcuts(null), mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -138,6 +145,8 @@ export function mergeConfig(raw: unknown): Config {
   if (r.dock) c.dock = parseDock(r.dock)
   if (r.appearance === 'glass' || r.appearance === 'solid') c.appearance = r.appearance
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
+  c.keys = parseShortcuts(r.keys)
+  if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
   if (typeof r.frosted === 'boolean') c.frosted = r.frosted
   if (typeof r.sounds === 'boolean') c.sounds = r.sounds
   if (typeof r.greeted === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.greeted)) c.greeted = r.greeted

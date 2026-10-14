@@ -6,13 +6,13 @@ import { Badge } from './Badge'
 import { TerminalIcon } from '../icons'
 import { Character } from '../character/Character'
 import { sound } from '../../sound'
-import { APPROVAL_KEYS, keyLabel, type ApprovalKey } from '@shared/approvalKeys'
+import type { ApprovalKey } from '@shared/approvalKeys'
+import { useShortcutLabel } from '../useShortcuts'
 import { parseQuestions } from '@shared/questions'
 import { QuestionCard } from './QuestionCard'
 
-const MAC = navigator.userAgent.includes('Macintosh')
 /** The shortcut that presses this button from anywhere. */
-const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{keyLabel(APPROVAL_KEYS[k], MAC)}</kbd>
+const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{useShortcutLabel(k)}</kbd>
 
 /** Claude Code permission prompt, styled like an Apple permission dialog. */
 export function ApprovalCard({ request, queued }: { request: ToolRequest; queued: number }) {

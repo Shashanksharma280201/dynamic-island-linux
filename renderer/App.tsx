@@ -27,8 +27,9 @@ export function App() {
   )
   useEffect(
     () =>
-      window.island.onAppearance(({ appearance, blur, sounds }) => {
+      window.island.onAppearance(({ appearance, blur, sounds, openOnHover }) => {
         setSoundsOn(!!sounds)
+        document.documentElement.dataset.openOnHover = openOnHover ? 'yes' : 'no'
         document.documentElement.dataset.appearance = appearance
         document.documentElement.dataset.blur = blur ? 'yes' : 'no'
       }),

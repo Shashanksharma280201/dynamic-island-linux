@@ -76,14 +76,14 @@ function approval(input) {
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
   const page = await app.firstWindow()
   const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png`, omitBackground: true })
-  // After clicking on the island, take the (page's) mouse off it again.
+  // After clicking on the island, take the (page's) mouse off it again. A
+  // click that removed the button under the mouse leaves Chromium without a
+  // mouseleave to send (the real pointer, which the island also follows, never
+  // came here), so say it explicitly too.
   const leave = async () => {
-    const [b, w, h] = await page.evaluate(() => {
-      const r = document.querySelector('.island-outer').getBoundingClientRect()
-      return [{ x: r.x, y: r.y, w: r.width, h: r.height }, innerWidth, innerHeight]
-    })
-    const x = b.x > w / 2 ? 4 : w - 4
-    await page.mouse.move(x, h - 4)
+    const [, h] = await page.evaluate(() => [innerWidth, innerHeight])
+    await page.mouse.move(4, h - 4)
+    await page.evaluate(() => document.querySelector('.island-outer').dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
     await sleep(200)
   }
   const term = terminal()

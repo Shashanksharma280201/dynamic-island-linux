@@ -31,6 +31,8 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'right', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
+    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
+    openOnHover: false,
     frosted: true,
     sounds: false,
     greeted: '',

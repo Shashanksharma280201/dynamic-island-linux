@@ -37,6 +37,19 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Do Not Disturb** in the tab, the Control Center and the tray: nothing pops
   up, and the resting island shows a moon with how many are waiting.
 
+**Easier to use**
+
+- **Show me around:** a one-minute tour on the island with example cards. It's
+  offered the first time, and is in the tray menu and Settings any time.
+- Cards that close by themselves show a thin countdown. It stops while you
+  hover, and the pin keeps the card until you close it.
+- **Change any shortcut** in Settings → Keyboard shortcuts: click it and press
+  the new keys. Keys another shortcut (or another app) already uses are refused,
+  with why.
+- **Shortcuts** in the Control Center lists them all, as they're set now.
+- **Open on hover** (Settings → General): rest on the island and the panel
+  opens, no click needed.
+
 **Looks**
 
 - Dotted "thinking orbs" show what's going on: on the capsule and the cards

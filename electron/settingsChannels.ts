@@ -6,6 +6,10 @@ export const SETTINGS = {
   SET_AUTOSTART: 'settings:set-autostart',
   SET_HOOK: 'settings:set-hook',
   SET_AGENT_HOOK: 'settings:set-agent-hook', // (agent id, on)
+  SET_KEY: 'settings:set-key', // (shortcut id, accelerator | null for the default) -> error text | null
+  SET_OPEN_ON_HOVER: 'settings:set-open-on-hover', // boolean
+  TOUR: 'settings:tour', // start the island's tour
+  RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',
   SET_SHORTCUT: 'settings:set-shortcut',

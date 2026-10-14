@@ -81,6 +81,7 @@ export function wireIpc(h: {
   onPanel: (open: boolean) => void
   onDismiss: (id: string) => void
   onHold: (id: string, hold: boolean) => void
+  onPin: (id: string) => void
   onFocus: (focus: boolean) => void
   onReply: (m: ReplyMsg) => void
   onMessageAction: (m: MessageActionMsg) => void
@@ -109,6 +110,9 @@ export function wireIpc(h: {
   })
   ipcMain.on(IPC.HOLD, (_e, m) => {
     if (m && typeof m.id === 'string') h.onHold(m.id, m.hold === true)
+  })
+  ipcMain.on(IPC.PIN, (_e, id) => {
+    if (typeof id === 'string') h.onPin(id)
   })
   ipcMain.on(IPC.FOCUS, (_e, f) => h.onFocus(f === true))
   ipcMain.on(IPC.REPLY, (_e, m) => {

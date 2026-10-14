@@ -1,4 +1,5 @@
 import type { AgentSession } from './sessions'
+import type { Shortcuts } from './shortcuts'
 import type { CharacterConfig } from './character'
 import type { AiSettings, ProviderId } from './ai'
 import type { PackageId, PackageTab, PackagesConfig } from './packages'
@@ -77,7 +78,16 @@ export type MessageData = {
   status?: { kind: 'sending' | 'sent' | 'error'; text?: string }
 }
 
-type Base = { id: string; priority: number; /** insertion order, newer = larger */ seq?: number }
+type Base = {
+  id: string
+  priority: number
+  /** insertion order, newer = larger */
+  seq?: number
+  /** A card that closes by itself: how long it stays up (ms) from when it shows. */
+  closes?: number
+  /** Pinned: it stays until you close it. */
+  pinned?: boolean
+}
 
 export type Activity =
   | (Base & { kind: 'media'; media: MediaState })
@@ -117,6 +127,9 @@ export const IPC = {
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open
+  TOUR: 'island:tour', // main -> renderer: start "Show me around"
+  KEYS: 'island:keys', // main -> renderer: Shortcuts (the global shortcuts' keys)
+  PIN: 'island:pin', // renderer -> main: activity id (keep a transient card until it's closed)
   FOCUS: 'island:focus', // renderer -> main: boolean (take keyboard focus for typing)
   REPLY: 'island:reply', // renderer -> main: { id, text }
   MESSAGE_ACTION: 'island:message-action', // renderer -> main: { id, action }
@@ -270,6 +283,11 @@ export type SettingsState = {
   notifications: boolean
   autostart: boolean
   hookInstalled: boolean
+  /** The global shortcuts' keys. */
+  keys: Shortcuts
+  /** Open the panel when the pointer rests on the resting island. */
+  openOnHover: boolean
+  mac: boolean
   /** Other coding agents (Codex, Gemini CLI, Cursor) whose sessions show on the island. */
   agentHooks: { id: string; name: string; installed: boolean; path: string; note: string }[]
   /** False when passwords can only be obfuscated (no desktop keyring). */

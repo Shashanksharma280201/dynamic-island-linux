@@ -17,6 +17,8 @@ export type TrayActions = {
   setHook: (on: boolean) => Promise<void>
   setAutostart: (on: boolean) => void
   openSettings: () => void
+  /** "Show me around": the island's tour. */
+  tour: () => void
   uninstall: () => void
   quit: () => void
 }
@@ -59,6 +61,7 @@ export class IslandTray {
         { label: 'Dynamic Island', enabled: false },
         { type: 'separator' },
         { label: 'Settings… (WhatsApp, Mail)', click: () => this.actions.openSettings() },
+        { label: 'Show me around', click: () => this.actions.tour() },
         { type: 'separator' },
         {
           label: 'Do Not Disturb',

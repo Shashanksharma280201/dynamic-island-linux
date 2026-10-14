@@ -66,3 +66,27 @@ test('a closing card cannot be held open again (e.g. re-hovered after "Sent")', 
   vi.advanceTimersByTime(1500)
   expect(store.has('a')).toBe(false)
 })
+
+test('a pinned card stays until closed, and says so', () => {
+  const store = new ActivityStore()
+  const t = new TransientCards(store, 2, 1000)
+  t.show(card('a'), 5000)
+  expect(store.list()[0].closes).toBe(5000)
+  t.pin('a')
+  expect(store.list()[0]).toMatchObject({ pinned: true, closes: undefined })
+  t.hold('a', true)
+  t.hold('a', false) // releasing a hover doesn't start a timer again
+  vi.advanceTimersByTime(60_000)
+  expect(store.has('a')).toBe(true)
+  // Updated while pinned: still pinned. Over the cap: others go first.
+  t.show(card('a'), 5000)
+  expect(store.list()[0].pinned).toBe(true)
+  t.show(card('b'), 5000)
+  t.show(card('c'), 5000)
+  expect(store.list().map((x) => x.id).sort()).toEqual(['a', 'c'])
+  t.dismiss('a')
+  expect(store.has('a')).toBe(false)
+  // Shown again after closing: a normal card.
+  t.show(card('a'), 5000)
+  expect(store.list().find((x) => x.id === 'a')?.pinned).toBeUndefined()
+})

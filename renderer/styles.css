@@ -4723,3 +4723,150 @@ button .spinner-orb,
 .dl.ctx {
   color: rgba(255, 255, 255, 0.62);
 }
+
+/* A card that closes by itself: the time it has left, and a pin to keep it. */
+.close-row {
+  position: absolute;
+  left: 24px;
+  right: 16px;
+  bottom: 4px;
+  height: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.close-bar {
+  flex: 1;
+  height: 2.5px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.close-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.34);
+  transform-origin: left center;
+  animation: close-bar linear forwards;
+  transition: background 0.2s;
+}
+.close-bar.held span {
+  background: rgba(255, 255, 255, 0.55);
+}
+@keyframes close-bar {
+  from {
+    transform: scaleX(var(--from, 1));
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.pin-btn {
+  pointer-events: auto;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--label-2);
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  animation: rise 0.18s cubic-bezier(0, 0, 0.2, 1) both;
+}
+.pin-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+}
+@media (prefers-reduced-motion: reduce) {
+  .close-bar span {
+    animation: none;
+  }
+}
+
+/* Control Center: the shortcuts sheet. */
+.shortcut-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: rise 0.2s cubic-bezier(0, 0, 0.2, 1) both;
+}
+.sheet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 26px;
+  font-size: 12.5px;
+}
+.sheet-how {
+  color: var(--label-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.sheet-change {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--blue);
+}
+.panel-foot .row.on {
+  color: var(--label);
+}
+
+/* "Show me around": the step under the island, with Back / Next. */
+.island.tour-bar {
+  width: 340px;
+  padding: 12px 14px 10px;
+  border-radius: 20px;
+  box-sizing: border-box;
+}
+.tour-text {
+  min-height: 58px;
+}
+.tour-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-bottom: 3px;
+}
+.tour-body {
+  font-size: 12.5px;
+  line-height: 1.42;
+  color: var(--label-2);
+}
+.tour-foot {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+.tour-foot .pill {
+  padding: 5px 12px;
+  font-size: 12.5px;
+}
+.tour-dots {
+  display: inline-flex;
+  gap: 4px;
+}
+.tour-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--label-3);
+  transition:
+    width 0.2s,
+    background 0.2s;
+}
+.tour-dots span.on {
+  width: 14px;
+  border-radius: 3px;
+  background: var(--label);
+}
+.island-outer.top .island.tour-bar {
+  align-self: flex-start;
+}
