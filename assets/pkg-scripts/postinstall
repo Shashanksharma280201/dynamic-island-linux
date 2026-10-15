@@ -1,0 +1,13 @@
+#!/bin/sh
+# Runs as root once the Installer has copied the app ($2 is where it went,
+# /Applications). The app is handed to the person installing it, as dragging
+# it from the .dmg would leave it, so the island's own Uninstall and the
+# one-line updater can replace it without a password. Then it's started.
+app="$2/Dynamic Island.app"
+[ -d "$app" ] || app="/Applications/Dynamic Island.app"
+user=$(stat -f %Su /dev/console 2>/dev/null)
+if [ -d "$app" ] && [ -n "$user" ] && [ "$user" != root ] && [ "$user" != loginwindow ]; then
+  chown -R "$user":staff "$app" || true
+  launchctl asuser "$(id -u "$user")" sudo -u "$user" open "$app" >/dev/null 2>&1 || true
+fi
+exit 0

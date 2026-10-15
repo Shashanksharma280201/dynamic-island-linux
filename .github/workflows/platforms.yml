@@ -32,11 +32,24 @@ jobs:
         run: npm run package
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no signing certificate
+      - name: Signed with a Developer ID, it still runs (hardened runtime, our entitlements)
+        # A real certificate isn't available here; an ad-hoc signature with the
+        # same options shows the app works under the rules notarization needs.
+        run: |
+          APP=$(ls -d dist/mac*/"Dynamic Island.app" | head -1)
+          codesign --force --deep --sign - --options runtime --entitlements assets/entitlements.mac.plist "$APP"
+          codesign -dv "$APP" 2>&1 | grep -E "flags=.*runtime"
+          codesign -d --entitlements - "$APP" 2>/dev/null | grep -E "audio-input|apple-events|allow-jit"
+          node e2e/smoke.cjs
+        env:
+          APP_PATH: ${{ github.workspace }}/dist/mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island
+          SHOTS: shots-hardened
       - uses: actions/upload-artifact@v4
         with:
           name: installer-${{ matrix.os }}
           path: |
             dist/*.dmg
+            dist/*.pkg
             dist/*.exe
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
@@ -115,6 +128,30 @@ jobs:
           echo "leftovers: ${LEFT:-none}"
           check "nothing left in ~/Library" '[ -z "$LEFT" ]'
           echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)"dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
+          exit $FAILED
+      - name: The .pkg, downloaded in a browser, installs and opens
+        # The Installer doesn't pass the download's quarantine on to the app,
+        # so there's no "damaged" message; its script hands the app to the
+        # user and starts it.
+        run: |
+          PKG=$(ls dist/*.pkg | head -1)
+          echo "Installer: $PKG"
+          xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" "$PKG"
+          sudo installer -pkg "$PKG" -target /
+          APP="/Applications/Dynamic Island.app"
+          FAILED=0
+          check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; FAILED=1; fi; }
+          check "installed in Applications" '[ -d "$APP" ]'
+          check "owned by the user, not root" '[ "$(stat -f %Su "$APP")" = "$USER" ]'
+          check "no quarantine on the app" '! xattr -p com.apple.quarantine "$APP" >/dev/null 2>&1'
+          check "signature valid" 'codesign --verify --deep --strict "$APP"'
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null && break; sleep 1; done
+          check "the installer started it" 'pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
+          sleep 4
+          "$APP/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data || true
+          for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null || break; sleep 1; done
+          sleep 6
+          check "its Uninstall removes it without a password" '[ ! -e "$APP" ]'
           exit $FAILED
       - uses: actions/upload-artifact@v4
         if: always()

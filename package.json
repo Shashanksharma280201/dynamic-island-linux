@@ -14,7 +14,7 @@
     "test:watch": "vitest",
     "test:e2e": "npm run build && xvfb-run -a -s \"-screen 0 1920x1080x24\" dbus-run-session -- sh -c \"node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs && node e2e/docs.cjs && node e2e/crm.cjs && node e2e/notifications.cjs && node e2e/sessions.cjs && node e2e/ease.cjs && node e2e/services.cjs && node e2e/recap.cjs\"",
     "check": "npm run typecheck && npm test && npm run build",
-    "package": "npm run build && electron-builder --mac dmg --publish never",
+    "package": "npm run build && electron-builder --mac dmg pkg --publish never",
     "hook:install": "node hook/install.cjs",
     "hook:uninstall": "node hook/install.cjs --uninstall",
     "limits:install": "node hook/statusline.cjs",
@@ -137,7 +137,8 @@
     "publish": null,
     "mac": {
       "target": [
-        "dmg"
+        "dmg",
+        "pkg"
       ],
       "category": "public.app-category.productivity",
       "icon": "assets/icon.png",
@@ -147,6 +148,9 @@
         "NSAppleEventsUsageDescription": "See and control what Spotify or Music is playing."
       },
       "identity": null,
+      "hardenedRuntime": true,
+      "entitlements": "assets/entitlements.mac.plist",
+      "entitlementsInherit": "assets/entitlements.mac.plist",
       "artifactName": "Dynamic-Island-${version}-${arch}.${ext}",
       "executableName": "Dynamic Island"
     },
@@ -164,6 +168,15 @@
     },
     "dmg": {
       "title": "Dynamic Island"
+    },
+    "pkg": {
+      "installLocation": "/Applications",
+      "isRelocatable": false,
+      "isVersionChecked": false,
+      "overwriteAction": "upgrade",
+      "mustClose": [
+        "io.github.shashanksharma280201.dynamicisland"
+      ]
     },
     "afterPack": "scripts/after-pack.cjs"
   },
