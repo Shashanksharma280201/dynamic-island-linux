@@ -42,6 +42,13 @@ jobs:
           codesign -dv "$APP" 2>&1 | grep -E "flags=.*runtime"
           codesign -d --entitlements - "$APP" 2>/dev/null | grep -E "audio-input|apple-events|allow-jit"
           note() { echo "::notice title=$1::$(sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"; }
+          # The smoke test above (unsigned) may have saved the app's encryption
+          # key in the keychain; a differently signed app asking for it gets a
+          # "wants to use your confidential information" prompt that nobody can
+          # answer here. A new install on a Mac doesn't have that key yet.
+          security dump-keychain 2>/dev/null | sed -n 's/.*"svce"<blob>="\(.*Safe Storage\)".*/\1/p' | sort -u > safe-storage.txt
+          note "Keychain entries removed first" < safe-storage.txt
+          while read -r svc; do security delete-generic-password -s "$svc" >/dev/null 2>&1 || true; done < safe-storage.txt
           node e2e/smoke.cjs > smoke-hardened.log 2>&1 &
           SMOKE=$!
           for i in $(seq 1 240); do kill -0 $SMOKE 2>/dev/null || break; sleep 1; done
@@ -52,7 +59,7 @@ jobs:
             MAIN=$(pgrep -f "mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island" | head -1)
             sample "$MAIN" 3 -file sample.txt >/dev/null 2>&1 || true
             # The main thread's deepest frames (where it waits), and the summary.
-            awk '/^Call graph:/{f=1; next} f && /^    [0-9]+ Thread_/{n++} f && n==1' sample.txt | tail -45 | sed -E 's/^[ +!:|]+//' | cut -c1-160 | note "Main thread, deepest frames"
+            awk '/^Call graph:/{f=1; next} f && /^    [0-9]+ Thread_/{n++} f && n==1' sample.txt | tail -45 | sed -E 's/^[ +!:|]+//' | cut -c1-160 | note "Main thread deepest frames"
             awk '/^Sort by top of stack/{f=1} f' sample.txt | head -25 | cut -c1-160 | note "Top of stack"
             ps -axo pid,stat,command | grep -i "dynamic island" | grep -v grep | cut -c1-160 | note "Processes"
             tail -60 shots-hardened/app.log 2>/dev/null | cut -c1-300 | note "App log while stuck"
