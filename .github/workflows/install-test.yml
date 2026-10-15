@@ -128,7 +128,12 @@ jobs:
 
   macos:
     needs: release
-    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Apple silicon on the current and the newest macOS, and Intel.
+        os: [macos-15, macos-26, macos-15-intel]
+    runs-on: ${{ matrix.os }}
     env:
       # The tag asked for, if any. Without one the scripts look up the latest
       # release themselves, as they do for most people.
@@ -168,6 +173,47 @@ jobs:
           check "settings and data removed" '[ ! -e ~/Library/Application\ Support/dynamic-island-linux ]'
           check "not running any more" '! pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
           echo "--- what the uninstall's last step did:"; cat "$(getconf DARWIN_USER_TEMP_DIR)"dynamic-island-uninstall-*/dynamic-island-uninstall.log 2>/dev/null || true
+          exit $failed
+      - name: Downloaded in a browser, it installs and opens
+        # A browser marks downloads as quarantined, and macOS won't open an
+        # app that isn't notarized from one (it calls it damaged). Unsigned
+        # releases come with a .pkg, whose Installer doesn't pass the mark on;
+        # a signed release's .dmg must pass Gatekeeper as it is.
+        if: needs.release.outputs.full == 'true'
+        run: |
+          TAG="${{ needs.release.outputs.tag }}"; VER="${TAG#v}"
+          case "$(uname -m)" in arm64) M=MSeries A=arm64 ;; *) M=intel A=x64 ;; esac
+          DL="https://github.com/${{ github.repository }}/releases/download/$TAG"
+          APP="/Applications/Dynamic Island.app"
+          quarantine() { xattr -w com.apple.quarantine "0083;$(printf %x $(date +%s));Safari;" "$1"; }
+          failed=0
+          check() { if eval "$2"; then echo "ok: $1"; else echo "FAILED: $1"; failed=1; fi; }
+          if curl -fsSL -o "$RUNNER_TEMP/di.pkg" "$DL/dynamic-island-mac-$M-$VER-$A.pkg"; then
+            quarantine "$RUNNER_TEMP/di.pkg"
+            sudo installer -pkg "$RUNNER_TEMP/di.pkg" -target /
+            check "installed in Applications" '[ -d "$APP" ]'
+            check "owned by the user, not root" '[ "$(stat -f %Su "$APP")" = "$USER" ]'
+            check "not quarantined, so not called damaged" '! xattr -p com.apple.quarantine "$APP" >/dev/null 2>&1'
+            for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null && break; sleep 1; done
+            check "the installer started it" 'pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null'
+            sleep 4
+            "$APP/Contents/MacOS/Dynamic Island" --uninstall --yes --delete-data || true
+            for i in $(seq 1 30); do pgrep -f "Dynamic Island.app/Contents/MacOS/" >/dev/null || break; sleep 1; done
+            sleep 6
+            check "its Uninstall removes it without a password" '[ ! -e "$APP" ]'
+          else
+            curl -fsSL -o "$RUNNER_TEMP/di.dmg" "$DL/dynamic-island-mac-$M-$VER-$A.dmg"
+            quarantine "$RUNNER_TEMP/di.dmg"
+            MNT=$(hdiutil attach -nobrowse -readonly "$RUNNER_TEMP/di.dmg" | grep -o '/Volumes/.*' | head -1)
+            ditto "$MNT/Dynamic Island.app" "$APP"
+            hdiutil detach "$MNT" -quiet
+            if codesign -dv "$APP" 2>&1 | grep -q "TeamIdentifier=not set"; then
+              echo "::notice::$TAG has no .pkg and isn't signed with a Developer ID: a browser download of it is refused (released before 0.3.0)."
+            else
+              check "Gatekeeper accepts the downloaded app" 'spctl --assess --type execute -vv "$APP" 2>&1 | tee /dev/stderr | grep -q "accepted"'
+            fi
+            rm -rf "$APP"
+          fi
           exit $failed
 
   windows:

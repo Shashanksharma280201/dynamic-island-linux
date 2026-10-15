@@ -4,7 +4,16 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
-## Unreleased
+## 0.3.0 (2026-10-15)
+
+**Installing on a Mac**
+
+- A Mac said the downloaded app "is damaged and can't be opened". The Mac
+  downloads now include a `.pkg`: open it, click **Open Anyway** once in
+  System Settings → Privacy & Security, and it installs and starts the island.
+  The one-line install command is still the easiest way on a Mac, and the
+  README says how to use the `.dmg` too. (The app isn't signed with an Apple
+  Developer ID yet; once it is, the `.dmg` opens normally.)
 
 **Claude Code, live from your terminals**
 

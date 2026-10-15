@@ -40,7 +40,7 @@ On Ubuntu and Debian it installs the `.deb` with apt (it asks for your
 password); on other Linux it puts the AppImage in `~/.local/bin` with an app
 menu entry. On a Mac it copies the app to Applications; on Windows it installs
 it for your account, no administrator needed. Either way there's no "Open
-Anyway" or SmartScreen step.
+Anyway" or SmartScreen step, so **on a Mac this is the easiest way**.
 
 **Or download the file for your computer:**
 
@@ -52,10 +52,23 @@ Anyway" or SmartScreen step.
 | Mac with Intel | [dynamic-island-mac-intel-0.2.0-x64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-mac-intel-0.2.0-x64.dmg) |
 | Windows 10 or 11 | [dynamic-island-windows-0.2.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-windows-0.2.0-x64.exe) |
 
-These installers aren't signed yet. On a Mac, open the `.dmg`, drag Dynamic
-Island to Applications, and the first time open **System Settings → Privacy &
-Security** and click **Open Anyway**. On Windows, if SmartScreen warns, click
-**More info**, then **Run anyway**. To check a download, compare it with
+These installers aren't signed yet, so each system asks once:
+
+- **Mac, `.pkg`:** open it. When macOS says it can't verify it, open **System
+  Settings → Privacy & Security**, click **Open Anyway**, and install. The
+  island starts by itself; its icon is in the menu bar.
+- **Mac, `.dmg`:** drag Dynamic Island to Applications, then run this once in
+  Terminal, or macOS says the app "is damaged and can't be opened":
+
+  ```bash
+  xattr -dr com.apple.quarantine "/Applications/Dynamic Island.app"
+  ```
+
+- **Windows:** if SmartScreen warns, click **More info**, then **Run anyway**.
+
+(The Mac app isn't signed with an Apple Developer ID yet; that's why macOS
+asks. [docs/mac-signing.md](docs/mac-signing.md) is how to turn that on.) To
+check a download, compare it with
 [SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
 --ignore-missing` (on a Mac, `shasum -a 256 -c SHA256SUMS.txt
 --ignore-missing`). To build it from the code instead, see [Install](#install).
