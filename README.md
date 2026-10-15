@@ -1,6 +1,6 @@
 # Dynamic Island for Linux
 
-**[Download Dynamic Island v0.2.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.2.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
+**[Download Dynamic Island v0.3.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.3.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
 
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule on
 the edge of your screen (right side by default, drag it anywhere along the left or
@@ -38,7 +38,7 @@ app (nothing to install).
 
 ## Download
 
-**Latest release: [v0.2.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.2.0)** ([what's new](CHANGELOG.md), [all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)).
+**Latest release: [v0.3.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.3.0)** ([what's new](CHANGELOG.md), [all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)).
 
 **Install with one command.** It downloads the right installer for your
 computer, checks it against the release's checksums, installs it and starts it.
@@ -68,11 +68,11 @@ Anyway" or SmartScreen step, so **on a Mac this is the easiest way**.
 
 | Your computer | Download |
 |---|---|
-| Ubuntu, Debian | [dynamic-island-linux-0.2.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-linux-0.2.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.2.0-amd64.deb` |
-| Any Linux (X11) | [dynamic-island-linux-0.2.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-linux-0.2.0-x86_64.AppImage), then `chmod +x` it and run it |
-| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-0.2.0-arm64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-mac-MSeries-0.2.0-arm64.dmg) |
-| Mac with Intel | [dynamic-island-mac-intel-0.2.0-x64.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-mac-intel-0.2.0-x64.dmg) |
-| Windows 10 or 11 | [dynamic-island-windows-0.2.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/dynamic-island-windows-0.2.0-x64.exe) |
+| Ubuntu, Debian | [dynamic-island-linux-0.3.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-linux-0.3.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.3.0-amd64.deb` |
+| Any Linux (X11) | [dynamic-island-linux-0.3.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-linux-0.3.0-x86_64.AppImage), then `chmod +x` it and run it |
+| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-0.3.0-arm64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-MSeries-0.3.0-arm64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-MSeries-0.3.0-arm64.dmg)) |
+| Mac with Intel | [dynamic-island-mac-intel-0.3.0-x64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-intel-0.3.0-x64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-intel-0.3.0-x64.dmg)) |
+| Windows 10 or 11 | [dynamic-island-windows-0.3.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-windows-0.3.0-x64.exe) |
 
 These installers aren't signed yet, so each system asks once:
 
@@ -91,7 +91,7 @@ These installers aren't signed yet, so each system asks once:
 (The Mac app isn't signed with an Apple Developer ID yet; that's why macOS
 asks. [docs/mac-signing.md](docs/mac-signing.md) is how to turn that on.) To
 check a download, compare it with
-[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.2.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
+[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
 --ignore-missing` (on a Mac, `shasum -a 256 -c SHA256SUMS.txt
 --ignore-missing`). To build it from the code instead, see [Install](#install).
 
