@@ -74,6 +74,14 @@ Run the Release workflow as usual. The Mac build log says "Signing with team
 publishing, if Gatekeeper wouldn't accept the result. Notarizing usually takes
 a few minutes.
 
+The first time the signed version opens Settings (or reads a saved key),
+macOS may ask once: "Dynamic Island wants to use your confidential information
+stored in dynamic-island-linux Safe Storage". That's the key the island
+encrypts your passwords and API keys with, saved by the earlier, differently
+signed version. Enter your Mac password and click **Always Allow**. Unsigned
+builds can ask this after an update too; with a Developer ID it stays allowed
+across updates.
+
 What the signed app may do is in
 [assets/entitlements.mac.plist](https://github.com/shashanksharma280201/dynamic-island-linux/blob/mac/assets/entitlements.mac.plist)
 on the `mac` branch: the microphone (talking to the assistant, dictation) and
