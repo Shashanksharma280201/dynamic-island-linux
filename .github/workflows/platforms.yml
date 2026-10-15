@@ -51,7 +51,10 @@ jobs:
             rc=124
             MAIN=$(pgrep -f "mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island" | head -1)
             sample "$MAIN" 3 -file sample.txt >/dev/null 2>&1 || true
-            awk '/^Call graph:/{f=1} /^Total number in stack/{f=0} f' sample.txt | head -90 | cut -c1-200 | note "Main process while stuck"
+            # The main thread's deepest frames (where it waits), and the summary.
+            awk '/^Call graph:/{f=1; next} f && /^    [0-9]+ Thread_/{n++} f && n==1' sample.txt | tail -45 | sed -E 's/^[ +!:|]+//' | cut -c1-160 | note "Main thread, deepest frames"
+            awk '/^Sort by top of stack/{f=1} f' sample.txt | head -25 | cut -c1-160 | note "Top of stack"
+            ps -axo pid,stat,command | grep -i "dynamic island" | grep -v grep | cut -c1-160 | note "Processes"
             tail -60 shots-hardened/app.log 2>/dev/null | cut -c1-300 | note "App log while stuck"
             kill $SMOKE; pkill -f "mac-arm64/Dynamic Island.app" || true
           else
