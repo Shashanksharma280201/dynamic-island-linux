@@ -34,8 +34,11 @@ jobs:
             package: npm run package
           - os: macos-latest
             branch: mac
-            # Apple silicon and Intel
-            package: npm run build && npx electron-builder --mac dmg --arm64 --x64 --publish never
+            # Apple silicon and Intel: the .dmg, and the .pkg that installs
+            # without macOS calling the app damaged. With a Developer ID (the
+            # MAC_CERT_P12 secret and the others in docs/mac-signing.md) the
+            # app is signed and notarized instead, and the .dmg is all it needs.
+            package: npm run build && npx electron-builder --mac dmg pkg --arm64 --x64 --publish never
           - os: windows-latest
             branch: windows
             package: npm run package
@@ -57,9 +60,34 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - run: ${{ matrix.package }}
+      - name: Build the installers
+        shell: bash
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no signing certificate
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false' # no signing certificate, unless the Mac one below is set
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          MAC_APPLE_ID: ${{ secrets.APPLE_ID }}
+          MAC_APP_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          MAC_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ "$RUNNER_OS" = macOS ] && [ -n "$MAC_CERT_P12" ]; then
+            for v in MAC_CERT_PASSWORD MAC_APPLE_ID MAC_APP_PASSWORD MAC_TEAM_ID; do
+              [ -n "${!v}" ] || { echo "::error::MAC_CERT_P12 is set but ${v#MAC_} isn't: see docs/mac-signing.md"; exit 1; }
+            done
+            echo "Signing with team $MAC_TEAM_ID's Developer ID certificate, then notarizing"
+            export CSC_LINK="$MAC_CERT_P12" CSC_KEY_PASSWORD="$MAC_CERT_PASSWORD"
+            export APPLE_ID="$MAC_APPLE_ID" APPLE_APP_SPECIFIC_PASSWORD="$MAC_APP_PASSWORD" APPLE_TEAM_ID="$MAC_TEAM_ID"
+            unset CSC_IDENTITY_AUTO_DISCOVERY
+            npm run build
+            npx electron-builder --mac dmg --arm64 --x64 --publish never -c.mac.identity="$MAC_TEAM_ID"
+            # Gatekeeper must accept it as downloaded, or people get "damaged".
+            for app in dist/mac*/*.app; do
+              spctl --assess --type execute -vv "$app"
+              xcrun stapler validate "$app"
+            done
+          else
+            ${{ matrix.package }}
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: installers-${{ matrix.branch }}
@@ -67,6 +95,7 @@ jobs:
             dist/*.deb
             dist/*.AppImage
             dist/*.dmg
+            dist/*.pkg
             dist/*.exe
           if-no-files-found: error
 
@@ -97,6 +126,8 @@ jobs:
               *-amd64.deb | *-x86_64.AppImage) new="$f" ;;
               *-arm64.dmg) new="dynamic-island-mac-MSeries-$VER-arm64.dmg" ;;
               *-x64.dmg) new="dynamic-island-mac-intel-$VER-x64.dmg" ;;
+              *-arm64.pkg) new="dynamic-island-mac-MSeries-$VER-arm64.pkg" ;;
+              *-x64.pkg) new="dynamic-island-mac-intel-$VER-x64.pkg" ;;
               *.exe) new="dynamic-island-windows-$VER-x64.exe" ;;
               *) echo "::error::unexpected file: $f"; exit 1 ;;
             esac
@@ -118,6 +149,12 @@ jobs:
             exit 1
           fi
           dl="https://github.com/${{ github.repository }}/releases/download/$TAG"
+          # Unsigned Mac builds come with a .pkg (signed ones don't need one).
+          pkg=""; [ -e "installers/dynamic-island-mac-MSeries-$VER-arm64.pkg" ] && pkg=1
+          mac() { # $1 = MSeries|intel, $2 = arm64|x64
+            local d="dynamic-island-mac-$1-$VER-$2.dmg" p="dynamic-island-mac-$1-$VER-$2.pkg"
+            if [ -n "$pkg" ]; then echo "[$p]($dl/$p) (or the [.dmg]($dl/$d))"; else echo "[$d]($dl/$d)"; fi
+          }
           raw="https://raw.githubusercontent.com/${{ github.repository }}/main/scripts"
           {
             echo "## What's new"
@@ -137,11 +174,17 @@ jobs:
             echo "|---|---|"
             echo "| Ubuntu, Debian | [dynamic-island-linux-$VER-amd64.deb]($dl/dynamic-island-linux-$VER-amd64.deb), then \`sudo apt install ./dynamic-island-linux-$VER-amd64.deb\` |"
             echo "| Any Linux (X11) | [dynamic-island-linux-$VER-x86_64.AppImage]($dl/dynamic-island-linux-$VER-x86_64.AppImage), then \`chmod +x\` it and run it |"
-            echo "| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-$VER-arm64.dmg]($dl/dynamic-island-mac-MSeries-$VER-arm64.dmg) |"
-            echo "| Mac with Intel | [dynamic-island-mac-intel-$VER-x64.dmg]($dl/dynamic-island-mac-intel-$VER-x64.dmg) |"
+            echo "| Mac with Apple silicon (M1 and newer) | $(mac MSeries arm64) |"
+            echo "| Mac with Intel | $(mac intel x64) |"
             echo "| Windows 10 or 11 | [dynamic-island-windows-$VER-x64.exe]($dl/dynamic-island-windows-$VER-x64.exe) |"
             echo
-            echo "The installers aren't signed. **Mac:** open the \`.dmg\` and drag Dynamic Island to Applications; the first time, open **System Settings → Privacy & Security** and click **Open Anyway**. **Windows:** if SmartScreen warns, click **More info**, then **Run anyway**. The one-command install skips both."
+            if [ -n "$pkg" ]; then
+              echo "**Mac:** the one command above is the easiest. Or open the \`.pkg\`: when macOS says it can't verify it, open **System Settings → Privacy & Security**, click **Open Anyway**, and install; the island starts by itself. With the \`.dmg\` instead, after dragging the app to Applications run \`xattr -dr com.apple.quarantine \"/Applications/Dynamic Island.app\"\` once in Terminal, or macOS says it's damaged (the app isn't signed with an Apple Developer ID yet)."
+            else
+              echo "**Mac:** open the \`.dmg\` and drag Dynamic Island to Applications. It's signed and notarized by Apple."
+            fi
+            echo
+            echo "**Windows:** the installer isn't signed: if SmartScreen warns, click **More info**, then **Run anyway**. The one-command install skips that."
             echo
             echo "\`SHA256SUMS.txt\` lists each file's checksum: \`sha256sum -c SHA256SUMS.txt --ignore-missing\` (Mac: \`shasum -a 256 -c SHA256SUMS.txt --ignore-missing\`)."
             echo
