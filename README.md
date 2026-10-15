@@ -221,9 +221,17 @@ open dist/*.dmg
 ```
 
 Drag **Dynamic Island** onto **Applications** in the window that opens, then
-open it from Launchpad or the Applications folder. If you copied the app from
-another Mac and macOS says it can't check it, open **System Settings →
-Privacy & Security** and click **Open Anyway** (once).
+open it from Launchpad or the Applications folder. If you copy the app to
+another Mac (AirDrop, a download) and macOS says it "is damaged and can't be
+opened", run this there once:
+
+```bash
+xattr -dr com.apple.quarantine "/Applications/Dynamic Island.app"
+```
+
+(`npm run package` also makes a `.pkg` in `dist/`, which installs on another
+Mac without that step, after one **Open Anyway** in System Settings → Privacy
+& Security.)
 
 **6. Start it at login:** click the island's menu bar icon and tick **Start at
 login**.
