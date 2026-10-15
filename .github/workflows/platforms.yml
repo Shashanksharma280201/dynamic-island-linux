@@ -35,12 +35,17 @@ jobs:
       - name: Signed with a Developer ID, it still runs (hardened runtime, our entitlements)
         # A real certificate isn't available here; an ad-hoc signature with the
         # same options shows the app works under the rules notarization needs.
+        timeout-minutes: 10
         run: |
           APP=$(ls -d dist/mac*/"Dynamic Island.app" | head -1)
           codesign --force --deep --sign - --options runtime --entitlements assets/entitlements.mac.plist "$APP"
           codesign -dv "$APP" 2>&1 | grep -E "flags=.*runtime"
           codesign -d --entitlements - "$APP" 2>/dev/null | grep -E "audio-input|apple-events|allow-jit"
-          node e2e/smoke.cjs
+          rc=0
+          perl -e 'alarm shift @ARGV; exec @ARGV' 300 node e2e/smoke.cjs > smoke-hardened.log 2>&1 || rc=$?
+          # What happened, readable without the log.
+          echo "::notice title=Hardened runtime smoke test (exit $rc)::$(tail -40 smoke-hardened.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          exit $rc
         env:
           APP_PATH: ${{ github.workspace }}/dist/mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island
           SHOTS: shots-hardened
