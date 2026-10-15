@@ -41,10 +41,23 @@ jobs:
           codesign --force --deep --sign - --options runtime --entitlements assets/entitlements.mac.plist "$APP"
           codesign -dv "$APP" 2>&1 | grep -E "flags=.*runtime"
           codesign -d --entitlements - "$APP" 2>/dev/null | grep -E "audio-input|apple-events|allow-jit"
+          note() { echo "::notice title=$1::$(sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"; }
+          node e2e/smoke.cjs > smoke-hardened.log 2>&1 &
+          SMOKE=$!
+          for i in $(seq 1 240); do kill -0 $SMOKE 2>/dev/null || break; sleep 1; done
           rc=0
-          perl -e 'alarm shift @ARGV; exec @ARGV' 300 node e2e/smoke.cjs > smoke-hardened.log 2>&1 || rc=$?
-          # What happened, readable without the log.
-          echo "::notice title=Hardened runtime smoke test (exit $rc)::$(tail -40 smoke-hardened.log | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')"
+          if kill -0 $SMOKE 2>/dev/null; then
+            # Stuck: what the app's main process is doing, and what it logged.
+            rc=124
+            MAIN=$(pgrep -f "mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island" | head -1)
+            sample "$MAIN" 3 -file sample.txt >/dev/null 2>&1 || true
+            awk '/^Call graph:/{f=1} /^Total number in stack/{f=0} f' sample.txt | head -90 | cut -c1-200 | note "Main process while stuck"
+            tail -60 shots-hardened/app.log 2>/dev/null | cut -c1-300 | note "App log while stuck"
+            kill $SMOKE; pkill -f "mac-arm64/Dynamic Island.app" || true
+          else
+            wait $SMOKE || rc=$?
+          fi
+          tail -40 smoke-hardened.log | note "Hardened runtime smoke test (exit $rc)"
           exit $rc
         env:
           APP_PATH: ${{ github.workspace }}/dist/mac-arm64/Dynamic Island.app/Contents/MacOS/Dynamic Island

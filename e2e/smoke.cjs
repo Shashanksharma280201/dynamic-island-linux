@@ -60,8 +60,10 @@ const seen = (page, sel, ms = 8000) => page.waitForSelector(sel, { timeout: ms }
     },
   })
   const logs = []
-  app.process().stderr.on('data', (d) => logs.push(d.toString()))
-  app.process().stdout.on('data', (d) => logs.push(d.toString()))
+  // Also kept in a file as it comes, to see what happened if a run gets stuck.
+  const keep = (d) => (logs.push(d.toString()), fs.appendFileSync(path.join(OUT, 'app.log'), d))
+  app.process().stderr.on('data', keep)
+  app.process().stdout.on('data', keep)
   const page = await app.firstWindow()
   const shot = (n) => page.screenshot({ path: path.join(OUT, `${n}.png`) }).catch(() => {})
   const toggle = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
