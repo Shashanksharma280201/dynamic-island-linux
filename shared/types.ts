@@ -4,6 +4,7 @@ import type { CharacterConfig } from './character'
 import type { AiSettings, ProviderId } from './ai'
 import type { PackageId, PackageTab, PackagesConfig } from './packages'
 import type { ClaudeRun } from './claude'
+import type { DragConfig } from './dragActions'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -97,6 +98,22 @@ export type Activity =
   | (Base & { kind: 'claude'; run: ClaudeRun })
   /** A Claude Code (or other agent) session in a terminal; `others` are also working. */
   | (Base & { kind: 'session'; session: AgentSession; others?: number })
+  /** A drag action at work (converting, shrinking…), then its result. */
+  | (Base & { kind: 'job'; job: JobState })
+
+/** A drag action's progress and result, as the island shows it. */
+export type JobState = {
+  title: string
+  /** The file(s) it works on. */
+  sub: string
+  phase: 'working' | 'done' | 'error'
+  /** 0 to 1 when several files are done one by one. */
+  progress?: number
+  /** A file it made: open it, show it, undo it or drag it out. */
+  result?: { path: string; name: string; ext: string; color: string; meta: string }
+  /** Done without a file to show ("Text copied"), or why it failed. */
+  note?: string
+}
 
 export type SystemState = {
   volume: number // 0-100
@@ -299,6 +316,8 @@ export type SettingsState = {
   customSounds: string[]
   /** The character also sits on the desktop. */
   companion: boolean
+  /** Drag actions: the ring that opens around a dragged file, and why it can't run here (if it can't). */
+  drag: DragConfig & { available: boolean; problem: string | null }
   /** Keep the weekly recap's history. */
   recap: boolean
   /** Services you follow, and how the last look went. */

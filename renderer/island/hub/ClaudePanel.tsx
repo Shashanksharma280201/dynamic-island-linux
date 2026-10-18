@@ -13,6 +13,7 @@ import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
 import { ClipIcon, ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
 import { attachmentNote } from '@shared/attachment'
+import { useDraft } from './claudeDraft'
 
 const folderName = (p: string) => p.split('/').filter(Boolean).pop() ?? '~'
 
@@ -148,6 +149,17 @@ function InputBar({ view, voice, onTyping }: { view: ClaudeView; voice: Voice; o
   const kb = useKeyboard(onTyping)
   const ref = useRef<HTMLTextAreaElement>(null)
   const busy = runActive(view.run)
+  // From the drag actions ring's Edit: the file is named, you say what to change.
+  useDraft((t) => {
+    setText(t)
+    kb.take()
+    setTimeout(() => {
+      const el = ref.current
+      if (!el) return
+      el.focus()
+      el.setSelectionRange(t.length, t.length)
+    }, 120)
+  })
   // The window you were in, attached to your next message (Claude Code only).
   const [attached, setAttached] = useState<{ title: string; path: string | null; preview: string | null } | null>(null)
   const [attaching, setAttaching] = useState(false)

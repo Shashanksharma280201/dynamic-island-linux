@@ -5248,3 +5248,135 @@ button .spinner-orb,
   font: inherit;
   cursor: pointer;
 }
+
+/* ---------------------------------------------------------------------------
+   Drag actions: what the ring is doing, and the file it made
+   --------------------------------------------------------------------------- */
+.card.job {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.job-text {
+  flex: 1;
+  min-width: 0;
+}
+.job-sub {
+  font-size: 11.5px;
+  color: var(--label-2);
+  margin-top: 2px;
+}
+.job-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--label-2);
+}
+.job-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.job-bar i {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--blue);
+  transition: width 0.3s ease;
+}
+/* Not knowing how long: a short bar that slides across. */
+.job-bar.busy i {
+  width: 34%;
+  animation: jobBusy 1.3s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+@keyframes jobBusy {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.job-mark {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.job-mark.ok {
+  background: rgba(48, 209, 88, 0.18);
+  color: var(--green);
+}
+.job-mark.bad {
+  background: rgba(255, 69, 58, 0.18);
+  color: #ff6961;
+}
+.job-ico {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.job-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 12px;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  cursor: grab;
+  transition: background 0.12s ease;
+}
+.job-file:hover {
+  background: rgba(255, 255, 255, 0.11);
+}
+.job-name {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.job-doc {
+  position: relative;
+  display: block;
+  flex: none;
+  width: 28px;
+  height: 36px;
+  border-radius: 3px 8px 3px 3px;
+  background: #f2f2f6;
+}
+.job-doc i {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  top: 9px;
+  height: 14px;
+  background: repeating-linear-gradient(#cdcdd4 0 1.5px, transparent 1.5px 4.5px);
+}
+.job-doc b {
+  position: absolute;
+  left: -5px;
+  bottom: 5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 7px;
+  font-weight: 700;
+  color: #fff;
+}
+.job-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .job-bar.busy i {
+    animation: none;
+    width: 100%;
+    opacity: 0.5;
+  }
+}

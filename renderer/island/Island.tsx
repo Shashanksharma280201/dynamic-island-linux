@@ -9,12 +9,14 @@ import { useHoverIntent } from './useHoverIntent'
 import { Hello, Peek } from './states/Peek'
 import { IdlePill } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
+import { JobCard } from './states/JobCard'
 import { ApprovalCard } from './states/ApprovalCard'
 import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
 import { Hub, savedTab, rememberTab, type HubTab } from './hub/Hub'
 import { Rail } from './hub/Rail'
+import { offerDraft } from './hub/claudeDraft'
 import { MessageCard } from './states/MessageCard'
 import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
 import { useVoice } from './voice/useVoice'
@@ -220,6 +222,20 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           return true
         })
         voiceRef.current.toggle()
+      }),
+    [],
+  )
+  // The drag actions ring's Ask and Edit: open the Claude tab (Edit leaves a message to finish).
+  useEffect(
+    () =>
+      window.island.claude?.onOpen(({ draft }) => {
+        if (draft) offerDraft(draft)
+        setTabState('claude')
+        rememberTab('claude')
+        setPanel((open) => {
+          if (!open) pinned.current = true
+          return true
+        })
       }),
     [],
   )
@@ -562,6 +578,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               ) : (
                 <CompactSession session={p.primary.session} others={p.primary.others} />
               )
+            ) : p.primary.kind === 'job' ? (
+              <JobCard id={p.primary.id} job={p.primary.job} />
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
             ) : (
