@@ -66,7 +66,7 @@ const until = async (fn, ms = 5000) => {
 
   try {
     await sleep(1500)
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { timeout: 5000 })
     await page.click('.rail-btn[aria-label="Claude"]')
     check(
@@ -122,7 +122,7 @@ const until = async (fn, ms = 5000) => {
     await page.click('.agent-ask button.deny')
     await waitDone()
     check('Don’t Allow sends nothing', !waLog().includes('never mind') && (await view()).run?.reply === 'Okay, I didn’t send it.', (await view()).run?.reply)
-    if (!(await page.$('.hub'))) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    if (!(await page.$('.hub'))) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { timeout: 5000 })
 
     // Settings → Packages

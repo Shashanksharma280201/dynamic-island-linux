@@ -76,6 +76,9 @@ import { ServiceHub } from './services'
 import { SERVICES } from './servicesChannels'
 import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
 import { CLAUDE } from './claudeChannels'
+import { DragRing } from './dragRing'
+import { DragJobs } from './dragJobs'
+import { closeImagePage } from './imageOps'
 import { MailManager } from './mailManager'
 import { SettingsController } from './settings'
 import { MEDIA_SCHEME_PRIVILEGES, serveMedia, wireInbox } from './inbox'
@@ -686,7 +689,68 @@ async function main() {
   })
 
   // ---- settings window (created before the services report status to it) ----
+  // ---- drag actions: hold a dragged file still, and a ring of actions opens (X11) ----
+  const languageName = (): string => {
+    try {
+      return new Intl.DisplayNames(['en'], { type: 'language' }).of(app.getLocale()) ?? 'English'
+    } catch {
+      return 'English'
+    }
+  }
+  // Who can answer Ask and take Edit: Claude Code, the island's agent, or no one yet.
+  const assistantKind = (): 'claude-code' | 'api' | null => {
+    if (providerInfo(config.ai.provider).kind === 'claude-code') {
+      const bin = findClaude()
+      return bin && existsSync(bin) ? 'claude-code' : null
+    }
+    return setupProblem(config.ai) ? null : 'api'
+  }
+  const dragJobs = new DragJobs({
+    printPdf: printHtmlToPdf,
+    soffice,
+    cards: transient,
+    saveTo: () => config.drag.saveTo,
+    ghostscript: () => findExecutable('gs', ['/usr/bin', '/usr/local/bin']),
+    ask: (prompt) => {
+      try {
+        claudeUi!.engine().ask(prompt)
+        send(win, CLAUDE.OPEN, {})
+      } catch {
+        // Still busy with something else: the question waits in the box.
+        send(win, CLAUDE.OPEN, { draft: prompt })
+      }
+    },
+    edit: (draft) => send(win, CLAUDE.OPEN, { draft }),
+    language: languageName,
+    trash: (p) => shell.trashItem(p),
+    ownDrag: () => dragRing.ownDrag(),
+    island: () => win,
+  })
+  const dragRing = new DragRing({
+    on: () => config.drag.on,
+    opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
+    env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
+    onDrop: (d) => dragJobs.run(d),
+    // Holding a file over the island drops it there (Documents), not the ring.
+    avoid: (p) => {
+      if (!cssRect) return false
+      const b = win.getBounds()
+      const m = 24
+      return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+    },
+  })
+  const applyDrag = () =>
+    void dragRing.apply().then((ok) => {
+      if (!ok && config.drag.on && dragRing.problem) console.log(`[island] drag actions are off here (${dragRing.problem})`)
+    })
+  applyDrag()
+
   settings = new SettingsController({
+    drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
+    onDrag: () => {
+      applyDrag()
+      tray?.refresh()
+    },
     config,
     mail,
     whatsapp,
@@ -821,6 +885,7 @@ async function main() {
   claudeUi.applyVoiceShortcut()
   claudeStateReady(claudeUi)
   claudeUi.push()
+
 
   waForMedia = whatsapp
   inbox = wireInbox(win, {
@@ -1173,10 +1238,17 @@ async function main() {
       hookInstalled: isHookInstalled(),
       autostart: isAutostartEnabled(),
       dnd: config.dnd,
+      dragActions: process.platform === 'linux' ? config.drag.on : null,
       centerCount: center.view().entries.length,
     }),
     {
       setDnd,
+      setDragActions: (on) => {
+        config.drag = { ...config.drag, on }
+        saveConfig(config)
+        applyDrag()
+        settings?.changed()
+      },
       clearAll: () => {
         clearCards()
         center.clearAll()
@@ -1221,6 +1293,8 @@ async function main() {
     center.flush()
     clearInterval(crmTimer)
     crm.flush()
+    dragRing.stop()
+    closeImagePage()
     claudeCode.dispose()
     apiAgent.dispose()
     mcpRun?.abort()

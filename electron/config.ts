@@ -8,6 +8,7 @@ import { parseAiConfig, type AiConfig } from '@shared/ai'
 import { parsePackages, type PackagesConfig } from '@shared/packages'
 import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
 import { parseDisplayPref, type DisplayPref } from '@shared/displays'
+import { DRAG_DEFAULTS, parseDragConfig, type DragConfig } from '@shared/dragActions'
 import { parseServices, type ServicesConfig } from './services'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
@@ -41,6 +42,8 @@ export type Config = {
   dictation: boolean
   /** The character also sits on the desktop, where you put it. */
   companion: { on: boolean; at: { x: number; y: number } | null }
+  /** Hold a dragged file still: a ring of actions opens around the pointer. */
+  drag: DragConfig
   /** Frosted glass from a blurred snapshot of what's behind the island (X11). */
   frosted: boolean
   /** The island's little sounds (off unless turned on). */
@@ -108,6 +111,7 @@ const DEFAULTS: Config = {
   keys: parseShortcuts(null),
   openOnHover: false,
   companion: { on: false, at: null },
+  drag: { ...DRAG_DEFAULTS },
   dictation: true,
   display: 'primary',
   services: parseServices(null),
@@ -149,7 +153,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, services: parseServices(null), keys: parseShortcuts(null), companion: { on: false, at: null }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -168,6 +172,7 @@ export function mergeConfig(raw: unknown): Config {
   c.display = parseDisplayPref(r.display)
   c.services = parseServices(r.services)
   if (typeof r.recap === 'boolean') c.recap = r.recap
+  c.drag = parseDragConfig(r.drag)
   c.companion = {
     on: r.companion?.on === true,
     at: Number.isFinite(r.companion?.at?.x) && Number.isFinite(r.companion?.at?.y) ? { x: Math.round(r.companion.at.x), y: Math.round(r.companion.at.y) } : null,

@@ -12,6 +12,7 @@ import { encryptSecret, decryptSecret, isSecretStorageSecure } from './secrets'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import type { ShortcutId } from '@shared/shortcuts'
 import { parseDisplayPref } from '@shared/displays'
+import { parseDragConfig } from '@shared/dragActions'
 import { SERVICE_IDS, type ServiceId } from '@shared/services'
 import type { ServiceHub } from './services'
 import { displayChoices } from './window'
@@ -49,6 +50,9 @@ type Deps = {
   pauseShortcuts: (on: boolean) => void
   startTour: () => void
   setCompanion: (on: boolean) => void
+  /** Whether drag actions can run here, and why not. */
+  drag: () => { available: boolean; problem: string | null }
+  onDrag: () => void
   setDisplay: (pref: string) => void
   services: () => ServiceHub
   clearRecap: () => void
@@ -102,6 +106,7 @@ export class SettingsController {
       openOnHover: config.openOnHover,
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
+      drag: { ...config.drag, ...this.d.drag() },
       display: config.display,
       recap: config.recap,
       services: SERVICE_IDS.map((id) => {
@@ -287,6 +292,13 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.SET_DISPLAY, (_e, pref) => {
       this.d.setDisplay(parseDisplayPref(pref))
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_DRAG, (_e, patch) => {
+      if (!patch || typeof patch !== 'object') return
+      config.drag = parseDragConfig({ ...config.drag, ...patch })
+      this.save()
+      this.d.onDrag()
       this.changed()
     })
     ipcMain.handle(SETTINGS.SET_COMPANION, (_e, on) => {

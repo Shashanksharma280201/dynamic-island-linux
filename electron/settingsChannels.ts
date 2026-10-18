@@ -17,6 +17,7 @@ export const SETTINGS = {
   SET_SERVICE: 'settings:set-service', // (id, { on?, url?, token? }) -> error | null
   SET_DISPLAY: 'settings:set-display', // 'primary' | 'cursor' | a display's key
   SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
+  SET_DRAG: 'settings:set-drag', // patch of the drag actions options
   RECORDING: 'settings:recording', // boolean: our global shortcuts let go while you record new keys
   SET_DOCK_SIDE: 'settings:set-dock-side',
   SET_APPEARANCE: 'settings:set-appearance',

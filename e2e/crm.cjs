@@ -67,7 +67,7 @@ const gone = (page, selector, ms = 6000) => page.waitForSelector(selector, { sta
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
   const page = await app.firstWindow()
   const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png` }).catch(() => {})
-  const togglePanel = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+  const togglePanel = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
   const view = () => page.evaluate(() => window.island.claude.state())
   const waitDone = () => until(async () => ['done', 'error', 'stopped'].includes((await view()).run?.phase), 10000)
   const crmFile = () => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'crm', 'crm.json'), 'utf8'))

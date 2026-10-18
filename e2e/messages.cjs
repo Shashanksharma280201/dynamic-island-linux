@@ -112,7 +112,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
   app.process().stdout.on('data', (d) => logs.push(d.toString()))
   const page = await app.firstWindow()
   const shot = (p, n) => p.screenshot({ path: `${OUT}/${n}.png`, omitBackground: true })
-  const islandFocusable = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isFocusable())
+  const islandFocusable = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).isFocusable())
   const waLog = () => (fs.existsSync(WA_LOG) ? fs.readFileSync(WA_LOG, 'utf8') : '')
 
   try {

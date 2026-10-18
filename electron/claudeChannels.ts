@@ -11,4 +11,5 @@ export const CLAUDE = {
   STT_ENSURE: 'claude:stt-ensure', // invoke: download the speech model if needed
   VOICE: 'claude:voice', // main -> renderer: talk shortcut pressed
   ATTACH: 'claude:attach', // invoke -> Attachment | null: the window you were in
+  OPEN: 'claude:open', // main -> renderer: { draft? } open the Claude tab (a message to finish in its box)
 } as const

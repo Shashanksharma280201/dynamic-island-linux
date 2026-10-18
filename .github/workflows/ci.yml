@@ -38,3 +38,8 @@ jobs:
         run: xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- sh -c "node e2e/run.cjs && node e2e/messages.cjs && node e2e/claude.cjs && node e2e/agent.cjs && node e2e/spotify.cjs && node e2e/docs.cjs && node e2e/crm.cjs && node e2e/notifications.cjs && node e2e/sessions.cjs && node e2e/ease.cjs && node e2e/services.cjs && node e2e/recap.cjs"
         env:
           E2E_SCALE: '2'
+      - name: drag actions on a simulated HiDPI (2x) display
+        # The ring needs a screen a little bigger than 1080p at 2x.
+        run: xvfb-run -a -s "-screen 0 3840x2160x24" dbus-run-session -- node e2e/drag.cjs
+        env:
+          E2E_SCALE: '2'

@@ -57,6 +57,8 @@ import { SPOTIFY } from '../electron/spotifyChannels'
 import { DOCS } from '../electron/docsChannels'
 import { CRM } from '../electron/crmChannels'
 import { NOTIFS } from '../electron/notifChannels'
+import { JOB, RING } from '../electron/ringChannels'
+import type { DragConfig, PlanEnv, SlotId } from '@shared/dragActions'
 import type { CenterView } from '@shared/notifCenter'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
@@ -109,6 +111,25 @@ const api = {
     drop: () => ipcRenderer.send(COMPANION.DROP),
     click: () => ipcRenderer.send(COMPANION.CLICK),
     ready: () => ipcRenderer.send(COMPANION.READY),
+  },
+  /** The drag actions ring's page (its own window, under the pointer). */
+  ring: {
+    onOpen: (cb: (o: { env: PlanEnv; pointer: { x: number; y: number } }) => void) => on(RING.OPEN, cb),
+    onPointer: (cb: (p: { x: number; y: number }) => void) => on(RING.POINTER, cb),
+    onEnd: (cb: () => void) => on(RING.END, cb),
+    onClose: (cb: () => void) => on(RING.CLOSE, cb),
+    ready: () => ipcRenderer.send(RING.READY),
+    shown: () => ipcRenderer.send(RING.SHOWN),
+    none: () => ipcRenderer.send(RING.NONE),
+    drop: (d: { slot: SlotId; choice?: string; paths: string[] }) => ipcRenderer.send(RING.DROP, d),
+    pathFor: (f: File): string => webUtils.getPathForFile(f),
+  },
+  /** A drag action's card: what it made. */
+  jobs: {
+    open: (id: string) => ipcRenderer.invoke(JOB.OPEN, id),
+    show: (id: string) => ipcRenderer.invoke(JOB.SHOW, id),
+    undo: (id: string) => ipcRenderer.invoke(JOB.UNDO, id),
+    drag: (id: string) => ipcRenderer.send(JOB.DRAG, id),
   },
   /** The weekly recap: shown by the main process; the image saved or copied. */
   recap: {
@@ -179,6 +200,8 @@ const api = {
     setApprovals: (on: boolean): Promise<void> => ipcRenderer.invoke(CLAUDE.SET_APPROVALS, on),
     ensureSpeechModel: (): Promise<void> => ipcRenderer.invoke(CLAUDE.STT_ENSURE),
     onVoice: (cb: () => void) => on(CLAUDE.VOICE, cb),
+    /** Open the Claude tab; with a draft, it waits in the box to be finished and sent. */
+    onOpen: (cb: (o: { draft?: string }) => void) => on(CLAUDE.OPEN, cb),
     /** A screenshot and the title of the window you were in (null if none known). */
     attach: (): Promise<{ title: string; path: string | null; preview: string | null } | null> => ipcRenderer.invoke(CLAUDE.ATTACH),
   },
@@ -264,6 +287,7 @@ const settings = {
   tour: () => ipcRenderer.invoke(SETTINGS.TOUR),
   openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
   setCompanion: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_COMPANION, on),
+  setDrag: (patch: Partial<DragConfig>) => ipcRenderer.invoke(SETTINGS.SET_DRAG, patch),
   setDisplay: (pref: string) => ipcRenderer.invoke(SETTINGS.SET_DISPLAY, pref),
   setRecap: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_RECAP, on),
   clearRecap: () => ipcRenderer.invoke(SETTINGS.CLEAR_RECAP),

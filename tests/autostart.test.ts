@@ -46,6 +46,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     character: { id: 'orbit', name: 'Orbit', outfit: 'auto', color: null },
     ai: { provider: 'claude-code', models: {}, baseUrls: {}, keys: {} },
     packages: { disabled: [] },
+    drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)
@@ -57,6 +58,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
   expect(
     mergeConfig({ claude: { cwd: '/p', permissionMode: 'yolo', sttModel: 'tiny'  } }).claude,
   ).toEqual({ ...d.claude, cwd: '/p', sttModel: 'tiny' })
+  expect(mergeConfig({ drag: { on: false, when: 'sometimes', dwellMs: 5000, saveTo: 'downloads' } }).drag).toEqual({ on: false, when: 'either', dwellMs: 900, saveTo: 'downloads' })
 })
 
 const ACC = {

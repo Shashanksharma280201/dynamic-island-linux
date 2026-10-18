@@ -67,7 +67,7 @@ function hook(input, env = {}) {
 
     // 1b. click-through: the X server routes input to the island only over it
     const xid = await app.evaluate(({ BrowserWindow }) => {
-      const h = BrowserWindow.getAllWindows()[0].getNativeWindowHandle()
+      const h = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getNativeWindowHandle()
       return String(h.length >= 8 ? h.readBigUInt64LE(0) : h.readUInt32LE(0))
     })
     const childAt = (x, y) =>
@@ -245,7 +245,7 @@ function hook(input, env = {}) {
 
   // 10b. drag the island to the other edge with a real X11 press/move/release
   try {
-    const bounds = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())
+    const bounds = () => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getBounds())
     const center = () =>
       page.evaluate(() => {
         const b = document.querySelector('.island-outer').getBoundingClientRect()
@@ -306,7 +306,7 @@ function hook(input, env = {}) {
     check('the top position is saved', topCfg.dock?.side === 'top', JSON.stringify(topCfg.dock))
     const tc = await center()
     const winId = await app.evaluate(({ BrowserWindow }) => {
-      const h = BrowserWindow.getAllWindows()[0].getNativeWindowHandle()
+      const h = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getNativeWindowHandle()
       return String(h.length >= 8 ? h.readBigUInt64LE(0) : h.readUInt32LE(0))
     })
     const xt = (...a) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), ...a.map(String)]).toString().trim()

@@ -40,6 +40,8 @@ export function present(list: Activity[], opts: { expanded: boolean }): Presenta
     (primary.kind === 'claude' && !['starting', 'thinking', 'tool', 'writing'].includes(primary.run.phase)) ||
     // A session in a terminal: a card when it's done or stuck, a small orb while it works.
     (primary.kind === 'session' && primary.session.phase !== 'working') ||
+    // A drag action: a pill with its progress, then the result to use.
+    primary.kind === 'job' ||
     opts.expanded
   )
     return { mode: 'expanded', primary, queued }

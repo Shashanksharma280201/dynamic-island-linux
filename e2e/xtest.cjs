@@ -58,6 +58,35 @@ x11.createClient((err, display) => {
       await sleep(300)
       xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
       await sleep(500)
+    } else if (args[0] === 'gesture') {
+      // A scripted pointer: down | up | alt-down | alt-up | wait:MS | move:X:Y[:STEPS]
+      // (a move glides in STEPS, 25 ms apart; one jump without). Prints "step N" as it goes.
+      const min = display.min_keycode
+      const map = await new Promise((res, rej) => X.GetKeyboardMapping(min, display.max_keycode - min, (e, m) => (e ? rej(e) : res(m))))
+      const altCode = map.findIndex((row) => row.includes(0xffe9)) + min
+      let at = null
+      await new Promise((res) => X.QueryPointer(root, (e, p) => res((at = [p.rootX, p.rootY]))))
+      let n = 0
+      for (const tok of args.slice(1)) {
+        const [cmd, a, b, c] = tok.split(':')
+        if (cmd === 'down') xt.FakeInput(xt.ButtonPress, 1, 0, root, 0, 0)
+        else if (cmd === 'up') xt.FakeInput(xt.ButtonRelease, 1, 0, root, 0, 0)
+        else if (cmd === 'alt-down') xt.FakeInput(xt.KeyPress, altCode, 0, root, 0, 0)
+        else if (cmd === 'alt-up') xt.FakeInput(xt.KeyRelease, altCode, 0, root, 0, 0)
+        else if (cmd === 'wait') await sleep(Number(a))
+        else if (cmd === 'move') {
+          const [x, y, steps] = [Number(a), Number(b), Number(c) || 1]
+          const [x0, y0] = at
+          for (let i = 1; i <= steps; i++) {
+            move(x0 + ((x - x0) * i) / steps, y0 + ((y - y0) * i) / steps)
+            if (steps > 1) await sleep(25)
+          }
+          at = [x, y]
+        }
+        await sleep(20)
+        console.log(`step ${++n} ${tok}`)
+      }
+      await sleep(200)
     } else if (args[0] === 'steal') {
       // Another app takes the keyboard: map a small window and focus it.
       const wid = X.AllocID()

@@ -4,6 +4,22 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**Drag actions**
+
+- Drag any file, in any app, and hold still for a moment (or press **Alt**): a
+  ring of six actions opens under the pointer. **Convert** (PDF, Word, Excel,
+  CSV, Markdown, text, PNG, JPEG, WebP), **Edit** with Claude, **Capture** an
+  image, **Ask Claude** to summarize, translate or explain it, **Shrink** a
+  photo or PDF, and **Copy text**. Let go on one and it runs.
+- The island shows it working, then the file it made: **Open**, **Show in
+  folder**, **Undo**, or drag it straight out of the island. Results are new
+  files next to the original; nothing is overwritten.
+- Move away or let go in the middle and the drag carries on as usual.
+- **Settings → Drag actions** (hold still, Alt or either; how long; where
+  results go) and a switch in the tray menu. Linux with X11 for now.
+
 ## 0.3.0 (2026-10-15)
 
 **Installing on a Mac**
