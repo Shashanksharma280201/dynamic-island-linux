@@ -313,10 +313,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     setPanel(true)
   }, [stage, p.mode, panel, wardrobe])
 
-  // Keep a notification / message open while it's hovered or being answered.
+  // Keep a notification / message / result open while it's hovered or being answered.
   const transientId =
     p.mode !== 'idle' &&
-    (p.primary.kind === 'notification' || p.primary.kind === 'message' || p.primary.id === 'claude-done' || p.primary.id.startsWith('session-done-'))
+    (p.primary.kind === 'notification' ||
+      p.primary.kind === 'message' ||
+      p.primary.id === 'claude-done' ||
+      p.primary.id.startsWith('session-done-') ||
+      (p.primary.kind === 'job' && p.primary.job.phase !== 'working'))
       ? p.primary.id
       : null
   // Only while the card is actually on screen (not hidden behind the panel).

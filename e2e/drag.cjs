@@ -231,6 +231,24 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
     r = await dragWith(report, [`move:${C[0]}:${C[1]}:10`, 'wait:1000', 'wait:400', 'wait:300', `move:${C[0] + 8}:${C[1] + 6}:3`, 'wait:400', 'wait:300'])
     check('letting go in the middle cancels', stateAt(r, 'wait:400', 2)?.phase === 'open' && (await until(async () => (await ringWin())?.visible === false, 3000)) && fs.readdirSync(FILES).sort().join() === before)
 
+    // ---- Over the island the ring stays shut: the file drops into Documents ----
+    await page.evaluate(() => document.querySelectorAll('.card.job .close-btn').forEach((b) => b.click()))
+    await until(async () => !!(await page.$('.capsule.idle')), 15000)
+    await sleep(600)
+    const win = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())
+    const box = await page.evaluate(() => {
+      const b = document.querySelector('.island-outer > .island').getBoundingClientRect()
+      return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
+    })
+    const isl = [Math.round(win.x + box.x), Math.round(win.y + box.y)]
+    r = await dragWith(report, [`move:${isl[0]}:${isl[1]}:14`, 'wait:1200', 'wait:300'])
+    check('holding a file over the island doesn’t open the ring', stateAt(r, 'wait:1200')?.phase !== 'open' && r.dragging, JSON.stringify(stateAt(r, 'wait:1200')))
+    check('it drops into Documents as before', await page.waitForSelector('.doc-row[data-doc="Report.pdf"]', { timeout: 6000 }).then(() => true, () => false))
+    await shot(page, '03-dropped-on-island')
+    // Close the panel the drop opened.
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await page.waitForSelector('.hub', { state: 'detached', timeout: 5000 }).catch(() => {})
+
     // ---- Settings: Alt only, then off ----
     await page.evaluate(() => window.settings.setDrag({ when: 'alt' }))
     r = await dragWith(report, [`move:${C[0]}:${C[1]}:10`, 'wait:1200', 'wait:300', 'alt-down', 'wait:600', 'wait:300', 'alt-up', 'move:1400:900:8'])

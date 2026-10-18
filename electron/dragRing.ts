@@ -16,6 +16,8 @@ type Deps = {
   onDrop: (drop: RingDrop) => void
   /** The ring showed (for the first-time tip). */
   onShown?: () => void
+  /** Where it stays shut (over the island, which takes dropped files itself). Screen units. */
+  avoid?: (p: { x: number; y: number }) => boolean
 }
 
 /**
@@ -127,6 +129,10 @@ export class DragRing {
         this.close('far')
         this.dwell = { anchor: null, bloomed: false }
       }
+      return
+    }
+    if (this.d.avoid?.(p)) {
+      this.dwell = { anchor: null, bloomed: false }
       return
     }
     const r = dwellStep(this.dwell, { x: s.x, y: s.y, t: s.t, alt: s.alt }, this.d.opens())

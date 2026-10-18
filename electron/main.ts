@@ -719,6 +719,13 @@ async function main() {
     opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
     env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
     onDrop: (d) => dragJobs.run(d),
+    // Holding a file over the island drops it there (Documents), not the ring.
+    avoid: (p) => {
+      if (!cssRect) return false
+      const b = win.getBounds()
+      const m = 24
+      return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+    },
   })
   const applyDrag = () =>
     void dragRing.apply().then((ok) => {
