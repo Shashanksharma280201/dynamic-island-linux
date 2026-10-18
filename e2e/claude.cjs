@@ -246,11 +246,11 @@ function speechWav(text, file) {
 
     // ---- Attach the window you were in ----
     // An app with the keyboard; then the panel opens over it.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 }).catch(() => {})
     const browser = require('child_process').spawn('node', [path.join(__dirname, 'fake-keys-app.cjs'), 'firefox', 'Pull request #12 - Firefox'], { stdio: ['ignore', 'pipe', 'inherit'] })
     await sleep(800)
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { timeout: 3000 })
     await sleep(600)
     await page.click('.claude-field .attach-btn')
@@ -345,7 +345,7 @@ function speechWav(text, file) {
     await settings.close()
     // The resting capsule shows it (asleep at night, awake by day).
     await page.evaluate(() => window.island.claude.stop()).catch(() => {})
-    if (await page.$('.hub')) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    if (await page.$('.hub')) await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     // Playwright's clicks leave its mouse "over" the island, which would keep
     // the last answer card open: take it off (and say so).
     await page.mouse.move(4, (await page.evaluate(() => innerHeight)) - 4)

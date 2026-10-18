@@ -357,6 +357,7 @@ Code setup behind; Uninstall… removes those too.
 
 | Feature | What you see | What you can do |
 | --- | --- | --- |
+| **Drag actions** | Drag a file in **any app** (your file manager, the desktop, a browser's downloads) and hold still for a moment: a ring of six actions blooms under the pointer, **Convert**, **Edit**, **Capture**, **Ask Claude**, **Shrink** and **Copy text**, always in the same places. Actions that don't fit the file are dimmed. Pointing at Convert or Ask fans out a second ring of formats or questions | Let go on an action and it runs; the island shows it working, then the new file (**Open**, **Show in folder**, **Undo**, or drag it straight out of the island into an email or chat). Convert PDF, Word, Excel, CSV, Markdown, text and images (PNG, JPEG, WebP) to other formats, make a **smaller copy** of a photo or PDF, copy all of a document's text, copy an image, or ask Claude to summarize, translate or explain it. **Alt** opens the ring at once. Move away, or let go in the middle, and the drag carries on as usual. Linux (X11) for now |
 | **Services** | The **Services** tab: GitHub (pull requests to review, yours with their CI), Vercel (deployments), Stripe (balance and payments), Resend (emails), Notion (recently edited pages), Cal.com (upcoming calls) and n8n (workflow runs). A heads-up pops up on the island for a failed deploy, CI breaking on your PR, a review request, a new payment or a failed workflow, and waits in Notifications | Turn each on and paste its key in **Settings → Services** (a wrong key is refused, with why). Click a row to open it on the service's site |
 | **Weekly recap** | Every Monday, last week with your coding agents: time, sessions, files, lines, commands, your top agent and project, the busiest day | **Share image** makes a picture of the week (with your character) to save to Pictures or copy; **Hide project names** leaves them out. Any time from the tray menu or Settings |
 | **Wardrobe and desktop companion** | 13 outfits plus a **Seasonal** one that changes with the date (a witch hat at Halloween, a Santa hat in December…), and a body colour. Turn on **On your desktop too** and the character also sits on your desktop, acting out what's going on and dozing when it's quiet | Pick an outfit and colour in **Settings → Character**, or right-click the resting island. Drag the desktop character anywhere (it remembers the spot); click it to open the island. Put your own sound files (done.mp3, ask.wav…) in the sounds folder (Settings → General → Sounds → Open Folder) to replace the built-in tones |
@@ -385,7 +386,7 @@ Code setup behind; Uninstall… removes those too.
 | **Which screen** | The island on your main display, on whichever display has the pointer (it follows you), or on a monitor you pick | **Settings → General → Island lives on**. A picked monitor is found again after you replug it |
 | **Tour and shortcuts** | **Show me around** (offered the first time, then in the tray menu and Settings) walks you through the island with example cards. **Shortcuts** in the Control Center lists every shortcut as it's set now | Change any shortcut in **Settings → Keyboard shortcuts**: click it and press the new keys (keys already in use are refused, with why). Cards that close by themselves show a thin countdown that stops while you hover; the pin keeps a card open. **Open on hover** in Settings → General opens the panel without a click |
 | **Settings window** | Opened from the tray menu or the Control Center, styled like System Settings | Appearance (Glass / Solid), frosted glass on/off, sounds on/off (soft tones, off by default), island position, open the notes folder, Ctrl+I shortcut on/off, link WhatsApp, add mail accounts, and the general toggles |
-| **Tray menu** | An icon in the top bar | Settings, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
+| **Tray menu** | An icon in the top bar | Settings, Do Not Disturb, drag actions on/off, show notifications on/off, Claude Code approvals on/off, Start at login on/off, Quit |
 
 Other details:
 
@@ -572,6 +573,33 @@ Then select one or more files:
 The agent can also find documents by name in your Documents, Downloads and
 Desktop folders (“merge the two March invoices in my Downloads”), and open
 documents by path in your home folder.
+
+### 4c+. Drag actions: do something with a file as you drag it (optional)
+
+On by default on Linux (X11). Start dragging any file, from your file manager,
+the desktop or anywhere else, and **hold still** for half a second (or press
+**Alt**). A ring opens under the pointer:
+
+| Action | What it does |
+| --- | --- |
+| **Convert** | Fans out the formats it can become; let go on one. PDF → Word, text or Markdown; Word → PDF, text or Markdown; Excel → CSV, PDF or Markdown; CSV → Excel, PDF or Markdown; Markdown or text → Word, PDF; PNG, JPEG and WebP → each other or PDF; PowerPoint → PDF with LibreOffice |
+| **Edit** | Opens the Claude tab with the file named, so you say what to change (Word, spreadsheets, text). Needs Claude Code or an AI in Settings |
+| **Capture** | Copies an image to the clipboard, ready to paste |
+| **Ask Claude** | Fans out questions: **Summarize**, **Translate**, **Explain**, and more for each kind of file. The answer appears on the island |
+| **Shrink** | A smaller copy of a photo (at most 2560 px, recompressed) or a PDF (with Ghostscript if installed, `sudo apt install ghostscript`) |
+| **Copy text** | All of a document's text on the clipboard; a spreadsheet as rows that paste into any sheet as a table |
+
+Results are **new files next to the original** (or in Downloads when that
+folder can't be written, or always, if you choose it in Settings); nothing is
+overwritten, and **Undo** on the island moves what was made to the Trash.
+Several files dragged together get the actions all of them share.
+
+Moving more than a few centimetres away closes the ring and the drag goes on
+as if nothing happened, and letting go in its middle cancels. Over the island
+itself the ring stays shut, so dropping files into Documents works as before. **Settings →
+Drag actions** sets whether it opens when you hold still, press Alt or either,
+how long to hold still, and where results go; the tray menu turns it off in
+one click.
 
 ### 4d. Your own CRM (optional)
 
@@ -898,6 +926,9 @@ electron/            main process
                      conversions, compare, and the workspace (docsIpc.ts wires the tab)
   crm/               the CRM: store (one JSON file, backups, undo) and import / export
                      (crmIpc.ts wires the tab)
+  dragWatch.ts       drag actions: notices a file drag anywhere (X11 XFixes + pointer)
+  dragRing.ts        the ring's window under the pointer, as a drop target
+  dragJobs.ts        runs what was picked; imageOps.ts converts images on a canvas
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
@@ -961,11 +992,24 @@ CHANGELOG.md         what changed in each release
   file), with a copy kept each day for a week; a damaged file falls back to
   the newest copy. Every change records what it replaced, grouped per click
   or per agent answer, which is what **Undo** puts back.
+- **Drag actions**: the island asks the X server (XFixes) to tell it when any
+  app takes the `XdndSelection`, which every app does when a drag starts, then
+  follows the pointer until the button goes up. When it holds still, a
+  transparent window with the ring is shown under it, and the pointer is
+  nudged by a pixel so the dragging app notices the new window and treats it as
+  a drop target (XDND). The ring learns the files' types as the drag enters it,
+  and their paths when you let go on an action, exactly like any drop.
+  Images are converted by Chromium on a canvas in a hidden, sandboxed page
+  with no network.
 - **Notes** are read and written by the main process in the profile folder;
   each save writes a temporary file and renames it, so a crash never leaves a
   half-written note.
 
 ## Limitations
+
+- **Drag actions need Linux with X11** for now. On Wayland apps can't see other
+  apps' drags; on macOS and Windows they're still to come. **Edit** works for
+  Word, spreadsheets and text files; editing PDFs and images is planned.
 
 - **Full interactivity needs X11.** On Wayland the app runs through XWayland and
   shows a warning; it's drawn, but hover and click only register while the

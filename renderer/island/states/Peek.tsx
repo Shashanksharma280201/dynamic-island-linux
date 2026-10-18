@@ -26,6 +26,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
     const more = a.others ? ` · ${a.others} more` : ''
     return { title: sessionStatus(x, o.now), sub: `${x.project || '~'} · ${turnTime(x, o.now)}${more}`, mood: sessionMood(x) }
   }
+  if (a.kind === 'job') return { title: a.job.title, sub: a.job.result?.name ?? a.job.sub, mood: a.job.phase === 'working' ? 'thinking' : a.job.phase === 'done' ? 'done' : 'idle' }
   return { title: a.kind === 'notification' ? a.notification.summary : 'Activity', sub: '', mood: 'idle' }
 }
 

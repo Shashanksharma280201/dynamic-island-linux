@@ -34,7 +34,7 @@ export default defineConfig({
     resolve: { alias: { '@shared': resolve('shared') } },
     build: {
       rollupOptions: {
-        input: { index: resolve('renderer/index.html'), settings: resolve('renderer/settings.html'), companion: resolve('renderer/companion.html') },
+        input: { index: resolve('renderer/index.html'), settings: resolve('renderer/settings.html'), companion: resolve('renderer/companion.html'), ring: resolve('renderer/ring.html') },
       },
     },
   },

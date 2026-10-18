@@ -6,12 +6,15 @@ export type TrayState = {
   hookInstalled: boolean
   autostart: boolean
   dnd: boolean
+  /** Drag actions on or off; null where they don't run (not Linux). */
+  dragActions: boolean | null
   /** How many notifications the notification center holds. */
   centerCount: number
 }
 
 export type TrayActions = {
   setDnd: (on: boolean) => void
+  setDragActions: (on: boolean) => void
   clearAll: () => void
   setNotifications: (on: boolean) => void
   setHook: (on: boolean) => Promise<void>
@@ -75,6 +78,19 @@ export class IslandTray {
             this.refresh()
           },
         },
+        ...(s.dragActions === null
+          ? []
+          : [
+              {
+                label: 'Drag actions',
+                type: 'checkbox' as const,
+                checked: s.dragActions,
+                click: (i: Electron.MenuItem) => {
+                  this.actions.setDragActions(i.checked)
+                  this.refresh()
+                },
+              },
+            ]),
         {
           label: s.centerCount ? `Clear all notifications (${s.centerCount})` : 'Clear all notifications',
           enabled: s.centerCount > 0,
