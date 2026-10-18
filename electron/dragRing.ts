@@ -71,9 +71,7 @@ export class DragRing {
   }
 
   async start(): Promise<boolean> {
-    const ok = await this.watcher.start()
-    if (ok) this.ensureWindow()
-    return ok
+    return this.watcher.start()
   }
 
   private running: Promise<boolean> | null = null
@@ -112,6 +110,8 @@ export class DragRing {
   }
 
   private onStart(): void {
+    // The ring's page loads with the first drag (no window until it's needed).
+    if (this.d.on()) this.ensureWindow()
     this.dwell = { anchor: null, bloomed: false }
     this.dropped = false
     if (this.open) this.close('none')
@@ -146,7 +146,11 @@ export class DragRing {
 
   private bloom(p: { x: number; y: number }): void {
     const win = this.ensureWindow()
-    if (!this.ready) return
+    if (!this.ready) {
+      // Still loading: try again with the next sample.
+      this.dwell = { ...this.dwell, bloomed: false }
+      return
+    }
     const display = screen.getDisplayNearestPoint({ x: Math.round(p.x), y: Math.round(p.y) })
     const c = ringCenter(p, display.workArea)
     const half = GEO.window / 2

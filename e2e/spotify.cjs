@@ -66,7 +66,7 @@ const until = async (fn, ms = 5000) => {
   let page = await app.firstWindow()
   const shot = (n) => page.screenshot({ path: `${OUT}/${n}.png` }).catch(() => {})
   const openMusic = async () => {
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { timeout: 5000 })
     await page.click('.rail-btn[aria-label="Music"]')
     await page.waitForSelector('.music', { timeout: 5000 })
@@ -197,13 +197,13 @@ const until = async (fn, ms = 5000) => {
     sp.premium = true
 
     // ---- The pop-out card while Spotify plays ----
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { state: 'detached', timeout: 5000 })
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:hover', true))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:hover', true))
     check('the Now Playing card uses Spotify’s look while Spotify plays', await page.waitForSelector('.card.media.spotify:has-text("Spotify")', { timeout: 6000 }).then(() => true, () => false))
     await sleep(350)
     await shot('05-media-card')
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:hover', false))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:hover', false))
 
     // ---- Spotify isn't open anywhere: pick a device or the Web Player ----
     player.kill()

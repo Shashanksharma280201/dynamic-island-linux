@@ -109,10 +109,9 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
     return w ? { visible: w.isVisible(), bounds: w.getBounds() } : null
   })
   let ring = null
+  // The ring's page (it loads with the first drag).
   const ringPage = async () => {
-    if (ring) return ring
-    await until(async () => app.windows().some((w) => w.url().includes('ring.html')), 8000)
-    ring = app.windows().find((w) => w.url().includes('ring.html')) ?? null
+    if (!ring) ring = app.windows().find((w) => w.url().includes('ring.html')) ?? null
     return ring
   }
   // What the ring shows right now, for the timeline below.
@@ -181,13 +180,14 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
 
   try {
     await sleep(1500)
-    check('the ring page is loaded and waiting, out of sight', !!(await ringPage()) && (await ringWin())?.visible === false, JSON.stringify(await ringWin()))
+    check('no ring window until a file is dragged', (await ringWin()) === null, JSON.stringify(await ringWin()))
 
     // ---- Convert a picture: hold still, go to Convert, pick JPG, let go ----
     const C = [700, 500]
     const conv = at(C, SLOT.convert, 105)
     const jpg = at(C, -27, 216) // first of PNG's three: JPG, WebP, PDF
     let r = await dragWith(photo, [`move:${C[0]}:${C[1]}:10`, 'wait:1000', 'wait:500', 'wait:300', `move:${conv[0]}:${conv[1]}:6`, 'wait:500', 'wait:300', `move:${jpg[0]}:${jpg[1]}:8`, 'wait:500', 'wait:300'], { 'wait:500#1': '10-ring-open', 'wait:500#2': '11-ring-convert', 'wait:500#3': '12-ring-jpg' })
+    check('the first drag loads it', !!(await ringPage()))
     const bloomed = stateAt(r, 'wait:500')
     check('a dragged file held still opens the ring', bloomed?.phase === 'open', JSON.stringify(bloomed) + (r.dragging ? '' : ' (the drag never started)'))
     check('the middle says Cancel under the pointer', bloomed?.caption === 'Let go here to cancel', bloomed?.caption)
@@ -235,7 +235,7 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
     await page.evaluate(() => document.querySelectorAll('.card.job .close-btn').forEach((b) => b.click()))
     await until(async () => !!(await page.$('.capsule.idle')), 15000)
     await sleep(600)
-    const win = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].getBounds())
+    const win = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getBounds())
     const box = await page.evaluate(() => {
       const b = document.querySelector('.island-outer > .island').getBoundingClientRect()
       return { x: b.x + b.width / 2, y: b.y + b.height / 2 }
@@ -246,7 +246,7 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
     check('it drops into Documents as before', await page.waitForSelector('.doc-row[data-doc="Report.pdf"]', { timeout: 6000 }).then(() => true, () => false))
     await shot(page, '03-dropped-on-island')
     // Close the panel the drop opened.
-    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
     await page.waitForSelector('.hub', { state: 'detached', timeout: 5000 }).catch(() => {})
 
     // ---- Settings: Alt only, then off ----
