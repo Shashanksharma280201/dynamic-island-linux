@@ -576,7 +576,8 @@ overwritten, and **Undo** on the island moves what was made to the Trash.
 Several files dragged together get the actions all of them share.
 
 Moving more than a few centimetres away closes the ring and the drag goes on
-as if nothing happened, and letting go in its middle cancels. **Settings →
+as if nothing happened, and letting go in its middle cancels. Over the island
+itself the ring stays shut, so dropping files into Documents works as before. **Settings →
 Drag actions** sets whether it opens when you hold still, press Alt or either,
 how long to hold still, and where results go; the tray menu turns it off in
 one click.
