@@ -114,7 +114,7 @@ const api = {
   },
   /** The drag actions ring's page (its own window, under the pointer). */
   ring: {
-    onOpen: (cb: (o: { env: PlanEnv; pointer: { x: number; y: number } }) => void) => on(RING.OPEN, cb),
+    onOpen: (cb: (o: { env: PlanEnv; pointer: { x: number; y: number }; files?: string[] }) => void) => on(RING.OPEN, cb),
     onPointer: (cb: (p: { x: number; y: number }) => void) => on(RING.POINTER, cb),
     onEnd: (cb: () => void) => on(RING.END, cb),
     onClose: (cb: () => void) => on(RING.CLOSE, cb),

@@ -1,19 +1,8 @@
 // @ts-expect-error - x11 ships no types
 import x11 from 'x11'
+import { screen } from 'electron'
 import { parseUriList } from '@shared/dragActions'
-
-/** The pointer during a drag, in physical root-window pixels. */
-export type DragSample = { x: number; y: number; t: number; alt: boolean; down: boolean }
-
-type Deps = {
-  /** A drag began somewhere (an app took the XdndSelection). */
-  onStart: () => void
-  onSample: (s: DragSample) => void
-  /** The button was let go: dropped or cancelled. */
-  onEnd: (last: DragSample | null) => void
-  /** Drags the island started itself (a result dragged out of it). */
-  ownDrag: () => boolean
-}
+import type { DragEvents, DragSample, DragSource } from './dragSource'
 
 const BUTTON1 = 0x100
 const MOD1 = 0x8 // Alt
@@ -30,20 +19,20 @@ export type WatchProblem = 'no-x11' | 'wayland' | 'no-xfixes' | null
  * is sampled; what's being dragged is asked of the dragging app as a
  * text/uri-list, the same way a drop target would.
  */
-export class DragWatcher {
+export class DragWatcher implements DragSource {
   private X: any = null
   private root = 0
   private win = 0
   private atoms = { sel: 0, uriList: 0, prop: 0 }
   private poll: ReturnType<typeof setInterval> | null = null
   private dragStart = 0
-  private sawDown = false
+  /** The last sample, in physical pixels (X11's), for nudging. */
   private last: DragSample | null = null
   private waiting: Array<(paths: string[]) => void> = []
   private xt: any = null
   problem: WatchProblem = null
 
-  constructor(private d: Deps) {}
+  constructor(private d: DragEvents) {}
 
   get dragging(): boolean {
     return !!this.poll
@@ -180,7 +169,6 @@ export class DragWatcher {
   private begin(): void {
     this.stopPolling()
     this.dragStart = Date.now()
-    this.sawDown = false
     this.last = null
     this.d.onStart()
     const X = this.X
@@ -191,7 +179,6 @@ export class DragWatcher {
         if (!this.poll) return
         if (err || !p) return this.end()
         const s: DragSample = { x: p.rootX, y: p.rootY, t: Date.now(), alt: !!(p.keyMask & MOD1), down: !!(p.keyMask & BUTTON1) }
-        if (s.down) this.sawDown = true
         // Not held at all (a drag started from the keyboard, or one that
         // already ended): nothing to do.
         if (!s.down || s.t - this.dragStart > MAX_DRAG_MS) {
@@ -199,7 +186,9 @@ export class DragWatcher {
           return this.end()
         }
         this.last = s
-        this.d.onSample(s)
+        // X11 counts physical pixels; the island works in screen units (one scale on X11).
+        const k = screen.getPrimaryDisplay().scaleFactor || 1
+        this.d.onSample({ ...s, x: s.x / k, y: s.y / k })
       })
     }, POLL_MS)
   }
@@ -207,7 +196,7 @@ export class DragWatcher {
   private end(): void {
     if (!this.poll) return
     this.stopPolling()
-    this.d.onEnd(this.sawDown ? this.last : null)
+    this.d.onEnd()
   }
 
   private stopPolling(): void {
