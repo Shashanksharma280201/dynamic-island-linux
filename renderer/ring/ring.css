@@ -17,6 +17,13 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+.catch {
+  position: absolute;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.012);
+}
 /* A soft dark halo that makes the ring stand out, fading out before the window's edge. */
 .halo {
   position: absolute;

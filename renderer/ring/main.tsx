@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type CSSProperties, type DragEvent } from 'react'
 import { createRoot } from 'react-dom/client'
-import { RING, SLOT_IDS, angleOf, choiceAngle, ringHit, ringPlanForTypes, ringTitle, type Hit, type PlanEnv, type RingPlan, type SlotId } from '@shared/dragActions'
+import { RING, SLOT_IDS, angleOf, choiceAngle, ringHit, ringPlan, ringPlanForTypes, ringTitle, type Hit, type PlanEnv, type RingPlan, type SlotId } from '@shared/dragActions'
 import './ring.css'
 
-type Open = { env: PlanEnv; pointer: { x: number; y: number }; at: number }
+type Open = { env: PlanEnv; pointer: { x: number; y: number }; files?: string[]; at: number }
 
 // Listening from the very start, so an early message isn't missed.
 let opened: Open | null = null
@@ -126,8 +126,22 @@ function Ring() {
     setHit(NO_HIT)
     hitRef.current = NO_HIT
     setPointer(opened.pointer)
-    setPhase('armed')
     const at = opened.at
+    // The system said what's dragged (macOS): the ring opens with its actions at once.
+    if (opened.files?.length) {
+      const pl = ringPlan(opened.files, opened.env)
+      if (!pl) {
+        setPhase('hidden')
+        window.island.ring.none()
+        return
+      }
+      planRef.current = pl
+      setPlan(pl)
+      setPhase('open')
+      window.island.ring.shown()
+      return
+    }
+    setPhase('armed')
     // If the dragging app never says what it carries, there's nothing to show.
     clearTimeout(timer.current)
     timer.current = setTimeout(() => {
@@ -141,6 +155,17 @@ function Ring() {
   // The drag ended or moved away: fold up.
   useEffect(() => {
     if (!ended || phase === 'hidden' || phase === 'dropped' || phase === 'leaving') return
+    // Let go on an action with the files known (macOS): that's the drop, even
+    // if the dragging app hasn't offered it to this window yet.
+    const pl = planRef.current
+    const a = ended === 'end' && pl && opened?.files?.length ? actionAt(pl, hitRef.current) : null
+    if (a && opened?.files) {
+      window.island.ring.drop({ ...a, paths: opened.files })
+      setPhase('dropped')
+      clearTimeout(timer.current)
+      timer.current = setTimeout(() => setPhase('hidden'), 400)
+      return
+    }
     setPhase(planRef.current ? 'leaving' : 'hidden')
     clearTimeout(timer.current)
     timer.current = setTimeout(() => setPhase('hidden'), 220)
@@ -196,7 +221,7 @@ function Ring() {
   const onDrop = (e: DragEvent) => {
     e.preventDefault()
     const pl = planRef.current
-    if (!pl) return
+    if (!pl || phase === 'dropped') return
     const a = actionAt(pl, track({ x: e.clientX, y: e.clientY }))
     if (!a) return
     const paths = Array.from(e.dataTransfer.files)
@@ -220,6 +245,9 @@ function Ring() {
 
   return (
     <div className={`stage ${phase}`} onDragEnter={onDrag} onDragOver={onDrag} onDrop={onDrop} data-phase={phase}>
+      {/* Waiting to hear what's dragged: an all but invisible disc under the pointer, since on
+          Windows and macOS a drag passes through fully transparent parts of a window. */}
+      {phase === 'armed' && <div className="catch" style={{ left: pointer.x - 70, top: pointer.y - 70 }} />}
       {show && plan && (
         <>
           <div className="halo" />
