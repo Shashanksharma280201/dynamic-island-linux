@@ -25,9 +25,11 @@
 
 ## Limitations
 
-- **Drag actions need Linux with X11** for now. On Wayland apps can't see other
-  apps' drags; on macOS and Windows they're still to come. **Edit** works for
-  Word, spreadsheets and text files; editing PDFs and images is planned.
+- **Drag actions** work on Linux with X11, macOS and Windows. On Wayland apps
+  can't see other apps' drags, so they're off there. On Windows the ring opens
+  for drags that show Windows' drag image (File Explorer, browsers and most
+  apps). **Edit** works for Word, spreadsheets and text files; editing PDFs and
+  images is planned.
 
 - **Full interactivity needs X11.** On Wayland the app runs through XWayland and
   shows a warning; it's drawn, but hover and click only register while the

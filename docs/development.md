@@ -173,6 +173,8 @@ electron/            main process
                      conversions, compare, and the workspace (docsIpc.ts wires the tab)
   crm/               the CRM: store (one JSON file, backups, undo) and import / export
                      (crmIpc.ts wires the tab)
+  dragSource.ts      drag actions: what a system's drag watcher reports (X11 below; macOS and
+                     Windows in electron/platform/ on their branches)
   dragWatch.ts       drag actions: notices a file drag anywhere (X11 XFixes + pointer)
   dragRing.ts        the ring's window under the pointer, as a drop target
   dragJobs.ts        runs what was picked; imageOps.ts converts images on a canvas
