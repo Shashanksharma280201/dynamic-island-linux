@@ -36,7 +36,7 @@ jobs:
           node e2e/drag-win.cjs > drag-win.txt 2>&1
           s=$?
           cat drag-win.txt
-          grep -E "^(PASS|FAIL)|checks passed|app log" drag-win.txt | sed 's/%/%25/g' | while read -r l; do echo "::notice title=drag-win::$l"; done
+          grep -E "^(PASS|FAIL)|checks passed|app log|windows during|watcher said" drag-win.txt | sed 's/%/%25/g' | while read -r l; do echo "::notice title=drag-win::$l"; done
           exit $s
         env:
           SHOTS: shots

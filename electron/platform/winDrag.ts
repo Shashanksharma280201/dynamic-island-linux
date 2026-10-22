@@ -145,9 +145,13 @@ export function winDragSource(e: DragEvents): DragSource {
         // Compiling the C# takes a moment the first time.
         setTimeout(() => done(false, 'no-helper'), 20_000)
         createInterface({ input: child.stdout }).on('line', (line) => {
+          if (process.env.DI_DRAG_DEBUG) console.log('[island] drag watcher said:', line)
           const m = winDragLine(line)
           if (!m) return
-          if ('ready' in m) return done(true)
+          if ('ready' in m) {
+            console.log('[island] drag watcher ready')
+            return done(true)
+          }
           if ('start' in m) {
             // A result dragged out of the island itself: leave it be.
             ours = e.ownDrag()

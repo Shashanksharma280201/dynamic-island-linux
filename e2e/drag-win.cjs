@@ -42,7 +42,7 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
     executablePath: ELECTRON,
     args: [ROOT],
     cwd: ROOT,
-    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_SOFFICE: '' },
+    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_SOFFICE: '', DI_DRAG_DEBUG: '1' },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -67,7 +67,8 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
   let source = null
   try {
     await page.waitForSelector('.capsule', { timeout: 20000 })
-    await sleep(4000) // the watcher compiles its C# once
+    // The watcher compiles its C# once: wait until it's listening.
+    check('the drag watcher starts', await until(() => logs.join('').includes('drag watcher ready'), 40000), (logs.join('').match(/\[island\] drag[^\n]*/g) || []).slice(0, 3).join(' | '))
     const { area, scale } = await app.evaluate(({ screen }) => ({ area: screen.getPrimaryDisplay().workArea, scale: screen.getPrimaryDisplay().scaleFactor }))
     const px = (v) => Math.round(v * scale)
     const mv = ([x, y], steps) => `move:${px(x)}:${px(y)}:${steps}`
@@ -94,11 +95,21 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
     while (!finished) {
       const steps = [...out.matchAll(/step (\d+)/g)].map((m) => Number(m[1]))
       const n = steps.length ? Math.max(...steps) : 0
+      if (n >= 6 && !seen.classes) {
+        seen.classes = 'listing'
+        const c = spawn(process.execPath, [path.join(__dirname, 'wininput.cjs'), 'classes'])
+        let co = ''
+        c.stdout.on('data', (d) => (co += d))
+        c.on('exit', () => (seen.classes = co.trim()))
+      }
       if (n >= 7 && !seen.open) seen.open = await state()
       if (n >= 13 && !seen.chip) seen.chip = await state()
       await sleep(60)
     }
     check('the drag started', said.includes('dragging'), said.trim().replace(/\n/g, ' | '))
+    await until(() => seen.classes !== 'listing', 8000)
+    console.log(`windows during the drag: ${seen.classes}`)
+    console.log(`what the watcher said: ${(logs.join('').match(/drag watcher said: [^\n]*/g) || []).map((l) => l.slice(20)).slice(0, 12).join(' | ')}`)
     check('holding still opens the ring', seen.open?.phase === 'open', JSON.stringify(seen.open))
     const w = await ringWin()
     check('under the pointer', !!w && Math.abs(w.bounds.x + w.bounds.width / 2 - C[0]) <= 2 && Math.abs(w.bounds.y + w.bounds.height / 2 - C[1]) <= 2, JSON.stringify(w))

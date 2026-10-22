@@ -1,5 +1,6 @@
 // Real pointer input on Windows for tests (SendInput), like xtest.cjs on X11:
 //   node e2e/wininput.cjs gesture TOKEN...   down | up | wait:MS | move:X:Y[:STEPS]
+//   node e2e/wininput.cjs classes           the visible top-level windows' classes
 // X and Y are physical screen pixels. Prints "step N TOKEN" after each.
 const { spawn } = require('child_process')
 const fs = require('fs')
@@ -17,6 +18,19 @@ public static class Gesture {
   [DllImport("user32.dll")] static extern bool SetProcessDPIAware();
   [DllImport("user32.dll")] static extern bool GetCursorPos(out POINT p);
   [DllImport("user32.dll")] static extern uint SendInput(uint n, INPUT[] inputs, int size);
+  public delegate bool EnumProc(IntPtr h, IntPtr l);
+  [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr l);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassNameW(IntPtr h, System.Text.StringBuilder s, int n);
+  /** The classes of the visible top-level windows. */
+  public static void Classes() {
+    var seen = new System.Collections.Generic.SortedSet<string>();
+    EnumWindows((h, l) => {
+      if (IsWindowVisible(h)) { var b = new System.Text.StringBuilder(256); GetClassNameW(h, b, 256); seen.Add(b.ToString()); }
+      return true;
+    }, IntPtr.Zero);
+    Console.WriteLine(string.Join(" ", seen));
+  }
   [StructLayout(LayoutKind.Sequential)] struct POINT { public int X; public int Y; }
   [StructLayout(LayoutKind.Sequential)] struct MOUSEINPUT { public int dx; public int dy; public uint data; public uint flags; public uint time; public IntPtr extra; }
   [StructLayout(LayoutKind.Sequential)] struct INPUT { public uint type; public MOUSEINPUT mi; }
@@ -52,15 +66,15 @@ public static class Gesture {
   }
 }
 '@
-[Gesture]::Run($args)
+if ($args[0] -eq 'classes') { [Gesture]::Classes() } else { [Gesture]::Run($args) }
 `
 
 const file = path.join(os.tmpdir(), 'island-wininput.ps1')
 fs.writeFileSync(file, '﻿' + PS)
 const [cmd, ...tokens] = process.argv.slice(2)
-if (cmd !== 'gesture') {
-  console.error('usage: node e2e/wininput.cjs gesture TOKEN...')
+if (cmd !== 'gesture' && cmd !== 'classes') {
+  console.error('usage: node e2e/wininput.cjs gesture TOKEN... | classes')
   process.exit(2)
 }
-const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file, ...tokens], { stdio: 'inherit', windowsHide: true })
+const p = spawn('powershell.exe', ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file, ...(cmd === 'classes' ? ['classes'] : tokens)], { stdio: 'inherit', windowsHide: true })
 p.on('exit', (code) => process.exit(code ?? 1))
