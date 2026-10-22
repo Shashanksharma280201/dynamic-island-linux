@@ -1,5 +1,9 @@
 # Dynamic Island for Linux
 
+[![CI](https://github.com/shashanksharma280201/dynamic-island-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/shashanksharma280201/dynamic-island-linux/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/shashanksharma280201/dynamic-island-linux)](https://github.com/shashanksharma280201/dynamic-island-linux/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 **[Download Dynamic Island v0.3.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.3.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
 
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule on
@@ -1010,3 +1014,22 @@ CHANGELOG.md         what changed in each release
 - Claude runs are tested automatically against a fake `claude` that speaks the
   same streaming protocol; voice is tested with synthesized speech.
 - Voice understands English (the Whisper `.en` models).
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and send a change,
+and [SECURITY.md](SECURITY.md) to report a vulnerability privately. Everyone
+taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Shashank Sharma. Free to use, change and share, including
+commercially, as long as the copyright notice stays with it.
+
+Bundled work keeps its own license: the Inter typeface (SIL Open Font License),
+[thinking-orbs](https://libraries.dev/orbs) by Jakub Antalik (MIT), and the
+libraries listed in `package.json` (MIT, Apache-2.0 and BSD).
+
+Dynamic Island for Linux is an independent project, not made by or affiliated
+with Apple. "Dynamic Island" names the iPhone feature that inspired it.
