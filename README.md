@@ -79,14 +79,16 @@ check a download, compare it with
 
 ## Watch the tour
 
-[![A 3 minute tour of Dynamic Island](docs/media/dynamic-island-tour.jpg)](docs/media/dynamic-island-tour.mp4)
+[![A 4 minute tour of Dynamic Island](docs/media/dynamic-island-tour.jpg)](docs/media/dynamic-island-tour.mp4)
 
-A narrated, 3 minute tour of everything the island does: the capsule, Now
+A narrated, 4 minute tour of everything the island does: the capsule, Now
 Playing, WhatsApp and mail replies, the panel, the assistant, Settings,
-Documents, the CRM, Spotify, Claude Code, and how to install it. Click the
-picture to play it ([download the video](docs/media/dynamic-island-tour.mp4?raw=true)).
+Documents, the CRM, Spotify, Claude Code and its live sessions, drag actions,
+the character, and how to install it. Click the picture to play it
+([download the video](docs/media/dynamic-island-tour.mp4?raw=true)), or watch
+the [one minute version](docs/media/dynamic-island-launch.mp4?raw=true).
 It's recorded from the real app with made-up data; `scripts/video/make.sh`
-records it again after changes.
+records it again after changes, and `scripts/video/launch.py` cuts the short one.
 
 ## Install
 
