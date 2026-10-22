@@ -119,9 +119,11 @@ def captions(path, w, h, size, margin):
             pieces = chunks(b["say"])
             n = sum(len(p) for p in pieces)
             at = b["start"] + LEAD
-            for p in pieces:
+            for j, p in enumerate(pieces):
                 d = b["dur"] * len(p) / n
-                f.write(f"Dialogue: 0,{ts(at)},{ts(at + d + 0.15)},Cap,,0,0,0,,{p}\n")
+                # Each line hands over to the next exactly; the last one lingers a moment.
+                end = at + d + (0.3 if j == len(pieces) - 1 else 0)
+                f.write(f"Dialogue: 0,{ts(at)},{ts(end)},Cap,,0,0,0,,{p}\n")
                 at += d
 
 
