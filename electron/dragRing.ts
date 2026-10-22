@@ -1,7 +1,7 @@
 import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { RING as GEO, SLOT_IDS, dwellStep, ringCenter, type DwellState, type OpenWhen, type PlanEnv, type SlotId } from '@shared/dragActions'
+import { RING as GEO, SLOT_IDS, dwellStep, isAbsolutePath, ringCenter, type DwellState, type OpenWhen, type PlanEnv, type SlotId } from '@shared/dragActions'
 import { DragWatcher } from './dragWatch'
 import type { DragSample, DragSource, DragSourceMaker } from './dragSource'
 import { RING } from './ringChannels'
@@ -64,7 +64,7 @@ export class DragRing {
     ipcMain.on(RING.DROP, (e, m) => {
       // One drop per ring: the page's drop and its let-go fallback can both arrive.
       if (!mine(e) || this.dropped || !m || !SLOT_IDS.includes(m.slot) || !Array.isArray(m.paths)) return
-      const paths = m.paths.filter((p: unknown): p is string => typeof p === 'string' && p.startsWith('/')).slice(0, 50)
+      const paths = m.paths.filter((p: unknown): p is string => typeof p === 'string' && isAbsolutePath(p)).slice(0, 50)
       if (!paths.length) return
       this.dropped = true
       this.d.onDrop({ slot: m.slot, choice: typeof m.choice === 'string' ? m.choice.slice(0, 40) : undefined, paths })

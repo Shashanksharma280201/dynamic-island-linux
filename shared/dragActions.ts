@@ -52,6 +52,11 @@ export function extOf(path: string): string {
   return dot > 0 ? name.slice(dot + 1).toLowerCase() : ''
 }
 
+/** A full path on any system: /Users/me/a.pdf, C:\\Users\\me\\a.pdf, \\\\server\\share\\a.pdf. Pure. */
+export function isAbsolutePath(path: string): boolean {
+  return path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path) || path.startsWith('\\\\')
+}
+
 export function dragKindOf(path: string): DragKind {
   return EXT_KIND[extOf(path)] ?? 'other'
 }

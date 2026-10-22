@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { RING, angleOf, askPrompt, choiceAngle, dragKindOf, dwellStep, editDraft, extForMime, extOf, parseUriList, resultName, ringCenter, ringFile, ringHit, ringPlan, ringPlanForTypes, ringTitle, type PlanEnv } from '../shared/dragActions'
+import { RING, angleOf, isAbsolutePath, askPrompt, choiceAngle, dragKindOf, dwellStep, editDraft, extForMime, extOf, parseUriList, resultName, ringCenter, ringFile, ringHit, ringPlan, ringPlanForTypes, ringTitle, type PlanEnv } from '../shared/dragActions'
 
 const env: PlanEnv = { libreOffice: false, assistant: 'api', language: 'English' }
 const slot = (plan: ReturnType<typeof ringPlan>, id: string) => plan!.slots.find((s) => s.id === id)!
@@ -149,5 +149,21 @@ describe('holding still', () => {
     expect(dwellStep(s, { x: 0, y: 0, t: 0, alt: true }, cfg).bloom).toBe(true)
     expect(dwellStep(s, { x: 0, y: 0, t: 0, alt: true }, { dwellMs: 400, when: 'still' }).bloom).toBe(false)
     expect(dwellStep({ anchor: { x: 0, y: 0, t: 0 }, bloomed: false }, { x: 0, y: 0, t: 5000, alt: false }, { dwellMs: 400, when: 'alt' }).bloom).toBe(false)
+  })
+})
+
+describe('dropped paths', () => {
+  it('are full paths on Linux, macOS and Windows', () => {
+    expect(isAbsolutePath('/home/me/Report.pdf')).toBe(true)
+    expect(isAbsolutePath('/Users/me/a b.png')).toBe(true)
+    expect(isAbsolutePath('C:\\Users\\me\\Report.pdf')).toBe(true)
+    expect(isAbsolutePath('d:/Work/Report.pdf')).toBe(true)
+    expect(isAbsolutePath('\\\\server\\share\\Report.pdf')).toBe(true)
+  })
+  it('but not names or relative paths', () => {
+    expect(isAbsolutePath('Report.pdf')).toBe(false)
+    expect(isAbsolutePath('docs\\Report.pdf')).toBe(false)
+    expect(isAbsolutePath('C:Report.pdf')).toBe(false)
+    expect(isAbsolutePath('')).toBe(false)
   })
 })
