@@ -4,3 +4,4 @@ out/
 .vite/
 *.log
 video-out/
+__pycache__/
