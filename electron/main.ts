@@ -148,6 +148,8 @@ async function main() {
   // What differs per OS: media, system controls, notifications, the cursor.
   const platform = await currentPlatform()
   const LINUX = platform.id === 'linux'
+  // Drag actions follow drags on X11, and wherever the platform knows how.
+  const DRAG_HERE = LINUX || !!platform.dragSource
   // A menu-bar app on macOS: no Dock icon.
   if (process.platform === 'darwin') app.dock?.hide()
   const store = new ActivityStore()
@@ -733,7 +735,7 @@ async function main() {
     env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
     onDrop: (d) => dragJobs.run(d),
     // Tests can play a drag the way a system reports one.
-    source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : undefined,
+    source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : platform.dragSource,
     // Holding a file over the island drops it there (Documents), not the ring.
     avoid: (p) => {
       if (!cssRect) return false
@@ -749,7 +751,7 @@ async function main() {
   applyDrag()
 
   settings = new SettingsController({
-    drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
+    drag: () => ({ available: DRAG_HERE, problem: dragRing.problem }),
     onDrag: () => {
       applyDrag()
       tray?.refresh()
@@ -1241,7 +1243,7 @@ async function main() {
       hookInstalled: isHookInstalled(),
       autostart: isAutostartEnabled(),
       dnd: config.dnd,
-      dragActions: process.platform === 'linux' ? config.drag.on : null,
+      dragActions: DRAG_HERE ? config.drag.on : null,
       centerCount: center.view().entries.length,
     }),
     {

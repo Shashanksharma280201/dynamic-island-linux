@@ -8,6 +8,7 @@ import type { LoopStatus, MediaCmd, MediaState, SysCmd, SystemState } from '@sha
 import type { MediaSource, Platform, SystemSource } from './index'
 import { electronCursor } from './electronCursor'
 import { WIN_HELPER } from './winHelper'
+import { winDragSource } from './winDrag'
 
 /** What the helper says about the current media session. */
 export type HelperMedia = {
@@ -209,5 +210,6 @@ export function win32(): Platform {
     notifications: false,
     readCursor: electronCursor,
     cursorPhysical: false,
+    dragSource: winDragSource,
   }
 }

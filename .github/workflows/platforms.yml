@@ -28,6 +28,18 @@ jobs:
         run: node e2e/smoke.cjs
         env:
           SHOTS: shots
+      - name: Drag actions on Windows (a real drag, by SendInput)
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          set +e
+          node e2e/drag-win.cjs > drag-win.txt 2>&1
+          s=$?
+          cat drag-win.txt
+          grep -E "^(PASS|FAIL)|checks passed|app log" drag-win.txt | sed 's/%/%25/g' | while read -r l; do echo "::notice title=drag-win::$l"; done
+          exit $s
+        env:
+          SHOTS: shots
       - name: Build the installer (as in the README)
         run: npm run package
       - uses: actions/upload-artifact@v4
