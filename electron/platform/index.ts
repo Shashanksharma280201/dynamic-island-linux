@@ -1,4 +1,5 @@
 import type { MediaCmd, MediaState, SysCmd, SystemState } from '@shared/types'
+import type { DragSourceMaker } from '../dragSource'
 
 /** What's playing, and controlling it. */
 export type MediaSource = {
@@ -26,6 +27,8 @@ export type Platform = {
   /** Where the pointer is; in physical pixels when `cursorPhysical`, else screen points. */
   readCursor: () => Promise<{ x: number; y: number } | null>
   cursorPhysical: boolean
+  /** How drag actions notice drags here (X11's watcher when not given; none on other systems without one). */
+  dragSource?: DragSourceMaker
 }
 
 /** Nothing playing that the island can see. */

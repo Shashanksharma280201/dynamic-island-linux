@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import type { LoopStatus, MediaCmd, MediaState, SysCmd, SystemState } from '@shared/types'
 import type { MediaSource, Platform, SystemSource } from './index'
 import { electronCursor } from './electronCursor'
+import { darwinDragSource } from './darwinDrag'
 
 /** Run a command; its output, or null if it failed or isn't installed. */
 function run(cmd: string, args: string[], timeout = 4000): Promise<string | null> {
@@ -222,5 +223,6 @@ export function darwin(): Platform {
     notifications: false,
     readCursor: electronCursor,
     cursorPhysical: false,
+    dragSource: darwinDragSource,
   }
 }

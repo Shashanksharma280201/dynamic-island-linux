@@ -28,6 +28,17 @@ jobs:
         run: node e2e/smoke.cjs
         env:
           SHOTS: shots
+      - name: Drag actions on macOS (the real drag pasteboard and pointer)
+        timeout-minutes: 6
+        run: |
+          set +e
+          node e2e/drag-mac.cjs > drag-mac.txt 2>&1
+          s=$?
+          cat drag-mac.txt
+          grep -E "^(PASS|FAIL)|checks passed" drag-mac.txt | sed 's/%/%25/g' | while read -r l; do echo "::notice title=drag-mac::$l"; done
+          exit $s
+        env:
+          SHOTS: shots
       - name: Build the installer (as in the README)
         run: npm run package
         env:
