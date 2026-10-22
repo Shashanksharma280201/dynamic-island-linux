@@ -77,13 +77,14 @@ anywhere along the edges or to the top center, and click it (or press
 | System | Version |
 |---|---|
 | Linux | Ubuntu or another GNOME desktop on X11. It runs on Wayland too, [with limits](docs/troubleshooting.md#limitations). |
-| macOS | 11 Big Sur or newer, Apple silicon or Intel |
-| Windows | 10 or 11, 64-bit |
+| macOS | 11 Big Sur or newer, Apple silicon or Intel ([what's different](docs/platforms.md#macos)) |
+| Windows | 10 or 11, 64-bit ([what's different](docs/platforms.md#windows)) |
 
 ## Documentation
 
 - [Install](docs/install.md): installers, building from the code, updating, uninstalling
 - [Features](docs/features.md): everything the island does
+- [macOS and Windows](docs/platforms.md): what's different there
 - [Set it up](docs/setup.md): Claude Code, AI providers, WhatsApp, mail, Spotify, documents, drag actions, the CRM
 - [Configuration, privacy and security](docs/configuration.md)
 - [Troubleshooting and limitations](docs/troubleshooting.md)
