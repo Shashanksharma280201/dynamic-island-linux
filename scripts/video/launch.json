@@ -1,0 +1,80 @@
+[
+ {
+  "id": "open",
+  "card": "title",
+  "title": "Dynamic Island",
+  "sub": "for Linux, macOS and Windows",
+  "say": "Your desktop deserves a Dynamic Island."
+ },
+ {
+  "id": "capsule",
+  "mark": "capsule-top",
+  "before": 2.4,
+  "title": "Lives on the edge of your screen",
+  "say": "It lives on the edge of your screen, or up top, like on your phone."
+ },
+ {
+  "id": "music",
+  "mark": "music-card",
+  "before": 0.8,
+  "title": "Now Playing",
+  "say": "Your music, with album art and controls."
+ },
+ {
+  "id": "reply",
+  "mark": "whatsapp-reply",
+  "before": 1.6,
+  "title": "Reply without switching apps",
+  "say": "Messages and mail pop up, and you reply right there."
+ },
+ {
+  "id": "sessions",
+  "mark": "session-done",
+  "before": 2.6,
+  "title": "Claude Code, live",
+  "say": "Every Claude Code session in your terminals, live, with exactly what it changed."
+ },
+ {
+  "id": "approve",
+  "mark": "claude-approval",
+  "before": 0.6,
+  "title": "Approve from anywhere",
+  "say": "Allow or deny its requests from any app."
+ },
+ {
+  "id": "drag",
+  "mark": "ring-hold",
+  "before": 1.2,
+  "min": 8.6,
+  "title": "Drag actions",
+  "say": "Drag any file and hold still. Convert it, shrink it, or ask Claude about it, right where you are."
+ },
+ {
+  "id": "assistant",
+  "mark": "agent-ask",
+  "before": 2.0,
+  "title": "An assistant that asks first",
+  "say": "An AI assistant with a face, that asks before it acts."
+ },
+ {
+  "id": "docs",
+  "mark": "docs-fixed",
+  "before": 1.4,
+  "title": "Your documents",
+  "say": "It fixes your documents, as tracked changes you can review."
+ },
+ {
+  "id": "character",
+  "mark": "companion",
+  "before": 2.2,
+  "title": "A little character",
+  "say": "And a little character that keeps you company."
+ },
+ {
+  "id": "end",
+  "card": "end",
+  "title": "Free and open source",
+  "sub": "github.com/shashanksharma280201/dynamic-island-linux",
+  "say": "Free and open source. Get it on GitHub."
+ }
+]
