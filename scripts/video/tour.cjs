@@ -525,7 +525,7 @@ async function pdf(pages, prefix) {
     await page.keyboard.press('Enter')
     await page.waitForSelector('.card.approval', { timeout: 10000 })
     mark('claude-approval')
-    await sleep(2400)
+    await sleep(4200)
     await tap('.card.approval button.allow')
     await sleep(2500)
   })
@@ -588,6 +588,10 @@ async function pdf(pages, prefix) {
   await scene('drag', async () => {
     await panelOpen(false)
     await clearCards()
+    // The pointer off the island, and the island back to its resting capsule, before the drag.
+    xt(W / 2, H - 60)
+    await page.evaluate(() => document.querySelector('.island-outer')?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
+    await page.waitForSelector('.card.media', { state: 'detached', timeout: 5000 }).catch(() => log('music card still open'))
     // A folder window, like a file manager, to drag a report out of.
     const files = spawn(ELECTRON, [path.join(__dirname, 'files-app.cjs'), '--no-sandbox', `--force-device-scale-factor=${SCALE}`], {
       env: { ...process.env, FILES_DIR: DRAG_DIR, FILES_AT: '64,486,420,170' },

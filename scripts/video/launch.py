@@ -43,7 +43,7 @@ for b in beats:
     sf.write(os.path.join(out, "tts", f"{b['id']}.wav"), audio, rate)
     b["dur"] = len(audio) / rate
     # How long the beat stays on screen: its narration, a breath, or longer if it asks.
-    b["len"] = max(b["dur"] + (1.2 if "card" in b else 0.8), b.get("min", 0), 3.0 if "card" in b else 0)
+    b["len"] = max(b["dur"] + (1.4 if "card" in b else 1.5), b.get("min", 0), 3.2 if "card" in b else 0)
 
 # ---- one clip per beat, wide and square ----
 clips = os.path.join(out, "clips")
