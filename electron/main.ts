@@ -1475,7 +1475,8 @@ function run(): void {
   app.on('before-quit', (e) => {
     if (cleaned || !cleanup) return
     e.preventDefault()
-    cleanup().finally(() => {
+    // Quitting never waits on a stuck service for more than a few seconds.
+    Promise.race([cleanup(), new Promise((r) => setTimeout(r, 5000))]).finally(() => {
       cleaned = true
       app.quit()
     })
