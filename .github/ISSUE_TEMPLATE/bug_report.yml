@@ -1,0 +1,36 @@
+name: Bug report
+description: Something doesn't work as it should
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: e.g. Ubuntu 24.04 on X11 (GNOME), Fedora 41 on Wayland, macOS 15 on Apple silicon, Windows 11
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Dynamic Island version
+      description: From Releases, or the commit if you run it from source
+    validations:
+      required: true
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Start the island from a terminal (`dynamic-island-linux`) and paste what it prints around the problem.
+      render: text
+  - type: textarea
+    id: more
+    attributes:
+      label: Anything else
+      description: Screenshots or a short screen recording help a lot.

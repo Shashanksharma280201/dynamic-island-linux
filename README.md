@@ -1,6 +1,10 @@
 # Dynamic Island for Linux
 
-**[Download Dynamic Island v0.3.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.3.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
+[![CI](https://github.com/shashanksharma280201/dynamic-island-linux/actions/workflows/ci.yml/badge.svg)](https://github.com/shashanksharma280201/dynamic-island-linux/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/shashanksharma280201/dynamic-island-linux)](https://github.com/shashanksharma280201/dynamic-island-linux/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+**[Download Dynamic Island v0.4.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.4.0)** for Linux, macOS and Windows, or [install it with one command](#download). See [what's new](CHANGELOG.md).
 
 A Mac-style **Dynamic Island** for Ubuntu (X11 + GNOME): a small black capsule on
 the edge of your screen (right side by default, drag it anywhere along the left or
@@ -38,7 +42,7 @@ app (nothing to install).
 
 ## Download
 
-**Latest release: [v0.3.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.3.0)** ([what's new](CHANGELOG.md), [all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)).
+**Latest release: [v0.4.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.4.0)** ([what's new](CHANGELOG.md), [all releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases)).
 
 **Install with one command.** It downloads the right installer for your
 computer, checks it against the release's checksums, installs it and starts it.
@@ -68,11 +72,11 @@ Anyway" or SmartScreen step, so **on a Mac this is the easiest way**.
 
 | Your computer | Download |
 |---|---|
-| Ubuntu, Debian | [dynamic-island-linux-0.3.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-linux-0.3.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.3.0-amd64.deb` |
-| Any Linux (X11) | [dynamic-island-linux-0.3.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-linux-0.3.0-x86_64.AppImage), then `chmod +x` it and run it |
-| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-0.3.0-arm64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-MSeries-0.3.0-arm64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-MSeries-0.3.0-arm64.dmg)) |
-| Mac with Intel | [dynamic-island-mac-intel-0.3.0-x64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-intel-0.3.0-x64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-mac-intel-0.3.0-x64.dmg)) |
-| Windows 10 or 11 | [dynamic-island-windows-0.3.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/dynamic-island-windows-0.3.0-x64.exe) |
+| Ubuntu, Debian | [dynamic-island-linux-0.4.0-amd64.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-linux-0.4.0-amd64.deb), then `sudo apt install ./dynamic-island-linux-0.4.0-amd64.deb` |
+| Any Linux (X11) | [dynamic-island-linux-0.4.0-x86_64.AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-linux-0.4.0-x86_64.AppImage), then `chmod +x` it and run it |
+| Mac with Apple silicon (M1 and newer) | [dynamic-island-mac-MSeries-0.4.0-arm64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-mac-MSeries-0.4.0-arm64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-mac-MSeries-0.4.0-arm64.dmg)) |
+| Mac with Intel | [dynamic-island-mac-intel-0.4.0-x64.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-mac-intel-0.4.0-x64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-mac-intel-0.4.0-x64.dmg)) |
+| Windows 10 or 11 | [dynamic-island-windows-0.4.0-x64.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/dynamic-island-windows-0.4.0-x64.exe) |
 
 These installers aren't signed yet, so each system asks once:
 
@@ -91,7 +95,7 @@ These installers aren't signed yet, so each system asks once:
 (The Mac app isn't signed with an Apple Developer ID yet; that's why macOS
 asks. [docs/mac-signing.md](docs/mac-signing.md) is how to turn that on.) To
 check a download, compare it with
-[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.3.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
+[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.4.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
 --ignore-missing` (on a Mac, `shasum -a 256 -c SHA256SUMS.txt
 --ignore-missing`). To build it from the code instead, see [Install](#install).
 
@@ -1032,3 +1036,22 @@ CHANGELOG.md         what changed in each release
 - Claude runs are tested automatically against a fake `claude` that speaks the
   same streaming protocol; voice is tested with synthesized speech.
 - Voice understands English (the Whisper `.en` models).
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome: see
+[CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and send a change,
+and [SECURITY.md](SECURITY.md) to report a vulnerability privately. Everyone
+taking part follows the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Shashank Sharma. Free to use, change and share, including
+commercially, as long as the copyright notice stays with it.
+
+Bundled work keeps its own license: the Inter typeface (SIL Open Font License),
+[thinking-orbs](https://libraries.dev/orbs) by Jakub Antalik (MIT), and the
+libraries listed in `package.json` (MIT, Apache-2.0 and BSD).
+
+Dynamic Island for Linux is an independent project, not made by or affiliated
+with Apple. "Dynamic Island" names the iPhone feature that inspired it.
