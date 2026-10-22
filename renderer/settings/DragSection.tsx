@@ -7,6 +7,7 @@ const WHY: Record<string, string> = {
   wayland: 'For now it needs an X11 session (“Ubuntu on Xorg” at the login screen). Wayland is coming',
   'no-x11': 'It couldn’t reach the X server, so it’s off for now',
   'no-xfixes': 'This X server can’t tell when a drag starts (no XFixes), so it’s off',
+  'no-helper': 'Its drag watcher couldn’t start, so it’s off for now',
 }
 
 /** Settings → Drag actions: the ring that opens around a file you drag, in any app. */
@@ -22,7 +23,7 @@ export function DragSection({ s }: { s: SettingsState }) {
     <section id="drag">
       <h2>Drag actions</h2>
       {!d.available ? (
-        <p className="hint">Drag a file and hold still to convert it, shrink it, copy its text or ask Claude about it. On Linux today; macOS and Windows are coming.</p>
+        <p className="hint">Drag a file and hold still to convert it, shrink it, copy its text or ask Claude about it. Not available on this system yet.</p>
       ) : (
         <>
           <Toggle

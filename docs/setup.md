@@ -115,7 +115,7 @@ documents by path in your home folder.
 
 ## Drag actions
 
-On by default on Linux (X11). Start dragging any file, from your file manager,
+On by default on Linux (X11), macOS and Windows. Start dragging any file, from your file manager,
 the desktop or anywhere else, and **hold still** for half a second (or press
 **Alt**). A ring opens under the pointer:
 

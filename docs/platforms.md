@@ -17,7 +17,7 @@ see [Install on macOS](install.md#install-on-macos).
 | Now Playing | **Spotify** and **Apple Music**, with controls, seeking, shuffle and repeat. The first time, macOS asks to let Dynamic Island control them (Automation). Browsers and other players aren't shown yet |
 | Control Center | **Volume** and **Wi-Fi**. **Bluetooth** shows if [`blueutil`](https://github.com/toy/blueutil) is installed, **brightness** if [`brightness`](https://github.com/nriley/brightness) is (`brew install blueutil brightness`) |
 | Other apps' notifications | Not available: macOS doesn't let apps read other apps' notifications |
-| Drag actions | Not yet |
+| Drag actions | The same as on Linux, and the ring opens with its actions at once. It notices drags through the system's drag pasteboard, so it needs no permission |
 | Frosted glass | Not yet (Glass and Solid looks both work) |
 | Shortcuts | **⌘I** opens the panel, **⌃⌥Space** talks to the assistant |
 | Everything else | The same as on Linux: the assistant (any AI), characters, Documents, CRM, Notes, WhatsApp, Mail, Spotify, voice, Claude Code |
@@ -33,7 +33,7 @@ Windows 10 or 11, 64-bit. To build it from the code, see
 | Now Playing | Any app in Windows' media overlay: **Spotify**, browsers (YouTube and others), Media Player and more, with cover art, controls, seeking, shuffle and repeat where the app allows it |
 | Control Center | **Volume** and mute, **Wi-Fi** and **Bluetooth** on and off, and **brightness** on laptop screens (external monitors don't let Windows set it) |
 | Other apps' notifications | Not available yet: Windows only lets packaged Store apps read them |
-| Drag actions | Not yet |
+| Drag actions | For drags that show Windows' drag image under the pointer: from File Explorer, browsers and most apps |
 | Frosted glass | Not yet (Glass and Solid looks both work) |
 | Shortcuts | **Ctrl+I** opens the panel, **Ctrl+Alt+Space** talks to the assistant |
 | Claude Code | The hook talks to the island over a named pipe; `npm run hook:install` sets it up as on Linux |
