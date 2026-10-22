@@ -4,6 +4,18 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**Drag actions on macOS and Windows**
+
+- Drag actions now work on a Mac and on Windows too: drag a file in any app,
+  hold still (or press Option / Alt), and the ring opens under the pointer.
+- On a Mac the ring opens with its actions at once, and needs no permission:
+  it notices drags through the system's drag pasteboard.
+- On Windows it opens for drags that show Windows' drag image under the
+  pointer, from File Explorer, browsers and most apps.
+- Fixed: a drop with a Windows path (`C:\Users\…`) was ignored.
+
 ## 0.4.0 (2026-10-22)
 
 **Drag actions**
