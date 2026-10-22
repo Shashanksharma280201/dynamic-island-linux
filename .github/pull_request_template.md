@@ -4,4 +4,4 @@
 
 - [ ] `npm run check` passes
 - [ ] `npm run test:e2e` passes (Linux), or why it doesn't apply
-- [ ] README / CHANGELOG updated if people will notice the change
+- [ ] Docs (README or docs/) and CHANGELOG updated if people will notice the change
