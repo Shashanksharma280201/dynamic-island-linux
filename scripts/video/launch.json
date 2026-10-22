@@ -1,0 +1,96 @@
+[
+ {
+  "id": "open",
+  "card": "title",
+  "title": "Dynamic Island",
+  "sub": "for Linux, macOS and Windows",
+  "say": "Your desktop deserves a Dynamic Island."
+ },
+ {
+  "id": "capsule",
+  "mark": "capsule-top",
+  "before": 2.4,
+  "title": "Lives on the edge of your screen",
+  "say": "It lives on the edge of your screen, or up top, like on your phone.",
+  "crop": [240, 0, 1040, 585]
+ },
+ {
+  "id": "music",
+  "mark": "music-card",
+  "before": 0.8,
+  "title": "Now Playing",
+  "say": "Your music, with album art and controls.",
+  "crop": [560, 0, 720, 405]
+ },
+ {
+  "id": "reply",
+  "mark": "whatsapp-reply",
+  "before": 1.6,
+  "title": "Reply without switching apps",
+  "say": "Messages and mail pop up, and you reply right there.",
+  "crop": [560, 0, 720, 405]
+ },
+ {
+  "id": "sessions",
+  "mark": "session-done",
+  "before": 2.6,
+  "title": "Claude Code, live",
+  "say": "Every Claude Code session in your terminals, live, with exactly what it changed.",
+  "crop": [560, 0, 720, 405]
+ },
+ {
+  "id": "diff",
+  "mark": "session-diff",
+  "before": 0.4,
+  "crop": [400, 0, 880, 495],
+  "title": "Every change, file by file",
+  "say": "And the Sessions tab keeps every change, file by file."
+ },
+ {
+  "id": "approve",
+  "mark": "claude-approval",
+  "before": -0.9,
+  "title": "Approve from anywhere",
+  "say": "Allow or deny its requests from any app.",
+  "crop": [560, 0, 720, 405]
+ },
+ {
+  "id": "drag",
+  "mark": "ring-hold",
+  "before": 1.2,
+  "min": 13.0,
+  "title": "Drag actions",
+  "say": "Drag any file and hold still. Convert it, shrink it, or ask Claude about it, right where you are.",
+  "crop": [56, 30, 1224, 689]
+ },
+ {
+  "id": "assistant",
+  "mark": "agent-ask",
+  "before": 0.6,
+  "title": "An assistant that asks first",
+  "say": "An AI assistant with a face, that asks before it acts.",
+  "crop": [480, 0, 800, 450]
+ },
+ {
+  "id": "docs",
+  "mark": "docs-fixed",
+  "before": 1.4,
+  "title": "Your documents",
+  "say": "It fixes your documents, as tracked changes you can review.",
+  "crop": [300, 0, 980, 551]
+ },
+ {
+  "id": "character",
+  "mark": "companion",
+  "before": 2.2,
+  "title": "A little character",
+  "say": "And a little character that keeps you company."
+ },
+ {
+  "id": "end",
+  "card": "end",
+  "title": "Free and open source",
+  "sub": "github.com/shashanksharma280201/dynamic-island-linux",
+  "say": "Free and open source. Get it on GitHub."
+ }
+]

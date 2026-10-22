@@ -9,6 +9,7 @@ const { spawn, spawnSync, execFileSync } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
+const zlib = require('zlib')
 const hoodiecrow = require('hoodiecrow-imap')
 const { SMTPServer } = require('smtp-server')
 const { PDFDocument, StandardFonts } = require('pdf-lib')
@@ -28,12 +29,13 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'island-tour-'))
 const USER_DATA = path.join(TMP, 'profile')
 const FILES = path.join(TMP, 'Downloads')
 const PROJECT = path.join(TMP, 'my-app')
+const DRAG_DIR = path.join(TMP, 'Desktop')
 const CLAUDE_DIR = path.join(TMP, 'claude')
 const WA_TRIGGER = path.join(TMP, 'wa-go')
 const SOCK = path.join(TMP, 'island.sock')
 const IMAP_PORT = 22143
 const SMTP_PORT = 22025
-for (const d of [VIDEO_DIR, USER_DATA, FILES, PROJECT, CLAUDE_DIR]) fs.mkdirSync(d, { recursive: true })
+for (const d of [VIDEO_DIR, USER_DATA, FILES, PROJECT, CLAUDE_DIR, DRAG_DIR]) fs.mkdirSync(d, { recursive: true })
 
 const scenes = JSON.parse(fs.readFileSync(path.join(VIDEO_DIR, 'scenes.json'), 'utf8')) // written by narrate.py, with each narration's length
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -45,6 +47,39 @@ const until = async (fn, ms = 5000) => {
 const xt = (...a) => execFileSync('node', [path.join(E2E, 'xtest.cjs'), ...a.map((v) => (typeof v === 'number' ? String(Math.round(v * SCALE)) : v))])
 const b64 = (s) => Buffer.from(s).toString('base64')
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a)
+
+/** A small picture (a soft gradient), as a PNG. */
+function png(w, h) {
+  const crcTable = Array.from({ length: 256 }, (_, n) => {
+    let c = n
+    for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1
+    return c >>> 0
+  })
+  const crc = (buf) => {
+    let c = 0xffffffff
+    for (const b of buf) c = crcTable[(c ^ b) & 0xff] ^ (c >>> 8)
+    return (c ^ 0xffffffff) >>> 0
+  }
+  const chunk = (type, data) => {
+    const td = Buffer.concat([Buffer.from(type), data])
+    const out = Buffer.alloc(12 + data.length)
+    out.writeUInt32BE(data.length, 0)
+    td.copy(out, 4)
+    out.writeUInt32BE(crc(td), 8 + data.length)
+    return out
+  }
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(w, 0)
+  ihdr.writeUInt32BE(h, 4)
+  ihdr.set([8, 6, 0, 0, 0], 8)
+  const rows = []
+  for (let y = 0; y < h; y++) {
+    const row = Buffer.alloc(1 + w * 4)
+    for (let x = 0; x < w; x++) row.set([60 + (x * 150) / w, 40 + (y * 120) / h, 200, 255], 1 + x * 4)
+    rows.push(row)
+  }
+  return Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(Buffer.concat(rows))), chunk('IEND', Buffer.alloc(0))])
+}
 
 async function pdf(pages, prefix) {
   const doc = await PDFDocument.create()
@@ -94,6 +129,37 @@ async function pdf(pages, prefix) {
     'Name,Company,Title,Email,Phone\nPriya Nair,Acme,Head of Design,priya@acme.com,+91 98765 43210\nDaniel Kim,Northwind,CTO,daniel@northwind.io,+1 415 555 0134\nSofia Rossi,Bluebird,Founder,sofia@bluebird.co,+39 333 123 4567\nLiam Walsh,Contoso,Buyer,liam@contoso.com,+44 20 7946 0958\n',
   )
   fs.writeFileSync(path.join(PROJECT, 'README.md'), '# My app\n')
+  {
+    const doc = await PDFDocument.create()
+    const font = await doc.embedFont(StandardFonts.Helvetica)
+    const bold = await doc.embedFont(StandardFonts.HelveticaBold)
+    const page = doc.addPage()
+    page.drawText('Quarterly Report', { x: 60, y: 720, size: 26, font: bold })
+    const lines = ['Revenue grew 18% over last quarter, led by the new team plan.', 'Churn fell to 2.1%, the lowest in two years.', 'Next quarter: launch on Windows, and hire two engineers.']
+    lines.forEach((l, i) => page.drawText(l, { x: 60, y: 670 - i * 28, size: 14, font }))
+    fs.writeFileSync(path.join(DRAG_DIR, 'Quarterly Report.pdf'), await doc.save())
+    fs.writeFileSync(path.join(DRAG_DIR, 'Team Photo.png'), png(320, 200))
+    fs.writeFileSync(path.join(DRAG_DIR, 'Meeting Notes.md'), '# Meeting notes\n\n- Ship drag actions\n- Record the tour\n')
+  }
+  // Last week with the coding agents, for the recap.
+  {
+    const mondayAgo = (weeks) => {
+      const d = new Date()
+      d.setHours(0, 0, 0, 0)
+      d.setDate(d.getDate() - ((d.getDay() + 6) % 7) - 7 * weeks)
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    }
+    const week = mondayAgo(1)
+    const HR = 3_600_000
+    fs.writeFileSync(
+      path.join(USER_DATA, 'recap.json'),
+      JSON.stringify({
+        // Already seen this week, so it waits for the character scene instead of popping up first.
+        shown: mondayAgo(0),
+        history: [{ week, turns: 31, sessions: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'], codingMs: 11.5 * HR, longestMs: 1.75 * HR, files: 64, added: 2140, removed: 512, commands: 93, allowed: 41, denied: 2, questions: 6, agents: { 'claude-code': 9.5 * HR, codex: 2 * HR }, projects: { shop: 6 * HR, 'dynamic-island': 4 * HR, blog: 1.5 * HR }, days: [2 * HR, 3 * HR, 1.5 * HR, 2.5 * HR, 2 * HR, 0.5 * HR, 0] }],
+      }),
+    )
+  }
   fs.writeFileSync(
     path.join(USER_DATA, 'config.json'),
     JSON.stringify({
@@ -150,7 +216,7 @@ async function pdf(pages, prefix) {
   })
   app.process().stderr.on('data', (d) => process.env.TOUR_VERBOSE && process.stderr.write(d))
   const page = await app.firstWindow()
-  const send = (ch) => app.evaluate(({ BrowserWindow }, ch) => BrowserWindow.getAllWindows()[0].webContents.send(ch), ch)
+  const send = (ch) => app.evaluate(({ BrowserWindow }, ch) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send(ch), ch)
   const panelOpen = async (open) => {
     if (!!(await page.$('.hub')) !== open) await send('island:toggle-panel')
     await page.waitForSelector('.hub', { state: open ? 'visible' : 'detached', timeout: 5000 }).catch(() => {})
@@ -230,18 +296,26 @@ async function pdf(pages, prefix) {
   await sleep(1000)
   const timeline = []
   let n = 0
+  // Key moments (the ring opening, a reply going out…), for cutting the launch video.
+  const marks = []
+  const mark = (name) => {
+    marks.push({ name, t: (Date.now() - t0) / 1000 })
+    log('mark', name)
+  }
 
   const scene = async (id, act) => {
     const s = scenes.find((x) => x.id === id)
     const start = (Date.now() - t0) / 1000
     n++
-    await desk.evaluate((o) => window.show(o), { step: id === 'intro' || id === 'install' ? '' : `${String(n - 1).padStart(2, '0')}`, title: s.title, sub: s.sub, intro: id === 'intro', install: id === 'install' })
+    // TOUR_TITLES=off records clean footage (no chapter titles) for the launch video.
+    if (process.env.TOUR_TITLES !== 'off') await desk.evaluate((o) => window.show(o), { step: id === 'intro' || id === 'install' ? '' : `${String(n - 1).padStart(2, '0')}`, title: s.title, sub: s.sub, intro: id === 'intro', install: id === 'install' })
     const minEnd = Date.now() + (s.dur + 1.6) * 1000
     log('scene', id)
     try {
       await act()
     } catch (e) {
       log(`scene ${id} hiccup:`, e.message.split('\n')[0])
+      await page.screenshot({ path: path.join(VIDEO_DIR, `hiccup-${id}.png`) }).catch(() => {})
     }
     const left = minEnd - Date.now()
     if (left > 0) await sleep(left)
@@ -267,6 +341,7 @@ async function pdf(pages, prefix) {
   await scene('capsule', async () => {
     await sleep(2200)
     await dragTo(W / 2, 40, (c) => c.y < 80)
+    mark('capsule-top')
     await sleep(2300)
     await dragTo(40, H * 0.32, (c) => c.x < W / 3)
     await sleep(1800)
@@ -278,6 +353,7 @@ async function pdf(pages, prefix) {
     const c = await capsuleCentre()
     xt(c.x, c.y)
     await page.waitForSelector('.card.media', { timeout: 4000 })
+    mark('music-card')
     await sleep(2200)
     await tap('button[title="Pause"]')
     await sleep(900)
@@ -300,10 +376,12 @@ async function pdf(pages, prefix) {
   await scene('whatsapp', async () => {
     fs.writeFileSync(WA_TRIGGER, 'go')
     await page.waitForSelector('.card.message.whatsapp', { timeout: 10000 })
+    mark('whatsapp-card')
     await until(async () => (await page.$$('.card.message .line')).length >= 2, 4000)
     await sleep(1200)
     await tap('.card.message .reply-btn')
     await page.waitForSelector('.reply textarea', { timeout: 3000 })
+    mark('whatsapp-reply')
     await page.keyboard.type('Yes! See you at 1 🙂', { delay: 70 })
     await sleep(500)
     await page.keyboard.press('Enter')
@@ -313,6 +391,7 @@ async function pdf(pages, prefix) {
     await page.waitForSelector('.card.message', { state: 'detached', timeout: 15000 }).catch(() => {})
     imap.appendMessage('INBOX', [], false, 'From: Priya Nair <priya@acme.com>\r\nSubject: Design review tomorrow?\r\nMessage-ID: <dr1@acme.com>\r\nDate: ' + new Date().toUTCString() + '\r\n\r\nHi Alex, can we move the design review to 11?\r\n')
     await page.waitForSelector('.card.message .subject', { timeout: 15000 })
+    mark('mail-card')
     await sleep(1500)
     await tap('.card.message .reply-btn')
     await page.waitForSelector('.reply textarea', { timeout: 3000 })
@@ -328,6 +407,7 @@ async function pdf(pages, prefix) {
     await ring(page, c.x - (await winPos()).x, c.y - (await winPos()).y)
     await panelOpen(true)
     await tap('.rail-btn[aria-label="Controls"]')
+    mark('panel')
     await sleep(2500)
   })
 
@@ -357,6 +437,7 @@ async function pdf(pages, prefix) {
     await type('.claude-field textarea', 'tell Alice I am running late')
     await page.keyboard.press('Enter')
     await page.waitForSelector('.card.agent-ask', { timeout: 8000 })
+    mark('agent-ask')
     await sleep(2600)
     await tap('.agent-ask button.allow')
     await agentDone()
@@ -367,6 +448,7 @@ async function pdf(pages, prefix) {
     await panelOpen(false)
     const s = await openSettings('character')
     await s.waitForSelector('#character .character-tile', { timeout: 6000 })
+    mark('settings')
     await sleep(1200)
     await tap('#character .character-tile:has-text("Bolt")', s)
     await sleep(1600)
@@ -387,12 +469,14 @@ async function pdf(pages, prefix) {
     await sleep(600)
     const rows = await page.$$eval('.doc-row', (r) => r.map((x) => ({ name: x.getAttribute('data-doc'), on: x.getAttribute('aria-pressed') === 'true' })))
     for (const r of rows) if (r.on !== r.name.endsWith('.pdf')) await tap(`.doc-row[data-doc="${r.name}"]`)
+    mark('docs')
     await tap('.doc-actions .chip:has-text("Merge 2 PDFs")')
     await sleep(2200)
     const now = await page.$$eval('.doc-row', (r) => r.map((x) => ({ name: x.getAttribute('data-doc'), on: x.getAttribute('aria-pressed') === 'true' })))
     for (const r of now) if (r.on !== (r.name === 'Contract.docx')) await tap(`.doc-row[data-doc="${r.name}"]`)
     await tap('.chip.idea:has-text("Fix spelling and grammar")')
     await page.waitForSelector('.ask-run-files .chip', { timeout: 12000 })
+    mark('docs-fixed')
     await sleep(1500)
   })
 
@@ -401,6 +485,7 @@ async function pdf(pages, prefix) {
     await tap('.crm-head [aria-label="More"]')
     await tap('.crm-menu-item:has-text("Import contacts")')
     await page.waitForSelector('.crm-person', { timeout: 6000 })
+    mark('crm')
     await sleep(1500)
     await type('.crm-ask textarea', 'log a call with Priya about the proposal and remind me to follow up')
     await page.keyboard.press('Enter')
@@ -414,6 +499,7 @@ async function pdf(pages, prefix) {
   await scene('spotify', async () => {
     await tap('.rail-btn[aria-label="Music"]')
     await page.waitForSelector('.sp-tile', { timeout: 8000 })
+    mark('spotify')
     await sleep(1200)
     await tap('.sp-tile:has-text("Road Trip")')
     await sleep(1500)
@@ -438,9 +524,128 @@ async function pdf(pages, prefix) {
     await type('.claude-field textarea', 'clean the build folder, this needs approval')
     await page.keyboard.press('Enter')
     await page.waitForSelector('.card.approval', { timeout: 10000 })
-    await sleep(2400)
+    mark('claude-approval')
+    await sleep(4200)
     await tap('.card.approval button.allow')
     await sleep(2500)
+  })
+
+  /** Clears any cards left on the island. */
+  const clearCards = async () => {
+    for (const x of await page.$$('.card .close-btn')) await x.click().catch(() => {})
+    await sleep(400)
+  }
+
+  await scene('sessions', async () => {
+    await panelOpen(false)
+    await clearCards()
+    // A Claude Code session in a terminal, through the real session hook.
+    const hook = (input) =>
+      spawnSync('node', [path.join(ROOT, 'hook/claude-island-hook-events.cjs')], {
+        input: JSON.stringify({ cwd: '/home/alex/shop', session_id: 'tour-1', ...input }),
+        env: { ...process.env, DYNAMIC_ISLAND_SOCK: SOCK, CLAUDE_CONFIG_DIR: CLAUDE_DIR },
+      })
+    hook({ hook_event_name: 'SessionStart', source: 'startup' })
+    hook({ hook_event_name: 'UserPromptSubmit', prompt: 'add tax to the cart total, with a test' })
+    hook({ hook_event_name: 'PreToolUse', tool_name: 'Read', tool_input: { file_path: '/home/alex/shop/cart.ts' } })
+    await page.waitForSelector('.session-capsule', { timeout: 6000 }).catch(() => {})
+    mark('session-working')
+    await sleep(2200)
+    hook({ hook_event_name: 'PostToolUse', tool_name: 'Read', tool_input: { file_path: '/home/alex/shop/cart.ts' }, tool_response: {} })
+    hook({ hook_event_name: 'PreToolUse', tool_name: 'Edit', tool_input: { file_path: '/home/alex/shop/cart.ts', old_string: 'return sum', new_string: 'return sum + tax' } })
+    await sleep(1600)
+    hook({
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Edit',
+      tool_input: { file_path: '/home/alex/shop/cart.ts', old_string: 'return sum', new_string: 'return sum + tax' },
+      tool_response: { filePath: '/home/alex/shop/cart.ts', structuredPatch: [{ oldStart: 10, oldLines: 3, newStart: 10, newLines: 4, lines: [' const sum = items()', '-return sum', '+const tax = sum * 0.2', '+return sum + tax', ' }'] }] },
+    })
+    hook({ hook_event_name: 'PreToolUse', tool_name: 'Write', tool_input: { file_path: '/home/alex/shop/cart.test.ts', content: '' } })
+    await sleep(1200)
+    hook({
+      hook_event_name: 'PostToolUse',
+      tool_name: 'Write',
+      tool_input: { file_path: '/home/alex/shop/cart.test.ts', content: "test('adds tax', () => {\n  expect(total([10])).toBe(12)\n})\n" },
+      tool_response: { filePath: '/home/alex/shop/cart.test.ts', type: 'create' },
+    })
+    hook({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'npm test' } })
+    await sleep(1600)
+    hook({ hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_input: { command: 'npm test' }, tool_response: { stdout: '42 passed' } })
+    const transcript = path.join(TMP, 'tour-1.jsonl')
+    fs.writeFileSync(transcript, JSON.stringify({ type: 'assistant', message: { role: 'assistant', content: [{ type: 'text', text: 'Done: the cart total now includes tax, with a test for it. All 42 tests pass.' }] } }) + '\n')
+    hook({ hook_event_name: 'Stop', transcript_path: transcript })
+    await page.waitForSelector('.session-card.done', { timeout: 6000 }).catch(() => {})
+    mark('session-done')
+    await sleep(3200)
+    await panelOpen(true)
+    await tap('.rail-btn[aria-label="Sessions"]')
+    await tap('.session-row:has-text("shop")')
+    await page.waitForSelector('.diff-file', { timeout: 4000 }).catch(() => {})
+    mark('session-diff')
+    await sleep(2600)
+  })
+
+  await scene('drag', async () => {
+    await panelOpen(false)
+    await clearCards()
+    // The pointer off the island, and the island back to its resting capsule, before the drag.
+    xt(W / 2, H - 60)
+    await page.evaluate(() => document.querySelector('.island-outer')?.dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
+    await page.waitForSelector('.card.media', { state: 'detached', timeout: 5000 }).catch(() => log('music card still open'))
+    // A folder window, like a file manager, to drag a report out of.
+    const files = spawn(ELECTRON, [path.join(__dirname, 'files-app.cjs'), '--no-sandbox', `--force-device-scale-factor=${SCALE}`], {
+      env: { ...process.env, FILES_DIR: DRAG_DIR, FILES_AT: '64,486,420,170' },
+    })
+    let said = ''
+    files.stdout.on('data', (d) => (said += d))
+    await until(async () => said.includes('ready'), 15000)
+    const spots = JSON.parse(said.slice(said.indexOf('ready ') + 6).split('\n')[0])
+    await sleep(1500)
+    const [fx, fy] = spots['Quarterly Report.pdf']
+    // The ring opens where the pointer holds still; Convert is at the top, and
+    // a PDF's formats fan out above it: Word, text, Markdown.
+    const C = [900, 400]
+    const at = (deg, r) => [C[0] + r * Math.sin((deg * Math.PI) / 180), C[1] - r * Math.cos((deg * Math.PI) / 180)]
+    const conv = at(0, 105)
+    const word = at(-27, 216)
+    const px = (v) => Math.round(v * SCALE)
+    const mv = ([x, y], steps) => `move:${px(x)}:${px(y)}:${steps}`
+    const tokens = [mv([fx, fy], 1), 'down', 'wait:150', mv([fx + 30, fy - 12], 4), mv([fx + 160, fy - 90], 8), mv(C, 22), 'wait:1600', mv(conv, 10), 'wait:900', mv(word, 12), 'wait:1400', 'up', 'wait:200']
+    // Each step prints once it's done: 6 arrives and holds still, 7 the ring is open, 9 the formats are out.
+    const marksAt = { 6: 'ring-hold', 7: 'ring-open', 9: 'ring-convert', 11: 'ring-word', 12: 'ring-drop' }
+    const g = spawn('node', [path.join(E2E, 'xtest.cjs'), 'gesture', ...tokens])
+    let out = ''
+    g.stdout.on('data', (d) => {
+      out += d
+      for (const m of String(d).matchAll(/step (\d+)/g)) if (marksAt[m[1]]) mark(marksAt[m[1]])
+    })
+    await new Promise((r) => g.on('exit', r))
+    await page.waitForSelector('.card.job[data-job="done"]', { timeout: 15000 }).catch(() => log('no job card'))
+    mark('drag-result')
+    await sleep(3600)
+    files.kill()
+  })
+
+  await scene('character', async () => {
+    await clearCards()
+    const s = await openSettings('character')
+    await s.waitForSelector('#character .wardrobe-item', { timeout: 6000 })
+    await sleep(900)
+    await tap('#character .wardrobe-item[data-outfit="crown"]', s)
+    mark('wardrobe')
+    await sleep(1400)
+    await tap('#character .toggle-row:has-text("On your desktop too") input.switch', s)
+    await until(() => app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().some((w) => w.getTitle() === 'Companion' && w.isVisible())), 5000)
+    mark('companion')
+    await sleep(1800)
+    await s.evaluate(() => document.getElementById('general')?.scrollIntoView())
+    await sleep(500)
+    await tap('.toggle-row:has-text("Last week’s recap") button:has-text("Show")', s)
+    await s.close()
+    await page.waitForSelector('.recap-card', { timeout: 6000 }).catch(() => log('no recap'))
+    mark('recap')
+    await sleep(4200)
+    await tap('.recap-card .pill.primary:has-text("OK")').catch(() => {})
   })
 
   await scene('install', async () => {
@@ -455,6 +660,7 @@ async function pdf(pages, prefix) {
   rec.stdin.write('q')
   await new Promise((r) => rec.on('close', r))
   fs.writeFileSync(path.join(VIDEO_DIR, 'timeline.json'), JSON.stringify(timeline, null, 1))
+  fs.writeFileSync(path.join(VIDEO_DIR, 'marks.json'), JSON.stringify(marks, null, 1))
   log('recorded', timeline.length, 'scenes')
   await app.close().catch(() => {})
   await backdrop.close().catch(() => {})

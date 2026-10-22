@@ -38,7 +38,7 @@ npm run test:e2e     # the real app under Xvfb (Linux)
   UI ("Couldn't convert it", not "Error: conversion failed").
 - Say in the pull request what changed and how you checked it. Screenshots help
   for anything visual.
-- New features go in `README.md`, and in `CHANGELOG.md` under the next version.
+- New features go in [docs/features.md](docs/features.md) (and the README's short list if they're big), and in `CHANGELOG.md` under the next version.
 
 ## Branches
 
@@ -49,9 +49,9 @@ is specific to macOS or Windows, open the pull request against that branch.
 
 ## Where things are
 
-The [Project layout](README.md#project-layout) and [How it works](README.md#how-it-works)
-sections of the README describe the code, and [Development](README.md#development)
-lists what the tests cover.
+[docs/development.md](docs/development.md) describes the code (its
+[project layout](docs/development.md#project-layout) and
+[how it works](docs/development.md#how-it-works)) and what the tests cover.
 
 By contributing you agree that your work is released under the
 [MIT License](LICENSE), and to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
