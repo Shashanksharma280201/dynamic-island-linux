@@ -3,7 +3,7 @@
   "id": "intro",
   "title": "Dynamic Island",
   "sub": "for Linux, macOS and Windows",
-  "say": "This is Dynamic Island: a small capsule that lives on the edge of your screen. It shows what's happening, like music, messages, mail and your AI assistant, and lets you act on it without leaving what you're doing. It runs on Linux, macOS and Windows. Let's take a tour."
+  "say": "This is Dynamic Island: a small capsule that lives on the edge of your screen. It shows what's happening, like music, messages, mail, your AI assistant and Claude Code, and lets you act on it without leaving what you're doing. It runs on Linux, macOS and Windows, and it's free and open source. Let's take a tour."
  },
  {
   "id": "capsule",
@@ -78,9 +78,27 @@
   "say": "If you use Claude Code, the island shows its permission requests, so you can allow or deny them from anywhere. The rings on the Claude icon show how much of your plan you've used. And you can talk to Claude Code, by typing or by voice."
  },
  {
+  "id": "sessions",
+  "title": "Live from your terminals",
+  "sub": "Every Claude Code session, as it works",
+  "say": "Every Claude Code session in your terminals shows up live. The orb shows what it's doing, reading, editing or running, with a step count. When it finishes, a card shows its answer and exactly what it changed. The Sessions tab keeps each one, with the diff of every file."
+ },
+ {
+  "id": "drag",
+  "title": "Drag actions",
+  "sub": "Hold a dragged file still, in any app",
+  "say": "Now drag any file, from any app, and hold still for a moment. A ring of actions opens right under the pointer. Point at Convert, pick Word, and let go. The new file appears on the island, ready to open, or drag it straight into an email. You can also shrink it, copy its text, or ask Claude about it."
+ },
+ {
+  "id": "character",
+  "title": "A little character",
+  "sub": "Outfits, your desktop, and a weekly recap",
+  "say": "And the island has a character. Dress it up, and it can sit on your desktop too, acting out what's going on. Every Monday it brings a short recap of your week with your coding agents."
+ },
+ {
   "id": "install",
   "title": "Get it",
-  "sub": "Pick your system in the README and run the commands",
-  "say": "To install it, open the README, pick your system, and run the commands in order. Use the main branch on Linux, mac on a Mac, and windows on Windows. That's Dynamic Island. Thanks for watching."
+  "sub": "One command on Linux, macOS and Windows",
+  "say": "To install it, run one command, on Linux, macOS or Windows, or download the installer. It's free and open source under the MIT license, so come and build it with us. That's Dynamic Island. Thanks for watching."
  }
 ]
