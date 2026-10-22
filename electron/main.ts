@@ -77,6 +77,7 @@ import { SERVICES } from './servicesChannels'
 import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
 import { CLAUDE } from './claudeChannels'
 import { DragRing } from './dragRing'
+import { scriptedDragSource } from './dragSourceScripted'
 import { DragJobs } from './dragJobs'
 import { closeImagePage } from './imageOps'
 import { MailManager } from './mailManager'
@@ -731,6 +732,8 @@ async function main() {
     opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
     env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
     onDrop: (d) => dragJobs.run(d),
+    // Tests can play a drag the way a system reports one.
+    source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : undefined,
     // Holding a file over the island drops it there (Documents), not the ring.
     avoid: (p) => {
       if (!cssRect) return false

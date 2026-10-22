@@ -2,7 +2,8 @@ import { BrowserWindow, ipcMain, screen, type Rectangle } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { RING as GEO, SLOT_IDS, dwellStep, ringCenter, type DwellState, type OpenWhen, type PlanEnv, type SlotId } from '@shared/dragActions'
-import { DragWatcher, type DragSample } from './dragWatch'
+import { DragWatcher } from './dragWatch'
+import type { DragSample, DragSource, DragSourceMaker } from './dragSource'
 import { RING } from './ringChannels'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -18,6 +19,8 @@ type Deps = {
   onShown?: () => void
   /** Where it stays shut (over the island, which takes dropped files itself). Screen units. */
   avoid?: (p: { x: number; y: number }) => boolean
+  /** How this system tells us about drags (X11 unless given). */
+  source?: DragSourceMaker
 }
 
 /**
@@ -27,7 +30,9 @@ type Deps = {
  * action drops the files on it. Moving away closes it and the drag goes on.
  */
 export class DragRing {
-  private watcher: DragWatcher
+  private watcher: DragSource
+  /** What's being dragged, when the system said at the start (macOS). */
+  private files: string[] | undefined
   private win: BrowserWindow | null = null
   private ready = false
   private dwell: DwellState = { anchor: null, bloomed: false }
@@ -36,12 +41,13 @@ export class DragRing {
   private ownUntil = 0
 
   constructor(private d: Deps) {
-    this.watcher = new DragWatcher({
-      onStart: () => this.onStart(),
-      onSample: (s) => this.onSample(s),
+    const events = {
+      onStart: (files?: string[]) => this.onStart(files),
+      onSample: (s: DragSample) => this.onSample(s),
       onEnd: () => this.onEnd(),
       ownDrag: () => Date.now() < this.ownUntil,
-    })
+    }
+    this.watcher = d.source ? d.source(events) : new DragWatcher(events)
     const mine = (e: Electron.IpcMainEvent) => !!this.win && e.sender === this.win.webContents
     ipcMain.on(RING.READY, (e) => {
       if (mine(e)) this.ready = true
@@ -56,7 +62,8 @@ export class DragRing {
       this.close('none')
     })
     ipcMain.on(RING.DROP, (e, m) => {
-      if (!mine(e) || !m || !SLOT_IDS.includes(m.slot) || !Array.isArray(m.paths)) return
+      // One drop per ring: the page's drop and its let-go fallback can both arrive.
+      if (!mine(e) || this.dropped || !m || !SLOT_IDS.includes(m.slot) || !Array.isArray(m.paths)) return
       const paths = m.paths.filter((p: unknown): p is string => typeof p === 'string' && p.startsWith('/')).slice(0, 50)
       if (!paths.length) return
       this.dropped = true
@@ -101,17 +108,14 @@ export class DragRing {
     this.ownUntil = Date.now() + ms
   }
 
-  private scale(): number {
-    return screen.getPrimaryDisplay().scaleFactor || 1
-  }
-
   private send(channel: string, v?: unknown): void {
     if (this.win && !this.win.isDestroyed()) this.win.webContents.send(channel, v)
   }
 
-  private onStart(): void {
+  private onStart(files?: string[]): void {
     // The ring's page loads with the first drag (no window until it's needed).
     if (this.d.on()) this.ensureWindow()
+    this.files = files?.length ? files.slice(0, 50) : undefined
     this.dwell = { anchor: null, bloomed: false }
     this.dropped = false
     if (this.open) this.close('none')
@@ -119,8 +123,7 @@ export class DragRing {
 
   private onSample(s: DragSample): void {
     if (!this.d.on()) return
-    const k = this.scale()
-    const p = { x: s.x / k, y: s.y / k }
+    const p = { x: s.x, y: s.y }
     if (this.open) {
       const { bounds, center } = this.open
       this.send(RING.POINTER, { x: p.x - bounds.x, y: p.y - bounds.y })
@@ -141,7 +144,16 @@ export class DragRing {
   }
 
   private onEnd(): void {
-    if (this.open) this.close(this.dropped ? 'drop' : 'end')
+    if (!this.open) return
+    if (this.dropped) return this.close('drop')
+    if (this.files) {
+      // The files are known (macOS): the page may take letting go on an action
+      // as the drop, since the dragging app only offers it once the pointer moved.
+      this.send(RING.END)
+      setTimeout(() => this.open && !this.dropped && this.close('end', false), 250)
+      return
+    }
+    this.close('end')
   }
 
   private bloom(p: { x: number; y: number }): void {
@@ -158,18 +170,19 @@ export class DragRing {
     this.open = { bounds, center: c }
     this.dropped = false
     win.setBounds(bounds)
-    this.send(RING.OPEN, { env: this.d.env(), pointer: { x: p.x - bounds.x, y: p.y - bounds.y } })
+    // With the files known (macOS), the ring opens with its actions at once.
+    this.send(RING.OPEN, { env: this.d.env(), pointer: { x: p.x - bounds.x, y: p.y - bounds.y }, files: this.files })
     win.showInactive()
     win.moveTop()
     // The dragging app only looks at what's under the pointer when it moves.
     setTimeout(() => this.watcher.nudge(), 60)
   }
 
-  private close(why: 'far' | 'end' | 'none' | 'drop'): void {
+  private close(why: 'far' | 'end' | 'none' | 'drop', tell = true): void {
     if (!this.open) return
     this.open = null
     if (why === 'far') this.send(RING.CLOSE)
-    else if (why === 'end') this.send(RING.END)
+    else if (why === 'end' && tell) this.send(RING.END)
     // The page folds the ring up (or swallows the file) first.
     const wait = why === 'none' ? 0 : why === 'drop' ? 420 : 230
     setTimeout(() => {
