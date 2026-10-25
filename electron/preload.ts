@@ -26,6 +26,8 @@ import type { Shortcuts } from '@shared/shortcuts'
 import { SESSIONS } from './sessionChannels'
 import { COMPANION } from './companionChannels'
 import { SERVICES } from './servicesChannels'
+import { CONNECTED } from './connectedChannels'
+import type { ConnectedState } from '@shared/connected'
 import type { ServiceState } from '@shared/services'
 import type { RecapCard } from '@shared/recap'
 import type {
@@ -96,6 +98,12 @@ const api = {
     refresh: (id: string): Promise<void> => ipcRenderer.invoke(SERVICES.REFRESH, id),
     open: (url: string): Promise<void> => ipcRenderer.invoke(SERVICES.OPEN, url),
     onChanged: (cb: (v: ServiceState[]) => void) => on(SERVICES.CHANGED, cb),
+  },
+  /** The connected package (trading engine…): what it shows, and its buttons. */
+  connected: {
+    view: (): Promise<ConnectedState> => ipcRenderer.invoke(CONNECTED.VIEW),
+    action: (id: string): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke(CONNECTED.ACTION, id),
+    onChanged: (cb: (v: ConnectedState) => void) => on(CONNECTED.CHANGED, cb),
   },
   /** Ctrl+Alt+1…9 / Allow while one of Claude's questions is on the island. */
   onQuestionKey: (cb: (k: { n?: number; send?: boolean }) => void) => on(IPC.QUESTION_KEY, cb),
@@ -294,6 +302,8 @@ const settings = {
   showRecap: () => ipcRenderer.invoke(SETTINGS.SHOW_RECAP),
   /** Turn a service on/off, or set its address or key; resolves to an error to show, or null. */
   setService: (id: string, patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_SERVICE, id, patch),
+  setConnected: (patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_CONNECTED, patch),
+  qr: (link: string): Promise<string | null> => ipcRenderer.invoke(SETTINGS.QR, link),
   setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),

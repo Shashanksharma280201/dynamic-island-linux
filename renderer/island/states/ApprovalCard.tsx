@@ -10,6 +10,7 @@ import type { ApprovalKey } from '@shared/approvalKeys'
 import { useShortcutLabel } from '../useShortcuts'
 import { parseQuestions } from '@shared/questions'
 import { QuestionCard } from './QuestionCard'
+import { ConnectedAskCard } from './ConnectedActivity'
 
 /** The shortcut that presses this button from anywhere. */
 const Key = ({ k }: { k: ApprovalKey }) => <kbd className="key">{useShortcutLabel(k)}</kbd>
@@ -21,6 +22,7 @@ export function ApprovalCard({ request, queued }: { request: ToolRequest; queued
     if (msg.decision === 'allow') sound('ok')
     window.island.sendDecision({ id: request.id, ...msg })
   }
+  if (request.connected) return <ConnectedAskCard id={request.id} card={request.connected} queued={queued} />
   if (request.ask) return <AgentAsk request={request} ask={request.ask} queued={queued} decide={decide} />
   const project = request.cwd?.split(/[\\/]/).filter(Boolean).pop()
   if (request.toolName === 'AskUserQuestion' && !request.fromIsland && parseQuestions(request.toolInput)) return <QuestionCard request={request} queued={queued} project={project} />

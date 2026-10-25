@@ -6,6 +6,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Connected: your trading engine on the island**
+
+- A new **Connected** package shows a service you run (the first one is the
+  [Day-Trading](https://github.com/Shashanksharma280201/Day-Trading) engine)
+  right on the island: today's P&L on the capsule, every trade it wants to make
+  as a card with **Buy / Skip** and a countdown, and its own tab with open
+  positions, today's trades and **Stop trading today**.
+- Only your click (or the approval shortcut) answers a card. No answer before
+  the countdown ends means no; the island's assistant can read what it shows
+  but can't answer for you.
+- Set it up in **Settings → Connected** (address and token, tried before
+  they're kept; the token is encrypted). The same section shows a QR to pair
+  the Day-Trading Android app with the same engine.
+- Everything shown comes from the service, so it can change what you see
+  without a new island release (protocol in Day-Trading's
+  `docs/island-protocol.md`).
+
 **Drag actions on macOS and Windows**
 
 - Drag actions now work on a Mac and on Windows too: drag a file in any app,

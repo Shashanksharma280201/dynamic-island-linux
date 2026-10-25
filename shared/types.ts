@@ -5,6 +5,7 @@ import type { AiSettings, ProviderId } from './ai'
 import type { PackageId, PackageTab, PackagesConfig } from './packages'
 import type { ClaudeRun } from './claude'
 import type { DragConfig } from './dragActions'
+import type { ConnectedCapsule, ConnectedCard } from './connected'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -19,6 +20,8 @@ export type ToolRequest = {
   fromIsland?: boolean
   /** The island's own agent asking before it acts for you (not Claude Code). */
   ask?: { app: string; title: string; body: string }
+  /** A connected package (the trading engine…) asking for your answer. */
+  connected?: ConnectedCard
 }
 
 export type Decision = 'allow' | 'deny' | 'ask'
@@ -100,6 +103,8 @@ export type Activity =
   | (Base & { kind: 'session'; session: AgentSession; others?: number })
   /** A drag action at work (converting, shrinking…), then its result. */
   | (Base & { kind: 'job'; job: JobState })
+  /** A connected package's status on the capsule (today's P&L…). */
+  | (Base & { kind: 'connected'; status: ConnectedCapsule })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {
@@ -322,6 +327,8 @@ export type SettingsState = {
   recap: boolean
   /** Services you follow, and how the last look went. */
   services: { id: string; on: boolean; hasKey: boolean; url: string; error?: string; checkedAt?: number }[]
+  /** The connected package (Settings → Connected). */
+  connected: { on: boolean; url: string; hasKey: boolean; phase: string; error?: string; name?: string; pairingLink?: string; phoneUrl?: string }
   /** Which display the island lives on, and the displays there are. */
   display: string
   displays: { key: string; name: string }[]
