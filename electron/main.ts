@@ -73,6 +73,9 @@ import { SESSIONS } from './sessionChannels'
 import { focusTerminal, frontWindow, terminalFocused } from './terminal'
 import { captureWindow, type FrontWindow } from './attach'
 import { ServiceHub } from './services'
+import { ConnectedHub, syncActivities } from './connected'
+import { CONNECTED } from './connectedChannels'
+import { askIdOf, viewText } from '@shared/connected'
 import { SERVICES } from './servicesChannels'
 import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
 import { CLAUDE } from './claudeChannels'
@@ -511,6 +514,10 @@ async function main() {
         media: { now: () => nowPlaying, command: (c) => media.command(c) },
         spotify,
         docs,
+        connected: { text: () => {
+          const v = connectedHub.view()
+          return viewText(v.manifest, v.view, v.phase)
+        } },
         crm: {
           store: crm,
           // One batch per answer: its changes undo in one go.
@@ -774,6 +781,7 @@ async function main() {
     setCompanion: (on) => setCompanion(on),
     setDisplay: (pref) => setDisplay(pref),
     services: () => serviceHub,
+    connected: () => connectedHub,
     clearRecap: () => recap.clear(),
     showRecap: () => showRecap(true),
     setDictation: (on) => {
@@ -828,7 +836,12 @@ async function main() {
     onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onCharacter: () => pushCharacter(),
-    onPackages: () => pushPackages(),
+    onPackages: () => {
+      pushPackages()
+      // Turning Connected off takes its capsule and cards away (and back on brings them back).
+      const v = connectedHub.view()
+      syncActivities(enabledPackages(config.packages).includes('connected') ? (v.view ?? null) : null, v.manifest ?? null, store, askDeadlines, Date.now())
+    },
     onAi: (previous) => {
       // Switching away from a provider mid-answer stops that answer.
       if (previous !== config.ai.provider) {
@@ -945,6 +958,18 @@ async function main() {
 
   const decide = (m: DecisionMsg) => {
     if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    // A connected package's card (a trade to approve…): your answer goes to it.
+    const askId = askIdOf(m.id)
+    if (askId !== null) {
+      if (m.decision === 'ask') return // no terminal to answer in
+      store.remove(m.id)
+      const pkg = connectedHub.view().manifest?.name ?? 'Connected'
+      void connectedHub.answer(askId, m.decision === 'allow').then((res) => {
+        if (!res.ok && res.message)
+          transient.show({ kind: 'notification', id: `connected-answer-${askId}`, priority: 5, notification: { app: pkg, summary: m.decision === 'allow' ? 'Not placed' : 'Couldn’t send your answer', body: res.message, urgency: 'normal' } }, 8000)
+      })
+      return
+    }
     if (m.answers) recap.answer('question')
     else if (m.decision === 'allow' || m.decision === 'deny') recap.answer(m.decision)
     claude.resolve(m)
@@ -1082,6 +1107,30 @@ async function main() {
     onEvent: (e) => showNotificationLater({ app: serviceInfo(e.service).name, summary: e.title, body: e.body, urgency: e.urgency }),
   })
   serviceHub.start()
+  // ---- The connected package (your trading engine…) ----
+  const askDeadlines = new Map<string, number>()
+  const connectedHub = new ConnectedHub({
+    config: () => config.connected,
+    token: () => {
+      try {
+        return config.connected.secret ? decryptSecret(config.connected.secret) : ''
+      } catch {
+        return ''
+      }
+    },
+    onChange: () => {
+      send(win, CONNECTED.CHANGED, connectedHub.view())
+      settings?.changed()
+    },
+    // Its capsule and its approval cards follow every view it sends.
+    onView: (view, manifest) => syncActivities(enabledPackages(config.packages).includes('connected') ? view : null, manifest, store, askDeadlines, Date.now()),
+    onNotify: (n, m) => {
+      if (enabledPackages(config.packages).includes('connected')) showNotificationLater({ app: m.name, summary: n.title, body: n.body, urgency: n.urgency })
+    },
+  })
+  connectedHub.start()
+  ipcMain.handle(CONNECTED.VIEW, () => connectedHub.view())
+  ipcMain.handle(CONNECTED.ACTION, (_e, id: unknown) => (typeof id === 'string' && /^[a-z0-9_-]{1,40}$/.test(id) ? connectedHub.action(id) : { ok: false, message: 'Unknown button' }))
   ipcMain.handle(SERVICES.VIEW, () => serviceHub.view())
   ipcMain.handle(SERVICES.REFRESH, (_e, id: unknown) => ((SERVICE_IDS as readonly unknown[]).includes(id) ? serviceHub.refresh(id as ServiceId) : undefined))
   ipcMain.handle(SERVICES.OPEN, (_e, url: unknown) => {
@@ -1204,6 +1253,7 @@ async function main() {
     send(win, NOTIFS.CHANGED, center.view())
     send(win, SESSIONS.CHANGED, sessions.list())
     send(win, SERVICES.CHANGED, serviceHub.view())
+    send(win, CONNECTED.CHANGED, connectedHub.view())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -1279,6 +1329,7 @@ async function main() {
     clearInterval(recapTimer)
     recap.flush()
     serviceHub.stop()
+    connectedHub.stop()
     clearInterval(companionTimer)
     companion.hide()
     center.flush()

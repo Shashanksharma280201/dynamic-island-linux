@@ -37,6 +37,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dictation: true,
     display: 'primary',
     services: Object.fromEntries(['github', 'vercel', 'stripe', 'resend', 'notion', 'calcom', 'n8n'].map((id) => [id, { on: false, url: '', secret: '' }])),
+    connected: { on: false, url: '', secret: '' },
     recap: true,
     frosted: true,
     sounds: false,

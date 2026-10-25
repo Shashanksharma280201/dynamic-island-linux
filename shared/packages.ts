@@ -3,10 +3,10 @@
  * tools the agent may use; Settings → Packages turns them on or off. Built-in
  * packages for now; the same shape will carry third-party ones later.
  */
-export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm'
+export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected'
 
 /** Rail tabs a package can own. */
-export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm'
+export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected'
 
 export type PackageToolInfo = {
   name: string
@@ -133,6 +133,15 @@ export const PACKAGES: PackageInfo[] = [
       { name: 'crm_import', summary: 'Import contacts (CSV, Excel, vCard)' },
       { name: 'crm_export', summary: 'Export as CSV' },
     ],
+  },
+  {
+    id: 'connected',
+    name: 'Connected',
+    description:
+      'A service you connect in Settings → Connected, such as your trading engine: its status on the capsule, its approvals as cards you answer, and its own tab. The agent can read what it shows, but only you can answer its approvals.',
+    tab: 'connected',
+    permissions: ['The address and token you give it in Settings → Connected', 'Sends your answers and button presses back to that service'],
+    tools: [{ name: 'connected_status', summary: 'Read what your connected package shows (read only)' }],
   },
 ]
 

@@ -29,6 +29,8 @@ export type PackageContext = {
   }
   docs: DocsContext
   crm: CrmContext
+  /** The connected package's view, as text (read only: only you answer its approvals). */
+  connected: { text: () => string }
   now?: () => Date
 }
 
@@ -294,6 +296,21 @@ function music(ctx: PackageContext): AgentTool[] {
   ]
 }
 
+// --------------------------------------------------------------- connected ----
+
+function connected(ctx: PackageContext): AgentTool[] {
+  return [
+    {
+      name: 'connected_status',
+      description:
+        'Read what the user’s connected package (for example their trading engine) shows right now: its status, anything waiting for the user’s approval, and its sections. Read only: you cannot approve, reject or press anything for the user; tell them to answer on the island or their phone.',
+      input_schema: schema({}),
+      label: () => 'Checking your connected package',
+      run: async () => ctx.connected.text(),
+    },
+  ]
+}
+
 const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = {
   basics,
   notes,
@@ -302,6 +319,7 @@ const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = {
   music,
   docs: (ctx) => docsTools(ctx.docs),
   crm: (ctx) => crmTools(ctx.crm),
+  connected,
 }
 
 /** The agent's tools: those of the packages that are turned on. */

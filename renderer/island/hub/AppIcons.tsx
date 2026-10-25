@@ -78,6 +78,14 @@ export const ServicesAppIcon = () => (
   </Tile>
 )
 
+/** Connected (your trading engine…): a rising line on a dark tile. */
+export const ConnectedAppIcon = () => (
+  <Tile from="#0f2a1b" to="#0a1510">
+    <path d="M6 19l5-5 3.5 3L22 9" fill="none" stroke="#30d158" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M17.5 9H22v4.5" fill="none" stroke="#30d158" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+  </Tile>
+)
+
 /** Spotify: the green disc with three arcs. */
 export const SpotifyAppIcon = () => (
   <svg className="app-icon" width={26} height={26} viewBox="0 0 28 28" aria-hidden>
