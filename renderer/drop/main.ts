@@ -3,11 +3,12 @@ import './drop.css'
 
 /**
  * Phone Drop's glow. While a file heads for your phone's edge, light comes up
- * at this screen's edge next to it: a white bloom with a ring of colour
- * around it, the rest of the screen dimmed a little. When the file comes out
- * of the light, the ring leaves it as a wave: it grows across the whole
- * screen and fades, like light through glass, and the light settles back to
- * the edge. A file leaving for the phone draws the wave in toward the edge.
+ * at this screen's edge next to it: a warm white bloom with a ribbon of
+ * colour curled around it (red, orange, yellow, green, blue, in soft lighter
+ * shades), the rest of the screen dimmed a little. When the file comes out of
+ * the light, the ribbon flows across the screen as a rippling wave, a lighter
+ * one behind it, and fades as the light settles back to the edge. A file
+ * leaving for the phone draws the ribbon in toward the edge.
  */
 
 type V = { x: number; y: number }
@@ -21,7 +22,7 @@ const K = 0.5
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
 const glow = { side: 'right' as DropSide, at: 0.5, level: 0, vel: 0, goal: 0, flash: 0, kick: 0, tint: 0 }
-/** The wave: 0 to 1 while it runs (-1 when not), outward from the light or in toward it, from where it started. */
+/** The colour flowing: 0 to 1 while it runs (-1 when not), out from the light or in toward it, from where it started. */
 const wave = { u: -1, out: true, power: 1, secs: 1.6, side: 'right' as DropSide, at: 0.5, startedAt: 0 }
 const smooth = (a: number, b: number, x: number) => {
   const t = clamp((x - a) / (b - a), 0, 1)
@@ -110,6 +111,66 @@ function frame(now: number) {
   requestAnimationFrame(frame)
 }
 
+// The colours: red, orange, yellow, green and blue, and lighter shades of them.
+type RGB = readonly [number, number, number]
+const HUES: RGB[] = [
+  [84, 166, 255], // blue
+  [92, 214, 120], // green
+  [255, 212, 79], // yellow
+  [255, 160, 77], // orange
+  [255, 107, 107], // red
+]
+/** Toward white by `k` (0 to 1): the lighter shades. */
+const light = (c: RGB, k: number): RGB => [Math.round(c[0] + (255 - c[0]) * k), Math.round(c[1] + (255 - c[1]) * k), Math.round(c[2] + (255 - c[2]) * k)]
+/** The colour at `f` (0 to 1) along blue, green, yellow, orange, red, blended between them. */
+function hueAt(f: number): RGB {
+  const x = clamp(f, 0, 1) * (HUES.length - 1)
+  const i = Math.min(HUES.length - 2, Math.floor(x))
+  const k = x - i
+  const a = HUES[i]
+  const b = HUES[i + 1]
+  return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, a[2] + (b[2] - a[2]) * k]
+}
+
+/** A soft bead of light: brightest in the middle, gone at its edge. Only its own square is painted. */
+function bead(x: number, y: number, r: number, c: RGB, a: number) {
+  if (a < 0.003 || r < 1) return
+  const [R, G, B] = c.map(Math.round)
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r)
+  g.addColorStop(0, `rgba(${R},${G},${B},${a})`)
+  g.addColorStop(0.4, `rgba(${R},${G},${B},${a * 0.6})`)
+  g.addColorStop(1, `rgba(${R},${G},${B},0)`)
+  ctx.fillStyle = g
+  ctx.fillRect(x - r, y - r, r * 2, r * 2)
+}
+
+/** `v` turned by `a` radians. */
+const turn = (v: V, a: number): V => ({ x: v.x * Math.cos(a) - v.y * Math.sin(a), y: v.x * Math.sin(a) + v.y * Math.cos(a) })
+
+/**
+ * A ribbon of light: soft beads along an arc around `c` (radius `R`, `wide`
+ * radians either side of `n`), close enough to melt into one band, blue at
+ * one end through green, yellow and orange to red at the other, rippling as
+ * `ph` moves, thinning only at its very ends.
+ */
+function ribbon(c: V, n: V, R: number, wide: number, size: number, alpha: number, lighten: number, ph: number, ripple: number) {
+  const N = clamp(Math.ceil((2 * wide * R) / (size * 0.45)), 16, 120)
+  for (let k = 0; k < N; k++) {
+    const f = k / (N - 1)
+    const ang = (f * 2 - 1) * wide
+    const dir = turn(n, ang)
+    const rr = R + ripple * Math.sin(ph + f * 7.5)
+    const end = smooth(0, 0.1, f) * smooth(0, 0.1, 1 - f)
+    bead(c.x + dir.x * rr, c.y + dir.y * rr, size * (0.85 + 0.15 * Math.sin(ph * 1.3 + f * 11)), light(hueAt(f), lighten), alpha * end)
+  }
+}
+
+/** How far either side an arc of radius `R` from `p` can go and still be on the screen (all its colours showing). */
+function onScreen(p: V, n: V, R: number, most: number): number {
+  const ext = n.x !== 0 ? Math.max(p.y, H() - p.y) : Math.max(p.x, W() - p.x)
+  return Math.min(most, Math.asin(Math.min(1, (ext * 0.92) / Math.max(1, R))))
+}
+
 function draw(t: number) {
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -119,52 +180,37 @@ function draw(t: number) {
   const F = glow.flash
   const big = Math.hypot(W(), H())
 
-  // While a wave leaves, the ring around the light goes with it.
-  const waveEnv = wave.u >= 0 ? wave.power * smooth(0, 0.12, wave.u) * (1 - smooth(0.6, 1, wave.u)) : 0
-  const held = wave.out ? 1 - 0.85 * waveEnv : 1
+  // While the colour flows out, less of it stays by the light.
+  const waveEnv = wave.u >= 0 ? wave.power * smooth(0, 0.14, wave.u) * (1 - smooth(0.55, 1, wave.u)) : 0
+  const held = wave.out ? 1 - 0.7 * waveEnv : 1
   if (L > 0.003 || F > 0.01) {
     // The rest of the screen, a little dimmer, so the light shows.
     const dim = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, big)
     dim.addColorStop(0, 'rgba(3,5,12,0)')
-    dim.addColorStop(0.22, `rgba(3,5,12,${0.06 * L})`)
-    dim.addColorStop(1, `rgba(3,5,12,${0.22 * L})`)
+    const dk = L * (1 - 0.6 * waveEnv)
+    dim.addColorStop(0.22, `rgba(3,5,12,${0.05 * dk})`)
+    dim.addColorStop(1, `rgba(3,5,12,${0.16 * dk})`)
     ctx.fillStyle = dim
     ctx.fillRect(0, 0, W(), H())
 
-    // A ring of colour around the light, like light through glass.
-    const sway = Math.sin(t * 0.9) * 0.025 * span
-    for (const [scale, a] of [
-      [1, 1],
-      [0.8, 0.55],
-    ] as const) {
-      const c = { x: p.x - n.x * 0.04 * span + n.y * sway * 0.6, y: p.y - n.y * 0.04 * span + n.x * sway * 0.6 }
-      const r = span * (0.4 + 0.24 * L + 0.18 * F) * scale + sway
-      const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r)
-      const k = (L + F * 0.6) * a * held
-      const s = scale === 1 ? 0 : 0.03
-      g.addColorStop(0, 'rgba(255,255,255,0)')
-      g.addColorStop(0.36 + s, 'rgba(255,255,255,0)')
-      g.addColorStop(0.46 + s, `rgba(140,225,255,${0.16 * k})`)
-      g.addColorStop(0.54 + s, `rgba(120,255,190,${0.15 * k})`)
-      g.addColorStop(0.62 + s, `rgba(255,226,120,${0.145 * k})`)
-      g.addColorStop(0.7 + s, `rgba(255,140,150,${0.12 * k})`)
-      g.addColorStop(0.79 + s, `rgba(206,120,255,${0.115 * k})`)
-      g.addColorStop(0.9, `rgba(120,110,255,${0.03 * k})`)
-      g.addColorStop(1, 'rgba(120,110,255,0)')
-      ctx.fillStyle = g
-      ctx.fillRect(0, 0, W(), H())
-    }
+    // A small ribbon of colour around the light, rippling slowly.
+    ctx.globalCompositeOperation = 'screen'
+    const k = (L + F * 0.5) * held
+    const c0 = { x: p.x - n.x * 0.02 * span, y: p.y - n.y * 0.02 * span }
+    const r0 = span * (0.16 + 0.05 * L + 0.04 * F)
+    ribbon(c0, n, r0, onScreen(p, n, r0, 1.25), span * (0.05 + 0.02 * L), 0.36 * k, 0.25, t * 1.4, span * 0.012)
+    ctx.globalCompositeOperation = 'source-over'
 
-    // The light itself: white where the phone is.
-    const rb = span * (0.18 + 0.3 * L + 0.25 * F)
+    // The light itself: a warm white where the phone is.
+    const rb = span * (0.16 + 0.26 * L + 0.22 * F)
     const b = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rb)
-    const w = Math.min(0.72, 0.68 * L + 0.32 * F)
+    const w = Math.min(0.72, 0.66 * L + 0.32 * F)
     const red = glow.tint
-    b.addColorStop(0, `rgba(255,${Math.round(255 - 140 * red)},${Math.round(255 - 150 * red)},${w})`)
-    b.addColorStop(0.2, `rgba(255,255,255,${0.7 * w})`)
-    b.addColorStop(0.45, `rgba(238,246,255,${0.3 * w})`)
-    b.addColorStop(0.72, `rgba(220,236,255,${0.08 * w})`)
-    b.addColorStop(1, 'rgba(220,236,255,0)')
+    b.addColorStop(0, `rgba(255,${Math.round(252 - 140 * red)},${Math.round(244 - 150 * red)},${w})`)
+    b.addColorStop(0.22, `rgba(255,251,242,${0.66 * w})`)
+    b.addColorStop(0.5, `rgba(255,247,236,${0.26 * w})`)
+    b.addColorStop(0.76, `rgba(255,244,230,${0.06 * w})`)
+    b.addColorStop(1, 'rgba(255,244,230,0)')
     ctx.fillStyle = b
     ctx.fillRect(0, 0, W(), H())
 
@@ -172,7 +218,7 @@ function draw(t: number) {
     const along = n.x !== 0 ? H() : W()
     const line = n.x !== 0 ? ctx.createLinearGradient(0, p.y - along * 0.4, 0, p.y + along * 0.4) : ctx.createLinearGradient(p.x - along * 0.4, 0, p.x + along * 0.4, 0)
     line.addColorStop(0, 'rgba(255,255,255,0)')
-    line.addColorStop(0.5, `rgba(255,255,255,${0.6 * w})`)
+    line.addColorStop(0.5, `rgba(255,255,255,${0.55 * w})`)
     line.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = line
     const th = 5
@@ -182,37 +228,24 @@ function draw(t: number) {
     else ctx.fillRect(0, H() - th, W(), th)
   }
 
-  // The wave: a ring of colour, white inside to violet outside, that grows out
-  // of the light across the whole screen (or closes in on it), fading as it goes.
+  // The colour flowing out: the ribbon leaves the light and crosses the
+  // screen as a wave, rippling, its beads growing as it spreads, a lighter
+  // one following behind, all fading as they go. A file leaving draws the
+  // wave in toward the light instead.
   if (wave.u >= 0 && waveEnv > 0.002) {
     const u = wave.u
     const w = edge(wave.side, wave.at)
-    const c = { x: w.p.x - w.n.x * 0.06 * w.span, y: w.p.y - w.n.y * 0.06 * w.span }
-    const far = Math.hypot(W(), H()) * 1.12
     // Out: quick off the edge, slowing as it spreads. In: slow, then quick into the light.
-    const e = wave.out ? 1 - Math.pow(1 - u, 3) : u * u * u
-    const R = wave.out ? 0.1 * w.span + (far - 0.1 * w.span) * e : far - (far - 0.08 * w.span) * e
-    const band = 0.3 * w.span + 0.4 * R
-    const g = ctx.createRadialGradient(c.x, c.y, Math.max(0, R - band), c.x, c.y, R)
-    const env = waveEnv
-    g.addColorStop(0, 'rgba(255,255,255,0)')
-    g.addColorStop(0.14, `rgba(255,255,255,${0.1 * env})`)
-    g.addColorStop(0.28, `rgba(140,225,255,${0.17 * env})`)
-    g.addColorStop(0.44, `rgba(120,255,190,${0.17 * env})`)
-    g.addColorStop(0.6, `rgba(255,226,120,${0.16 * env})`)
-    g.addColorStop(0.74, `rgba(255,140,150,${0.14 * env})`)
-    g.addColorStop(0.88, `rgba(206,120,255,${0.11 * env})`)
-    g.addColorStop(1, 'rgba(120,110,255,0)')
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, W(), H())
-    if (wave.out) {
-      // Just ahead of it, the screen dims a little: the wave's dark edge.
-      const d = ctx.createRadialGradient(c.x, c.y, R, c.x, c.y, R + 0.35 * w.span)
-      d.addColorStop(0, `rgba(20,10,40,${0.14 * env})`)
-      d.addColorStop(1, 'rgba(20,10,40,0)')
-      ctx.fillStyle = d
-      ctx.fillRect(0, 0, W(), H())
-    }
+    const e = wave.out ? 1 - Math.pow(1 - u, 3) : 1 - u * u * u
+    const reach = Math.hypot(W(), H()) * 0.9
+    const c = { x: w.p.x - w.n.x * 0.02 * w.span, y: w.p.y - w.n.y * 0.02 * w.span }
+    const R = w.span * 0.16 + reach * e
+    const ph = t * 2.4 + u * 9
+    ctx.globalCompositeOperation = 'screen'
+    const wide = onScreen(w.p, w.n, R, 1.25)
+    ribbon(c, w.n, R * 0.86, wide, w.span * (0.06 + 0.08 * e), 0.24 * waveEnv, 0.55, ph + 1.1, w.span * (0.015 + 0.03 * e))
+    ribbon(c, w.n, R, wide, w.span * (0.07 + 0.1 * e), 0.42 * waveEnv, 0.12, ph, w.span * (0.02 + 0.04 * e))
+    ctx.globalCompositeOperation = 'source-over'
   }
 }
 

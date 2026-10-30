@@ -6,6 +6,17 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Phone Drop: a ribbon of light**
+
+- The colour is now a ribbon of light, red and orange through yellow and
+  green to blue, in soft lighter shades: it curls around the light at the
+  edge while a file is on its way, and when the file comes out it flows
+  across the screen as a smooth rippling wave, with a lighter echo behind
+  it, and fades. Sending a file to the phone draws it in toward the edge.
+  On the phone too. No more rings of colour.
+- Quitting the island while your phone is connected no longer stops on an
+  error box.
+
 **Island Drop 3: everything the island does, on your phone**
 
 - The app now has the rest of the island: a **Claude** tab to talk to Claude
