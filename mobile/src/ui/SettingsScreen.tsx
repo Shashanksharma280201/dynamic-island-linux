@@ -1,15 +1,15 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { liveLink } from '../../modules/live-link'
 import { shareIntake } from '../../modules/share-intake'
 import { DEVICE, type DropLink, type LinkState } from '../link'
 import type { Prefs } from '../prefs'
+import { Page } from './kit'
 import { C } from './theme'
 
 /** The pairing, how the app keeps in touch, and what it notifies you about. */
-export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top }: { link: DropLink; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number }) {
+export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top, onBack }: { link: DropLink; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; onBack?: () => void }) {
   return (
-    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingTop: top + 8, paddingBottom: 120, gap: 14 }}>
-      <Text style={s.h1}>Settings</Text>
+    <Page title="Settings" top={top} onBack={onBack}>
 
       <View style={s.card}>
         <Text style={s.kicker}>Paired with</Text>
@@ -36,6 +36,7 @@ export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top }: 
       <View style={s.card}>
         <Text style={s.kicker}>Good to know</Text>
         <Text style={s.p}>• Approvals (Claude Code, trades, the assistant) can be answered here, on their notification, or on the island. The first answer wins.</Text>
+        <Text style={s.p}>• Everything here works on your computer itself: a note you write is saved there, a message you send goes from its WhatsApp, Claude runs there.</Text>
         <Text style={s.p}>• Notifications for approvals are private on the lock screen, so they can’t be answered on a locked phone.</Text>
         <Text style={s.p}>• {shareIntake.available ? 'Share from any app and pick Island Drop to send it to your computer.' : 'Sharing from other apps needs the installed app.'}</Text>
       </View>
@@ -51,7 +52,7 @@ export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top }: 
       >
         <Text style={s.dangerText}>Unpair</Text>
       </Pressable>
-    </ScrollView>
+    </Page>
   )
 }
 

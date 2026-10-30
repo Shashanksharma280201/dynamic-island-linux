@@ -166,6 +166,8 @@ electron/            main process
   phoneLink.ts       the island on your phone: its live view (server-sent events), answers, files out
   phoneOut.ts        files from this computer to the phone, with the glow and a card on the island
   phoneEdge.ts       a file dragged to the screen's edge where the phone is: the light, the strip that takes the drop
+  phoneCalls.ts      the island's own functions for the phone: the handlers its window invokes (kept as they're
+                     registered), checked against PHONE_CALLS; what its window is told, pushed to the phone
   settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
   notes.ts           notes as Markdown files (atomic writes)
   claudeCode.ts      runs Claude Code (claude -p, stream-json) for island commands

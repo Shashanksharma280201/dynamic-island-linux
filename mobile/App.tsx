@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, AppState, Linking, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, AppState, BackHandler, Linking, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -11,12 +11,15 @@ import { forgetPairing, loadPairing, savePairing } from './src/pairing'
 import { loadPrefs, savePrefs, type Prefs } from './src/prefs'
 import { parsePairingLink, type Pairing } from './src/protocol'
 import { keepReceived, loadReceived, type Received } from './src/received'
-import { ActivityScreen } from './src/ui/ActivityScreen'
+import type { InboxUnread } from '../shared/types'
+import { ClaudeScreen } from './src/ui/ClaudeScreen'
 import { FilesScreen } from './src/ui/FilesScreen'
+import { InboxScreen } from './src/ui/InboxScreen'
 import { IncomingLayer } from './src/ui/IncomingLayer'
 import { IslandScreen } from './src/ui/IslandScreen'
+import { useCall } from './src/ui/kit'
+import { MoreScreen, type MoreId } from './src/ui/MoreScreen'
 import { PairScreen } from './src/ui/PairScreen'
-import { SettingsScreen } from './src/ui/SettingsScreen'
 import { ShareScreen } from './src/ui/ShareScreen'
 import { TABS, TabBar, type TabId } from './src/ui/TabBar'
 import { C } from './src/ui/theme'
@@ -103,7 +106,25 @@ function Root() {
 function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; shared: SharedFile[] | null; clearShared: () => void; onUnpair: () => void }) {
   const insets = useSafeAreaInsets()
   const { width: W } = useWindowDimensions()
-  const [tab, setTab] = useState<TabId>('island')
+  const [tab, setTabState] = useState<TabId>('island')
+  const [more, setMore] = useState<MoreId | null>(null)
+  // A tab's screen is made the first time it's opened, then kept (its scroll, its drafts).
+  const [seen, setSeen] = useState<Set<TabId>>(() => new Set(['island']))
+  const setTab = (t: TabId) => {
+    setTabState(t)
+    if (!seen.has(t)) setSeen(new Set([...seen, t]))
+  }
+  const unread = useCall<InboxUnread>(link, 'inbox.unread', [], { topic: 'inbox' })
+  // Back from another tab goes to the Island tab (screens opened inside a tab go back first).
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      // A screen open in More closes first (More's own listener).
+      if (tab === 'island' || (tab === 'more' && more)) return false
+      setTabState('island')
+      return true
+    })
+    return () => sub.remove()
+  }, [tab, more])
   const [live, setLive] = useState<Live>(link.live)
   const [state, setState] = useState<LinkState>(link.state)
   const [received, setReceived] = useState<Received[]>(() => loadReceived())
@@ -145,23 +166,43 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
   }
 
   const top = insets.top + 12
-  const filesTabX = 12 + ((W - 24) / TABS.length) * 1.5
+  const filesTabX = 12 + ((W - 24) / TABS.length) * (TABS.indexOf('files') + 0.5)
+  const inboxBadge = (unread.data?.chats ?? 0) + (unread.data?.mail ?? 0)
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <Screen on={tab === 'island'}>
-        <IslandScreen link={link} live={live} top={top} />
+        <IslandScreen
+          link={link}
+          live={live}
+          top={top}
+          onOpen={(id) => {
+            setMore(id)
+            setTab('more')
+          }}
+        />
       </Screen>
-      <Screen on={tab === 'files'}>
-        <FilesScreen link={link} received={received} setReceived={setReceived} top={top} />
-      </Screen>
-      <Screen on={tab === 'activity'}>
-        <ActivityScreen link={link} live={live} top={top} />
-      </Screen>
-      <Screen on={tab === 'settings'}>
-        <SettingsScreen link={link} state={state} prefs={prefs} setPrefs={setPrefs} onUnpair={onUnpair} top={top} />
-      </Screen>
-      <TabBar tab={tab} setTab={setTab} badges={{ island: live.view?.approvals.length ?? 0 }} bottom={insets.bottom} />
+      {seen.has('claude') && (
+        <Screen on={tab === 'claude'}>
+          <ClaudeScreen link={link} top={top} bottom={insets.bottom} />
+        </Screen>
+      )}
+      {seen.has('files') && (
+        <Screen on={tab === 'files'}>
+          <FilesScreen link={link} received={received} setReceived={setReceived} top={top} />
+        </Screen>
+      )}
+      {seen.has('inbox') && (
+        <Screen on={tab === 'inbox'}>
+          <InboxScreen link={link} live={live} top={top} bottom={insets.bottom} />
+        </Screen>
+      )}
+      {seen.has('more') && (
+        <Screen on={tab === 'more'}>
+          <MoreScreen link={link} live={live} state={state} prefs={prefs} setPrefs={setPrefs} onUnpair={onUnpair} top={top} open={more} setOpen={setMore} />
+        </Screen>
+      )}
+      <TabBar tab={tab} setTab={setTab} badges={{ island: live.view?.approvals.length ?? 0, inbox: inboxBadge }} bottom={insets.bottom} />
       <IncomingLayer link={link} onReceived={onReceived} filesTabX={filesTabX} />
       {shared && <ShareScreen link={link} files={shared} onDone={clearShared} />}
     </View>

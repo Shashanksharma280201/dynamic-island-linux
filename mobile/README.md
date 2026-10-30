@@ -13,9 +13,25 @@ Your computer's Dynamic Island on your phone, and files both ways with a glow.
   glow at the edge of the computer's screen and lands in the island. Files the
   computer sends come out of the glow on the phone's side and land here, in
   **Received**.
-- **Activity**: the computer's notifications.
+- **Claude**: talk to Claude Code on your computer, as in the island's Claude
+  tab: type, watch what it's doing step by step, read the reply, stop it,
+  start over, and see your plan's limits.
+- **Inbox**: your computer's WhatsApp chats and mail, to read and answer, and
+  its notifications (clear one or all, Do Not Disturb).
+- **More**: **Trading** (P&L, trades to answer, positions, today's trades,
+  Stop trading / Close everything), **Notes** (read, write, edit), **Music**
+  (what's playing, Spotify search, playlists, where it plays), **Controls**
+  (volume, brightness, mute, Wi-Fi, Bluetooth, Do Not Disturb), **CRM**
+  (follow-ups, people, log a call, deals), **Documents** (convert, merge PDFs,
+  page numbers, send to the phone), **Services** (GitHub, Vercel, Stripe…) and
+  this app's **Settings**.
 - **Notifications** on the phone for everything waiting, with **Allow** and
   **Deny** (or **Buy** / **Skip**) buttons right on them.
+
+Everything runs on the computer itself, through the island's own functions:
+a note you write is saved there, a message you send goes from its WhatsApp,
+Claude runs there. Whatever changes (Claude's reply, new mail, the trading
+view) reaches the phone as it happens.
 
 It talks plain HTTP to the island's **Phone Drop** server on your Wi-Fi (or
 Tailscale), with the token from the island's pairing QR (protocol:
@@ -54,7 +70,7 @@ scan it from the app.
   go, or click the tray icon, **Send a file to <your phone>…**. The phone's
   edge that faces the computer glows, the file comes out of it and drops into
   **Received**.
-- **Settings**: stay connected in the background (a quiet ongoing notification
+- **More → Settings**: stay connected in the background (a quiet ongoing notification
   keeps the link open so approvals and files reach you within seconds; turn
   it off and they arrive when you open the app), show the computer's own
   notifications on the phone too, unpair.
@@ -89,7 +105,8 @@ locally instead: `npx expo prebuild --platform android` then
 | `src/link.ts` | Finds the computer, the live link (server-sent events), answers, media controls, uploads and downloads with progress |
 | `src/notify.ts` | Notification channels, one notification per approval with its buttons, the computer's notifications |
 | `src/files.ts`, `src/received.ts` | Recent photos, the files you add, what the computer sent |
-| `src/ui/` | The tabs, approval cards, the lifted file and its flick (Reanimated, gesture handler), the glow, files arriving |
+| `src/ui/` | The tabs (Island, Claude, Files, Inbox, More) and their screens, approval cards, the lifted file and its flick (Reanimated, gesture handler), the glow, files arriving |
+| `src/ui/kit.tsx` | What every screen is made of: `useCall` (an island function, kept live by its pushes), the page, cards, rows, the segmented control, the composer, the slider |
 | `modules/share-intake` | A small native module: what other apps share, copied into the app |
 | `modules/live-link` | A small native module: the foreground service that keeps the link open in the background |
 

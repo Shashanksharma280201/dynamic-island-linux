@@ -18,7 +18,7 @@ export function LiveDot({ on, color }: { on: boolean; color: string }) {
 }
 
 /** Your computer's island: what's waiting for you, what's playing, your trades and sessions. */
-export function IslandScreen({ link, live, top }: { link: DropLink; live: Live; top: number }) {
+export function IslandScreen({ link, live, top, onOpen }: { link: DropLink; live: Live; top: number; onOpen?: (id: 'trading' | 'music') => void }) {
   const [refreshing, setRefreshing] = useState(false)
   const v = live.view
   const color = live.phase === 'live' ? C.green : live.phase === 'connecting' ? C.orange : C.red
@@ -62,21 +62,29 @@ export function IslandScreen({ link, live, top }: { link: DropLink; live: Live; 
         </Animated.View>
       )}
 
-      {v?.media && <NowPlaying media={v.media} link={link} />}
-      {v?.trading && <Trading t={v.trading} />}
+      {v?.media && (
+        <Pressable onPress={() => onOpen?.('music')}>
+          <NowPlaying media={v.media} link={link} />
+        </Pressable>
+      )}
+      {v?.trading && (
+        <Pressable onPress={() => onOpen?.('trading')} style={({ pressed }) => pressed && { transform: [{ scale: 0.985 }] }}>
+          <Trading t={v.trading} />
+        </Pressable>
+      )}
       {!!v?.sessions.length && <Sessions list={v.sessions} />}
 
       {quiet && (
         <Animated.View entering={FadeIn.duration(400)} style={s.quiet}>
           <Text style={s.quietTitle}>All quiet</Text>
-          <Text style={s.quietText}>When Claude Code asks for permission, a trade needs your OK, or the assistant wants to act for you, it shows up here and as a notification, ready to answer.</Text>
+          <Text style={s.quietText}>When Claude Code asks for permission, a trade needs your OK, or the assistant wants to act for you, it shows up here and as a notification, ready to answer. Talk to Claude in the Claude tab; chats, mail and notifications are in Inbox; trading, notes, music, controls, the CRM and documents are in More.</Text>
         </Animated.View>
       )}
     </ScrollView>
   )
 }
 
-function NowPlaying({ media, link }: { media: PhoneMedia; link: DropLink }) {
+export function NowPlaying({ media, link }: { media: PhoneMedia; link: DropLink }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
     if (!media.playing) return
