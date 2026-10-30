@@ -326,8 +326,8 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('the dictate shortcut shows the dictation pill', await seen(page, '.dictate-pill .dictate'))
     await sleep(400)
     await shot(page, '12-dictate')
-    const x = await page.$('.dictate-x')
-    if (x) await x.click()
+    // Close it (a locator, so a pill that re-renders meanwhile is found again).
+    await page.locator('.dictate-x').click({ timeout: 3000 }).catch(() => {})
   } catch (e) {
     check('unexpected error', false, e.message)
   } finally {
