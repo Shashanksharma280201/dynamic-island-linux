@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { RING as GEO, SLOT_IDS, dwellStep, isAbsolutePath, ringCenter, type DwellState, type OpenWhen, type PlanEnv, type SlotId } from '@shared/dragActions'
 import { DragWatcher } from './dragWatch'
-import type { DragSample, DragSource, DragSourceMaker } from './dragSource'
+import type { DragEvents, DragSample, DragSource, DragSourceMaker } from './dragSource'
 import { RING } from './ringChannels'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -21,6 +21,8 @@ type Deps = {
   avoid?: (p: { x: number; y: number }) => boolean
   /** How this system tells us about drags (X11 unless given). */
   source?: DragSourceMaker
+  /** Something else following file drags too (sending to the phone), even with the ring off. */
+  also?: { on: () => boolean; events: Pick<DragEvents, 'onStart' | 'onSample' | 'onEnd'> }
 }
 
 /**
@@ -41,10 +43,20 @@ export class DragRing {
   private ownUntil = 0
 
   constructor(private d: Deps) {
+    const also = () => (d.also?.on() ? d.also.events : null)
     const events = {
-      onStart: (files?: string[]) => this.onStart(files),
-      onSample: (s: DragSample) => this.onSample(s),
-      onEnd: () => this.onEnd(),
+      onStart: (files?: string[]) => {
+        this.onStart(files)
+        also()?.onStart(files)
+      },
+      onSample: (s: DragSample) => {
+        this.onSample(s)
+        also()?.onSample(s)
+      },
+      onEnd: () => {
+        this.onEnd()
+        d.also?.events.onEnd()
+      },
       ownDrag: () => Date.now() < this.ownUntil,
     }
     this.watcher = d.source ? d.source(events) : new DragWatcher(events)
@@ -83,9 +95,19 @@ export class DragRing {
 
   private running: Promise<boolean> | null = null
 
-  /** Watch drags or not, as the setting says. False when it can't here. */
+  /** What's being dragged right now, asked of the dragging app ([] when it can't say). */
+  dragged(): Promise<string[]> {
+    return this.watcher.files?.() ?? Promise.resolve([])
+  }
+
+  /** Make the dragging app look again at what's under the pointer (a window that just appeared there). */
+  nudge(): void {
+    this.watcher.nudge()
+  }
+
+  /** Watch drags or not, as the settings say. False when it can't here. */
   apply(): Promise<boolean> {
-    if (this.d.on()) {
+    if (this.d.on() || this.d.also?.on()) {
       this.running ??= this.start().then((ok) => {
         if (!ok) this.running = null
         return ok

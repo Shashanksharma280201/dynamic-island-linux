@@ -1,4 +1,4 @@
-import type { DropCmd, DropSide } from '@shared/drop'
+import type { DropAimCmd, DropCmd, DropSendCmd, DropSide } from '@shared/drop'
 import './drop.css'
 
 /**
@@ -19,9 +19,11 @@ const ctx = canvas.getContext('2d')!
 const K = 0.5
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1 }
+const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1, sweepIn: true }
 const pending = new Map<string, { side: DropSide; at: number; thumb?: string; name: string; ext: string; color: string }>()
 const thumbs = new Map<string, Thumb>()
+/** A file dragged toward the phone's edge: the light follows the pointer along it, with a label. */
+const aim = { on: false, at: 0.5, vis: 0, el: null as HTMLDivElement | null, text: null as HTMLSpanElement | null }
 let running = false
 let idleSent = true
 let lastT = 0
@@ -65,6 +67,9 @@ function frame(now: number) {
   // Up quickly, down a little slower.
   const rate = glow.goal > glow.level ? 5.5 : 2.6
   glow.level += (glow.goal - glow.level) * (1 - Math.exp(-dt * rate))
+  if (aim.on) glow.at += (aim.at - glow.at) * (1 - Math.exp(-dt * 12))
+  // The label comes with the light, and goes at once when the file is let go.
+  aim.vis += ((aim.on && aim.text?.textContent ? Math.min(1, glow.level * 1.4) : 0) - aim.vis) * (1 - Math.exp(-dt * (aim.on ? 8 : 14)))
   glow.flash *= Math.exp(-dt * 3.2)
   glow.tint *= Math.exp(-dt * 1.5)
   if (glow.sweep >= 0) {
@@ -72,8 +77,9 @@ function frame(now: number) {
     if (glow.sweep > 1) glow.sweep = -1
   }
   draw(t)
+  placeAim()
   document.body.dataset.level = glow.level.toFixed(2)
-  const quiet = glow.goal === 0 && glow.level < 0.004 && glow.flash < 0.01 && glow.sweep < 0 && !thumbs.size
+  const quiet = glow.goal === 0 && glow.level < 0.004 && glow.flash < 0.01 && glow.sweep < 0 && !thumbs.size && aim.vis < 0.01
   if (quiet) {
     running = false
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -162,7 +168,9 @@ function draw(t: number) {
     const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
     const env = Math.sin(Math.PI * u)
     const reach = span * 1.25
-    const c = { x: p.x + n.x * e * reach, y: p.y + n.y * e * reach }
+    // Into the screen for a file that arrived; toward the edge for one leaving.
+    const d = glow.sweepIn ? e * reach : (1 - e) * reach
+    const c = { x: p.x + n.x * d, y: p.y + n.y * d }
     const half = span * 0.13
     const g = ctx.createLinearGradient(c.x - n.x * half, c.y - n.y * half, c.x + n.x * half, c.y + n.y * half)
     const stops: [number, string][] = [
@@ -181,6 +189,50 @@ function draw(t: number) {
     ctx.fillStyle = g
     ctx.fillRect(0, 0, W(), H())
   }
+}
+
+// ---- Dragging a file to the phone ----
+
+function aimAt(c: DropAimCmd) {
+  if (c.level <= 0) {
+    aim.on = false
+    glow.goal = pending.size || thumbs.size ? glow.goal : 0
+    setPhase('aim-off')
+    return wake()
+  }
+  if (!aim.on || glow.side !== c.side) glow.at = c.at
+  aim.on = true
+  aim.at = c.at
+  glow.side = c.side
+  // Brighter as it nears; full when letting go would send it.
+  glow.goal = c.ready ? 1 : 0.25 + 0.5 * c.level
+  if (!aim.el) {
+    aim.el = document.createElement('div')
+    aim.el.className = 'aim'
+    aim.el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="2.5" width="11" height="19" rx="2.6"/><path d="M10.5 18.5h3"/></svg><span></span>'
+    aim.text = aim.el.querySelector('span')
+    stage.appendChild(aim.el)
+  }
+  if (aim.text && c.label !== undefined) aim.text.textContent = c.label
+  aim.el.classList.toggle('ready', !!c.ready)
+  setPhase(c.ready ? 'aim-ready' : 'aim')
+  wake()
+}
+
+/** The label sits just inside the light, beside the pointer. */
+function placeAim() {
+  const el = aim.el
+  if (!el) return
+  const show = aim.vis
+  if (show <= 0.01) {
+    if (el.style.opacity !== '0') el.style.opacity = '0'
+    return
+  }
+  const { p, n } = edge(glow.side, glow.at)
+  const along = glow.side === 'left' || glow.side === 'right' ? { x: p.x, y: clamp(glow.at, 0.06, 0.94) * H() } : { x: clamp(glow.at, 0.12, 0.88) * W(), y: p.y }
+  const inset = n.x !== 0 ? 150 : 80
+  el.style.opacity = show.toFixed(3)
+  el.style.transform = `translate(${along.x + n.x * inset}px, ${along.y + n.y * inset}px) translate(-50%, -50%) scale(${(0.92 + 0.08 * show).toFixed(3)})`
 }
 
 // ---- The file ----
@@ -265,6 +317,7 @@ async function fly(id: string, to: V, sweep: boolean) {
   th.bar.classList.remove('on')
   if (sweep) {
     glow.sweep = 0
+    glow.sweepIn = true
     glow.flash = 1
   }
   glow.goal = 0
@@ -305,6 +358,43 @@ function splash(at: V) {
     ],
     { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' },
   ).onfinish = () => s.remove()
+}
+
+/** A file leaving for the phone: it swings toward the edge and the light takes it. */
+function sendOut(c: DropSendCmd) {
+  aim.on = false
+  glow.side = c.side
+  glow.at = c.at
+  glow.goal = 1
+  const { p, n } = edge(c.side, c.at)
+  const th = makeThumb(c.id, c)
+  thumbs.set(c.id, th)
+  th.leaving = true
+  const from = c.from
+  // Through a point a little off the straight line, so it swings in.
+  const mid = { x: (from.x + p.x) / 2 + n.y * 60, y: (from.y + p.y) / 2 - Math.abs(n.x) * 70 }
+  const gone = { x: p.x - n.x * 60, y: p.y - n.y * 60 }
+  const turn = n.x !== 0 ? `rotateY(${n.x < 0 ? 38 : -38}deg)` : `rotateX(${n.y < 0 ? -38 : 38}deg)`
+  const a = th.el.animate(
+    [
+      { transform: place(from, 0.85), opacity: 0, filter: 'brightness(1)' },
+      { transform: place(from, 1.06), opacity: 1, offset: 0.14 },
+      { transform: place(mid, 0.82, 'rotateZ(4deg)'), offset: 0.5 },
+      { transform: place(p, 0.34, turn), opacity: 1, filter: 'brightness(1.9) blur(1px)', offset: 0.86 },
+      { transform: place(gone, 0.12, turn), opacity: 0, filter: 'brightness(2.4) blur(4px)' },
+    ],
+    { duration: reduced ? 320 : 1150, easing: 'cubic-bezier(.45,0,.3,1)', fill: 'forwards' },
+  )
+  setPhase('send')
+  a.onfinish = () => {
+    th.el.remove()
+    thumbs.delete(c.id)
+    glow.flash = 1
+    glow.sweep = 0
+    glow.sweepIn = false
+    glow.goal = 0
+  }
+  wake()
 }
 
 function fail(id: string) {
@@ -352,6 +442,8 @@ window.island.drop.onCmd((c: DropCmd) => {
     setPhase('cancel')
     wake()
   } else if (c.t === 'fail') fail(c.id)
+  else if (c.t === 'send') sendOut(c)
+  else if (c.t === 'aim') aimAt(c)
 })
 setPhase('idle')
 window.island.drop.ready()

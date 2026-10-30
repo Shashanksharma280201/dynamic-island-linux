@@ -163,6 +163,9 @@ electron/            main process
   dropServer.ts      Phone Drop: the HTTP server your phone sends files to (token, .part, no overwrite)
   phoneDrop.ts       Phone Drop: from the phone's first nudge to the card on the island
   dropOverlay.ts     Phone Drop: the see-through window over the screen the glow is drawn in
+  phoneLink.ts       the island on your phone: its live view (server-sent events), answers, files out
+  phoneOut.ts        files from this computer to the phone, with the glow and a card on the island
+  phoneEdge.ts       a file dragged to the screen's edge where the phone is: the light, the strip that takes the drop
   settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
   notes.ts           notes as Markdown files (atomic writes)
   claudeCode.ts      runs Claude Code (claude -p, stream-json) for island commands
@@ -182,8 +185,9 @@ electron/            main process
   dragRing.ts        the ring's window under the pointer, as a drop target
   dragJobs.ts        runs what was picked; imageOps.ts converts images on a canvas
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
-                     renderer/drop/ draws Phone Drop's glow, the file coming out of it and its flight
-mobile/              Island Drop, the Android app that sends files to Phone Drop (Expo; see its README)
+                     renderer/drop/ draws Phone Drop's glow, the file coming out of it and its flight;
+                     renderer/catch/ is the strip at the phone's edge that takes a dropped file
+mobile/              Island Drop, the island on your Android phone and files both ways (Expo; see its README)
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
 scripts/             install.sh / install.ps1 (the one-line installers), video/ (the tour, drop-demo.cjs)

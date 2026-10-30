@@ -13,6 +13,10 @@ import {
   parseApproach,
   parseDropConfig,
   sizeText,
+  EDGE_REACH,
+  EDGE_SEND,
+  edgeAim,
+  edgeStrip,
 } from '@shared/drop'
 
 describe('drop protocol', () => {
@@ -157,5 +161,35 @@ describe('drop server', () => {
     expect((await call('/elsewhere')).status).toBe(404)
     expect((await call('/drop/nothing')).status).toBe(404)
     expect(readdirSync(folder)).toEqual([])
+  })
+})
+
+describe('dragging a file to the phone', () => {
+  const b = { x: 0, y: 0, width: 1920, height: 1080 }
+
+  test('the light starts near the phone\'s edge and sends right at it', () => {
+    expect(edgeAim({ x: 960, y: 540 }, b, 'right')).toBeNull()
+    const near = edgeAim({ x: 1920 - EDGE_REACH + 10, y: 270 }, b, 'right')!
+    expect(near.closeness).toBeGreaterThan(0)
+    expect(near.closeness).toBeLessThan(0.2)
+    expect(near.along).toBeCloseTo(0.25)
+    expect(near.send).toBe(false)
+    const at = edgeAim({ x: 1915, y: 270 }, b, 'right')!
+    expect(at.closeness).toBeGreaterThan(0.95)
+    expect(at.send).toBe(true)
+    // The other edges, and off the screen.
+    expect(edgeAim({ x: 5, y: 540 }, b, 'right')).toBeNull()
+    expect(edgeAim({ x: 5, y: 540 }, b, 'left')?.send).toBe(true)
+    expect(edgeAim({ x: 480, y: 1078 }, b, 'bottom')?.along).toBeCloseTo(0.25)
+    expect(edgeAim({ x: 2000, y: 540 }, b, 'right')).toBeNull()
+    expect(edgeAim({ x: 1915, y: 10 }, { x: 1920, y: 0, width: 1920, height: 1080 }, 'left')).toBeNull()
+  })
+
+  test('the strip that takes the drop hugs the edge around the pointer, on the screen', () => {
+    expect(edgeStrip(b, 'right', 0.5)).toEqual({ x: 1920 - EDGE_SEND, y: 330, width: EDGE_SEND, height: 420 })
+    expect(edgeStrip(b, 'left', 0)).toEqual({ x: 0, y: 0, width: EDGE_SEND, height: 420 })
+    expect(edgeStrip(b, 'right', 1).y).toBe(1080 - 420)
+    expect(edgeStrip(b, 'bottom', 0.5)).toEqual({ x: 750, y: 1080 - EDGE_SEND, width: 420, height: EDGE_SEND })
+    expect(edgeStrip({ x: 100, y: 50, width: 300, height: 200 }, 'top', 0.5)).toEqual({ x: 100, y: 50, width: 300, height: EDGE_SEND })
   })
 })

@@ -6,10 +6,9 @@ import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { EXT_COLOR, askPrompt, editDraft, extOf, resultName, ringFile, type RingFile } from '@shared/dragActions'
 import type { Activity, JobState } from '@shared/types'
-import { convertDocument, type ConvertDeps, type ConvertTarget } from './docs/convert'
+import { convertDocument, viaLibreOffice, type ConvertDeps, type ConvertTarget } from './docs/convert'
+import { anyText, convertSheet, type SheetTarget } from './anyDoc'
 import { freshPath, kindOf, stem } from './docs/files'
-import { readDocument } from './docs/read'
-import { xlsxRows } from './docs/sheet'
 import { encodeImage, imageToPdf } from './imageOps'
 import type { RingDrop } from './dragRing'
 import type { TransientCards } from './transient'
@@ -21,6 +20,9 @@ type Deps = ConvertDeps & {
   saveTo: () => 'next' | 'downloads'
   /** Ghostscript, for shrinking PDFs properly (pdf-lib otherwise). */
   ghostscript: () => string | null
+  /** tesseract and pdftoppm: Copy text reads images and scans with them. */
+  tesseract: () => string | null
+  pdftoppm: () => string | null
   ask: (prompt: string) => void
   edit: (draft: string) => void
   language: () => string
@@ -183,7 +185,11 @@ export class DragJobs {
       const r = await encodeImage(f.path, to, { quality: 0.92 })
       return { path: await this.save(f.path, r.bytes, resultName(f.base, 'convert', to)), note: '' }
     }
-    if (!kindOf(f.path)) throw new Error('That kind of file isn’t supported.')
+    if (f.kind === 'sheet') {
+      const r = await convertSheet(f.path, f.ext, to as SheetTarget, f.base, this.d)
+      return { path: await this.save(f.path, r.bytes, resultName(f.base, 'convert', to)), note: r.note }
+    }
+    if (!kindOf(f.path)) return this.convertOther(f, to)
     const r = await convertDocument(f.path, to as ConvertTarget, this.d)
     return { path: await this.save(f.path, r.bytes, resultName(stem(f.path), 'convert', r.ext)), note: r.note ?? '' }
   }
@@ -223,10 +229,23 @@ export class DragJobs {
     return doc.save({ useObjectStreams: true })
   }
 
+  /** Files the documents engine doesn't open (OpenDocument, RTF, old Office, web pages, code): LibreOffice, or their text. */
+  private async convertOther(f: RingFile, to: string): Promise<{ path: string; note: string }> {
+    const soffice = this.d.soffice()
+    const name = resultName(f.base, 'convert', to)
+    if (soffice && (to === 'pdf' || to === 'docx' || to === 'pptx') && f.kind !== 'text') return { path: await this.save(f.path, await viaLibreOffice(soffice, f.path, to), name), note: '' }
+    const text = await this.textOf(f)
+    if (to === 'txt' || to === 'md') return { path: await this.save(f.path, new Uint8Array(Buffer.from(text + '\n')), name), note: to === 'md' ? 'Its text, as Markdown' : '' }
+    if (to === 'pdf') {
+      const esc = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      const html = `<!doctype html><meta charset="utf-8"><title>${f.base.replace(/</g, '')}</title><body style="margin:0"><pre style="white-space:pre-wrap;font:10pt/1.5 'DejaVu Sans Mono',monospace;margin:0">${esc}</pre>`
+      return { path: await this.save(f.path, await this.d.printPdf(html), name), note: f.kind === 'text' ? '' : 'Its text only' }
+    }
+    throw new Error(`That can’t be turned into ${to.toUpperCase()} here.`)
+  }
+
   private async textOf(f: RingFile): Promise<string> {
-    // A sheet as tab-separated rows: pastes into any spreadsheet as a table.
-    if (f.ext === 'xlsx') return (await xlsxRows(new Uint8Array(await readFile(f.path)))).map((r) => r.map((c) => c.replace(/[\t\r\n]+/g, ' ')).join('\t')).join('\n')
-    const r = await readDocument(f.path)
-    return f.kind === 'pdf' ? r.text.replace(/^--- Page \d+ of \d+ ---\n/gm, '') : r.text
+    // Sheets come as tab-separated rows (they paste into any spreadsheet as a table); images and scans are read by OCR.
+    return anyText(f.path, f.ext, this.d)
   }
 }

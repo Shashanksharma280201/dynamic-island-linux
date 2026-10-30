@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { dropPairingLink } from '@shared/drop'
 import { aim, computerSide, exitPoint, release, SEND_AT } from '../mobile/src/gesture'
 import { cleanPairing, isIslandHello, parsePairingLink, sizeText } from '../mobile/src/protocol'
@@ -59,5 +61,24 @@ describe('the flick', () => {
     expect(computerSide('bottom')).toBe('top')
     expect(exitPoint('left', 20, 300, W, H, 100)).toEqual({ x: -140, y: 300 })
     expect(exitPoint('bottom', 20, 300, W, H, 100)).toEqual({ x: 20, y: 940 })
+  })
+})
+
+describe('what the island sends the phone', () => {
+  // mobile/src/islandTypes.ts is a copy of the types in shared/phone.ts (the
+  // app is built on its own, so it can't import them). Comments may differ.
+  const decls = (file: string) => {
+    const s = readFileSync(join(__dirname, '..', file), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    const from = s.indexOf('export const PHONE_PROTOCOL')
+    const last = s.indexOf('export type PhoneIncoming')
+    return s.slice(from, s.indexOf('\n', last)).replace(/\s+/g, ' ').trim()
+  }
+
+  test('the phone app has the same types as the island', () => {
+    const island = decls('shared/phone.ts')
+    expect(island).toContain('export type PhoneView')
+    expect(decls('mobile/src/islandTypes.ts')).toBe(island)
   })
 })

@@ -94,6 +94,8 @@ const SLOT = { convert: 0, edit: 60, capture: 120, ask: 180, shrink: 240, text: 
       DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
       DI_BACKDROP: 'off',
       DI_SOFFICE: '',
+      // No OCR either: a picture offers no Copy text (with tesseract it does).
+      DI_TESSERACT: '',
       // No assistant here: Ask and Edit say so instead of running.
       DI_CLAUDE_BIN: path.join(TMP, 'no-claude'),
     },

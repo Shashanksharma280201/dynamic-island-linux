@@ -2,6 +2,7 @@ import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, s
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import {
@@ -25,6 +26,10 @@ import { decryptSecret, encryptSecret } from './secrets'
 import { DropServer } from './dropServer'
 import { DropOverlay } from './dropOverlay'
 import { PhoneDrop } from './phoneDrop'
+import { PhoneLink } from './phoneLink'
+import { PhoneEdge } from './phoneEdge'
+import { PhoneOut } from './phoneOut'
+import { phoneView } from '@shared/phone'
 import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
@@ -375,9 +380,12 @@ async function main() {
   const recap = new RecapStore(join(app.getPath('userData'), 'recap.json'), () => config.recap)
 
   // ---- Claude Code sessions in your terminals, live ----
+  // The phone hears about changes once its link exists (Phone Drop, below).
+  let phoneChanged = () => {}
   const sessions = new SessionTracker({
     onChange: (list) => {
       send(win, SESSIONS.CHANGED, list)
+      phoneChanged()
       // While any work: one small orb for all of them, the busiest first.
       const working = list.filter((x) => x.phase === 'working')
       if (working.length) store.upsert({ kind: 'session', id: 'agent-sessions', priority: 2, session: working[0], others: working.length - 1 })
@@ -720,12 +728,15 @@ async function main() {
     }
     return setupProblem(config.ai) ? null : 'api'
   }
+  const tesseract = () => (process.env.DI_TESSERACT === '' ? null : findExecutable('tesseract', ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin', 'C:\\Program Files\\Tesseract-OCR']))
   const dragJobs = new DragJobs({
     printPdf: printHtmlToPdf,
     soffice,
     cards: transient,
     saveTo: () => config.drag.saveTo,
     ghostscript: () => findExecutable('gs', ['/usr/bin', '/usr/local/bin']),
+    tesseract,
+    pdftoppm: () => findExecutable('pdftoppm', ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin']),
     ask: (prompt) => {
       try {
         claudeUi!.engine().ask(prompt)
@@ -741,21 +752,32 @@ async function main() {
     ownDrag: () => dragRing.ownDrag(),
     island: () => win,
   })
+  // Dragging a file to the screen's edge where your phone is sends it there (set up with Phone Drop below).
+  let phoneEdge: PhoneEdge | null = null
   const dragRing = new DragRing({
     on: () => config.drag.on,
     opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
-    env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
+    env: () => ({ libreOffice: !!soffice(), ocr: !!tesseract(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
     onDrop: (d) => dragJobs.run(d),
     // Tests can play a drag the way a system reports one.
     source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : platform.dragSource,
-    // Holding a file over the island drops it there (Documents), not the ring.
-    avoid: (p) => {
-      if (!cssRect) return false
-      const b = win.getBounds()
-      const m = 24
-      return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+    also: {
+      on: () => config.drop.on,
+      events: {
+        onStart: (files) => phoneEdge?.onStart(files),
+        onSample: (s) => phoneEdge?.onSample(s),
+        onEnd: () => phoneEdge?.onEnd(),
+      },
     },
+    // Holding a file over the island drops it there (Documents), not the ring; at the phone's edge it goes to the phone.
+    avoid: (p) => overIsland(p) || !!phoneEdge?.near(p),
   })
+  function overIsland(p: { x: number; y: number }): boolean {
+    if (!cssRect) return false
+    const b = win.getBounds()
+    const m = 24
+    return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+  }
   const applyDrag = () =>
     void dragRing.apply().then((ok) => {
       if (!ok && config.drag.on && dragRing.problem) console.log(`[island] drag actions are off here (${dragRing.problem})`)
@@ -783,7 +805,42 @@ async function main() {
     },
     folderLabel: dropFolderLabel,
   })
-  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop })
+  // The island on your phone: what it shows, and its answers (through the same decide() as a click here).
+  const phoneLink = new PhoneLink({
+    view: () => phoneView({ name: hostname(), activities: store.list(), sessions: sessions.list(), center: center.view(), now: Date.now() }),
+    decide: (m) => decide(m),
+    media: (c) => void media.command(c),
+    art: async () => {
+      const u = nowPlaying?.artUrl
+      if (!u || !/^(file:\/\/|\/)/.test(u)) return null
+      const p = u.startsWith('file://') ? fileURLToPath(u) : u
+      const bytes = await readFile(p)
+      if (bytes.length > 4 * 1024 * 1024) return null
+      return { bytes, type: /\.png$/i.test(p) ? 'image/png' : /\.webp$/i.test(p) ? 'image/webp' : 'image/jpeg' }
+    },
+    delivered: (id, ok, device) => phoneOut.delivered(id, ok, device),
+    progress: (id, got, size) => phoneOut.progress(id, got, size),
+    onPhones: () => {
+      tray?.refresh()
+      settings?.changed()
+    },
+  })
+  const phoneOut = new PhoneOut({ link: phoneLink, overlay: dropOverlay, present: (id, job, made) => dragJobs.present(id, job, made), side: () => ({ side: phoneDrop.side, at: phoneDrop.at }) })
+  phoneEdge = new PhoneEdge({
+    phone: () => phoneLink.connected()[0]?.device ?? null,
+    side: () => phoneDrop.side,
+    display: () => screen.getDisplayMatching(win.getBounds()),
+    overlay: dropOverlay,
+    dragged: () => dragRing.dragged(),
+    send: (paths, from, at) => void phoneOut.send(paths, from, at),
+    avoid: overIsland,
+  })
+  // Tests send files to the phone without the file picker.
+  if (process.env.DI_TEST_HOOKS) (globalThis as any).__islandSendToPhone = (paths: string[]) => phoneOut.send(paths)
+  phoneChanged = () => phoneLink.changed()
+  store.onChange(phoneChanged)
+  center.onChange(phoneChanged)
+  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop, extra: (req, res, url) => phoneLink.handle(req, res, url) })
   let dropProblem: string | null = null
   const applyDrop = async () => {
     dropServer.stop()
@@ -809,6 +866,7 @@ async function main() {
       listening,
       problem: dropProblem ?? (config.drop.on && listening && !urls.length ? 'This computer has no Wi-Fi, Ethernet or Tailscale address for your phone to reach' : null),
       name: hostname(),
+      phones: phoneLink.connected().map((p) => p.device),
       link: config.drop.on && dropToken() && urls.length ? dropPairingLink(hostname(), dropToken(), urls) : undefined,
     }
   }
@@ -826,6 +884,8 @@ async function main() {
       if (p.forget) config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
       saveConfig(config)
       if (p.on !== undefined || p.forget) await applyDrop()
+      // Following drags (to send to the phone) depends on Phone Drop too.
+      if (p.on !== undefined) applyDrag()
       return config.drop.on ? dropProblem : null
     },
     pickDropFolder: async (parent) => {
@@ -1368,6 +1428,7 @@ async function main() {
       dnd: config.dnd,
       dragActions: DRAG_HERE ? config.drag.on : null,
       centerCount: center.view().entries.length,
+      phone: phoneLink.connected()[0]?.device ?? null,
     }),
     {
       setDnd,
@@ -1397,6 +1458,10 @@ async function main() {
       openSettings: () => settings?.open(),
       tour: () => send(win, IPC.TOUR, null),
       recap: () => showRecap(true),
+      sendToPhone: async () => {
+        const r = await dialog.showOpenDialog({ title: 'Send to your phone', properties: ['openFile', 'multiSelections'] })
+        if (!r.canceled && r.filePaths.length) void phoneOut.send(r.filePaths)
+      },
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
@@ -1423,8 +1488,10 @@ async function main() {
     clearInterval(crmTimer)
     crm.flush()
     dragRing.stop()
+    phoneLink.stop()
     dropServer.stop()
     phoneDrop.stop()
+    phoneEdge?.stop()
     dropOverlay.destroy()
     closeImagePage()
     claudeCode.dispose()

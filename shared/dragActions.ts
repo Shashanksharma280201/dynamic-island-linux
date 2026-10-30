@@ -15,25 +15,52 @@ export const SLOT_LABEL: Record<SlotId, string> = { convert: 'Convert', edit: 'E
 const EXT_KIND: Record<string, DragKind> = {
   pdf: 'pdf',
   docx: 'docx',
+  doc: 'docx',
+  odt: 'docx',
+  rtf: 'docx',
   xlsx: 'sheet',
+  xls: 'sheet',
+  ods: 'sheet',
   csv: 'sheet',
+  tsv: 'sheet',
   pptx: 'slides',
+  ppt: 'slides',
+  odp: 'slides',
   md: 'text',
   markdown: 'text',
   txt: 'text',
+  html: 'text',
+  htm: 'text',
   png: 'image',
   jpg: 'image',
   jpeg: 'image',
   webp: 'image',
 }
 
+/** Other files that are text: code, data, logs, subtitles. Copy text works on them as they are. */
+const PLAIN_TEXT = new Set(
+  'json xml yaml yml log ini toml conf cfg env srt vtt tex rst adoc js mjs cjs ts tsx jsx py java c h cc cpp hpp cs go rs rb php swift kt kts sh bash zsh fish ps1 css scss less sql r lua pl dart vue svelte graphql proto'.split(' '),
+)
+for (const e of PLAIN_TEXT) EXT_KIND[e] = 'text'
+
 /** Badge colour per extension (the same as everywhere on the island). */
 export const EXT_COLOR: Record<string, string> = {
   pdf: '#ff453a',
   docx: '#0a84ff',
+  doc: '#0a84ff',
+  odt: '#0a84ff',
+  rtf: '#0a84ff',
   xlsx: '#30d158',
+  xls: '#30d158',
+  ods: '#30d158',
   csv: '#30d158',
+  tsv: '#30d158',
+  json: '#ffd60a',
+  html: '#ff9f0a',
+  htm: '#ff9f0a',
   pptx: '#ff9f0a',
+  ppt: '#ff9f0a',
+  odp: '#ff9f0a',
   md: '#8e8e93',
   markdown: '#8e8e93',
   txt: '#8e8e93',
@@ -43,7 +70,7 @@ export const EXT_COLOR: Record<string, string> = {
   webp: '#bf5af2',
 }
 
-const FORMAT_LABEL: Record<string, string> = { pdf: 'PDF', docx: 'Word', xlsx: 'Excel', csv: 'CSV', txt: 'Text', md: 'Markdown', png: 'PNG', jpg: 'JPEG', webp: 'WebP' }
+const FORMAT_LABEL: Record<string, string> = { pdf: 'PDF', docx: 'Word', xlsx: 'Excel', csv: 'CSV', tsv: 'TSV', json: 'JSON', html: 'Web page', txt: 'Text', md: 'Markdown', pptx: 'PowerPoint', png: 'PNG', jpg: 'JPEG', webp: 'WebP' }
 
 /** "Report.PDF" → "pdf". Pure. */
 export function extOf(path: string): string {
@@ -77,6 +104,8 @@ export type RingPlan = { files: RingFile[]; slots: Slot[] }
 /** What this computer can do, which changes what the ring offers. */
 export type PlanEnv = {
   libreOffice: boolean
+  /** Whether tesseract is installed: Copy text reads images and scans then. */
+  ocr?: boolean
   /** The assistant Ask Claude and Edit go to; null if none is set up. */
   assistant: 'claude-code' | 'api' | null
   /** The language "Translate" means ("English"). */
@@ -93,11 +122,28 @@ function convertTargets(f: RingFile, env: PlanEnv): string[] {
     case 'docx':
       return ['pdf', 'txt', 'md']
     case 'xlsx':
-      return ['csv', 'pdf', 'md']
+      return ['csv', 'pdf', 'docx', 'json', 'md', 'html']
     case 'csv':
-      return ['xlsx', 'pdf', 'md']
+      return ['xlsx', 'pdf', 'docx', 'json', 'md', 'html']
+    case 'tsv':
+    case 'ods':
+      return ['xlsx', 'csv', 'pdf', 'docx', 'json', 'md']
+    case 'xls':
+      return env.libreOffice ? ['xlsx', 'csv', 'pdf', 'docx', 'json', 'md'] : []
+    case 'odt':
+    case 'rtf':
+      return env.libreOffice ? ['docx', 'pdf', 'txt', 'md'] : ['txt', 'md']
+    case 'doc':
+      return env.libreOffice ? ['docx', 'pdf', 'txt', 'md'] : []
     case 'pptx':
       return [...(env.libreOffice ? ['pdf'] : []), 'txt', 'md']
+    case 'odp':
+      return env.libreOffice ? ['pdf', 'pptx', 'txt'] : ['txt']
+    case 'ppt':
+      return env.libreOffice ? ['pdf', 'pptx', 'txt'] : []
+    case 'html':
+    case 'htm':
+      return ['pdf', 'txt', 'md']
     case 'md':
     case 'markdown':
       return ['docx', 'pdf', 'txt']
@@ -111,8 +157,11 @@ function convertTargets(f: RingFile, env: PlanEnv): string[] {
     case 'webp':
       return ['png', 'jpg', 'pdf']
   }
-  return []
+  return PLAIN_TEXT.has(f.ext) ? ['pdf', 'txt'] : []
 }
+
+/** Old binary Office files: LibreOffice reads them. */
+const OFFICE_ONLY = new Set(['doc', 'xls', 'ppt'])
 
 const choice = (ext: string): Choice => ({ id: ext, label: FORMAT_LABEL[ext] ?? ext.toUpperCase(), sub: `.${ext}`, color: EXT_COLOR[ext] ?? '#8e8e93' })
 
@@ -132,12 +181,14 @@ const NO_ASSISTANT = 'Set up the assistant in Settings first'
 /** One file's six places. */
 function slotsFor(f: RingFile, env: PlanEnv): Slot[] {
   const k = f.kind
+  const officeWhy = OFFICE_ONLY.has(f.ext) && !env.libreOffice ? `Opening .${f.ext} files needs LibreOffice` : undefined
   const doc = k === 'pdf' || k === 'docx' || k === 'sheet' || k === 'slides' || k === 'text'
+  const textWhy = officeWhy ?? (doc ? undefined : k === 'image' ? (env.ocr ? undefined : 'Install tesseract to copy the words in images') : 'No text to copy')
   const targets = convertTargets(f, env)
   const askWhy = !env.assistant ? NO_ASSISTANT : k === 'image' && env.assistant !== 'claude-code' ? 'Seeing images needs Claude Code as the assistant' : undefined
   const editable = k === 'docx' || k === 'sheet' || k === 'text'
   return [
-    { id: 'convert', label: SLOT_LABEL.convert, enabled: targets.length > 0, why: targets.length ? undefined : 'Nothing to convert this to', hint: 'Convert: choose a format', choices: targets.map(choice) },
+    { id: 'convert', label: SLOT_LABEL.convert, enabled: targets.length > 0, why: targets.length ? undefined : (officeWhy ?? 'Nothing to convert this to'), hint: 'Convert: choose a format', choices: targets.map(choice) },
     {
       id: 'edit',
       label: SLOT_LABEL.edit,
@@ -154,7 +205,7 @@ function slotsFor(f: RingFile, env: PlanEnv): Slot[] {
       why: k === 'image' || k === 'pdf' ? undefined : 'Nothing to shrink in this kind of file',
       hint: 'Make a smaller copy, next to the original',
     },
-    { id: 'text', label: SLOT_LABEL.text, enabled: doc, why: doc ? undefined : k === 'image' ? 'Not yet for images' : 'No text to copy', hint: k === 'sheet' ? 'Copy it as a table' : 'Copy all the text' },
+    { id: 'text', label: SLOT_LABEL.text, enabled: !textWhy, why: textWhy, hint: k === 'sheet' ? 'Copy it as a table' : k === 'image' ? 'Copy the words in it' : 'Copy all the text' },
   ]
 }
 
@@ -245,7 +296,19 @@ export function ringTitle(files: RingFile[]): string {
   if (files.length !== 1) return `${files.length} files`
   const f = files[0]
   if (f.kind === 'image') return f.ext === 'jpg' || f.ext === 'jpeg' ? 'JPEG' : f.ext.toUpperCase()
-  return KIND_NAME[f.kind]
+  return EXT_NAME[f.ext] ?? (f.kind === 'text' && PLAIN_TEXT.has(f.ext) ? `${f.ext.toUpperCase()} file` : KIND_NAME[f.kind])
+}
+
+/** Names for files whose kind's name would be wrong ("Word file" for an .odt). */
+const EXT_NAME: Record<string, string> = {
+  odt: 'Document',
+  rtf: 'RTF document',
+  ods: 'Spreadsheet',
+  tsv: 'TSV sheet',
+  csv: 'CSV sheet',
+  odp: 'Presentation',
+  html: 'Web page',
+  htm: 'Web page',
 }
 
 // ---- Geometry ---------------------------------------------------------------

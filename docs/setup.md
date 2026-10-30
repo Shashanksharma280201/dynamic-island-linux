@@ -121,12 +121,12 @@ the desktop or anywhere else, and **hold still** for half a second (or press
 
 | Action | What it does |
 | --- | --- |
-| **Convert** | Fans out the formats it can become; let go on one. PDF → Word, text or Markdown; Word → PDF, text or Markdown; Excel → CSV, PDF or Markdown; CSV → Excel, PDF or Markdown; Markdown or text → Word, PDF; PNG, JPEG and WebP → each other or PDF; PowerPoint → PDF with LibreOffice |
+| **Convert** | Fans out the formats it can become; let go on one. PDF → Word, text or Markdown; Word → PDF, text or Markdown; **spreadsheets** (Excel, OpenDocument `.ods`, CSV, TSV, and old `.xls` with LibreOffice) → Excel, CSV, PDF, Word (as a table), JSON (one object per row), Markdown or a web page; Markdown or text → Word, PDF; PNG, JPEG and WebP → each other or PDF; PowerPoint → PDF with LibreOffice; OpenDocument, RTF and old Office files → Word or PDF with LibreOffice, or their text; web pages and code → PDF or text |
 | **Edit** | Opens the Claude tab with the file named, so you say what to change (Word, spreadsheets, text). Needs Claude Code or an AI in Settings |
 | **Capture** | Copies an image to the clipboard, ready to paste |
 | **Ask Claude** | Fans out questions: **Summarize**, **Translate**, **Explain**, and more for each kind of file. The answer appears on the island |
 | **Shrink** | A smaller copy of a photo (at most 2560 px, recompressed) or a PDF (with Ghostscript if installed, `sudo apt install ghostscript`) |
-| **Copy text** | All of a document's text on the clipboard; a spreadsheet as rows that paste into any sheet as a table |
+| **Copy text** | All of a document's text on the clipboard, from **any document**: PDF, Word, OpenDocument, RTF, slides, web pages, code, JSON, logs and other text files (old `.doc` and `.ppt` with LibreOffice). A spreadsheet comes as rows that paste into any sheet as a table. With [tesseract](https://github.com/tesseract-ocr/tesseract) installed (`sudo apt install tesseract-ocr`) it also copies the words in **images** and **scanned PDFs** |
 
 Results are **new files next to the original** (or in Downloads when that
 folder can't be written, or always, if you choose it in Settings); nothing is
@@ -189,6 +189,22 @@ using the **Island Drop** app (in [`mobile/`](../mobile)).
 
 Only phones that scanned the QR can send. **Forget paired phones** makes a new
 QR; phones paired before have to scan it again.
+
+Once paired, the app is also **the island on your phone**:
+
+- Anything waiting for your answer on the computer (Claude Code's permission
+  requests, questions and plans, the assistant acting for you, your trading
+  engine's trades) is on the app's **Island** tab and comes as a notification
+  with its buttons. Answer it there or on the island; the other one updates.
+  Allow notifications when the app asks.
+- **Settings → Stay connected in the background** (on by default) keeps the
+  link open with a quiet ongoing notification, so these reach the phone
+  within seconds even when the app is closed.
+- To send a file to the phone, drag it from any app to the edge of the screen
+  where your phone is (the side its files come in from; the right edge until
+  it has sent one). The edge lights up and says **Send to <your phone>**; let
+  go there. Or click the tray icon, then **Send a file to <your phone>…**. It
+  lands in the app's **Files → Received**.
 
 ## Connect your trading engine
 
