@@ -20,8 +20,11 @@ export type ConvertDeps = {
 
 export type Converted = { bytes: Uint8Array; ext: ConvertTarget; note?: string }
 
-/** Convert an Office file with LibreOffice into a temporary folder; returns the bytes. */
-async function viaLibreOffice(soffice: string, path: string, to: 'pdf' | 'docx'): Promise<Uint8Array> {
+/**
+ * Convert an Office file with LibreOffice into a temporary folder; returns the
+ * bytes. `to` is an extension, or an extension and a filter ("txt:Text").
+ */
+export async function viaLibreOffice(soffice: string, path: string, to: string): Promise<Uint8Array> {
   const dir = await mkdtemp(join(tmpdir(), 'island-convert-'))
   try {
     // Its own profile, so it works even while LibreOffice is open.
@@ -32,7 +35,7 @@ async function viaLibreOffice(soffice: string, path: string, to: 'pdf' | 'docx')
       ),
     )
     // It reports some failures (like a missing Writer) only in its output.
-    const made = await readFile(join(dir, `${stem(path)}.${to}`)).catch(() => null)
+    const made = await readFile(join(dir, `${stem(path)}.${to.split(':')[0]}`)).catch(() => null)
     if (!made) throw new Error(said.split('\n').find((l) => /error/i.test(l))?.replace(/^Error:\s*/i, '') || 'no file was made')
     return new Uint8Array(made)
   } catch (e: any) {

@@ -1,0 +1,18 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <application>
+    <!-- Keeps Island Drop connected to your computer's island while it's in the
+         background, so approvals and files arrive within seconds. Started only
+         while you use the app; stops when you swipe it away. -->
+    <service
+      android:name=".LiveLinkService"
+      android:exported="false"
+      android:foregroundServiceType="specialUse">
+      <property
+        android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+        android:value="Live connection to the user's own computer so approvals and files arrive within seconds" />
+    </service>
+  </application>
+</manifest>

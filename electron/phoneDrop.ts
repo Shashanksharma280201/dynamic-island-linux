@@ -35,10 +35,15 @@ const LAND_FALLBACK_MS = 3200
  */
 export class PhoneDrop implements DropEvents {
   private drops = new Map<string, Drop>()
+  /** The edge files last came in at: where the phone is, so files sent back leave there. */
+  side: DropApproach['side'] = 'right'
+  at = 0.5
 
   constructor(private d: Deps) {}
 
   approach(a: DropApproach): void {
+    this.side = a.side
+    this.at = a.at
     const cur = this.drops.get(a.id)
     if (cur && cur.phase !== 'near') return
     clearTimeout(cur?.timer)

@@ -44,7 +44,37 @@ describe('what the ring offers', () => {
     expect(slot(p, 'capture').enabled).toBe(true)
     expect(slot(p, 'ask')).toMatchObject({ enabled: false, why: 'Seeing images needs Claude Code as the assistant' })
     expect(slot(ringPlan(['/d/Receipt.png'], { ...env, assistant: 'claude-code' }), 'ask').enabled).toBe(true)
-    expect(slot(p, 'text')).toMatchObject({ enabled: false, why: 'Not yet for images' })
+    expect(slot(p, 'text')).toMatchObject({ enabled: false, why: 'Install tesseract to copy the words in images' })
+    expect(slot(ringPlan(['/d/Receipt.png'], { ...env, ocr: true }), 'text')).toMatchObject({ enabled: true, hint: 'Copy the words in it' })
+  })
+
+  test('every kind of sheet converts to the common formats', () => {
+    const ids = (path: string, e = env) => slot(ringPlan([path], e), 'convert').choices!.map((c) => c.id)
+    expect(ids('/d/Budget.xlsx')).toEqual(['csv', 'pdf', 'docx', 'json', 'md', 'html'])
+    expect(ids('/d/List.csv')).toEqual(['xlsx', 'pdf', 'docx', 'json', 'md', 'html'])
+    expect(ids('/d/Data.tsv')).toEqual(['xlsx', 'csv', 'pdf', 'docx', 'json', 'md'])
+    expect(ids('/d/Plan.ods')).toEqual(['xlsx', 'csv', 'pdf', 'docx', 'json', 'md'])
+    expect(slot(ringPlan(['/d/Budget.xlsx'], env), 'convert').choices!.find((c) => c.id === 'json')).toMatchObject({ label: 'JSON', sub: '.json' })
+    // Old .xls files need LibreOffice to open.
+    expect(slot(ringPlan(['/d/Old.xls'], env), 'convert')).toMatchObject({ enabled: false, why: 'Opening .xls files needs LibreOffice' })
+    expect(slot(ringPlan(['/d/Old.xls'], env), 'text')).toMatchObject({ enabled: false, why: 'Opening .xls files needs LibreOffice' })
+    expect(ids('/d/Old.xls', { ...env, libreOffice: true })).toEqual(['xlsx', 'csv', 'pdf', 'docx', 'json', 'md'])
+    // Six choices still fit on the second ring.
+    expect(choiceAngle(0, 5, 6) - choiceAngle(0, 0, 6)).toBeLessThanOrEqual(140)
+  })
+
+  test('Copy text works on any document', () => {
+    for (const f of ['/d/a.odt', '/d/a.rtf', '/d/a.odp', '/d/page.html', '/d/data.json', '/d/main.py', '/d/app.log', '/d/sub.srt']) {
+      const p = ringPlan([f], env)
+      expect(p, f).not.toBeNull()
+      expect(slot(p, 'text').enabled, f).toBe(true)
+    }
+    expect(dragKindOf('/a/notes.odt')).toBe('docx')
+    expect(dragKindOf('/a/config.yaml')).toBe('text')
+    expect(slot(ringPlan(['/d/main.py'], env), 'convert').choices!.map((c) => c.id)).toEqual(['pdf', 'txt'])
+    expect(slot(ringPlan(['/d/a.odt'], env), 'convert').choices!.map((c) => c.id)).toEqual(['txt', 'md'])
+    expect(slot(ringPlan(['/d/a.doc'], env), 'text')).toMatchObject({ enabled: false, why: 'Opening .doc files needs LibreOffice' })
+    expect(slot(ringPlan(['/d/a.doc'], { ...env, libreOffice: true }), 'text').enabled).toBe(true)
   })
 
   test('slides become PDFs only with LibreOffice', () => {

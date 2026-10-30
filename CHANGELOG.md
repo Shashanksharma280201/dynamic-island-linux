@@ -6,6 +6,46 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island Drop 2: the island on your phone, and files both ways**
+
+- Answer from your phone: Claude Code's permission requests, its questions
+  and plans, the assistant's "about to act for you" and your trading engine's
+  trades show up in the app and as phone notifications with **Allow** /
+  **Deny** (or **Buy** / **Skip**) buttons. Answer on the phone or on the
+  island, whichever is nearer; the other one updates at once, and a
+  notification disappears as soon as it's answered anywhere.
+- The app now has the island's other parts too: what's playing with its
+  controls, today's P&L, your Claude Code sessions and the computer's
+  notifications (also as phone notifications, if you want).
+- Files go the other way as well: drag a file from any app to the edge of the
+  screen where your phone is (the side its files come in from). The edge
+  lights up as you get near, following the pointer, and says **Send to <your
+  phone>**; let go and the file is pulled into the light. On the phone, the
+  edge that faces the computer lights up and the file comes out of the glow
+  into **Received** (photos and videos also land in the gallery's **Island
+  Drop** album). Or use **Send a file to <your phone>…** in the tray menu.
+- Smoother everywhere: the lifted file, the glow and the flick now run on the
+  phone's UI thread (Reanimated), with springs and haptics; a new tab bar,
+  cards that slide in and out, and a background link that keeps approvals
+  arriving within seconds.
+
+**Drag actions: every kind of spreadsheet, and text from any document**
+
+- **Convert** now takes every kind of spreadsheet (Excel, OpenDocument `.ods`,
+  CSV, TSV, and old `.xls` with LibreOffice) to Excel, CSV, PDF, Word (as a
+  table), JSON (one object per row, named by the first row), Markdown or a web
+  page.
+- **Copy text** works on any document: OpenDocument, RTF, web pages, code,
+  JSON, logs and other text files as well as PDF, Word and slides (old `.doc`
+  and `.ppt` with LibreOffice). With tesseract installed it also copies the
+  words in images and scanned PDFs.
+
+**Island Drop: Share -> Island Drop**
+
+- Island Drop now appears in Android's share sheet: share photos, files or a
+  link from any app and it opens already lifted, to flick toward your computer
+  (or send with a tap). Several files go across as one drop.
+
 **Phone Drop: files from your phone, with a glow**
 
 - Flick photos and files from your Android phone to this computer with the new

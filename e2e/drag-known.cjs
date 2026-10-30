@@ -54,6 +54,17 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
   fs.writeFileSync(report, await doc.save())
   const archive = path.join(FILES, 'Backup.zip')
   fs.writeFileSync(archive, 'PK')
+  const budget = path.join(FILES, 'Budget.csv')
+  fs.writeFileSync(budget, 'Item,Cost\nRent,1200\nFood,350.5\n')
+  // A real OpenDocument text file (a zip with its content.xml).
+  const JSZip = require('jszip')
+  const odt = new JSZip()
+  odt.file('mimetype', 'application/vnd.oasis.opendocument.text')
+  odt.file('content.xml', '<office:document-content><office:body><office:text><text:h>Minutes</text:h><text:p>Ship it on <text:span>Friday</text:span>.</text:p></office:text></office:body></office:document-content>')
+  const minutes = path.join(FILES, 'Minutes.odt')
+  fs.writeFileSync(minutes, await odt.generateAsync({ type: 'nodebuffer' }))
+  const letter = path.join(FILES, 'Letter.rtf')
+  fs.writeFileSync(letter, "{\\rtf1\\ansi{\\fonttbl{\\f0 Arial;}}\\pard Dear Sam,\\par Caf\\'e9 at noon.\\par}")
   fs.writeFileSync(SCRIPT, '')
   fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'right', y: 0.3 } }))
 
@@ -104,6 +115,38 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
     check('letting go on it converts the file, with no drop event', await until(() => fs.existsSync(made), 8000) && fs.readFileSync(made, 'utf8').includes('Quarterly numbers'), fs.readdirSync(FILES).join(', '))
     check('the island shows the result', await page.waitForSelector('.card.job[data-job="done"]', { timeout: 6000 }).then(() => true, () => false))
     check('and the ring folds away', await until(async () => (await ringWin())?.visible === false, 3000))
+
+    // ---- A sheet to JSON (the fourth of six formats) ----
+    /** Drag `file`, hold until the ring opens, go to action `slot` (0-5) and choice `i` of `n` (or the action itself), let go. */
+    const pick = async (file, slot, i, n) => {
+      say({ start: [file] })
+      await hold(C[0], C[1], 1000)
+      await until(async () => (await state())?.phase === 'open', 3000)
+      await glide(C, at(C, slot * 60, 105))
+      await hold(...at(C, slot * 60, 105), 300)
+      if (n) {
+        const deg = slot * 60 + (i - (n - 1) / 2) * 27
+        await glide(at(C, slot * 60, 105), at(C, deg, 216))
+        await hold(...at(C, deg, 216), 300)
+      }
+      const seen = await state()
+      say({ end: true })
+      await until(async () => (await ringWin())?.visible === false, 4000)
+      return seen
+    }
+    const onJson = await pick(budget, 0, 3, 6)
+    check('a sheet offers six formats, JSON among them', onJson?.chips.map((c) => c.replace('*', '')).join() === 'xlsx,pdf,docx,json,md,html' && onJson.chips.includes('json*'), JSON.stringify(onJson))
+    const json = path.join(FILES, 'Budget.json')
+    check('and turns into JSON', await until(() => fs.existsSync(json), 8000) && JSON.stringify(JSON.parse(fs.readFileSync(json, 'utf8'))) === JSON.stringify([{ Item: 'Rent', Cost: 1200 }, { Item: 'Food', Cost: 350.5 }]), fs.existsSync(json) ? fs.readFileSync(json, 'utf8') : fs.readdirSync(FILES).join(', '))
+
+    // ---- Copy text from documents the ring didn't know before ----
+    const clip = () => app.evaluate(({ clipboard }) => clipboard.readText())
+    await app.evaluate(({ clipboard }) => clipboard.writeText(''))
+    const onText = await pick(minutes, 5)
+    check('an OpenDocument file can have its text copied', onText?.lit === 'text', JSON.stringify(onText))
+    check('and it is on the clipboard', await until(async () => (await clip()) === 'Minutes\nShip it on Friday.', 6000), JSON.stringify(await clip()))
+    await pick(letter, 5)
+    check('so can an RTF letter', await until(async () => (await clip()) === 'Dear Sam,\nCafé at noon.', 6000), JSON.stringify(await clip()))
 
     // ---- Letting go in the middle cancels ----
     const before = fs.readdirSync(FILES).sort().join()
