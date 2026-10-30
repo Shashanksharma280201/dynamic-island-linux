@@ -1,6 +1,6 @@
 import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { DropServer, type DropEvents } from '../electron/dropServer'
 import {
   cleanDevice,
@@ -103,7 +103,7 @@ describe('drop server', () => {
       cancel: (id) => log.push(`cancel ${id}`),
       start: (id, i, name, size) => log.push(`start ${id} ${i} ${name} ${size}`),
       progress: () => {},
-      saved: (id, i, path) => log.push(`saved ${id} ${i} ${path.split('/').pop()}`),
+      saved: (id, i, path) => log.push(`saved ${id} ${i} ${basename(path)}`),
       failed: (id, why) => log.push(`failed ${id} ${why}`),
     }
     server = new DropServer({ token: () => TOKEN, folder: () => folder, name: () => 'test-laptop', events })
