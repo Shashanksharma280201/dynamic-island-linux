@@ -160,6 +160,9 @@ electron/            main process
                      whatsapp (whatsapp-web.js), mail (IMAP IDLE + SMTP)
   messages.ts        turns WhatsApp messages / mail into cards, routes replies
   transient.ts       cards that close by themselves (held while hovered or replying)
+  dropServer.ts      Phone Drop: the HTTP server your phone sends files to (token, .part, no overwrite)
+  phoneDrop.ts       Phone Drop: from the phone's first nudge to the card on the island
+  dropOverlay.ts     Phone Drop: the see-through window over the screen the glow is drawn in
   settings.ts        settings window + its IPC; config.ts / secrets.ts store settings
   notes.ts           notes as Markdown files (atomic writes)
   claudeCode.ts      runs Claude Code (claude -p, stream-json) for island commands
@@ -179,9 +182,11 @@ electron/            main process
   dragRing.ts        the ring's window under the pointer, as a drop target
   dragJobs.ts        runs what was picked; imageOps.ts converts images on a canvas
 renderer/            React UI (island shapes, cards, animations); renderer/settings/ is the settings window
+                     renderer/drop/ draws Phone Drop's glow, the file coming out of it and its flight
+mobile/              Island Drop, the Android app that sends files to Phone Drop (Expo; see its README)
 shared/              pure logic shared by both sides (presentation rules, protocol, types)
 hook/                Claude Code PermissionRequest hook + installer
-scripts/             install.sh / install.ps1 (the one-line installers), video/ (the tour)
+scripts/             install.sh / install.ps1 (the one-line installers), video/ (the tour, drop-demo.cjs)
 e2e/                 end-to-end test harness
 tests/               unit tests (vitest)
 CHANGELOG.md         what changed in each release

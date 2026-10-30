@@ -66,10 +66,14 @@ export function JobCard({ id, job }: { id: string; job: JobState }) {
               window.island.jobs.drag(id)
             }}
           >
-            <span className="job-doc">
-              <i />
-              <b style={{ background: r.color }}>{r.ext.toUpperCase()}</b>
-            </span>
+            {r.thumb ? (
+              <img className="job-thumb" src={r.thumb} alt="" />
+            ) : (
+              <span className="job-doc">
+                <i />
+                <b style={{ background: r.color }}>{r.ext.toUpperCase()}</b>
+              </span>
+            )}
             <div className="job-text">
               <div className="job-name ellipsis">{r.name}</div>
               <div className="job-sub ellipsis">{r.meta}</div>

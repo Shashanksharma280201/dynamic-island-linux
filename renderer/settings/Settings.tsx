@@ -8,6 +8,7 @@ import { SettingsProblem } from './Problem'
 import { ShortcutsSection } from './ShortcutsSection'
 import { ServicesSection } from './ServicesSection'
 import { ConnectedSection } from './ConnectedSection'
+import { DropSection } from './DropSection'
 import { DragSection } from './DragSection'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
@@ -496,6 +497,8 @@ export function Settings() {
       <ShortcutsSection s={s} />
 
       <DragSection s={s} />
+
+      <DropSection s={s} />
 
       <ConnectedSection s={s} />
 

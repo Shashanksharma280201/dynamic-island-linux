@@ -169,6 +169,27 @@ import back.
 Everything is kept in `~/.config/dynamic-island-linux/crm/crm.json`, with a
 copy each day for the last week in `crm/backups/`.
 
+## Phone Drop: files from your phone
+
+Send photos and files from your Android phone to this computer with a flick,
+using the **Island Drop** app (in [`mobile/`](../mobile)).
+
+1. Open **Settings → Phone Drop** and turn on **Receive files from your phone**.
+   Pick where files go (Downloads, the Desktop or a folder).
+2. Install the app on your phone: download `island-drop.apk` from the latest
+   [Island Drop (Android)](https://github.com/Shashanksharma280201/dynamic-island-linux/actions/workflows/android.yml)
+   run (open the run, then **Artifacts**), and open it on your phone (allow
+   "install unknown apps" for your browser or files app once). To build it
+   yourself, see [mobile/README.md](../mobile/README.md).
+3. In **Settings → Phone Drop**, click **Show QR** and scan it with the app.
+   Your phone and computer need the same Wi-Fi, or Tailscale on both.
+4. Hold your phone next to the screen, hold a photo or file in the app, and
+   move it toward the computer. The screen's edge lights up; let go (or flick)
+   and it flies across into the island.
+
+Only phones that scanned the QR can send. **Forget paired phones** makes a new
+QR; phones paired before have to scan it again.
+
 ## Connect your trading engine
 
 The **Connected** package shows the [Day-Trading](https://github.com/Shashanksharma280201/Day-Trading)

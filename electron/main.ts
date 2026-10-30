@@ -1,6 +1,6 @@
 import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
@@ -21,7 +21,11 @@ import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
 import { dayOf, greeting, loadConfig, saveConfig } from './config'
-import { decryptSecret } from './secrets'
+import { decryptSecret, encryptSecret } from './secrets'
+import { DropServer } from './dropServer'
+import { DropOverlay } from './dropOverlay'
+import { PhoneDrop } from './phoneDrop'
+import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
   agentHooks,
@@ -56,7 +60,8 @@ import { wireSpotify } from './spotifyIpc'
 import { SPOTIFY } from './spotifyChannels'
 import { spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
-import { homedir } from 'node:os'
+import { homedir, hostname, networkInterfaces } from 'node:os'
+import { randomBytes } from 'node:crypto'
 import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
@@ -743,8 +748,76 @@ async function main() {
     })
   applyDrag()
 
+  // ---- Phone Drop: files flicked from your phone land here ----
+  const dropFolder = () =>
+    process.env.DI_DROP_FOLDER || (config.drop.folder === 'downloads' ? app.getPath('downloads') : config.drop.folder === 'desktop' ? app.getPath('desktop') : config.drop.folder)
+  const dropFolderLabel = () =>
+    process.env.DI_DROP_FOLDER ? basename(process.env.DI_DROP_FOLDER) : config.drop.folder === 'downloads' ? 'Downloads' : config.drop.folder === 'desktop' ? 'Desktop' : basename(config.drop.folder)
+  const dropToken = () => process.env.DI_DROP_TOKEN || (config.drop.on && config.drop.secret ? decryptSecret(config.drop.secret) : '')
+  const dropPort = () => Number(process.env.DI_DROP_PORT) || config.drop.port
+  const dropOverlay = new DropOverlay({
+    display: () => screen.getDisplayMatching(win.getBounds()),
+    onLanded: (id) => phoneDrop.landed(id),
+  })
+  const phoneDrop = new PhoneDrop({
+    overlay: dropOverlay,
+    present: (id, job, made) => dragJobs.present(id, job, made),
+    // Files land in the island's capsule.
+    target: () => {
+      const b = win.getBounds()
+      return cssRect ? { x: b.x + cssRect.x + cssRect.width / 2, y: b.y + cssRect.y + cssRect.height / 2 } : { x: b.x + b.width / 2, y: b.y + 20 }
+    },
+    folderLabel: dropFolderLabel,
+  })
+  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop })
+  let dropProblem: string | null = null
+  const applyDrop = async () => {
+    dropServer.stop()
+    dropProblem = null
+    if (!config.drop.on) return
+    if (!dropToken()) {
+      config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
+      saveConfig(config)
+    }
+    dropProblem = await dropServer.start(dropPort())
+    if (dropProblem) console.log(`[island] phone drop: ${dropProblem}`)
+    else console.log(`[island] phone drop listening on port ${dropPort()}`)
+  }
+  void applyDrop()
+  const dropStatus = (): DropStatus => {
+    const urls = dropAddresses(networkInterfaces(), dropPort())
+    const listening = dropServer.listening
+    return {
+      on: config.drop.on,
+      folder: config.drop.folder,
+      folderLabel: dropFolderLabel(),
+      port: dropPort(),
+      listening,
+      problem: dropProblem ?? (config.drop.on && listening && !urls.length ? 'This computer has no Wi-Fi, Ethernet or Tailscale address for your phone to reach' : null),
+      name: hostname(),
+      link: config.drop.on && dropToken() && urls.length ? dropPairingLink(hostname(), dropToken(), urls) : undefined,
+    }
+  }
+
   settings = new SettingsController({
     drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
+    drop: dropStatus,
+    setDrop: async (p) => {
+      if (p.folder !== undefined) {
+        if (!['downloads', 'desktop'].includes(p.folder) && !isAbsolute(p.folder)) return 'Pick a folder'
+        config.drop.folder = p.folder
+      }
+      if (p.on !== undefined) config.drop.on = p.on
+      // A new token: phones paired before have to scan the QR again.
+      if (p.forget) config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
+      saveConfig(config)
+      if (p.on !== undefined || p.forget) await applyDrop()
+      return config.drop.on ? dropProblem : null
+    },
+    pickDropFolder: async (parent) => {
+      const r = await dialog.showOpenDialog(parent, { title: 'Where files from your phone go', defaultPath: dropFolder(), properties: ['openDirectory', 'createDirectory'] })
+      return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
+    },
     onDrag: () => {
       applyDrag()
       tray?.refresh()
@@ -1336,6 +1409,9 @@ async function main() {
     clearInterval(crmTimer)
     crm.flush()
     dragRing.stop()
+    dropServer.stop()
+    phoneDrop.stop()
+    dropOverlay.destroy()
     closeImagePage()
     claudeCode.dispose()
     apiAgent.dispose()

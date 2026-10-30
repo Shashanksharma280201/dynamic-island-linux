@@ -52,6 +52,7 @@ it from the code instead, see [Install](docs/install.md).
 - **Messages and mail**: WhatsApp messages and new mail pop up as cards, and you reply right there.
 - **Claude Code, live**: every session in your terminals shows what it's doing and what it changed. Allow its permission prompts, answer its questions and read its plans from any app.
 - **Drag actions**: drag any file and hold still, and a ring opens to convert it, shrink it, copy its text or ask Claude about it.
+- **Phone Drop**: flick a photo or file from your Android phone toward the screen; it comes out of a glow at the edge and lands in the island.
 - **An assistant**: Claude, ChatGPT, Gemini, DeepSeek, OpenRouter or Ollama, and it asks before it sends or changes anything.
 - **Documents and a CRM**: merge, split and convert files, have Word files corrected as tracked changes, and keep a simple CRM.
 - **Notifications**: every app's notifications on the island, a notification center, and Do Not Disturb.

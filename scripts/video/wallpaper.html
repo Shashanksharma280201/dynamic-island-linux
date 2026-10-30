@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Desktop</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #0d3b4a;
+      }
+      svg {
+        display: block;
+        width: 100vw;
+        height: 100vh;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- A plain mountain wallpaper at dusk, behind the Phone Drop demo. -->
+    <svg viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#0a3d55" />
+          <stop offset="0.55" stop-color="#1f8aa8" />
+          <stop offset="1" stop-color="#5fc3d6" />
+        </linearGradient>
+        <linearGradient id="far" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2b6f86" />
+          <stop offset="1" stop-color="#173f52" />
+        </linearGradient>
+        <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#16394a" />
+          <stop offset="1" stop-color="#0a1c26" />
+        </linearGradient>
+        <linearGradient id="snow" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#f4fbff" />
+          <stop offset="1" stop-color="#9fc8d6" />
+        </linearGradient>
+        <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#5fb3c7" stop-opacity="0" />
+          <stop offset="0.5" stop-color="#3f8ea4" stop-opacity="0.55" />
+          <stop offset="1" stop-color="#0b2733" stop-opacity="0.95" />
+        </linearGradient>
+      </defs>
+      <rect width="1600" height="900" fill="url(#sky)" />
+      <g fill="#ffffff" opacity="0.55">
+        <circle cx="210" cy="90" r="1.2" /><circle cx="460" cy="60" r="1" /><circle cx="720" cy="120" r="1.3" /><circle cx="1010" cy="70" r="1" />
+        <circle cx="1280" cy="110" r="1.2" /><circle cx="1490" cy="50" r="1" /><circle cx="90" cy="180" r="0.9" /><circle cx="860" cy="40" r="0.8" />
+      </g>
+      <path d="M0 610 L170 470 L260 520 L390 400 L520 500 L640 430 L760 520 L900 470 L1040 540 L1200 450 L1340 520 L1480 470 L1600 520 L1600 900 L0 900 Z" fill="url(#far)" />
+      <path d="M380 640 L640 410 L760 300 L830 250 L900 300 L1010 380 L1130 470 L1260 560 L1400 650 L380 650 Z" fill="url(#near)" />
+      <path d="M760 300 L830 250 L900 300 L870 318 L845 300 L820 330 L795 312 Z" fill="url(#snow)" />
+      <path d="M690 360 L760 300 L795 312 L770 340 L740 335 L715 360 Z" fill="url(#snow)" opacity="0.85" />
+      <path d="M900 300 L1010 380 L975 384 L940 352 L915 362 L885 322 Z" fill="url(#snow)" opacity="0.8" />
+      <path d="M0 640 L120 560 L250 600 L330 540 L460 610 L560 570 L700 640 L0 660 Z" fill="#12313f" />
+      <path d="M1000 660 L1150 560 L1220 590 L1300 520 L1420 600 L1500 570 L1600 610 L1600 680 L1000 680 Z" fill="#11303e" />
+      <rect y="560" width="1600" height="340" fill="url(#mist)" />
+    </svg>
+  </body>
+</html>

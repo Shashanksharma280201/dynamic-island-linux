@@ -5350,6 +5350,14 @@ button .spinner-orb,
   border-radius: 3px 8px 3px 3px;
   background: #f2f2f6;
 }
+.job-thumb {
+  flex: none;
+  width: 44px;
+  height: 36px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 .job-doc i {
   position: absolute;
   left: 6px;

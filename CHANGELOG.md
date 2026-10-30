@@ -6,6 +6,20 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Phone Drop: files from your phone, with a glow**
+
+- Flick photos and files from your Android phone to this computer with the new
+  **Island Drop** app: hold a file and move it toward the side of the phone
+  that faces your computer. That edge of the screen lights up, white with a
+  ring of colour; let go and the file comes out of the light, a band of colour
+  sweeps across the screen, and the file flies into the island, which shows it
+  to open, show in its folder, undo or drag out.
+- Turn it on in **Settings → Phone Drop** and pair with its QR. Only paired
+  phones can send; files are saved to Downloads (or the Desktop, or a folder
+  you pick) and never over another file. Big files carry on in the island
+  with a progress bar.
+- The app's APK is built by GitHub Actions (**Island Drop (Android)**).
+
 **Connected: your trading engine on the island**
 
 - A new **Connected** package shows a service you run (the first one is the
