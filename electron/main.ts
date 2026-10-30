@@ -19,7 +19,7 @@ import { createIslandWindow, placeIslandWindow } from './window'
 import { Interactivity } from './interactivity'
 import { InputShape, shapeRect } from './inputShape'
 import { closeCursor } from './cursor'
-import { send, wireIpc } from './ipc'
+import { parseSysCmd, send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
 import { dayOf, greeting, loadConfig, saveConfig } from './config'
 import { decryptSecret, encryptSecret } from './secrets'
@@ -28,8 +28,9 @@ import { DropOverlay } from './dropOverlay'
 import { PhoneDrop } from './phoneDrop'
 import { PhoneLink } from './phoneLink'
 import { PhoneEdge } from './phoneEdge'
+import { INVOKED, PUSHED, invokeKept, keepHandlers, phoneCall, type PhoneRoutes } from './phoneCalls'
 import { PhoneOut } from './phoneOut'
-import { phoneView } from '@shared/phone'
+import { phoneView, type PhoneTopic } from '@shared/phone'
 import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
@@ -103,6 +104,8 @@ import { wireCrm } from './crmIpc'
 import { dueLabel } from '@shared/crm'
 import { printHtmlToPdf } from './docs/print'
 import { wireDocs } from './docsIpc'
+import { DOCS } from './docsChannels'
+import type { DocsView } from '@shared/docs'
 import { Backdrop } from './backdrop'
 import { FakeMailWatcher } from './providers/mailFake'
 import { IPC } from '@shared/types'
@@ -157,9 +160,20 @@ function cdpUrl(): string {
 }
 
 async function main() {
+  // The phone calls the same functions the island's window does.
+  keepHandlers()
   const config = bootConfig
   const store = new ActivityStore()
   const win = createIslandWindow(config.dock.side, config.display)
+  // What the island's window is told about Claude, trading, the inbox… the phone hears too.
+  let phonePush: ((topic: PhoneTopic, data: unknown) => void) | null = null
+  let phoneRoutes: PhoneRoutes | null = null
+  const toWindow = win.webContents.send.bind(win.webContents)
+  win.webContents.send = (channel: string, ...args: unknown[]) => {
+    toWindow(channel, ...args)
+    const topic = PUSHED[channel]
+    if (topic) phonePush?.(topic, args[0])
+  }
   const claudeStateReady = earlyClaudeState()
   // The island may use the microphone (talking to Claude); nothing else.
   win.webContents.session.setPermissionRequestHandler((wc, permission, cb, details) => {
@@ -810,7 +824,9 @@ async function main() {
       tray?.refresh()
       settings?.changed()
     },
+    call: (fn, args) => phoneCall(phoneRoutes, fn, args),
   })
+  phonePush = (topic, data) => phoneLink.push(topic, data)
   const phoneOut = new PhoneOut({ link: phoneLink, overlay: dropOverlay, present: (id, job, made) => dragJobs.present(id, job, made), side: () => ({ side: phoneDrop.side, at: phoneDrop.at }) })
   phoneEdge = new PhoneEdge({
     phone: () => phoneLink.connected()[0]?.device ?? null,
@@ -1070,6 +1086,26 @@ async function main() {
     },
     () => void pushSys(),
   )
+
+  // The phone's calls: the island window's own (INVOKED), and a few of main's.
+  phoneRoutes = {
+    ...INVOKED,
+    'system.read': () => (DEMO ? { ...demoSys } : system.read()),
+    'system.cmd': (c: unknown) => {
+      const cmd = parseSysCmd(c)
+      if (!cmd) throw new Error('Unknown control')
+      commands.push(cmd)
+      return true
+    },
+    // A file in Documents, sent to the phone that asked (the glow and all).
+    'docs.toPhone': async (id: string) => {
+      const view = (await invokeKept(DOCS.VIEW)) as DocsView
+      const f = view.files.find((x) => x.id === id && !x.missing)
+      if (!f) throw new Error('That file isn’t in Documents any more')
+      await phoneOut.send([f.path])
+      return true
+    },
+  } as PhoneRoutes
 
   // Typing a reply needs keyboard focus; the island is unfocusable otherwise
   // so it never steals focus from the app you're using.
