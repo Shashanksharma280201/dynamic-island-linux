@@ -9,13 +9,19 @@ import type { DragEvents, DragSource } from '../dragSource'
 
 /**
  * The drag watcher the island runs on Windows (PowerShell compiling a little
- * C#). Windows has no "a drag started" notice, but drags of files show the
- * shell's drag image, a window of class SysDragImage, from Explorer and from
- * most apps: while the main mouse button is down, that window showing means a
- * drag. One JSON object a line: {"ready":true}, {"start":true},
- * {"held":true,"alt":false} while the drag goes on, {"end":true}. Reads
- * "nudge" lines: the pointer moves a pixel and back, so the dragging app looks
- * again at what's under it (the ring that just opened there).
+ * C#). Windows has no "a drag started" notice, so with the main mouse button
+ * down it looks for either sign of one:
+ * - the shell's drag image (a window of class SysDragImage) showing, as it
+ *   does for files dragged from Explorer and most apps, though only over
+ *   windows that draw it;
+ * - the pointer gone past the drag distance while a hidden window holds the
+ *   mouse: OLE's DoDragDrop, which every file drag goes through, captures it
+ *   that way for the whole drag, whatever is under the pointer.
+ * One JSON object a line: {"ready":true}, {"start":true,"by":"image"|"capture"},
+ * {"held":true,"alt":false} while the drag goes on, {"end":true}; with
+ * DI_DRAG_DEBUG set, {"debug":"..."} lines say what it saw. Reads "nudge"
+ * lines: the pointer moves a pixel and back, so the dragging app looks again
+ * at what's under it (the ring that just opened there).
  */
 export const WIN_DRAG = String.raw`
 $ErrorActionPreference = 'Stop'
@@ -23,6 +29,7 @@ $ErrorActionPreference = 'Stop'
 Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 public static class IslandDrag {
   [DllImport("user32.dll")] static extern short GetAsyncKeyState(int vk);
@@ -32,15 +39,49 @@ public static class IslandDrag {
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr FindWindowW(string cls, string title);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
   [DllImport("user32.dll")] static extern uint SendInput(uint n, INPUT[] inputs, int size);
+  [DllImport("user32.dll")] static extern bool GetGUIThreadInfo(uint thread, ref GUITHREADINFO info);
+  [DllImport("user32.dll")] static extern IntPtr WindowFromPoint(POINT p);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr pid);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassNameW(IntPtr h, StringBuilder name, int size);
   [StructLayout(LayoutKind.Sequential)] struct POINT { public int X; public int Y; }
+  [StructLayout(LayoutKind.Sequential)] struct RECT { public int L; public int T; public int R; public int B; }
+  [StructLayout(LayoutKind.Sequential)] struct GUITHREADINFO { public int cbSize; public uint flags; public IntPtr active; public IntPtr focus; public IntPtr capture; public IntPtr menuOwner; public IntPtr moveSize; public IntPtr caret; public RECT caretRect; }
   [StructLayout(LayoutKind.Sequential)] struct MOUSEINPUT { public int dx; public int dy; public uint data; public uint flags; public uint time; public IntPtr extra; }
   [StructLayout(LayoutKind.Sequential)] struct INPUT { public uint type; public MOUSEINPUT mi; }
   const int SM_SWAPBUTTON = 23, VK_LBUTTON = 1, VK_RBUTTON = 2, VK_MENU = 0x12;
+  const int SM_CXDRAG = 68, SM_CYDRAG = 69;
+  // Moving or sizing a window, or in a menu: the mouse is held, but not for a drag.
+  const uint NOT_A_DRAG = 0x2 | 0x4 | 0x8 | 0x10;
   const uint MOVE = 1, ABSOLUTE = 0x8000, VIRTUALDESK = 0x4000;
+  static readonly bool debug = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DI_DRAG_DEBUG"));
   static readonly object say = new object();
   static void Say(string s) { lock (say) { Console.Out.WriteLine(s); Console.Out.Flush(); } }
   static bool Down(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
   static bool DragImage() { IntPtr w = FindWindowW("SysDragImage", null); return w != IntPtr.Zero && IsWindowVisible(w); }
+  static string ClassOf(IntPtr h) {
+    if (h == IntPtr.Zero) return "";
+    var s = new StringBuilder(256);
+    return GetClassNameW(h, s, s.Capacity) > 0 ? s.ToString() : "";
+  }
+  // The window holding the mouse in a thread (0: the foreground one's), unless it's moving a window or in a menu.
+  static IntPtr Capture(uint thread) {
+    var g = new GUITHREADINFO();
+    g.cbSize = Marshal.SizeOf(typeof(GUITHREADINFO));
+    if (!GetGUIThreadInfo(thread, ref g) || (g.flags & NOT_A_DRAG) != 0) return IntPtr.Zero;
+    return g.capture;
+  }
+  // DoDragDrop holds the mouse with a hidden window of OLE's own (the clipboard window) until the drop.
+  static bool OleDrag(uint pressThread) {
+    foreach (uint t in new uint[] { 0, pressThread }) {
+      IntPtr c = Capture(t);
+      if (c != IntPtr.Zero && (!IsWindowVisible(c) || ClassOf(c) == "CLIPBRDWNDCLASS")) return true;
+    }
+    return false;
+  }
+  static string Seen(uint pressThread) {
+    IntPtr f = Capture(0), p = Capture(pressThread);
+    return "capture " + (ClassOf(f) == "" ? "-" : ClassOf(f)) + (f != IntPtr.Zero && IsWindowVisible(f) ? " (shown)" : "") + " / " + (ClassOf(p) == "" ? "-" : ClassOf(p)) + (p != IntPtr.Zero && IsWindowVisible(p) ? " (shown)" : "") + (DragImage() ? ", drag image" : "");
+  }
   static void MoveTo(int x, int y) {
     int vx = GetSystemMetrics(76), vy = GetSystemMetrics(77), vw = GetSystemMetrics(78), vh = GetSystemMetrics(79);
     var i = new INPUT[1];
@@ -69,6 +110,9 @@ public static class IslandDrag {
     Say("{\"ready\":true}");
     // idle, watching (button down), dragging
     string state = "idle";
+    POINT press = new POINT();
+    uint pressThread = 0;
+    string said = "";
     while (true) {
       int button = GetSystemMetrics(SM_SWAPBUTTON) != 0 ? VK_RBUTTON : VK_LBUTTON;
       bool down = Down(button);
@@ -77,10 +121,28 @@ public static class IslandDrag {
         state = "idle";
       } else if (state == "idle") {
         state = "watching";
+        // Where it was pressed, and the thread of the window there (the one that may start a drag).
+        GetCursorPos(out press);
+        IntPtr under = WindowFromPoint(press);
+        pressThread = under == IntPtr.Zero ? 0 : GetWindowThreadProcessId(under, IntPtr.Zero);
+        said = "";
       }
-      if (state == "watching" && DragImage()) {
-        state = "dragging";
-        Say("{\"start\":true}");
+      if (state == "watching") {
+        POINT now;
+        GetCursorPos(out now);
+        bool moved = Math.Abs(now.X - press.X) >= GetSystemMetrics(SM_CXDRAG) || Math.Abs(now.Y - press.Y) >= GetSystemMetrics(SM_CYDRAG);
+        string by = DragImage() ? "image" : (moved && OleDrag(pressThread) ? "capture" : null);
+        if (debug && moved) {
+          string seen = Seen(pressThread);
+          if (seen != said) {
+            said = seen;
+            Say("{\"debug\":\"" + seen.Replace("\\", "/").Replace("\"", "'") + "\"}");
+          }
+        }
+        if (by != null) {
+          state = "dragging";
+          Say("{\"start\":true,\"by\":\"" + by + "\"}");
+        }
       }
       if (state == "dragging") Say(Down(VK_MENU) ? "{\"held\":true,\"alt\":true}" : "{\"held\":true,\"alt\":false}");
       Thread.Sleep(state == "idle" ? 50 : 30);
