@@ -706,12 +706,15 @@ async function main() {
     }
     return setupProblem(config.ai) ? null : 'api'
   }
+  const tesseract = () => (process.env.DI_TESSERACT === '' ? null : findExecutable('tesseract', ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin', 'C:\\Program Files\\Tesseract-OCR']))
   const dragJobs = new DragJobs({
     printPdf: printHtmlToPdf,
     soffice,
     cards: transient,
     saveTo: () => config.drag.saveTo,
     ghostscript: () => findExecutable('gs', ['/usr/bin', '/usr/local/bin']),
+    tesseract,
+    pdftoppm: () => findExecutable('pdftoppm', ['/usr/bin', '/usr/local/bin', '/opt/homebrew/bin']),
     ask: (prompt) => {
       try {
         claudeUi!.engine().ask(prompt)
@@ -730,7 +733,7 @@ async function main() {
   const dragRing = new DragRing({
     on: () => config.drag.on,
     opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
-    env: () => ({ libreOffice: !!soffice(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
+    env: () => ({ libreOffice: !!soffice(), ocr: !!tesseract(), assistant: assistantKind(), language: languageName(), saveTo: config.drag.saveTo }),
     onDrop: (d) => dragJobs.run(d),
     // Tests can play a drag the way a system reports one.
     source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : undefined,

@@ -6,6 +6,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Drag actions: every kind of spreadsheet, and text from any document**
+
+- **Convert** now takes every kind of spreadsheet (Excel, OpenDocument `.ods`,
+  CSV, TSV, and old `.xls` with LibreOffice) to Excel, CSV, PDF, Word (as a
+  table), JSON (one object per row, named by the first row), Markdown or a web
+  page.
+- **Copy text** works on any document: OpenDocument, RTF, web pages, code,
+  JSON, logs and other text files as well as PDF, Word and slides (old `.doc`
+  and `.ppt` with LibreOffice). With tesseract installed it also copies the
+  words in images and scanned PDFs.
+
+**Island Drop: Share -> Island Drop**
+
+- Island Drop now appears in Android's share sheet: share photos, files or a
+  link from any app and it opens already lifted, to flick toward your computer
+  (or send with a tap). Several files go across as one drop.
+
 **Phone Drop: files from your phone, with a glow**
 
 - Flick photos and files from your Android phone to this computer with the new

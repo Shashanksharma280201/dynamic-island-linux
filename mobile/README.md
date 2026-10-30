@@ -28,6 +28,9 @@ scan it from the app.
   of the computer lights up. Let go near the edge, or flick, and it's sent.
   Let go anywhere else and it goes back.
 - **Tap** a file, then **Send** to send it without the gesture.
+- **Share** from any app (Gallery, Files, a browser, WhatsApp): pick **Island Drop**
+  in the share sheet and what you shared opens already lifted, ready to flick.
+  A link or text arrives on the computer as a `.txt` file.
 
 ## Build it yourself
 
@@ -53,7 +56,8 @@ locally instead: `npx expo prebuild --platform android` then
 | `src/gesture.ts` | Which edge a dragged file is heading for, and when letting go sends it (pure) |
 | `src/link.ts` | Finds the computer at its addresses, the nudges while you drag, the upload with progress |
 | `src/files.ts` | Recent photos and videos, the files you add, thumbnails for the computer's glow |
-| `src/ui/` | Pairing (QR or link), the grid, the lifted file, the glow and the white wash |
+| `src/ui/` | Pairing (QR or link), the grid, the lifted file, the glow and the white wash, the share screen |
+| `modules/share-intake` | A small native module: what other apps share, copied into the app |
 
 The pure parts are tested from the island's test suite (`tests/dropPhone.test.ts`).
 
