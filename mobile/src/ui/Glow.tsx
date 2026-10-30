@@ -19,7 +19,7 @@ export function EdgeGlow({ edge, along, level, w, h }: { edge: SharedValue<numbe
     const e = edge.value
     const cx = e === 0 ? 0 : e === 1 ? w : a * w
     const cy = e === 2 ? 0 : e === 3 ? h : a * h
-    return { opacity: Math.min(1, level.value), transform: [{ translateX: cx - size / 2 }, { translateY: cy - size / 2 }, { scale: 0.5 + 0.5 * Math.min(1.2, level.value) }] }
+    return { opacity: Math.min(0.9, level.value), transform: [{ translateX: cx - size / 2 }, { translateY: cy - size / 2 }, { scale: 0.5 + 0.5 * Math.min(1.2, level.value) }] }
   })
   return (
     <View pointerEvents="none" style={[StyleSheet.absoluteFill, { overflow: 'hidden' }]}>
@@ -27,14 +27,14 @@ export function EdgeGlow({ edge, along, level, w, h }: { edge: SharedValue<numbe
         <Svg width={size} height={size}>
           <Defs>
             <RadialGradient id={id} cx="50%" cy="50%" r="50%">
-              <Stop offset="0" stopColor="#ffffff" stopOpacity="1" />
-              <Stop offset="0.1" stopColor="#ffffff" stopOpacity="0.92" />
-              <Stop offset="0.22" stopColor="#e6f5ff" stopOpacity="0.6" />
-              <Stop offset="0.32" stopColor="#8ce1ff" stopOpacity="0.4" />
-              <Stop offset="0.41" stopColor="#78ffbe" stopOpacity="0.32" />
-              <Stop offset="0.5" stopColor="#ffe278" stopOpacity="0.27" />
-              <Stop offset="0.59" stopColor="#ff8c96" stopOpacity="0.22" />
-              <Stop offset="0.69" stopColor="#ce78ff" stopOpacity="0.16" />
+              <Stop offset="0" stopColor="#ffffff" stopOpacity="0.78" />
+              <Stop offset="0.1" stopColor="#ffffff" stopOpacity="0.64" />
+              <Stop offset="0.22" stopColor="#e6f5ff" stopOpacity="0.38" />
+              <Stop offset="0.32" stopColor="#8ce1ff" stopOpacity="0.24" />
+              <Stop offset="0.41" stopColor="#78ffbe" stopOpacity="0.19" />
+              <Stop offset="0.5" stopColor="#ffe278" stopOpacity="0.16" />
+              <Stop offset="0.59" stopColor="#ff8c96" stopOpacity="0.13" />
+              <Stop offset="0.69" stopColor="#ce78ff" stopOpacity="0.09" />
               <Stop offset="1" stopColor="#7a6eff" stopOpacity="0" />
             </RadialGradient>
           </Defs>

@@ -53,6 +53,11 @@ export class DropOverlay {
     return { x: p.x - b.x, y: p.y - b.y }
   }
 
+  /** Load the page ahead of time (a drag heading for the phone may come), so the light starts at once. */
+  prepare(): void {
+    this.ensureWindow()
+  }
+
   send(cmd: DropCmd): void {
     const win = this.ensureWindow()
     if (cmd.t === 'approach' || !win.isVisible()) this.cover(win)
