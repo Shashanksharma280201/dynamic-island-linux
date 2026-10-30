@@ -6,6 +6,26 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island Drop 2: the island on your phone, and files both ways**
+
+- Answer from your phone: Claude Code's permission requests, its questions
+  and plans, the assistant's "about to act for you" and your trading engine's
+  trades show up in the app and as phone notifications with **Allow** /
+  **Deny** (or **Buy** / **Skip**) buttons. Answer on the phone or on the
+  island, whichever is nearer; the other one updates at once, and a
+  notification disappears as soon as it's answered anywhere.
+- The app now has the island's other parts too: what's playing with its
+  controls, today's P&L, your Claude Code sessions and the computer's
+  notifications (also as phone notifications, if you want).
+- Files go the other way as well: **Send a file to <your phone>…** in the tray
+  menu. The phone's edge that faces the computer lights up and the file comes
+  out of the glow into **Received** (photos and videos also land in the
+  gallery's **Island Drop** album).
+- Smoother everywhere: the lifted file, the glow and the flick now run on the
+  phone's UI thread (Reanimated), with springs and haptics; a new tab bar,
+  cards that slide in and out, and a background link that keeps approvals
+  arriving within seconds.
+
 **Drag actions: every kind of spreadsheet, and text from any document**
 
 - **Convert** now takes every kind of spreadsheet (Excel, OpenDocument `.ods`,

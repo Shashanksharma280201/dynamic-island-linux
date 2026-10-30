@@ -1,6 +1,11 @@
 import { Platform } from 'react-native'
-import { File } from 'expo-file-system'
+import EventSource from 'react-native-sse'
+import { Directory, File, Paths } from 'expo-file-system'
+import type { PhoneIncoming, PhoneView } from './islandTypes'
 import { isIslandHello, type Pairing, type Side } from './protocol'
+
+/** The island's live view on this phone. */
+export type Live = { phase: 'off' | 'connecting' | 'live' | 'offline'; view?: PhoneView; seenAt?: number; error?: string }
 
 export type Phase = 'finding' | 'ready' | 'offline'
 export type LinkState = { phase: Phase; error?: string; url?: string }
@@ -78,7 +83,12 @@ export async function findComputer(p: Pairing): Promise<{ url: string; name: str
  */
 export class DropLink {
   state: LinkState = { phase: 'finding' }
+  live: Live = { phase: 'off' }
   private listeners = new Set<(s: LinkState) => void>()
+  private liveListeners = new Set<(l: Live) => void>()
+  private incomingListeners = new Set<(f: PhoneIncoming) => void>()
+  private es: EventSource<'view' | 'incoming'> | null = null
+  private poll: ReturnType<typeof setInterval> | null = null
   private finding: Promise<string | null> | null = null
 
   constructor(readonly pairing: Pairing) {}
@@ -172,6 +182,141 @@ export class DropLink {
       } catch (e2: any) {
         return { ok: false, message: linkError(undefined, String(e2?.message ?? e2)) }
       }
+    }
+  }
+
+  // ---- The island, live ----
+
+  private setLive(patch: Partial<Live>) {
+    this.live = { ...this.live, ...patch }
+    for (const l of this.liveListeners) l(this.live)
+  }
+
+  subscribeLive(l: (live: Live) => void): () => void {
+    this.liveListeners.add(l)
+    l(this.live)
+    return () => this.liveListeners.delete(l)
+  }
+
+  /** A file the computer is sending (it may arrive again after a reconnect: callers keep track of ids). */
+  onIncoming(l: (f: PhoneIncoming) => void): () => void {
+    this.incomingListeners.add(l)
+    return () => this.incomingListeners.delete(l)
+  }
+
+  /** Listen to the island: its view on every change, files it sends. Reconnects by itself. */
+  async startLive(): Promise<void> {
+    this.stopLive()
+    this.setLive({ phase: 'connecting', error: undefined })
+    const url = await this.url()
+    if (!url) return this.setLive({ phase: 'offline', error: this.state.error })
+    const es = new EventSource<'view' | 'incoming'>(`${url}/island/events`, {
+      headers: { ...this.auth, 'X-Island-Device': DEVICE },
+      pollingInterval: 3000, // reconnect this soon after the stream drops
+      timeoutBeforeConnection: 0,
+    })
+    es.addEventListener('view', (e) => {
+      try {
+        const v = JSON.parse(e.data ?? '{}') as PhoneView
+        if (v && v.protocol === 1) this.setLive({ phase: 'live', view: v, seenAt: Date.now(), error: undefined })
+      } catch {
+        // a bad line
+      }
+    })
+    es.addEventListener('incoming', (e) => {
+      try {
+        const f = JSON.parse(e.data ?? '{}') as PhoneIncoming
+        if (f && typeof f.id === 'string' && typeof f.name === 'string') for (const l of this.incomingListeners) l(f)
+      } catch {
+        // a bad line
+      }
+    })
+    es.addEventListener('error', (e: any) => {
+      this.setLive({ phase: 'offline', error: linkError(e?.xhrStatus || undefined, e?.message) })
+      // The computer may have moved to another address: look again.
+      if (!e?.xhrStatus) void this.find()
+    })
+    this.es = es
+    // A slow poll as a safety net: idle connections can die quietly on mobile networks.
+    this.poll = setInterval(() => void this.refresh(), 30_000)
+  }
+
+  stopLive(): void {
+    this.es?.removeAllEventListeners()
+    this.es?.close()
+    this.es = null
+    if (this.poll) clearInterval(this.poll)
+    this.poll = null
+  }
+
+  async refresh(): Promise<void> {
+    const url = this.state.url
+    if (!url) return
+    try {
+      const r = await call(`${url}/island/view`, { headers: this.auth, timeoutMs: 5000 })
+      if (r.ok) this.setLive({ phase: 'live', view: (await r.json()) as PhoneView, seenAt: Date.now(), error: undefined })
+      else this.setLive({ phase: 'offline', error: linkError(r.status) })
+    } catch (e: any) {
+      this.setLive({ phase: 'offline', error: linkError(undefined, String(e?.message ?? e)) })
+    }
+  }
+
+  private async post(path: string, body: object): Promise<{ ok: boolean; message: string }> {
+    const url = await this.url()
+    if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
+    try {
+      const r = await call(`${url}${path}`, { method: 'POST', headers: { ...this.auth, 'Content-Type': 'application/json', 'X-Island-Device': DEVICE }, body: JSON.stringify(body), timeoutMs: 6000 })
+      const j: any = await r.json().catch(() => ({}))
+      return { ok: r.ok && j.ok !== false, message: typeof j.message === 'string' ? j.message : r.ok ? '' : linkError(r.status) }
+    } catch (e: any) {
+      return { ok: false, message: linkError(undefined, String(e?.message ?? e)) }
+    }
+  }
+
+  /** Your answer to an approval. Only ever called from your tap (in the app or on a notification's button). */
+  decide(id: string, decision: 'allow' | 'deny' | 'ask', extra: { always?: boolean; answers?: Record<string, string>; message?: string } = {}) {
+    return this.post('/island/decide', { id, decision, ...extra })
+  }
+
+  media(cmd: 'playpause' | 'next' | 'previous') {
+    return this.post('/island/media', { cmd })
+  }
+
+  /** An image on the computer (the cover), with the token. */
+  imageSource(path: string): { uri: string; headers: Record<string, string> } | null {
+    const url = this.state.url
+    if (!url) return null
+    return { uri: path.startsWith('/') ? `${url}${path}` : path, headers: path.startsWith('/') ? this.auth : {} }
+  }
+
+  /** Take a file the computer sent: saved in the app's Received folder, then the computer hears it arrived. */
+  async receive(f: PhoneIncoming, onProgress: (p: number) => void): Promise<{ ok: boolean; uri?: string; message?: string }> {
+    const url = await this.url()
+    if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
+    const dir = new Directory(Paths.document, 'received')
+    if (!dir.exists) dir.create({ intermediates: true })
+    // Only a plain name, in Received: never a path from the other side.
+    const name = f.name.replace(/[\\/\u0000-\u001f]/g, '_').replace(/^\.+/, '').slice(0, 200) || 'file'
+    let dest = new File(dir, name)
+    const dot = name.lastIndexOf('.')
+    for (let i = 2; dest.exists; i++) dest = new File(dir, dot > 0 ? `${name.slice(0, dot)} (${i})${name.slice(dot)}` : `${name} (${i})`)
+    try {
+      const task = File.createDownloadTask(`${url}/drop/out/${f.id}`, dest, {
+        headers: { ...this.auth, 'X-Island-Device': DEVICE },
+        onProgress: ({ bytesWritten, totalBytes }) => onProgress(totalBytes > 0 ? bytesWritten / totalBytes : f.size ? bytesWritten / f.size : 0),
+      })
+      const got = await task.downloadAsync()
+      if (!got || (f.size && got.size !== f.size)) throw new Error('It didn’t arrive whole')
+      await this.post(`/drop/out/${f.id}/done`, { ok: true })
+      return { ok: true, uri: got.uri }
+    } catch (e: any) {
+      try {
+        if (dest.exists) dest.delete()
+      } catch {
+        // gone already
+      }
+      await this.post(`/drop/out/${f.id}/done`, { ok: false })
+      return { ok: false, message: String(e?.message ?? e) }
     }
   }
 }

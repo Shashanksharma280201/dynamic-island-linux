@@ -20,6 +20,7 @@ export type Aim = { edge: Side; closeness: number; along: number }
 
 /** The edge the finger is nearest to, and how close (0 far, 1 at it); null if it's in the middle. */
 export function aim(x: number, y: number, w: number, h: number): Aim | null {
+  'worklet'
   const options: Aim[] = [
     { edge: 'left', closeness: 1 - x / (w * ZONE_X), along: y / h },
     { edge: 'right', closeness: 1 - (w - x) / (w * ZONE_X), along: y / h },
@@ -33,6 +34,7 @@ export function aim(x: number, y: number, w: number, h: number): Aim | null {
 
 /** Let go at (x, y) moving at (vx, vy) px/ms, having moved (dx, dy): the edge it's sent out of, or null. */
 export function release(x: number, y: number, vx: number, vy: number, dx: number, dy: number, w: number, h: number): Aim | null {
+  'worklet'
   const a = aim(x, y, w, h)
   if (a && a.closeness >= SEND_AT) return a
   const speed = Math.hypot(vx, vy)
@@ -45,11 +47,16 @@ export function release(x: number, y: number, vx: number, vy: number, dx: number
 
 /** The computer's edge the file comes in at: the opposite one. */
 export function computerSide(phoneEdge: Side): Side {
+  'worklet'
   return phoneEdge === 'left' ? 'right' : phoneEdge === 'right' ? 'left' : phoneEdge === 'top' ? 'bottom' : 'top'
 }
 
+/** The edges as numbers, for the UI thread: 0 left, 1 right, 2 top, 3 bottom. */
+export const EDGES: Side[] = ['left', 'right', 'top', 'bottom']
+
 /** Where to fly the file out of the screen: past the edge. */
 export function exitPoint(edge: Side, x: number, y: number, w: number, h: number, size: number): { x: number; y: number } {
+  'worklet'
   if (edge === 'left') return { x: -size * 1.4, y }
   if (edge === 'right') return { x: w + size * 1.4, y }
   if (edge === 'top') return { x, y: -size * 1.4 }

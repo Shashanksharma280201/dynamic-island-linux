@@ -190,6 +190,19 @@ using the **Island Drop** app (in [`mobile/`](../mobile)).
 Only phones that scanned the QR can send. **Forget paired phones** makes a new
 QR; phones paired before have to scan it again.
 
+Once paired, the app is also **the island on your phone**:
+
+- Anything waiting for your answer on the computer (Claude Code's permission
+  requests, questions and plans, the assistant acting for you, your trading
+  engine's trades) is on the app's **Island** tab and comes as a notification
+  with its buttons. Answer it there or on the island; the other one updates.
+  Allow notifications when the app asks.
+- **Settings → Stay connected in the background** (on by default) keeps the
+  link open with a quiet ongoing notification, so these reach the phone
+  within seconds even when the app is closed.
+- To send a file to the phone, click the tray icon, then **Send a file to
+  <your phone>…**. It lands in the app's **Files → Received**.
+
 ## Connect your trading engine
 
 The **Connected** package shows the [Day-Trading](https://github.com/Shashanksharma280201/Day-Trading)
