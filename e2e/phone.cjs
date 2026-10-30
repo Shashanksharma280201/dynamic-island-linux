@@ -84,7 +84,12 @@ function listen() {
 }
 
 ;(async () => {
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top' }, drop: { on: true } }))
+  // A trading engine connected (the stand-in from e2e/connected.cjs), with its token stored as Settings would without a keyring.
+  const engine = spawn('node', [path.join(__dirname, 'fake-engine.cjs')], { stdio: ['ignore', 'pipe', 'inherit'] })
+  const enginePort = await new Promise((r) => engine.stdout.on('data', (d) => /port (\d+)/.test(d) && r(Number(/port (\d+)/.exec(d)[1]))))
+  const control = (what, body) => fetch(`http://127.0.0.1:${enginePort}/__control/${what}`, { method: 'POST', body: JSON.stringify(body ?? {}) }).then((r) => r.json())
+  const connected = { on: true, url: `http://127.0.0.1:${enginePort}`, secret: 'plain:' + Buffer.from('good-token').toString('base64') }
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top' }, drop: { on: true }, connected }))
   fs.writeFileSync(SCRIPT, '')
   const player = spawn('node', [path.join(__dirname, 'fake-player.cjs')])
   let playerLog = ''
@@ -139,6 +144,23 @@ function listen() {
     await page.click('.card.approval .pill.deny')
     const said2 = JSON.parse((await h2) || '{}')
     check('answering on the island tells the phone', said2.hookSpecificOutput?.decision?.behavior === 'deny' && (await until(() => phone.view?.approvals.length === 0, 3000)), JSON.stringify(said2))
+
+    // ---- A trade from the engine, answered on the phone ----
+    const ASK = { id: 'a1b2c3d4', title: 'Buy 19 INFY', subtitle: 'INFY · 09:31', lines: [{ label: 'Stop', value: '₹995.17' }, { label: 'Risk', value: '₹139.46', tone: 'down' }], note: 'ORB long', approve_label: 'Buy', reject_label: 'Skip', seconds_left: 60, expires_at: 0, tone: 'up' }
+    await control('view', { asks: [ASK] })
+    check('a trade the engine proposes reaches the phone', await until(() => phone.view?.approvals.some((x) => x.kind === 'trade'), 8000), JSON.stringify(phone.view?.approvals))
+    const t = phone.view?.approvals.find((x) => x.kind === 'trade')
+    check('with its own buttons, numbers and countdown', t?.title === 'Buy 19 INFY' && t.allow === 'Buy' && t.deny === 'Skip' && t.lines?.some((l) => l.value === '₹995.17') && t.secondsLeft > 0, JSON.stringify(t))
+    check('the island shows it too', await page.waitForSelector('.card.connected-ask', { timeout: 3000 }).then(() => true, () => false))
+    const bought = await post('/island/decide', { id: t?.id, decision: 'allow' })
+    check('the phone’s Buy is accepted', bought.ok, String(bought.status))
+    const posts = await until(async () => {
+      const p = await control('posts')
+      return p.some((x) => x.path === '/island/answer') ? p : null
+    }, 4000)
+    check('and the engine gets the approval', !!posts?.some((x) => x.path === '/island/answer' && x.body.ask_id === ASK.id && x.body.answer === 'approve'), JSON.stringify(posts))
+    await control('view', { asks: [] })
+    check('the trade goes from the island and the phone', (await page.waitForSelector('.card.connected-ask', { state: 'detached', timeout: 4000 }).then(() => true, () => false)) && (await until(() => !phone.view?.approvals.some((x) => x.kind === 'trade'), 4000)))
 
     // ---- A file from the computer to the phone ----
     const file = path.join(TMP, 'Slides.pdf')
@@ -210,6 +232,7 @@ function listen() {
 
   phone?.ctl.abort()
   player.kill()
+  engine.kill()
   await app.close().catch(() => {})
   const errs = logs.join('').split('\n').filter((l) => /Uncaught|TypeError|ReferenceError/.test(l))
   console.log('app log:', errs.length ? errs.slice(0, 6).join(' | ') : 'clean')
