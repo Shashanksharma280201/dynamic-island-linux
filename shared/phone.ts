@@ -13,6 +13,12 @@
  *   GET  /island/art                   what's playing's cover
  *   GET  /drop/out/<id>                an incoming file's bytes
  *   POST /drop/out/<id>/done           the phone has it
+ *   POST /island/call    { fn, args }  one of the island's own functions
+ *                                      (PHONE_CALLS): { ok, value } or { ok: false, message }
+ *
+ * The event stream also carries push ({ topic, data }): what the island's
+ * window is told when Claude, trading, the inbox, notifications, music, the
+ * CRM, documents or services change (PHONE_TOPICS).
  */
 import type { Activity, ToolRequest } from './types'
 import type { AgentSession } from './sessions'
@@ -174,4 +180,107 @@ export function phoneView(input: { name: string; activities: Activity[]; session
   }
   const notes: PhoneNote[] = (input.center?.entries ?? []).slice(0, 40).map((e) => ({ id: e.id, at: e.at, app: cap(e.app, 60), title: cap(e.title, 200), body: cap(e.body, 600) || undefined, source: e.source, urgency: e.urgency }))
   return { protocol: PHONE_PROTOCOL, at: now, name: input.name, approvals, media, sessions: sessions.slice(0, 12), notes, trading, dnd: !!input.center?.dnd }
+}
+
+// ---- The island's functions on the phone ----
+
+/** An argument: string, number, boolean, object, string list; `?` may be left out (or null). */
+type Arg = 's' | 'n' | 'b' | 'o' | 'S' | 's?' | 'o?'
+
+/**
+ * What the phone may call: the same functions the island's window uses
+ * (Claude, trading, notifications, chats, mail, notes, music, system
+ * controls, CRM, documents, services), and the arguments each takes.
+ */
+export const PHONE_CALLS = {
+  'claude.state': [],
+  'claude.ask': ['s'],
+  'claude.stop': [],
+  'claude.new': [],
+  'connected.view': [],
+  'connected.action': ['s'],
+  'notifications.view': [],
+  'notifications.dismiss': ['s'],
+  'notifications.clearAll': [],
+  'notifications.undo': [],
+  'notifications.setDnd': ['b'],
+  'inbox.sources': [],
+  'inbox.unread': [],
+  'inbox.chats': [],
+  'inbox.chat': ['s'],
+  'inbox.sendChat': ['s', 's'],
+  'inbox.mailList': ['s?'],
+  'inbox.mailGet': ['s', 'n'],
+  'inbox.mailReply': ['s', 'n', 's'],
+  'inbox.mailRead': ['s', 'n'],
+  'notes.list': [],
+  'notes.get': ['s'],
+  'notes.save': ['s?', 's'],
+  'notes.remove': ['s'],
+  'spotify.state': [],
+  'spotify.home': [],
+  'spotify.search': ['s'],
+  'spotify.page': ['s'],
+  'spotify.play': ['o', 's?'],
+  'spotify.devices': [],
+  'spotify.transfer': ['s'],
+  'spotify.control': ['o'],
+  'spotify.like': ['s', 'b'],
+  'system.read': [],
+  'system.cmd': ['o'],
+  'crm.overview': [],
+  'crm.contacts': ['s', 's?'],
+  'crm.contact': ['s'],
+  'crm.saveContact': ['s?', 'o'],
+  'crm.log': ['o'],
+  'crm.tasks': ['s'],
+  'crm.saveTask': ['s?', 'o'],
+  'crm.deals': [],
+  'crm.deal': ['s'],
+  'docs.view': [],
+  'docs.action': ['o'],
+  'docs.remove': ['S'],
+  'docs.toPhone': ['s'],
+  'services.view': [],
+  'services.refresh': ['s'],
+} as const satisfies Record<string, readonly Arg[]>
+
+export type PhoneCall = keyof typeof PHONE_CALLS
+
+/** What the phone hears about as it changes (push events). */
+export const PHONE_TOPICS = ['claude', 'connected', 'inbox', 'notifications', 'spotify', 'crm', 'docs', 'services'] as const
+export type PhoneTopic = (typeof PHONE_TOPICS)[number]
+
+/** A call's reply. */
+export type PhoneCallResult = { ok: true; value: unknown } | { ok: false; message: string }
+
+const MAX_TEXT = 100_000
+const MAX_OBJECT = 200_000
+const plain = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+
+/** A call's name and arguments as the island takes them, or null if they're not what it takes. Pure. */
+export function phoneCallArgs(fn: unknown, args: unknown): { fn: PhoneCall; args: unknown[] } | null {
+  if (typeof fn !== 'string' || !Object.prototype.hasOwnProperty.call(PHONE_CALLS, fn)) return null
+  const spec: readonly Arg[] = PHONE_CALLS[fn as PhoneCall]
+  const given = args === undefined ? [] : args
+  if (!Array.isArray(given) || given.length > spec.length) return null
+  const out: unknown[] = []
+  for (let i = 0; i < spec.length; i++) {
+    const kind = spec[i]
+    const v = given[i]
+    if (kind.endsWith('?') && (v === undefined || v === null)) {
+      out.push(v ?? undefined)
+      continue
+    }
+    const k = kind.replace('?', '')
+    if (k === 's' && !(typeof v === 'string' && v.length <= MAX_TEXT)) return null
+    if (k === 'n' && !(typeof v === 'number' && Number.isFinite(v))) return null
+    if (k === 'b' && typeof v !== 'boolean') return null
+    if (k === 'o' && !(plain(v) && JSON.stringify(v).length <= MAX_OBJECT)) return null
+    if (k === 'S' && !(Array.isArray(v) && v.length <= 200 && v.every((x) => typeof x === 'string' && x.length <= 400))) return null
+    out.push(v)
+  }
+  // Trailing arguments left out are passed as left out.
+  while (out.length && out[out.length - 1] === undefined) out.pop()
+  return { fn: fn as PhoneCall, args: out }
 }

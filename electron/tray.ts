@@ -63,7 +63,8 @@ export class IslandTray {
   }
 
   refresh(): void {
-    if (!this.tray) return
+    // Electron may already have taken the icon down (quitting, or no tray on this desktop).
+    if (!this.tray || this.tray.isDestroyed()) return
     const s = this.state()
     this.tray.setContextMenu(
       Menu.buildFromTemplate([

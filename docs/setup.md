@@ -200,6 +200,9 @@ Once paired, the app is also **the island on your phone**:
 - **Settings → Stay connected in the background** (on by default) keeps the
   link open with a quiet ongoing notification, so these reach the phone
   within seconds even when the app is closed.
+- The app's **Claude**, **Inbox** and **More** tabs do what the island does,
+  on the computer: talk to Claude Code, answer WhatsApp and mail, trading,
+  notes, music, controls, the CRM, documents and services.
 - To send a file to the phone, drag it from any app to the edge of the screen
   where your phone is (the side its files come in from; the right edge until
   it has sent one). The edge lights up and says **Send to <your phone>**; let

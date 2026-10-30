@@ -6,6 +6,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island Drop 3: everything the island does, on your phone**
+
+- The app now has the rest of the island: a **Claude** tab to talk to Claude
+  Code on your computer (its steps and reply as they come, Stop, New, your
+  plan's limits); an **Inbox** with your WhatsApp chats and mail to read and
+  answer, and the computer's notifications (clear, Clear all, Do Not
+  Disturb); and **More**: Trading (positions, today's trades, Stop trading
+  today / Close everything), Notes, Music (Spotify search, playlists, where
+  it plays), Controls (volume, brightness, mute, Wi-Fi, Bluetooth), CRM
+  (follow-ups, people, log a call, deals), Documents (convert, merge PDFs,
+  page numbers, send a file to the phone) and Services.
+- It all runs on the computer through the island's own functions, and what
+  changes there (Claude's reply, new mail, the trading view) shows on the
+  phone as it happens.
+- Only a paired phone can use them, and only those: the island checks every
+  call and its arguments.
+
 **Island Drop 2: the island on your phone, and files both ways**
 
 - Answer from your phone: Claude Code's permission requests, its questions

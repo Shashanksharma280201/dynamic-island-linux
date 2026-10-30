@@ -2,6 +2,7 @@ import { Platform } from 'react-native'
 import EventSource from 'react-native-sse'
 import { Directory, File, Paths } from 'expo-file-system'
 import type { PhoneIncoming, PhoneView } from './islandTypes'
+import type { PhoneCall, PhoneTopic } from '../../shared/phone'
 import { isIslandHello, type Pairing, type Side } from './protocol'
 
 /** The island's live view on this phone. */
@@ -87,7 +88,8 @@ export class DropLink {
   private listeners = new Set<(s: LinkState) => void>()
   private liveListeners = new Set<(l: Live) => void>()
   private incomingListeners = new Set<(f: PhoneIncoming) => void>()
-  private es: EventSource<'view' | 'incoming'> | null = null
+  private pushListeners = new Map<PhoneTopic, Set<(data: unknown) => void>>()
+  private es: EventSource<'view' | 'incoming' | 'push'> | null = null
   private poll: ReturnType<typeof setInterval> | null = null
   private finding: Promise<string | null> | null = null
 
@@ -204,13 +206,40 @@ export class DropLink {
     return () => this.incomingListeners.delete(l)
   }
 
+  /** What the island says when something of `topic` changes (Claude's reply so far, new mail…). */
+  onPush(topic: PhoneTopic, l: (data: unknown) => void): () => void {
+    let set = this.pushListeners.get(topic)
+    if (!set) this.pushListeners.set(topic, (set = new Set()))
+    set.add(l)
+    return () => set!.delete(l)
+  }
+
+  /** One of the island's own functions (notes, chats, Claude, trading…), as its window would call it. */
+  async call<T = unknown>(fn: PhoneCall, ...args: unknown[]): Promise<{ ok: true; value: T } | { ok: false; message: string }> {
+    const url = await this.url()
+    if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
+    try {
+      const r = await call(`${url}/island/call`, {
+        method: 'POST',
+        headers: { ...this.auth, 'Content-Type': 'application/json', 'X-Island-Device': DEVICE },
+        body: JSON.stringify({ fn, args }),
+        timeoutMs: 20_000,
+      })
+      const j: any = await r.json().catch(() => ({}))
+      if (r.ok && j.ok) return { ok: true, value: j.value as T }
+      return { ok: false, message: typeof j.message === 'string' ? j.message : linkError(r.status) }
+    } catch (e: any) {
+      return { ok: false, message: linkError(undefined, String(e?.message ?? e)) }
+    }
+  }
+
   /** Listen to the island: its view on every change, files it sends. Reconnects by itself. */
   async startLive(): Promise<void> {
     this.stopLive()
     this.setLive({ phase: 'connecting', error: undefined })
     const url = await this.url()
     if (!url) return this.setLive({ phase: 'offline', error: this.state.error })
-    const es = new EventSource<'view' | 'incoming'>(`${url}/island/events`, {
+    const es = new EventSource<'view' | 'incoming' | 'push'>(`${url}/island/events`, {
       headers: { ...this.auth, 'X-Island-Device': DEVICE },
       pollingInterval: 3000, // reconnect this soon after the stream drops
       timeoutBeforeConnection: 0,
@@ -227,6 +256,14 @@ export class DropLink {
       try {
         const f = JSON.parse(e.data ?? '{}') as PhoneIncoming
         if (f && typeof f.id === 'string' && typeof f.name === 'string') for (const l of this.incomingListeners) l(f)
+      } catch {
+        // a bad line
+      }
+    })
+    es.addEventListener('push', (e) => {
+      try {
+        const m = JSON.parse(e.data ?? '{}') as { topic: PhoneTopic; data: unknown }
+        for (const l of this.pushListeners.get(m.topic) ?? []) l(m.data)
       } catch {
         // a bad line
       }

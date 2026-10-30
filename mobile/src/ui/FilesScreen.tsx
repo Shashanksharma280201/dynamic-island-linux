@@ -11,7 +11,7 @@ import { newDropId, sizeText, type Side } from '../protocol'
 import { forgetReceived, openReceived, type Received } from '../received'
 import { sendAll, setSideUsed, sideUsed, sizeOf } from '../send'
 import { Face } from './Face'
-import { EdgeGlow, Wash } from './Glow'
+import { EdgeGlow, Ripple, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
 import { C } from './theme'
 import { useFlick } from './useFlick'
@@ -145,6 +145,7 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
       />
 
       <EdgeGlow edge={flick.edge} along={flick.along} level={flick.level} w={W} h={H} />
+      <Ripple edge={flick.edge} along={flick.along} t={flick.ring} out={flick.ringOut} w={W} h={H} />
       <Animated.View pointerEvents="none" style={[s.liftedCard, { width: card, height: card }, flick.cardStyle]}>
         {lifted && <Face item={lifted} size={card} />}
       </Animated.View>
