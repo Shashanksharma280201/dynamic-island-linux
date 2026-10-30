@@ -4,9 +4,10 @@ import './drop.css'
 /**
  * Phone Drop's glow. While a file heads for your phone's edge, light comes up
  * at this screen's edge next to it: a white bloom with a ring of colour
- * around it, the rest of the screen dimmed a little. When the bytes start,
- * the file comes out of the light; when it's saved, a band of colour sweeps
- * across the screen and the file flies into the island.
+ * around it, the rest of the screen dimmed a little. When the file comes out
+ * of the light, the ring leaves it as a wave: it grows across the whole
+ * screen and fades, like light through glass, and the light settles back to
+ * the edge. A file leaving for the phone draws the wave in toward the edge.
  */
 
 type V = { x: number; y: number }
@@ -19,7 +20,19 @@ const ctx = canvas.getContext('2d')!
 const K = 0.5
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const glow = { side: 'right' as DropSide, at: 0.5, level: 0, vel: 0, goal: 0, flash: 0, kick: 0, tint: 0, sweep: -1, sweepIn: true }
+const glow = { side: 'right' as DropSide, at: 0.5, level: 0, vel: 0, goal: 0, flash: 0, kick: 0, tint: 0 }
+/** The wave: 0 to 1 while it runs (-1 when not), outward from the light or in toward it, from where it started. */
+const wave = { u: -1, out: true, power: 1, secs: 1.6, side: 'right' as DropSide, at: 0.5, startedAt: 0 }
+const smooth = (a: number, b: number, x: number) => {
+  const t = clamp((x - a) / (b - a), 0, 1)
+  return t * t * (3 - 2 * t)
+}
+
+/** Start a wave from the light at this edge. */
+function startWave(out: boolean, power: number, secs: number) {
+  Object.assign(wave, { u: 0, out, power, secs: reduced ? Math.min(secs, 0.6) : secs, side: glow.side, at: glow.at, startedAt: performance.now() })
+  wake()
+}
 const pending = new Map<string, { side: DropSide; at: number; thumb?: string; name: string; ext: string; color: string }>()
 const thumbs = new Map<string, Thumb>()
 /** A file dragged toward the phone's edge: the light follows the pointer along it, with a label. */
@@ -76,14 +89,14 @@ function frame(now: number) {
   glow.flash += (glow.kick - glow.flash) * (1 - Math.exp(-dt * 9))
   glow.kick *= Math.exp(-dt * 3.4)
   glow.tint *= Math.exp(-dt * 1.5)
-  if (glow.sweep >= 0) {
-    glow.sweep += dt / (reduced ? 0.6 : 1.5)
-    if (glow.sweep > 1) glow.sweep = -1
+  if (wave.u >= 0) {
+    wave.u += dt / wave.secs
+    if (wave.u > 1) wave.u = -1
   }
   draw(t)
   placeAim()
   document.body.dataset.level = glow.level.toFixed(2)
-  const quiet = glow.goal === 0 && glow.level < 0.004 && Math.abs(glow.vel) < 0.01 && glow.flash < 0.01 && glow.kick < 0.01 && glow.sweep < 0 && !thumbs.size && aim.vis < 0.01
+  const quiet = glow.goal === 0 && glow.level < 0.004 && Math.abs(glow.vel) < 0.01 && glow.flash < 0.01 && glow.kick < 0.01 && wave.u < 0 && !thumbs.size && aim.vis < 0.01
   if (quiet) {
     running = false
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -106,6 +119,9 @@ function draw(t: number) {
   const F = glow.flash
   const big = Math.hypot(W(), H())
 
+  // While a wave leaves, the ring around the light goes with it.
+  const waveEnv = wave.u >= 0 ? wave.power * smooth(0, 0.12, wave.u) * (1 - smooth(0.6, 1, wave.u)) : 0
+  const held = wave.out ? 1 - 0.85 * waveEnv : 1
   if (L > 0.003 || F > 0.01) {
     // The rest of the screen, a little dimmer, so the light shows.
     const dim = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, big)
@@ -124,7 +140,7 @@ function draw(t: number) {
       const c = { x: p.x - n.x * 0.04 * span + n.y * sway * 0.6, y: p.y - n.y * 0.04 * span + n.x * sway * 0.6 }
       const r = span * (0.4 + 0.24 * L + 0.18 * F) * scale + sway
       const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r)
-      const k = (L + F * 0.6) * a
+      const k = (L + F * 0.6) * a * held
       const s = scale === 1 ? 0 : 0.03
       g.addColorStop(0, 'rgba(255,255,255,0)')
       g.addColorStop(0.36 + s, 'rgba(255,255,255,0)')
@@ -166,32 +182,37 @@ function draw(t: number) {
     else ctx.fillRect(0, H() - th, W(), th)
   }
 
-  // On arrival, a band of colour sweeps across the screen.
-  if (glow.sweep >= 0) {
-    const u = glow.sweep
-    const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
-    const env = Math.sin(Math.PI * u)
-    const reach = span * 1.25
-    // Into the screen for a file that arrived; toward the edge for one leaving.
-    const d = glow.sweepIn ? e * reach : (1 - e) * reach
-    const c = { x: p.x + n.x * d, y: p.y + n.y * d }
-    const half = span * 0.13
-    const g = ctx.createLinearGradient(c.x - n.x * half, c.y - n.y * half, c.x + n.x * half, c.y + n.y * half)
-    const stops: [number, string][] = [
-      [0, '170,120,255,0'],
-      [0.14, `170,120,255,${0.09 * env}`],
-      [0.3, `90,160,255,${0.12 * env}`],
-      [0.44, `110,240,255,${0.14 * env}`],
-      [0.52, `255,255,255,${0.17 * env}`],
-      [0.6, `140,255,170,${0.13 * env}`],
-      [0.74, `255,235,130,${0.12 * env}`],
-      [0.88, `255,150,120,${0.08 * env}`],
-      [1, '255,150,120,0'],
-    ]
-    // The leading edge goes first (into the screen).
-    for (const [o, rgba] of stops) g.addColorStop(1 - o, `rgba(${rgba})`)
+  // The wave: a ring of colour, white inside to violet outside, that grows out
+  // of the light across the whole screen (or closes in on it), fading as it goes.
+  if (wave.u >= 0 && waveEnv > 0.002) {
+    const u = wave.u
+    const w = edge(wave.side, wave.at)
+    const c = { x: w.p.x - w.n.x * 0.06 * w.span, y: w.p.y - w.n.y * 0.06 * w.span }
+    const far = Math.hypot(W(), H()) * 1.12
+    // Out: quick off the edge, slowing as it spreads. In: slow, then quick into the light.
+    const e = wave.out ? 1 - Math.pow(1 - u, 3) : u * u * u
+    const R = wave.out ? 0.1 * w.span + (far - 0.1 * w.span) * e : far - (far - 0.08 * w.span) * e
+    const band = 0.3 * w.span + 0.4 * R
+    const g = ctx.createRadialGradient(c.x, c.y, Math.max(0, R - band), c.x, c.y, R)
+    const env = waveEnv
+    g.addColorStop(0, 'rgba(255,255,255,0)')
+    g.addColorStop(0.14, `rgba(255,255,255,${0.1 * env})`)
+    g.addColorStop(0.28, `rgba(140,225,255,${0.17 * env})`)
+    g.addColorStop(0.44, `rgba(120,255,190,${0.17 * env})`)
+    g.addColorStop(0.6, `rgba(255,226,120,${0.16 * env})`)
+    g.addColorStop(0.74, `rgba(255,140,150,${0.14 * env})`)
+    g.addColorStop(0.88, `rgba(206,120,255,${0.11 * env})`)
+    g.addColorStop(1, 'rgba(120,110,255,0)')
     ctx.fillStyle = g
     ctx.fillRect(0, 0, W(), H())
+    if (wave.out) {
+      // Just ahead of it, the screen dims a little: the wave's dark edge.
+      const d = ctx.createRadialGradient(c.x, c.y, R, c.x, c.y, R + 0.35 * w.span)
+      d.addColorStop(0, `rgba(20,10,40,${0.14 * env})`)
+      d.addColorStop(1, 'rgba(20,10,40,0)')
+      ctx.fillStyle = d
+      ctx.fillRect(0, 0, W(), H())
+    }
   }
 }
 
@@ -282,7 +303,8 @@ function arrive(id: string) {
   glow.side = info.side
   glow.at = info.at
   glow.goal = 1
-  glow.kick = Math.max(glow.kick, 0.3)
+  glow.kick = Math.max(glow.kick, 0.55)
+  startWave(true, 1, 1.6)
   const { p, n, span } = edge(info.side, info.at)
   const th = makeThumb(id, info)
   thumbs.set(id, th)
@@ -313,16 +335,15 @@ function progress(id: string, p: number) {
 }
 
 /** Into the island, along a curve, getting smaller. */
-async function fly(id: string, to: V, sweep: boolean) {
+async function fly(id: string, to: V, landing: boolean) {
   const th = thumbs.get(id)
   if (!th || th.leaving) return
   th.leaving = true
   await th.out
   th.bar.classList.remove('on')
-  if (sweep) {
-    glow.sweep = 0
-    glow.sweepIn = true
-    glow.kick = 0.85
+  if (landing) {
+    glow.kick = 0.6
+    if (performance.now() - wave.startedAt > 2500) startWave(true, 0.6, 1.5)
   }
   glow.goal = 0
   const from = th.at
@@ -337,7 +358,7 @@ async function fly(id: string, to: V, sweep: boolean) {
     ],
     { duration: reduced ? 300 : 1100, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' },
   )
-  setPhase(sweep ? 'land' : 'stow')
+  setPhase(landing ? 'land' : 'stow')
   a.onfinish = () => {
     splash(to)
     th.el.remove()
@@ -390,12 +411,12 @@ function sendOut(c: DropSendCmd) {
     { duration: reduced ? 320 : 1300, easing: 'cubic-bezier(.42,0,.28,1)', fill: 'forwards' },
   )
   setPhase('send')
+  // The colour closes in on the light while the file goes into it.
+  startWave(false, 0.85, 1.3)
   a.onfinish = () => {
     th.el.remove()
     thumbs.delete(c.id)
     glow.kick = 0.85
-    glow.sweep = 0
-    glow.sweepIn = false
     glow.goal = 0
   }
   wake()
