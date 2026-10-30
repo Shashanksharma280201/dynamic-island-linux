@@ -59,8 +59,8 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       edge.value = EDGES.indexOf(phoneEdge)
       along.value = 0.42
-      level.value = withTiming(1, { duration: 320 })
-      wash.value = withSequence(withTiming(0.35, { duration: 160 }), withTiming(0, { duration: 600 }))
+      level.value = withTiming(0.9, { duration: 480, easing: Easing.out(Easing.quad) })
+      wash.value = withSequence(withTiming(0.18, { duration: 260, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) }))
       x.value = from.x
       y.value = from.y
       scale.value = 0.55
@@ -77,7 +77,7 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
       if (quiet) return next()
       setDone(r.ok ? 'ok' : 'fail')
       void Haptics.notificationAsync(r.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error)
-      level.value = withTiming(0, { duration: 900 })
+      level.value = withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.quad) })
       if (r.ok) {
         scale.value = withSequence(withSpring(1.08, { damping: 8, stiffness: 300 }), withDelay(450, withTiming(0.12, { duration: 520, easing: Easing.in(Easing.cubic) })))
         x.value = withDelay(650, withTiming(filesTabX, { duration: 520, easing: Easing.in(Easing.cubic) }))
