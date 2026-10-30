@@ -1,15 +1,33 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ActivityIndicator, Linking, View } from 'react-native'
+import { ActivityIndicator, AppState, Linking, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
+import { shareIntake, type SharedFile } from './modules/share-intake'
 import { DropLink, findComputer } from './src/link'
 import { forgetPairing, loadPairing, savePairing } from './src/pairing'
 import { parsePairingLink, type Pairing } from './src/protocol'
 import { HomeScreen } from './src/ui/HomeScreen'
 import { PairScreen } from './src/ui/PairScreen'
+import { ShareScreen } from './src/ui/ShareScreen'
 import { C } from './src/ui/theme'
 
 export default function App() {
   const [pairing, setPairing] = useState<Pairing | null | undefined>(undefined)
+  const [shared, setShared] = useState<SharedFile[] | null>(null)
+
+  // Share -> Island Drop from another app: at launch, when it comes back, or while open.
+  useEffect(() => {
+    const check = () =>
+      void shareIntake.take().then((f) => {
+        if (f.length) setShared(f)
+      })
+    check()
+    const off = shareIntake.onShare(check)
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && check())
+    return () => {
+      off()
+      sub.remove()
+    }
+  }, [])
 
   // The saved pairing, and pairing links opened from elsewhere (islanddrop://pair?…).
   useEffect(() => {
@@ -39,7 +57,9 @@ export default function App() {
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar style="light" />
-      {pairing && link ? (
+      {pairing && link && shared ? (
+        <ShareScreen link={link} files={shared} onDone={() => setShared(null)} />
+      ) : pairing && link ? (
         <HomeScreen
           link={link}
           onUnpair={async () => {

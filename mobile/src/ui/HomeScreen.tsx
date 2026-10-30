@@ -1,16 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Animated, Easing, FlatList, Image, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, Alert, Animated, Easing, FlatList, Linking, PanResponder, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import * as Haptics from 'expo-haptics'
-import { File } from 'expo-file-system'
 import { addFiles, loadTray, recentMedia, removeFromTray, thumbOf, whenText, type Item } from '../files'
 import { aim, computerSide, exitPoint, release, type Aim } from '../gesture'
 import type { DropLink, LinkState } from '../link'
 import { newDropId, sizeText, type Side } from '../protocol'
+import { sendAll, setSideUsed, sideUsed, sizeOf } from '../send'
+import { Face } from './Face'
 import { EdgeGlow, Wash } from './Glow'
-import { C, extOf, kindColor } from './theme'
+import { SendPill, type Sending } from './SendPill'
+import { C } from './theme'
 
 type Lifted = { item: Item; home: { x: number; y: number }; size: number }
-type Sending = { name: string; item: Item; p: number; phase: 'sending' | 'sent' | 'failed'; message?: string }
 
 const GAP = 10
 const PAD = 16
@@ -36,7 +37,6 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
   const liftedRef = useRef<Lifted | null>(null)
   liftedRef.current = lifted
   const drag = useRef({ id: '', approached: '' as '' | Side, along: 0.5, carrying: false, granted: false, thumb: undefined as Promise<string | undefined> | undefined })
-  const lastSide = useRef<Side>('right')
   const pos = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current
   const scale = useRef(new Animated.Value(1)).current
   const tilt = useRef(new Animated.Value(0)).current
@@ -66,8 +66,7 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
   }
 
   const fileInfo = (item: Item) => {
-    const size = item.size || safeSize(item.uri)
-    return { name: item.name, size }
+    return { name: item.name, size: sizeOf(item) }
   }
 
   const approach = async (a: Aim) => {
@@ -102,7 +101,7 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
     if (!l || !drag.current.carrying) return
     drag.current.carrying = false
     const side = computerSide(a.edge)
-    lastSide.current = side
+    setSideUsed(side)
     setAimed(a)
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
     const out = exitPoint(a.edge, at.x, at.y, W, H, l.size)
@@ -125,11 +124,13 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
 
   /** Make sure the computer knows which edge, then send the bytes. */
   const deliver = async (item: Item, id: string, side: Side, along: number, needsApproach: boolean, thumb?: Promise<string | undefined>) => {
-    const info = fileInfo(item)
-    setSending({ name: item.name, item, p: 0, phase: 'sending' })
-    if (needsApproach) await link.approach(id, side, along, [info], await Promise.race([thumb ?? Promise.resolve(undefined), new Promise<undefined>((r) => setTimeout(r, 450))]))
-    const r = await link.send(id, 0, { uri: item.uri, ...info }, (p) => setSending((s) => (s && s.item.key === item.key && s.phase === 'sending' ? { ...s, p } : s)))
-    setSending({ name: r.name ?? item.name, item, p: 1, phase: r.ok ? 'sent' : 'failed', message: r.ok ? undefined : r.message })
+    setSending({ key: id, name: item.name, p: 0, phase: 'sending' })
+    const r = await sendAll(link, id, [item], side, along, {
+      approach: needsApproach,
+      thumb,
+      onProgress: (p) => setSending((s) => (s && s.key === id && s.phase === 'sending' ? { ...s, p } : s)),
+    })
+    setSending({ key: id, name: r.name ?? item.name, p: 1, phase: r.ok ? 'sent' : 'failed', message: r.ok ? undefined : r.message })
     if (!r.ok) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
   }
 
@@ -139,7 +140,7 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
     wash.setValue(0)
     Animated.sequence([Animated.timing(wash, { toValue: 0.85, duration: 160, useNativeDriver: false }), Animated.timing(wash, { toValue: 0, duration: 650, useNativeDriver: false })]).start()
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)
-    void deliver(item, newDropId(), lastSide.current, 0.5, true, thumbOf(item))
+    void deliver(item, newDropId(), sideUsed(), 0.5, true, thumbOf(item))
   }
 
   const pan = useMemo(
@@ -299,53 +300,12 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
         </View>
       )}
 
-      {sending && !sel && (
-        <Pressable style={s.bar} onPress={() => sending.phase !== 'sending' && setSending(null)}>
-          <View style={s.pill}>
-            <View style={[s.pillMark, { backgroundColor: sending.phase === 'failed' ? C.red : sending.phase === 'sent' ? C.green : 'rgba(255,255,255,0.14)' }]}>
-              {sending.phase === 'sending' ? <ActivityIndicator size="small" color="#fff" /> : <Text style={s.pillMarkText}>{sending.phase === 'sent' ? '✓' : '!'}</Text>}
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.pillTitle} numberOfLines={1}>
-                {sending.phase === 'sending' ? `Sending ${sending.name}` : sending.phase === 'sent' ? `Sent to ${link.pairing.name}` : 'Didn’t send'}
-              </Text>
-              {sending.phase === 'sending' ? (
-                <View style={s.track}>
-                  <View style={[s.fill, { width: `${Math.round(Math.max(0.03, sending.p) * 100)}%` }]} />
-                </View>
-              ) : (
-                <Text style={s.pillSub} numberOfLines={2}>
-                  {sending.phase === 'sent' ? sending.name : sending.message}
-                </Text>
-              )}
-            </View>
-          </View>
-        </Pressable>
-      )}
+      {sending && !sel && <SendPill sending={sending} to={link.pairing.name} onDismiss={() => setSending(null)} />}
     </View>
   )
 }
 
 const ADD: Item = { key: '__add', uri: '', name: '', size: 0, kind: 'file', when: 0 }
-
-function safeSize(uri: string): number {
-  try {
-    return new File(uri).size ?? 0
-  } catch {
-    return 0
-  }
-}
-
-/** A photo, or a coloured tile with the file's type. */
-function Face({ item, size }: { item: Item; size: number }) {
-  if (item.kind === 'photo') return <Image source={{ uri: item.uri }} style={{ width: size, height: size }} resizeMode="cover" />
-  return (
-    <View style={[s.typeTile, { width: size, height: size, backgroundColor: kindColor(item.name) }]}>
-      {item.kind === 'video' && <Text style={s.play}>▶</Text>}
-      <Text style={s.typeText}>{extOf(item.name)}</Text>
-    </View>
-  )
-}
 
 function Tile({
   item,
@@ -418,9 +378,6 @@ const s = StyleSheet.create({
   meta: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
   name: { color: C.text, fontSize: 13, fontWeight: '600' },
   sub: { color: C.text3, fontSize: 11, marginTop: 1 },
-  typeTile: { justifyContent: 'flex-end', padding: 14 },
-  typeText: { color: '#fff', fontSize: 22, fontWeight: '800' },
-  play: { position: 'absolute', top: 12, right: 14, color: 'rgba(255,255,255,0.9)', fontSize: 18 },
   add: { borderRadius: 16, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
   addPlus: { color: C.text, fontSize: 34, fontWeight: '300' },
   addText: { color: C.text2, fontSize: 13, fontWeight: '600', marginTop: 2 },
@@ -441,11 +398,4 @@ const s = StyleSheet.create({
   bar: { position: 'absolute', left: 16, right: 16, bottom: 34 },
   sendBtn: { backgroundColor: '#fff', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
   sendText: { color: '#000', fontSize: 16, fontWeight: '800' },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: 'rgba(30,33,40,0.97)', borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.line },
-  pillMark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  pillMarkText: { color: '#fff', fontSize: 17, fontWeight: '800' },
-  pillTitle: { color: C.text, fontSize: 14, fontWeight: '700' },
-  pillSub: { color: C.text2, fontSize: 12, marginTop: 2 },
-  track: { height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.14)', marginTop: 7, overflow: 'hidden' },
-  fill: { height: 4, borderRadius: 2, backgroundColor: '#fff' },
 })

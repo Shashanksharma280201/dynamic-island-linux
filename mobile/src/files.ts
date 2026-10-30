@@ -69,7 +69,7 @@ function saveTray(items: Item[]) {
   new File(Paths.document, TRAY_LIST).write(JSON.stringify(items))
 }
 
-const kindOf = (name: string): Item['kind'] =>
+export const kindOf = (name: string): Item['kind'] =>
   /\.(jpe?g|png|webp|gif|heic|heif|avif|bmp)$/i.test(name) ? 'photo' : /\.(mp4|mov|mkv|webm|3gp)$/i.test(name) ? 'video' : 'file'
 
 /** Pick files with the system picker and add copies of them to the tray. */
