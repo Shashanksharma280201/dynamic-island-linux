@@ -68,6 +68,7 @@ export class PhoneLink {
   private outgoing = new Map<string, Outgoing>()
   private timer: ReturnType<typeof setTimeout> | null = null
   private keepalive: ReturnType<typeof setInterval> | null = null
+  private stopped = false
   private pushes = new Map<PhoneTopic, unknown>()
   private pushTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -119,6 +120,8 @@ export class PhoneLink {
   }
 
   stop(): void {
+    // Phones going away now is the island quitting: nothing to tell anyone.
+    this.stopped = true
     for (const p of this.phones) p.res.end()
     this.phones.clear()
     if (this.keepalive) clearInterval(this.keepalive)
@@ -218,6 +221,7 @@ export class PhoneLink {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })
     res.write('retry: 3000\n\n')
     const phone: Phone = { res, device, since: Date.now() }
+    this.stopped = false
     this.phones.add(phone)
     this.d.onPhones?.()
     res.write(`event: view\ndata: ${JSON.stringify(this.d.view())}\n\n`)
@@ -231,7 +235,7 @@ export class PhoneLink {
     }, KEEPALIVE_MS)
     req.on('close', () => {
       this.phones.delete(phone)
-      this.d.onPhones?.()
+      if (!this.stopped) this.d.onPhones?.()
       if (!this.phones.size && this.keepalive) {
         clearInterval(this.keepalive)
         this.keepalive = null

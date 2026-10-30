@@ -1712,6 +1712,9 @@ function run(): void {
     })
   })
   for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => app.quit())
+  // A mistake somewhere is logged, not shown as Electron's error box: that box
+  // is modal, so the island (and anything waiting for it to quit) would hang on it.
+  process.on('uncaughtException', (e) => console.error('[island] uncaught:', e))
 }
 
 if (app.requestSingleInstanceLock()) {
