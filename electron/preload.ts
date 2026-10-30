@@ -140,6 +140,11 @@ const api = {
     ready: () => ipcRenderer.send(DROP.READY),
     landed: (id: string) => ipcRenderer.send(DROP.LANDED, id),
     idle: () => ipcRenderer.send(DROP.IDLE),
+    /** The strip at the phone's edge that takes files dragged to it. */
+    edgeReady: () => ipcRenderer.send(DROP.EDGE_READY),
+    edgeOver: () => ipcRenderer.send(DROP.EDGE_OVER),
+    edgeDrop: (paths: string[]) => ipcRenderer.send(DROP.EDGE_DROP, paths),
+    pathFor: (f: File): string => webUtils.getPathForFile(f),
   },
   /** A drag action's card: what it made. */
   jobs: {

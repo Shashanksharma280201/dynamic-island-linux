@@ -1,7 +1,9 @@
 // End-to-end test of the island on your phone: this script plays the Island
 // Drop app. It listens to the island's live stream (/island/events) with the
 // pairing token, sees a real Claude Code permission request and what's
-// playing, answers from "the phone", and takes a file the computer sends.
+// playing, answers from "the phone", and takes files the computer sends: one
+// from the tray, one dragged to the screen's edge where the phone is (a
+// scripted drag source, DI_FAKE_DRAG, plays the drag as a system reports one).
 const { _electron } = require('playwright-core')
 const { spawn } = require('child_process')
 const path = require('path')
@@ -30,6 +32,15 @@ const until = async (fn, ms = 5000) => {
   const end = Date.now() + ms
   while (!(await fn()) && Date.now() < end) await sleep(100)
   return fn()
+}
+const SCRIPT = path.join(TMP, 'drag.jsonl')
+const say = (o) => fs.appendFileSync(SCRIPT, JSON.stringify(o) + '\n')
+/** The pointer gliding to (x, y), as samples. */
+const glide = async (from, to, steps = 8) => {
+  for (let i = 1; i <= steps; i++) {
+    say({ at: [from[0] + ((to[0] - from[0]) * i) / steps, from[1] + ((to[1] - from[1]) * i) / steps] })
+    await sleep(40)
+  }
 }
 const auth = { Authorization: `Bearer ${TOKEN}`, 'X-Island-Device': 'Test Phone' }
 const post = (p, body) => fetch(BASE + p, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -74,6 +85,7 @@ function listen() {
 
 ;(async () => {
   fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top' }, drop: { on: true } }))
+  fs.writeFileSync(SCRIPT, '')
   const player = spawn('node', [path.join(__dirname, 'fake-player.cjs')])
   let playerLog = ''
   player.stdout.on('data', (d) => (playerLog += d))
@@ -82,7 +94,7 @@ function listen() {
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1' },
+    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1', DI_FAKE_DRAG: SCRIPT },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -145,6 +157,52 @@ function listen() {
       const again = await fetch(`${BASE}/drop/out/${inc.id}`, { headers: auth })
       check('a file is only offered until it’s taken', again.status === 404)
     }
+
+    // ---- Dragging a file to the screen's edge where the phone is ----
+    const photo = path.join(TMP, 'Holiday.png')
+    fs.writeFileSync(photo, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))
+    const screenB = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().bounds)
+    const overlay = () => app.windows().find((w) => w.url().includes('drop.html'))
+    const lit = async () =>
+      overlay()
+        ?.evaluate(() => ({ phase: document.body.dataset.phase ?? '', label: document.querySelector('.aim span')?.textContent ?? '', ready: !!document.querySelector('.aim.ready') }))
+        .catch(() => null)
+    const strip = () =>
+      app.evaluate(({ BrowserWindow }) => {
+        const w = BrowserWindow.getAllWindows().find((x) => x.getTitle() === 'Send to phone')
+        return w ? { visible: w.isVisible(), bounds: w.getBounds() } : null
+      })
+    const before = phone.events.filter((e) => e.ev === 'incoming').length
+    const right = screenB.x + screenB.width
+    const y = screenB.y + Math.round(screenB.height * 0.6)
+    say({ start: [photo] })
+    await glide([right - 700, y], [right - 420, y], 4)
+    check('dragging in the middle of the screen lights nothing', !['aim', 'aim-ready'].includes((await lit())?.phase ?? ''), JSON.stringify(await lit()))
+    await glide([right - 420, y], [right - 100, y], 6)
+    check('nearing the phone’s edge lights it, saying where it goes', await until(async () => (await lit())?.label === 'Send to Test Phone', 3000), JSON.stringify(await lit()))
+    await glide([right - 100, y], [right - 12, y], 4)
+    check('at the edge, letting go will send it', await until(async () => (await lit())?.ready === true && (await lit())?.label === 'Let go to send to Test Phone', 3000), JSON.stringify(await lit()))
+    const st = await strip()
+    check('a strip at the edge takes the drop', !!st?.visible && st.bounds.x + st.bounds.width === right && st.bounds.y <= y && st.bounds.y + st.bounds.height >= y, JSON.stringify(st))
+    await sleep(300)
+    await page.screenshot({ path: path.join(OUT, 'phone-edge.png') }).catch(() => {})
+    say({ end: true })
+    const inc2 = await until(() => phone.events.filter((e) => e.ev === 'incoming')[before]?.msg, 5000)
+    check('letting go sends it to the phone, from that edge', !!inc2 && inc2.name === 'Holiday.png' && inc2.side === 'right' && !!inc2.thumb, JSON.stringify(inc2 && { ...inc2, thumb: !!inc2.thumb }))
+    check('the island shows it going', await until(async () => (await page.textContent('.card.job').catch(() => '')).includes('To Test Phone'), 3000), await page.textContent('.card.job').catch(() => ''))
+    check('and the strip goes', await until(async () => (await strip())?.visible === false, 2000))
+    if (inc2) {
+      await fetch(`${BASE}/drop/out/${inc2.id}`, { headers: auth }).then((r) => r.arrayBuffer())
+      await post(`/drop/out/${inc2.id}/done`, { ok: true })
+    }
+
+    // Letting go short of the edge sends nothing.
+    say({ start: [photo] })
+    await glide([right - 400, y], [right - 120, y], 6)
+    await until(async () => (await lit())?.label === 'Send to Test Phone', 2000)
+    say({ end: true })
+    await sleep(900)
+    check('letting go short of the edge sends nothing', phone.events.filter((e) => e.ev === 'incoming').length === before + 1 && !['aim', 'aim-ready'].includes((await lit())?.phase ?? ''), JSON.stringify(await lit()))
   } catch (e) {
     check('unexpected error', false, e.message)
     await page.screenshot({ path: path.join(OUT, 'phone-failure.png') }).catch(() => {})

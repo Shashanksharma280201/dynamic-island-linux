@@ -49,9 +49,11 @@ scan it from the app.
 - **Share** from any app (Gallery, Files, a browser, WhatsApp): pick **Island Drop**
   in the share sheet and what you shared opens already lifted, ready to flick.
   A link or text arrives on the computer as a `.txt` file.
-- **From the computer**: click the tray icon, **Send a file to <your phone>…**.
-  The phone's edge that faces the computer glows, the file comes out of it
-  and drops into **Received**.
+- **From the computer**: drag a file to the edge of the computer's screen
+  where the phone is (it lights up and says **Send to <your phone>**) and let
+  go, or click the tray icon, **Send a file to <your phone>…**. The phone's
+  edge that faces the computer glows, the file comes out of it and drops into
+  **Received**.
 - **Settings**: stay connected in the background (a quiet ongoing notification
   keeps the link open so approvals and files reach you within seconds; turn
   it off and they arrive when you open the app), show the computer's own

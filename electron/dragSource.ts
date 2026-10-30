@@ -24,6 +24,8 @@ export interface DragSource {
   stop(): void
   /** Move the pointer a pixel and back, where the dragging app only looks under it on a move. */
   nudge(): void
+  /** What's being dragged, asked of the dragging app (X11); [] when it can't say. */
+  files?(timeoutMs?: number): Promise<string[]>
   /** Why it isn't running (no X11, Wayland, a missing helper…). */
   readonly problem: string | null
 }

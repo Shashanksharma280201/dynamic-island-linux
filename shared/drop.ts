@@ -245,9 +245,45 @@ export type DropCmd =
   | { t: 'cancel'; id: string }
   | { t: 'fail'; id: string }
   | DropSendCmd
+  | DropAimCmd
 
 /** How long the file hovers in the glow before a slow transfer goes on in the island instead. */
 export const HOVER_MS = 3500
 
 /** The overlay sending a file to the phone: it's pulled from `from` into the light at the edge. */
 export type DropSendCmd = { t: 'send'; id: string; side: DropSide; at: number; from: { x: number; y: number }; thumb?: string; name: string; ext: string; color: string }
+
+/** The overlay showing where a file dragged on this computer would go: the phone's edge, lit as the pointer nears (an empty label: let go, the label goes). */
+export type DropAimCmd = { t: 'aim'; side: DropSide; at: number; level: number; label?: string; ready?: boolean }
+
+/** How far from the phone's edge (screen units) the light starts when you drag a file toward it… */
+export const EDGE_REACH = 160
+/** … and how near letting go sends it. */
+export const EDGE_SEND = 48
+
+/**
+ * Where a dragged file is, seen from the edge of the screen `b` the phone is
+ * at: how near (0 at EDGE_REACH, 1 on the edge), where along it (0 to 1, left
+ * to right or top to bottom), and whether letting go here sends it. Null when
+ * it's off this screen or not near that edge.
+ */
+export function edgeAim(p: { x: number; y: number }, b: { x: number; y: number; width: number; height: number }, side: DropSide): { closeness: number; along: number; send: boolean } | null {
+  if (p.x < b.x || p.y < b.y || p.x > b.x + b.width || p.y > b.y + b.height) return null
+  const d = side === 'left' ? p.x - b.x : side === 'right' ? b.x + b.width - p.x : side === 'top' ? p.y - b.y : b.y + b.height - p.y
+  if (d > EDGE_REACH) return null
+  const along = side === 'left' || side === 'right' ? (p.y - b.y) / b.height : (p.x - b.x) / b.width
+  return { closeness: Math.min(1, Math.max(0, 1 - d / EDGE_REACH)), along: Math.min(1, Math.max(0, along)), send: d <= EDGE_SEND }
+}
+
+/** The strip at the phone's edge that takes the drop, around `along` (screen units). */
+export function edgeStrip(b: { x: number; y: number; width: number; height: number }, side: DropSide, along: number, length = 420): { x: number; y: number; width: number; height: number } {
+  const depth = EDGE_SEND
+  if (side === 'left' || side === 'right') {
+    const h = Math.min(length, b.height)
+    const y = Math.round(Math.min(Math.max(b.y + along * b.height - h / 2, b.y), b.y + b.height - h))
+    return { x: side === 'left' ? b.x : b.x + b.width - depth, y, width: depth, height: h }
+  }
+  const w = Math.min(length, b.width)
+  const x = Math.round(Math.min(Math.max(b.x + along * b.width - w / 2, b.x), b.x + b.width - w))
+  return { x, y: side === 'top' ? b.y : b.y + b.height - depth, width: w, height: depth }
+}

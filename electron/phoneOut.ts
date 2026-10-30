@@ -42,11 +42,12 @@ export class PhoneOut {
     }
   }
 
-  /** Send files; `from` is where on the screen they start (the pointer, when they were dragged). */
-  async send(paths: string[], from?: { x: number; y: number }): Promise<void> {
+  /** Send files; `from` is where on the screen they start (the pointer, when they were dragged), `along` where on the phone's edge they leave. */
+  async send(paths: string[], from?: { x: number; y: number }, along?: number): Promise<void> {
     const phones = this.d.link.connected()
     const device = phones[0]?.device ?? 'your phone'
-    const { side, at } = this.d.side()
+    const { side, at: usual } = this.d.side()
+    const at = along ?? usual
     for (const path of paths.slice(0, 20)) {
       const st = await stat(path).catch(() => null)
       const name = basename(path)

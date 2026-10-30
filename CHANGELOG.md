@@ -17,10 +17,13 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - The app now has the island's other parts too: what's playing with its
   controls, today's P&L, your Claude Code sessions and the computer's
   notifications (also as phone notifications, if you want).
-- Files go the other way as well: **Send a file to <your phone>…** in the tray
-  menu. The phone's edge that faces the computer lights up and the file comes
-  out of the glow into **Received** (photos and videos also land in the
-  gallery's **Island Drop** album).
+- Files go the other way as well: drag a file from any app to the edge of the
+  screen where your phone is (the side its files come in from). The edge
+  lights up as you get near, following the pointer, and says **Send to <your
+  phone>**; let go and the file is pulled into the light. On the phone, the
+  edge that faces the computer lights up and the file comes out of the glow
+  into **Received** (photos and videos also land in the gallery's **Island
+  Drop** album). Or use **Send a file to <your phone>…** in the tray menu.
 - Smoother everywhere: the lifted file, the glow and the flick now run on the
   phone's UI thread (Reanimated), with springs and haptics; a new tab bar,
   cards that slide in and out, and a background link that keeps approvals

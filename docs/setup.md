@@ -200,8 +200,11 @@ Once paired, the app is also **the island on your phone**:
 - **Settings → Stay connected in the background** (on by default) keeps the
   link open with a quiet ongoing notification, so these reach the phone
   within seconds even when the app is closed.
-- To send a file to the phone, click the tray icon, then **Send a file to
-  <your phone>…**. It lands in the app's **Files → Received**.
+- To send a file to the phone, drag it from any app to the edge of the screen
+  where your phone is (the side its files come in from; the right edge until
+  it has sent one). The edge lights up and says **Send to <your phone>**; let
+  go there. Or click the tray icon, then **Send a file to <your phone>…**. It
+  lands in the app's **Files → Received**.
 
 ## Connect your trading engine
 

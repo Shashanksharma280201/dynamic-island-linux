@@ -27,6 +27,7 @@ import { DropServer } from './dropServer'
 import { DropOverlay } from './dropOverlay'
 import { PhoneDrop } from './phoneDrop'
 import { PhoneLink } from './phoneLink'
+import { PhoneEdge } from './phoneEdge'
 import { PhoneOut } from './phoneOut'
 import { phoneView } from '@shared/phone'
 import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
@@ -737,6 +738,8 @@ async function main() {
     ownDrag: () => dragRing.ownDrag(),
     island: () => win,
   })
+  // Dragging a file to the screen's edge where your phone is sends it there (set up with Phone Drop below).
+  let phoneEdge: PhoneEdge | null = null
   const dragRing = new DragRing({
     on: () => config.drag.on,
     opens: () => ({ when: config.drag.when, dwellMs: config.drag.dwellMs }),
@@ -744,14 +747,23 @@ async function main() {
     onDrop: (d) => dragJobs.run(d),
     // Tests can play a drag the way a system reports one.
     source: process.env.DI_FAKE_DRAG ? scriptedDragSource(process.env.DI_FAKE_DRAG) : undefined,
-    // Holding a file over the island drops it there (Documents), not the ring.
-    avoid: (p) => {
-      if (!cssRect) return false
-      const b = win.getBounds()
-      const m = 24
-      return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+    also: {
+      on: () => config.drop.on,
+      events: {
+        onStart: (files) => phoneEdge?.onStart(files),
+        onSample: (s) => phoneEdge?.onSample(s),
+        onEnd: () => phoneEdge?.onEnd(),
+      },
     },
+    // Holding a file over the island drops it there (Documents), not the ring; at the phone's edge it goes to the phone.
+    avoid: (p) => overIsland(p) || !!phoneEdge?.near(p),
   })
+  function overIsland(p: { x: number; y: number }): boolean {
+    if (!cssRect) return false
+    const b = win.getBounds()
+    const m = 24
+    return p.x >= b.x + cssRect.x - m && p.x <= b.x + cssRect.x + cssRect.width + m && p.y >= b.y + cssRect.y - m && p.y <= b.y + cssRect.y + cssRect.height + m
+  }
   const applyDrag = () =>
     void dragRing.apply().then((ok) => {
       if (!ok && config.drag.on && dragRing.problem) console.log(`[island] drag actions are off here (${dragRing.problem})`)
@@ -800,6 +812,15 @@ async function main() {
     },
   })
   const phoneOut = new PhoneOut({ link: phoneLink, overlay: dropOverlay, present: (id, job, made) => dragJobs.present(id, job, made), side: () => ({ side: phoneDrop.side, at: phoneDrop.at }) })
+  phoneEdge = new PhoneEdge({
+    phone: () => phoneLink.connected()[0]?.device ?? null,
+    side: () => phoneDrop.side,
+    display: () => screen.getDisplayMatching(win.getBounds()),
+    overlay: dropOverlay,
+    dragged: () => dragRing.dragged(),
+    send: (paths, from, at) => void phoneOut.send(paths, from, at),
+    avoid: overIsland,
+  })
   // Tests send files to the phone without the file picker.
   if (process.env.DI_TEST_HOOKS) (globalThis as any).__islandSendToPhone = (paths: string[]) => phoneOut.send(paths)
   phoneChanged = () => phoneLink.changed()
@@ -849,6 +870,8 @@ async function main() {
       if (p.forget) config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
       saveConfig(config)
       if (p.on !== undefined || p.forget) await applyDrop()
+      // Following drags (to send to the phone) depends on Phone Drop too.
+      if (p.on !== undefined) applyDrag()
       return config.drop.on ? dropProblem : null
     },
     pickDropFolder: async (parent) => {
@@ -1454,6 +1477,7 @@ async function main() {
     phoneLink.stop()
     dropServer.stop()
     phoneDrop.stop()
+    phoneEdge?.stop()
     dropOverlay.destroy()
     closeImagePage()
     claudeCode.dispose()
