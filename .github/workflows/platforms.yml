@@ -40,6 +40,19 @@ jobs:
           exit $s
         env:
           SHOTS: shots
+      - name: Drag actions on Windows, known without the drag image (by OLE holding the mouse)
+        timeout-minutes: 6
+        shell: bash
+        run: |
+          set +e
+          node e2e/drag-win.cjs > drag-win-capture.txt 2>&1
+          s=$?
+          cat drag-win-capture.txt
+          grep -E "^(PASS|FAIL)|checks passed|app log|windows during|watcher said" drag-win-capture.txt | sed 's/%/%25/g' | while read -r l; do echo "::notice title=drag-win (capture)::$l"; done
+          exit $s
+        env:
+          SHOTS: shots/capture
+          DI_DRAG_SIGNAL: capture
       - name: Build the installer (as in the README)
         run: npm run package
       - uses: actions/upload-artifact@v4

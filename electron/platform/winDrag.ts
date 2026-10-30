@@ -19,7 +19,8 @@ import type { DragEvents, DragSource } from '../dragSource'
  *   that way for the whole drag, whatever is under the pointer.
  * One JSON object a line: {"ready":true}, {"start":true,"by":"image"|"capture"},
  * {"held":true,"alt":false} while the drag goes on, {"end":true}; with
- * DI_DRAG_DEBUG set, {"debug":"..."} lines say what it saw. Reads "nudge"
+ * DI_DRAG_DEBUG set, {"debug":"..."} lines say what it saw (and with
+ * DI_DRAG_SIGNAL=capture it goes by the mouse alone, for tests). Reads "nudge"
  * lines: the pointer moves a pixel and back, so the dragging app looks again
  * at what's under it (the ring that just opened there).
  */
@@ -54,6 +55,7 @@ public static class IslandDrag {
   const uint NOT_A_DRAG = 0x2 | 0x4 | 0x8 | 0x10;
   const uint MOVE = 1, ABSOLUTE = 0x8000, VIRTUALDESK = 0x4000;
   static readonly bool debug = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DI_DRAG_DEBUG"));
+  static readonly bool byImage = Environment.GetEnvironmentVariable("DI_DRAG_SIGNAL") != "capture";
   static readonly object say = new object();
   static void Say(string s) { lock (say) { Console.Out.WriteLine(s); Console.Out.Flush(); } }
   static bool Down(int vk) { return (GetAsyncKeyState(vk) & 0x8000) != 0; }
@@ -131,7 +133,7 @@ public static class IslandDrag {
         POINT now;
         GetCursorPos(out now);
         bool moved = Math.Abs(now.X - press.X) >= GetSystemMetrics(SM_CXDRAG) || Math.Abs(now.Y - press.Y) >= GetSystemMetrics(SM_CYDRAG);
-        string by = DragImage() ? "image" : (moved && OleDrag(pressThread) ? "capture" : null);
+        string by = byImage && DragImage() ? "image" : (moved && OleDrag(pressThread) ? "capture" : null);
         if (debug && moved) {
           string seen = Seen(pressThread);
           if (seen != said) {

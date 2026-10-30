@@ -107,6 +107,9 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
       await sleep(60)
     }
     check('the drag started', said.includes('dragging'), said.trim().replace(/\n/g, ' | '))
+    // DI_DRAG_SIGNAL=capture: the watcher ignores the drag image and has to know the drag by OLE holding the mouse.
+    const by = /"start":true,"by":"(\w+)"/.exec(logs.join(''))?.[1]
+    if (process.env.DI_DRAG_SIGNAL === 'capture') check('the watcher knew it by the mouse capture alone', by === 'capture', by)
     await until(() => seen.classes !== 'listing', 8000)
     console.log(`windows during the drag: ${seen.classes}`)
     // Every distinct line (what it saw, and which sign started the drag), not each "held".
