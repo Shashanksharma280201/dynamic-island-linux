@@ -66,7 +66,9 @@ export function DropSection({ s }: { s: SettingsState }) {
           </label>
         )}
         {d.on && (err || d.problem) && <div className="hint service-status bad">{err || d.problem}</div>}
-        {d.on && !err && !d.problem && d.listening && <div className="hint service-status ok">Ready on port {d.port}</div>}
+        {d.on && !err && !d.problem && d.listening && (
+          <div className="hint service-status ok">{d.phones.length ? `Connected: ${d.phones.join(', ')}` : `Ready on port ${d.port}`}</div>
+        )}
       </div>
       {d.on && d.link && (
         <div className="service-row connected-phone">

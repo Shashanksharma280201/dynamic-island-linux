@@ -1,4 +1,4 @@
-import type { DropCmd, DropSide } from '@shared/drop'
+import type { DropCmd, DropSendCmd, DropSide } from '@shared/drop'
 import './drop.css'
 
 /**
@@ -19,7 +19,7 @@ const ctx = canvas.getContext('2d')!
 const K = 0.5
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1 }
+const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1, sweepIn: true }
 const pending = new Map<string, { side: DropSide; at: number; thumb?: string; name: string; ext: string; color: string }>()
 const thumbs = new Map<string, Thumb>()
 let running = false
@@ -162,7 +162,9 @@ function draw(t: number) {
     const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
     const env = Math.sin(Math.PI * u)
     const reach = span * 1.25
-    const c = { x: p.x + n.x * e * reach, y: p.y + n.y * e * reach }
+    // Into the screen for a file that arrived; toward the edge for one leaving.
+    const d = glow.sweepIn ? e * reach : (1 - e) * reach
+    const c = { x: p.x + n.x * d, y: p.y + n.y * d }
     const half = span * 0.13
     const g = ctx.createLinearGradient(c.x - n.x * half, c.y - n.y * half, c.x + n.x * half, c.y + n.y * half)
     const stops: [number, string][] = [
@@ -265,6 +267,7 @@ async function fly(id: string, to: V, sweep: boolean) {
   th.bar.classList.remove('on')
   if (sweep) {
     glow.sweep = 0
+    glow.sweepIn = true
     glow.flash = 1
   }
   glow.goal = 0
@@ -305,6 +308,42 @@ function splash(at: V) {
     ],
     { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' },
   ).onfinish = () => s.remove()
+}
+
+/** A file leaving for the phone: it swings toward the edge and the light takes it. */
+function sendOut(c: DropSendCmd) {
+  glow.side = c.side
+  glow.at = c.at
+  glow.goal = 1
+  const { p, n } = edge(c.side, c.at)
+  const th = makeThumb(c.id, c)
+  thumbs.set(c.id, th)
+  th.leaving = true
+  const from = c.from
+  // Through a point a little off the straight line, so it swings in.
+  const mid = { x: (from.x + p.x) / 2 + n.y * 60, y: (from.y + p.y) / 2 - Math.abs(n.x) * 70 }
+  const gone = { x: p.x - n.x * 60, y: p.y - n.y * 60 }
+  const turn = n.x !== 0 ? `rotateY(${n.x < 0 ? 38 : -38}deg)` : `rotateX(${n.y < 0 ? -38 : 38}deg)`
+  const a = th.el.animate(
+    [
+      { transform: place(from, 0.85), opacity: 0, filter: 'brightness(1)' },
+      { transform: place(from, 1.06), opacity: 1, offset: 0.14 },
+      { transform: place(mid, 0.82, 'rotateZ(4deg)'), offset: 0.5 },
+      { transform: place(p, 0.34, turn), opacity: 1, filter: 'brightness(1.9) blur(1px)', offset: 0.86 },
+      { transform: place(gone, 0.12, turn), opacity: 0, filter: 'brightness(2.4) blur(4px)' },
+    ],
+    { duration: reduced ? 320 : 1150, easing: 'cubic-bezier(.45,0,.3,1)', fill: 'forwards' },
+  )
+  setPhase('send')
+  a.onfinish = () => {
+    th.el.remove()
+    thumbs.delete(c.id)
+    glow.flash = 1
+    glow.sweep = 0
+    glow.sweepIn = false
+    glow.goal = 0
+  }
+  wake()
 }
 
 function fail(id: string) {
@@ -352,6 +391,7 @@ window.island.drop.onCmd((c: DropCmd) => {
     setPhase('cancel')
     wake()
   } else if (c.t === 'fail') fail(c.id)
+  else if (c.t === 'send') sendOut(c)
 })
 setPhase('idle')
 window.island.drop.ready()

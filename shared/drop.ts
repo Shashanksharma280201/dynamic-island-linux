@@ -69,6 +69,8 @@ export type DropStatus = {
   link?: string
   /** This computer's name, as the phone shows it. */
   name: string
+  /** Phones connected now (Island Drop open, or keeping in touch in the background). */
+  phones: string[]
 }
 
 export const DROP_DEFAULTS: DropConfig = { on: false, folder: 'downloads', port: DROP_DEFAULT_PORT, secret: '' }
@@ -242,6 +244,10 @@ export type DropCmd =
   | { t: 'stow'; id: string; to: { x: number; y: number } }
   | { t: 'cancel'; id: string }
   | { t: 'fail'; id: string }
+  | DropSendCmd
 
 /** How long the file hovers in the glow before a slow transfer goes on in the island instead. */
 export const HOVER_MS = 3500
+
+/** The overlay sending a file to the phone: it's pulled from `from` into the light at the edge. */
+export type DropSendCmd = { t: 'send'; id: string; side: DropSide; at: number; from: { x: number; y: number }; thumb?: string; name: string; ext: string; color: string }

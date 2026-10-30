@@ -2,6 +2,7 @@ import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, s
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { readFile } from 'node:fs/promises'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
 import { MediaProvider } from './providers/media'
@@ -25,6 +26,9 @@ import { decryptSecret, encryptSecret } from './secrets'
 import { DropServer } from './dropServer'
 import { DropOverlay } from './dropOverlay'
 import { PhoneDrop } from './phoneDrop'
+import { PhoneLink } from './phoneLink'
+import { PhoneOut } from './phoneOut'
+import { phoneView } from '@shared/phone'
 import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
@@ -364,9 +368,12 @@ async function main() {
   const recap = new RecapStore(join(app.getPath('userData'), 'recap.json'), () => config.recap)
 
   // ---- Claude Code sessions in your terminals, live ----
+  // The phone hears about changes once its link exists (Phone Drop, below).
+  let phoneChanged = () => {}
   const sessions = new SessionTracker({
     onChange: (list) => {
       send(win, SESSIONS.CHANGED, list)
+      phoneChanged()
       // While any work: one small orb for all of them, the busiest first.
       const working = list.filter((x) => x.phase === 'working')
       if (working.length) store.upsert({ kind: 'session', id: 'agent-sessions', priority: 2, session: working[0], others: working.length - 1 })
@@ -772,7 +779,33 @@ async function main() {
     },
     folderLabel: dropFolderLabel,
   })
-  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop })
+  // The island on your phone: what it shows, and its answers (through the same decide() as a click here).
+  const phoneLink = new PhoneLink({
+    view: () => phoneView({ name: hostname(), activities: store.list(), sessions: sessions.list(), center: center.view(), now: Date.now() }),
+    decide: (m) => decide(m),
+    media: (c) => void media.command(c),
+    art: async () => {
+      const u = nowPlaying?.artUrl
+      if (!u || !/^(file:\/\/|\/)/.test(u)) return null
+      const p = u.startsWith('file://') ? fileURLToPath(u) : u
+      const bytes = await readFile(p)
+      if (bytes.length > 4 * 1024 * 1024) return null
+      return { bytes, type: /\.png$/i.test(p) ? 'image/png' : /\.webp$/i.test(p) ? 'image/webp' : 'image/jpeg' }
+    },
+    delivered: (id, ok, device) => phoneOut.delivered(id, ok, device),
+    progress: (id, got, size) => phoneOut.progress(id, got, size),
+    onPhones: () => {
+      tray?.refresh()
+      settings?.changed()
+    },
+  })
+  const phoneOut = new PhoneOut({ link: phoneLink, overlay: dropOverlay, present: (id, job, made) => dragJobs.present(id, job, made), side: () => ({ side: phoneDrop.side, at: phoneDrop.at }) })
+  // Tests send files to the phone without the file picker.
+  if (process.env.DI_TEST_HOOKS) (globalThis as any).__islandSendToPhone = (paths: string[]) => phoneOut.send(paths)
+  phoneChanged = () => phoneLink.changed()
+  store.onChange(phoneChanged)
+  center.onChange(phoneChanged)
+  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop, extra: (req, res, url) => phoneLink.handle(req, res, url) })
   let dropProblem: string | null = null
   const applyDrop = async () => {
     dropServer.stop()
@@ -798,6 +831,7 @@ async function main() {
       listening,
       problem: dropProblem ?? (config.drop.on && listening && !urls.length ? 'This computer has no Wi-Fi, Ethernet or Tailscale address for your phone to reach' : null),
       name: hostname(),
+      phones: phoneLink.connected().map((p) => p.device),
       link: config.drop.on && dropToken() && urls.length ? dropPairingLink(hostname(), dropToken(), urls) : undefined,
     }
   }
@@ -1357,6 +1391,7 @@ async function main() {
       dnd: config.dnd,
       dragActions: process.platform === 'linux' ? config.drag.on : null,
       centerCount: center.view().entries.length,
+      phone: phoneLink.connected()[0]?.device ?? null,
     }),
     {
       setDnd,
@@ -1386,6 +1421,10 @@ async function main() {
       openSettings: () => settings?.open(),
       tour: () => send(win, IPC.TOUR, null),
       recap: () => showRecap(true),
+      sendToPhone: async () => {
+        const r = await dialog.showOpenDialog({ title: 'Send to your phone', properties: ['openFile', 'multiSelections'] })
+        if (!r.canceled && r.filePaths.length) void phoneOut.send(r.filePaths)
+      },
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },
@@ -1412,6 +1451,7 @@ async function main() {
     clearInterval(crmTimer)
     crm.flush()
     dragRing.stop()
+    phoneLink.stop()
     dropServer.stop()
     phoneDrop.stop()
     dropOverlay.destroy()

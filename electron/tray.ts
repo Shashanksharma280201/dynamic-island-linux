@@ -10,6 +10,8 @@ export type TrayState = {
   dragActions: boolean | null
   /** How many notifications the notification center holds. */
   centerCount: number
+  /** The phone listening for files (Phone Drop), if one is. */
+  phone: string | null
 }
 
 export type TrayActions = {
@@ -24,6 +26,8 @@ export type TrayActions = {
   tour: () => void
   /** Last week's recap. */
   recap: () => void
+  /** Pick files and send them to the phone. */
+  sendToPhone: () => void
   uninstall: () => void
   quit: () => void
 }
@@ -67,6 +71,7 @@ export class IslandTray {
         { type: 'separator' },
         { label: 'Settings… (WhatsApp, Mail)', click: () => this.actions.openSettings() },
         { label: 'Weekly recap', click: () => this.actions.recap() },
+        ...(s.phone ? [{ label: `Send a file to ${s.phone}…`, click: () => this.actions.sendToPhone() }] : []),
         { label: 'Show me around', click: () => this.actions.tour() },
         { type: 'separator' },
         {

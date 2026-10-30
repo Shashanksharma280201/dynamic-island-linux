@@ -28,6 +28,8 @@ type Deps = {
   /** This computer's name, for the phone's list. */
   name: () => string
   events: DropEvents
+  /** Everything else a paired phone asks for (the island on the phone: /island/…, /drop/out/…): true if handled. */
+  extra?: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>
 }
 
 const MAX_JSON = 400_000
@@ -84,7 +86,7 @@ export class DropServer {
 
   private async handle(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url ?? '/', 'http://island')
-    if (!url.pathname.startsWith('/drop/')) return send(res, 404, { ok: false, message: 'Not here' })
+    if (!url.pathname.startsWith('/drop/') && !url.pathname.startsWith('/island/')) return send(res, 404, { ok: false, message: 'Not here' })
     if (!this.authorized(req)) {
       req.resume()
       return send(res, 401, { ok: false, message: 'This phone isn’t paired with this computer. Scan the QR again.' })
@@ -104,6 +106,7 @@ export class DropServer {
       return send(res, 200, { ok: true })
     }
     if (route === 'PUT /drop/file') return this.receive(req, res, url)
+    if (this.d.extra && (await this.d.extra(req, res, url))) return
     req.resume()
     return send(res, 404, { ok: false, message: 'Not here' })
   }
