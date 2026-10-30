@@ -5350,6 +5350,14 @@ button .spinner-orb,
   border-radius: 3px 8px 3px 3px;
   background: #f2f2f6;
 }
+.job-thumb {
+  flex: none;
+  width: 44px;
+  height: 36px;
+  border-radius: 7px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
 .job-doc i {
   position: absolute;
   left: 6px;
@@ -5379,4 +5387,199 @@ button .spinner-orb,
     width: 100%;
     opacity: 0.5;
   }
+}
+
+/* ---------------------------------------------------------------------------
+   Connected packages (the trading engine): capsule, approval card, tab
+   --------------------------------------------------------------------------- */
+.tone-up {
+  color: var(--green);
+}
+.tone-down {
+  color: var(--red);
+}
+.tone-warn {
+  color: var(--orange);
+}
+.connected-capsule {
+  gap: 6px;
+  padding: 10px 4px;
+}
+.connected-capsule .cc-arrow {
+  font-size: 11px;
+  line-height: 1;
+}
+.connected-capsule .cc-short {
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.2px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  white-space: nowrap;
+}
+.island-outer.top .connected-capsule .cc-short {
+  writing-mode: horizontal-tb;
+  transform: none;
+  font-size: 13px;
+}
+.detached-glyph.connected.tone-up {
+  color: var(--green);
+}
+.detached-glyph.connected.tone-down {
+  color: var(--red);
+}
+.detached-glyph.connected.tone-warn {
+  color: var(--orange);
+}
+.pkg-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+}
+.pkg-icon .app-icon {
+  width: 22px;
+  height: 22px;
+}
+.connected-ask .ask-title {
+  margin-bottom: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.connected-ask[data-tone='up'] .ask-title {
+  color: var(--green);
+}
+.connected-ask[data-tone='down'] .ask-title {
+  color: var(--red);
+}
+.ask-timer {
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+}
+.ask-timer.low {
+  color: var(--orange);
+  background: rgba(255, 159, 10, 0.16);
+}
+.ask-lines {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 4px;
+}
+.ask-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+}
+.ask-label {
+  color: var(--label-3);
+}
+.ask-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.ask-note {
+  margin-top: 4px;
+}
+.pill.allow.sell {
+  background: var(--red);
+}
+.pill.danger {
+  color: var(--red);
+}
+.pill.deny.danger {
+  color: #fff;
+  background: var(--red);
+}
+.connected-status .cs-big {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin: 4px 0 2px;
+}
+.connected-view .cv-big {
+  margin: 2px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.connected-view .cv-big b {
+  font-size: 26px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.connected-view .cv-big span {
+  font-size: 12px;
+  color: var(--label-2);
+}
+.cv-live {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--label-2);
+  background: rgba(255, 255, 255, 0.08);
+}
+.cv-live.live {
+  color: var(--green);
+  background: rgba(48, 209, 88, 0.14);
+}
+.cv-live.error {
+  color: var(--red);
+  background: rgba(255, 69, 58, 0.14);
+}
+.cv-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 6px 0 2px;
+}
+.cv-stat {
+  display: flex;
+  flex-direction: column;
+  padding: 7px 9px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.05);
+}
+.cv-stat-label {
+  font-size: 10.5px;
+  color: var(--label-3);
+}
+.cv-stat-value {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.cv-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.cv-action {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cv-confirm {
+  padding: 9px 10px;
+  border-radius: 12px;
+  background: rgba(255, 69, 58, 0.1);
+}
+.cv-confirm-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+.cv-note.tone-warn {
+  color: var(--orange);
+}
+.cv-seen {
+  margin-top: 8px;
 }

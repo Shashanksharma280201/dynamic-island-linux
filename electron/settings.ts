@@ -13,8 +13,11 @@ import { isAutostartEnabled, setAutostart } from './autostart'
 import type { ShortcutId } from '@shared/shortcuts'
 import { parseDisplayPref } from '@shared/displays'
 import { parseDragConfig } from '@shared/dragActions'
+import type { DropStatus } from '@shared/drop'
 import { SERVICE_IDS, type ServiceId } from '@shared/services'
 import type { ServiceHub } from './services'
+import type { ConnectedHub } from './connected'
+import { cleanUrl } from '@shared/connected'
 import { displayChoices } from './window'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
@@ -52,9 +55,15 @@ type Deps = {
   setCompanion: (on: boolean) => void
   /** Whether drag actions can run here, and why not. */
   drag: () => { available: boolean; problem: string | null }
+  /** Phone Drop as Settings shows it. */
+  drop: () => DropStatus
+  /** Turn Phone Drop on or off, change its folder, or forget paired phones: an error, or null. */
+  setDrop: (patch: { on?: boolean; folder?: string; forget?: boolean }) => Promise<string | null>
+  pickDropFolder: (win: BrowserWindow) => Promise<string | null>
   onDrag: () => void
   setDisplay: (pref: string) => void
   services: () => ServiceHub
+  connected: () => ConnectedHub
   clearRecap: () => void
   showRecap: () => void
   setDictation: (on: boolean) => void
@@ -107,12 +116,26 @@ export class SettingsController {
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
       drag: { ...config.drag, ...this.d.drag() },
+      drop: this.d.drop(),
       display: config.display,
       recap: config.recap,
       services: SERVICE_IDS.map((id) => {
         const st = this.d.services().view().find((v) => v.id === id)
         return { id, on: config.services[id].on, hasKey: !!config.services[id].secret, url: config.services[id].url, error: st?.error, checkedAt: st?.checkedAt }
       }),
+      connected: (() => {
+        const v = this.d.connected().view()
+        return {
+          on: config.connected.on,
+          url: config.connected.url,
+          hasKey: !!config.connected.secret,
+          phase: v.phase,
+          error: v.error,
+          name: v.manifest?.name,
+          pairingLink: v.manifest?.pairingLink,
+          phoneUrl: v.manifest?.phoneUrl,
+        }
+      })(),
       displays: displayChoices(),
       dictation: config.dictation,
       dictationActive: this.d.dictationActive(),
@@ -290,9 +313,58 @@ export class SettingsController {
       this.d.services().restart(sid)
       return null
     })
+    ipcMain.handle(SETTINGS.SET_CONNECTED, async (_e, patch) => {
+      if (!patch || typeof patch !== 'object') return 'Nothing to change'
+      const cur = config.connected
+      const next = { ...cur }
+      if (typeof patch.on === 'boolean') next.on = patch.on
+      if (typeof patch.url === 'string') {
+        const url = cleanUrl(patch.url)
+        if (patch.url.trim() && !url) return 'That doesn’t look like an address (http://127.0.0.1:8765)'
+        next.url = url
+      }
+      const token = typeof patch.token === 'string' ? patch.token.trim() : null
+      // A new token or address is tried before it's kept.
+      if ((token || (typeof patch.url === 'string' && next.url !== cur.url)) && next.on && next.url) {
+        const key = token || (cur.secret ? decryptSecret(cur.secret) : '')
+        if (key) {
+          const err = await this.d.connected().verify(next.url, key)
+          if (err) return err
+        }
+      }
+      if (token !== null) next.secret = token ? encryptSecret(token) : ''
+      config.connected = next
+      this.save()
+      this.d.connected().restart()
+      return null
+    })
+    ipcMain.handle(SETTINGS.QR, async (_e, value: unknown) => {
+      // Only pairing links, so this can't be used to render arbitrary text.
+      if (typeof value !== 'string' || !(value.startsWith('daytrader://pair?') || value.startsWith('islanddrop://pair?')) || value.length > 1000) return null
+      const QRCode = (await import('qrcode')).default
+      return QRCode.toDataURL(value, { margin: 1, width: 240 })
+    })
     ipcMain.handle(SETTINGS.SET_DISPLAY, (_e, pref) => {
       this.d.setDisplay(parseDisplayPref(pref))
       this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_DROP, async (_e, patch) => {
+      if (!patch || typeof patch !== 'object') return 'Nothing to change'
+      const p: { on?: boolean; folder?: string; forget?: boolean } = {}
+      if (typeof patch.on === 'boolean') p.on = patch.on
+      if (typeof patch.folder === 'string') p.folder = patch.folder
+      if (patch.forget === true) p.forget = true
+      const err = await this.d.setDrop(p)
+      this.changed()
+      return err
+    })
+    ipcMain.handle(SETTINGS.PICK_DROP_FOLDER, async () => {
+      const dir = this.win ? await this.d.pickDropFolder(this.win) : null
+      if (dir) {
+        await this.d.setDrop({ folder: dir })
+        this.changed()
+      }
+      return dir
     })
     ipcMain.handle(SETTINGS.SET_DRAG, (_e, patch) => {
       if (!patch || typeof patch !== 'object') return

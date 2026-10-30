@@ -11,6 +11,7 @@ import {
   NotificationsAppIcon,
   SessionsAppIcon,
   ServicesAppIcon,
+  ConnectedAppIcon,
   CrmAppIcon,
   DocsAppIcon,
   MailAppIcon,
@@ -25,6 +26,7 @@ const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'alerts', label: 'Notifications', icon: <NotificationsAppIcon /> },
   { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
   { id: 'sessions', label: 'Sessions', icon: <SessionsAppIcon /> },
+  { id: 'connected', label: 'Connected', icon: <ConnectedAppIcon /> },
   { id: 'services', label: 'Services', icon: <ServicesAppIcon /> },
   { id: 'music', label: 'Music', icon: <SpotifyAppIcon /> },
   { id: 'chats', label: 'Chats', icon: <WhatsAppIcon /> },
@@ -118,6 +120,7 @@ export function Rail({
   hidden = [],
   alerts = 0,
   sessions = 0,
+  connected,
 }: {
   tab: HubTab
   onTab: (t: HubTab) => void
@@ -127,6 +130,8 @@ export function Rail({
   alerts?: number
   /** Sessions in your terminals that need you. */
   sessions?: number
+  /** The connected package's name (its tab's label) and approvals waiting. */
+  connected?: { name: string; waiting: number }
 }) {
   const unread = useUnread()
   // One selection pill that slides from tab to tab. (Not a shared-layout
@@ -138,20 +143,21 @@ export function Rail({
     setPillY(on ? on.offsetTop : null)
   }, [tab, hidden.join()])
   const badge = (id: HubTab) =>
-    id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : id === 'sessions' ? badgeText(sessions) : ''
+    id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : id === 'sessions' ? badgeText(sessions) : id === 'connected' ? badgeText(connected?.waiting) : ''
   return (
     <div ref={railRef} className="rail" role="tablist" aria-orientation="vertical" onClick={(e) => e.stopPropagation()}>
       {pillY !== null && <motion.span className="rail-pill" initial={false} animate={{ y: pillY }} transition={pop} aria-hidden />}
       {ITEMS.filter((it) => !hidden.includes(it.id)).map((it) => {
         const b = badge(it.id)
         const count = it.id === 'chats' ? unread?.chats : it.id === 'mail' ? unread?.mail : it.id === 'alerts' ? alerts : it.id === 'sessions' ? sessions : null
-        const title = it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} ${it.id === 'alerts' ? 'new' : it.id === 'sessions' ? 'need you' : 'unread'}` : it.label
+        const label = it.id === 'connected' && connected?.name ? connected.name : it.label
+        const title = it.id === 'connected' ? (b ? `${label} · ${connected?.waiting} waiting for you` : label) : it.id === 'claude' ? usageTitle(usage) : b ? `${it.label} · ${count} ${it.id === 'alerts' ? 'new' : it.id === 'sessions' ? 'need you' : 'unread'}` : it.label
         return (
           <button
             key={it.id}
             role="tab"
             aria-selected={tab === it.id}
-            aria-label={it.label}
+            aria-label={label}
             title={title}
             className={`rail-btn${tab === it.id ? ' on' : ''}`}
             onClick={() => onTab(it.id)}

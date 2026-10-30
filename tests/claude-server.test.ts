@@ -110,3 +110,17 @@ test('parseRequest validates untrusted fields', () => {
     suggestions: undefined,
   })
 })
+
+test('stop does not wait for a hook that is still connected', async () => {
+  const sock = sockPath()
+  const server = new ClaudeServer(sock)
+  const events: unknown[] = []
+  server.onEvent((e) => events.push(e))
+  await server.start()
+  // A session hook that sent an event and hasn't hung up yet.
+  const { client, replies } = connect(sock, [encode({ type: 'event', event: { kind: 'start', session: 's1', cwd: '/tmp' } })])
+  await new Promise<void>((r) => client.once('connect', () => setTimeout(r, 50)))
+  const stopped = await Promise.race([server.stop().then(() => 'stopped'), new Promise((r) => setTimeout(() => r('stuck'), 1500))])
+  expect(stopped).toBe('stopped')
+  await replies
+})

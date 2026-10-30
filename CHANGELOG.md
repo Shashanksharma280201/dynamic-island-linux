@@ -6,6 +6,37 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Phone Drop: files from your phone, with a glow**
+
+- Flick photos and files from your Android phone to this computer with the new
+  **Island Drop** app: hold a file and move it toward the side of the phone
+  that faces your computer. That edge of the screen lights up, white with a
+  ring of colour; let go and the file comes out of the light, a band of colour
+  sweeps across the screen, and the file flies into the island, which shows it
+  to open, show in its folder, undo or drag out.
+- Turn it on in **Settings → Phone Drop** and pair with its QR. Only paired
+  phones can send; files are saved to Downloads (or the Desktop, or a folder
+  you pick) and never over another file. Big files carry on in the island
+  with a progress bar.
+- The app's APK is built by GitHub Actions (**Island Drop (Android)**).
+
+**Connected: your trading engine on the island**
+
+- A new **Connected** package shows a service you run (the first one is the
+  [Day-Trading](https://github.com/Shashanksharma280201/Day-Trading) engine)
+  right on the island: today's P&L on the capsule, every trade it wants to make
+  as a card with **Buy / Skip** and a countdown, and its own tab with open
+  positions, today's trades and **Stop trading today**.
+- Only your click (or the approval shortcut) answers a card. No answer before
+  the countdown ends means no; the island's assistant can read what it shows
+  but can't answer for you.
+- Set it up in **Settings → Connected** (address and token, tried before
+  they're kept; the token is encrypted). The same section shows a QR to pair
+  the Day-Trading Android app with the same engine.
+- Everything shown comes from the service, so it can change what you see
+  without a new island release (protocol in Day-Trading's
+  `docs/island-protocol.md`).
+
 **Drag actions on macOS and Windows**
 
 - Drag actions now work on a Mac and on Windows too: drag a file in any app,

@@ -1,6 +1,6 @@
 import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
@@ -21,7 +21,11 @@ import { closeCursor } from './cursor'
 import { send, wireIpc } from './ipc'
 import { IslandTray } from './tray'
 import { dayOf, greeting, loadConfig, saveConfig } from './config'
-import { decryptSecret } from './secrets'
+import { decryptSecret, encryptSecret } from './secrets'
+import { DropServer } from './dropServer'
+import { DropOverlay } from './dropOverlay'
+import { PhoneDrop } from './phoneDrop'
+import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
   agentHooks,
@@ -56,7 +60,8 @@ import { wireSpotify } from './spotifyIpc'
 import { SPOTIFY } from './spotifyChannels'
 import { spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
-import { homedir } from 'node:os'
+import { homedir, hostname, networkInterfaces } from 'node:os'
+import { randomBytes } from 'node:crypto'
 import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
@@ -73,6 +78,9 @@ import { SESSIONS } from './sessionChannels'
 import { focusTerminal, frontWindow, terminalFocused } from './terminal'
 import { captureWindow, type FrontWindow } from './attach'
 import { ServiceHub } from './services'
+import { ConnectedHub, syncActivities } from './connected'
+import { CONNECTED } from './connectedChannels'
+import { askIdOf, viewText } from '@shared/connected'
 import { SERVICES } from './servicesChannels'
 import { safeServiceUrl, serviceInfo, SERVICE_IDS, type ServiceId } from '@shared/services'
 import { CLAUDE } from './claudeChannels'
@@ -522,6 +530,10 @@ async function main() {
         media: { now: () => nowPlaying, command: (c) => media.command(c) },
         spotify,
         docs,
+        connected: { text: () => {
+          const v = connectedHub.view()
+          return viewText(v.manifest, v.view, v.phase)
+        } },
         crm: {
           store: crm,
           // One batch per answer: its changes undo in one go.
@@ -750,8 +762,76 @@ async function main() {
     })
   applyDrag()
 
+  // ---- Phone Drop: files flicked from your phone land here ----
+  const dropFolder = () =>
+    process.env.DI_DROP_FOLDER || (config.drop.folder === 'downloads' ? app.getPath('downloads') : config.drop.folder === 'desktop' ? app.getPath('desktop') : config.drop.folder)
+  const dropFolderLabel = () =>
+    process.env.DI_DROP_FOLDER ? basename(process.env.DI_DROP_FOLDER) : config.drop.folder === 'downloads' ? 'Downloads' : config.drop.folder === 'desktop' ? 'Desktop' : basename(config.drop.folder)
+  const dropToken = () => process.env.DI_DROP_TOKEN || (config.drop.on && config.drop.secret ? decryptSecret(config.drop.secret) : '')
+  const dropPort = () => Number(process.env.DI_DROP_PORT) || config.drop.port
+  const dropOverlay = new DropOverlay({
+    display: () => screen.getDisplayMatching(win.getBounds()),
+    onLanded: (id) => phoneDrop.landed(id),
+  })
+  const phoneDrop = new PhoneDrop({
+    overlay: dropOverlay,
+    present: (id, job, made) => dragJobs.present(id, job, made),
+    // Files land in the island's capsule.
+    target: () => {
+      const b = win.getBounds()
+      return cssRect ? { x: b.x + cssRect.x + cssRect.width / 2, y: b.y + cssRect.y + cssRect.height / 2 } : { x: b.x + b.width / 2, y: b.y + 20 }
+    },
+    folderLabel: dropFolderLabel,
+  })
+  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop })
+  let dropProblem: string | null = null
+  const applyDrop = async () => {
+    dropServer.stop()
+    dropProblem = null
+    if (!config.drop.on) return
+    if (!dropToken()) {
+      config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
+      saveConfig(config)
+    }
+    dropProblem = await dropServer.start(dropPort())
+    if (dropProblem) console.log(`[island] phone drop: ${dropProblem}`)
+    else console.log(`[island] phone drop listening on port ${dropPort()}`)
+  }
+  void applyDrop()
+  const dropStatus = (): DropStatus => {
+    const urls = dropAddresses(networkInterfaces(), dropPort())
+    const listening = dropServer.listening
+    return {
+      on: config.drop.on,
+      folder: config.drop.folder,
+      folderLabel: dropFolderLabel(),
+      port: dropPort(),
+      listening,
+      problem: dropProblem ?? (config.drop.on && listening && !urls.length ? 'This computer has no Wi-Fi, Ethernet or Tailscale address for your phone to reach' : null),
+      name: hostname(),
+      link: config.drop.on && dropToken() && urls.length ? dropPairingLink(hostname(), dropToken(), urls) : undefined,
+    }
+  }
+
   settings = new SettingsController({
     drag: () => ({ available: DRAG_HERE, problem: dragRing.problem }),
+    drop: dropStatus,
+    setDrop: async (p) => {
+      if (p.folder !== undefined) {
+        if (!['downloads', 'desktop'].includes(p.folder) && !isAbsolute(p.folder)) return 'Pick a folder'
+        config.drop.folder = p.folder
+      }
+      if (p.on !== undefined) config.drop.on = p.on
+      // A new token: phones paired before have to scan the QR again.
+      if (p.forget) config.drop.secret = encryptSecret(randomBytes(32).toString('base64url'))
+      saveConfig(config)
+      if (p.on !== undefined || p.forget) await applyDrop()
+      return config.drop.on ? dropProblem : null
+    },
+    pickDropFolder: async (parent) => {
+      const r = await dialog.showOpenDialog(parent, { title: 'Where files from your phone go', defaultPath: dropFolder(), properties: ['openDirectory', 'createDirectory'] })
+      return r.canceled || !r.filePaths[0] ? null : r.filePaths[0]
+    },
     onDrag: () => {
       applyDrag()
       tray?.refresh()
@@ -788,6 +868,7 @@ async function main() {
     setCompanion: (on) => setCompanion(on),
     setDisplay: (pref) => setDisplay(pref),
     services: () => serviceHub,
+    connected: () => connectedHub,
     clearRecap: () => recap.clear(),
     showRecap: () => showRecap(true),
     setDictation: (on) => {
@@ -842,7 +923,12 @@ async function main() {
     onSpotifyClient: () => spotify.signOut(),
     setUsageBridge: (on) => setUsageBridgeInstalled(on),
     onCharacter: () => pushCharacter(),
-    onPackages: () => pushPackages(),
+    onPackages: () => {
+      pushPackages()
+      // Turning Connected off takes its capsule and cards away (and back on brings them back).
+      const v = connectedHub.view()
+      syncActivities(enabledPackages(config.packages).includes('connected') ? (v.view ?? null) : null, v.manifest ?? null, store, askDeadlines, Date.now())
+    },
     onAi: (previous) => {
       // Switching away from a provider mid-answer stops that answer.
       if (previous !== config.ai.provider) {
@@ -959,6 +1045,18 @@ async function main() {
 
   const decide = (m: DecisionMsg) => {
     if (agentApprovals.decide(m.id, m.decision === 'allow')) return
+    // A connected package's card (a trade to approve…): your answer goes to it.
+    const askId = askIdOf(m.id)
+    if (askId !== null) {
+      if (m.decision === 'ask') return // no terminal to answer in
+      store.remove(m.id)
+      const pkg = connectedHub.view().manifest?.name ?? 'Connected'
+      void connectedHub.answer(askId, m.decision === 'allow').then((res) => {
+        if (!res.ok && res.message)
+          transient.show({ kind: 'notification', id: `connected-answer-${askId}`, priority: 5, notification: { app: pkg, summary: m.decision === 'allow' ? 'Not placed' : 'Couldn’t send your answer', body: res.message, urgency: 'normal' } }, 8000)
+      })
+      return
+    }
     if (m.answers) recap.answer('question')
     else if (m.decision === 'allow' || m.decision === 'deny') recap.answer(m.decision)
     claude.resolve(m)
@@ -1096,6 +1194,30 @@ async function main() {
     onEvent: (e) => showNotificationLater({ app: serviceInfo(e.service).name, summary: e.title, body: e.body, urgency: e.urgency }),
   })
   serviceHub.start()
+  // ---- The connected package (your trading engine…) ----
+  const askDeadlines = new Map<string, number>()
+  const connectedHub = new ConnectedHub({
+    config: () => config.connected,
+    token: () => {
+      try {
+        return config.connected.secret ? decryptSecret(config.connected.secret) : ''
+      } catch {
+        return ''
+      }
+    },
+    onChange: () => {
+      send(win, CONNECTED.CHANGED, connectedHub.view())
+      settings?.changed()
+    },
+    // Its capsule and its approval cards follow every view it sends.
+    onView: (view, manifest) => syncActivities(enabledPackages(config.packages).includes('connected') ? view : null, manifest, store, askDeadlines, Date.now()),
+    onNotify: (n, m) => {
+      if (enabledPackages(config.packages).includes('connected')) showNotificationLater({ app: m.name, summary: n.title, body: n.body, urgency: n.urgency })
+    },
+  })
+  connectedHub.start()
+  ipcMain.handle(CONNECTED.VIEW, () => connectedHub.view())
+  ipcMain.handle(CONNECTED.ACTION, (_e, id: unknown) => (typeof id === 'string' && /^[a-z0-9_-]{1,40}$/.test(id) ? connectedHub.action(id) : { ok: false, message: 'Unknown button' }))
   ipcMain.handle(SERVICES.VIEW, () => serviceHub.view())
   ipcMain.handle(SERVICES.REFRESH, (_e, id: unknown) => ((SERVICE_IDS as readonly unknown[]).includes(id) ? serviceHub.refresh(id as ServiceId) : undefined))
   ipcMain.handle(SERVICES.OPEN, (_e, url: unknown) => {
@@ -1218,6 +1340,7 @@ async function main() {
     send(win, NOTIFS.CHANGED, center.view())
     send(win, SESSIONS.CHANGED, sessions.list())
     send(win, SERVICES.CHANGED, serviceHub.view())
+    send(win, CONNECTED.CHANGED, connectedHub.view())
     send(win, IPC.RECT_REQUEST, null)
     // Hello, once a day (not when a test drives the app).
     const automated = process.env.DI_NO_GREETING === '1' || process.argv.some((a) => a.startsWith('--remote-debugging-port'))
@@ -1293,12 +1416,16 @@ async function main() {
     clearInterval(recapTimer)
     recap.flush()
     serviceHub.stop()
+    connectedHub.stop()
     clearInterval(companionTimer)
     companion.hide()
     center.flush()
     clearInterval(crmTimer)
     crm.flush()
     dragRing.stop()
+    dropServer.stop()
+    phoneDrop.stop()
+    dropOverlay.destroy()
     closeImagePage()
     claudeCode.dispose()
     apiAgent.dispose()
@@ -1489,7 +1616,8 @@ function run(): void {
   app.on('before-quit', (e) => {
     if (cleaned || !cleanup) return
     e.preventDefault()
-    cleanup().finally(() => {
+    // Quitting never waits on a stuck service for more than a few seconds.
+    Promise.race([cleanup(), new Promise((r) => setTimeout(r, 5000))]).finally(() => {
       cleaned = true
       app.quit()
     })

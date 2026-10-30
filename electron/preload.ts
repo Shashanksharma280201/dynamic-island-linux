@@ -26,6 +26,8 @@ import type { Shortcuts } from '@shared/shortcuts'
 import { SESSIONS } from './sessionChannels'
 import { COMPANION } from './companionChannels'
 import { SERVICES } from './servicesChannels'
+import { CONNECTED } from './connectedChannels'
+import type { ConnectedState } from '@shared/connected'
 import type { ServiceState } from '@shared/services'
 import type { RecapCard } from '@shared/recap'
 import type {
@@ -58,6 +60,8 @@ import { DOCS } from '../electron/docsChannels'
 import { CRM } from '../electron/crmChannels'
 import { NOTIFS } from '../electron/notifChannels'
 import { JOB, RING } from '../electron/ringChannels'
+import { DROP } from '../electron/dropChannels'
+import type { DropCmd } from '@shared/drop'
 import type { DragConfig, PlanEnv, SlotId } from '@shared/dragActions'
 import type { CenterView } from '@shared/notifCenter'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
@@ -97,6 +101,12 @@ const api = {
     open: (url: string): Promise<void> => ipcRenderer.invoke(SERVICES.OPEN, url),
     onChanged: (cb: (v: ServiceState[]) => void) => on(SERVICES.CHANGED, cb),
   },
+  /** The connected package (trading engine…): what it shows, and its buttons. */
+  connected: {
+    view: (): Promise<ConnectedState> => ipcRenderer.invoke(CONNECTED.VIEW),
+    action: (id: string): Promise<{ ok: boolean; message: string }> => ipcRenderer.invoke(CONNECTED.ACTION, id),
+    onChanged: (cb: (v: ConnectedState) => void) => on(CONNECTED.CHANGED, cb),
+  },
   /** Ctrl+Alt+1…9 / Allow while one of Claude's questions is on the island. */
   onQuestionKey: (cb: (k: { n?: number; send?: boolean }) => void) => on(IPC.QUESTION_KEY, cb),
   /** Dictate anywhere: the shortcut, and typing what you said into the focused app. */
@@ -123,6 +133,13 @@ const api = {
     none: () => ipcRenderer.send(RING.NONE),
     drop: (d: { slot: SlotId; choice?: string; paths: string[] }) => ipcRenderer.send(RING.DROP, d),
     pathFor: (f: File): string => webUtils.getPathForFile(f),
+  },
+  /** Phone Drop's glow over the whole screen (its own window). */
+  drop: {
+    onCmd: (cb: (c: DropCmd) => void) => on(DROP.CMD, cb),
+    ready: () => ipcRenderer.send(DROP.READY),
+    landed: (id: string) => ipcRenderer.send(DROP.LANDED, id),
+    idle: () => ipcRenderer.send(DROP.IDLE),
   },
   /** A drag action's card: what it made. */
   jobs: {
@@ -294,6 +311,10 @@ const settings = {
   showRecap: () => ipcRenderer.invoke(SETTINGS.SHOW_RECAP),
   /** Turn a service on/off, or set its address or key; resolves to an error to show, or null. */
   setService: (id: string, patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_SERVICE, id, patch),
+  setConnected: (patch: { on?: boolean; url?: string; token?: string }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_CONNECTED, patch),
+  qr: (link: string): Promise<string | null> => ipcRenderer.invoke(SETTINGS.QR, link),
+  setDrop: (patch: { on?: boolean; folder?: string; forget?: boolean }): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_DROP, patch),
+  pickDropFolder: (): Promise<string | null> => ipcRenderer.invoke(SETTINGS.PICK_DROP_FOLDER),
   setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),

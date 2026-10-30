@@ -77,6 +77,12 @@ export class DragJobs {
     })
   }
 
+  /** Another feature's card (a file from your phone…): `made` can be opened, shown, undone or dragged out like a result. */
+  present(id: string, job: JobState, made?: string[]): void {
+    if (made?.length) this.made.set(id, made)
+    this.show(id, job)
+  }
+
   private first(id: unknown): string | null {
     return this.made.get(String(id))?.[0] ?? null
   }

@@ -1,0 +1,13 @@
+<!-- The card: a photo of mountains, tilted, as it comes out of the light. -->
+<g transform="translate(470 520) rotate(-9)">
+  <rect x="-170" y="-205" width="340" height="410" rx="54" fill="#1b1f27" stroke="#ffffff" stroke-width="14"/>
+  <clipPath id="photo"><rect x="-132" y="-167" width="264" height="250" rx="30"/></clipPath>
+  <g clip-path="url(#photo)">
+    <rect x="-132" y="-167" width="264" height="250" fill="url(#sky)"/>
+    <path d="M-132 83 L-60 -10 L-20 30 L40 -60 L132 50 L132 83 Z" fill="#0f2a36"/>
+    <path d="M40 -60 L64 -26 L52 -22 L40 -36 L28 -18 L20 -30 Z" fill="#ffffff"/>
+    <circle cx="70" cy="-110" r="22" fill="#fff6dd"/>
+  </g>
+  <rect x="-132" y="112" width="180" height="20" rx="10" fill="#ffffff" opacity="0.85"/>
+  <rect x="-132" y="146" width="120" height="16" rx="8" fill="#ffffff" opacity="0.4"/>
+</g>
