@@ -234,7 +234,10 @@ export function HomeScreen({ link, onUnpair }: { link: DropLink; onUnpair: () =>
         }
         renderItem={({ item }) =>
           item.key === ADD.key ? (
-            <Pressable style={[s.add, { width: tile, height: tile + 44 }]} onPress={() => void addFiles(tray).then(setTray)}>
+            <Pressable
+              style={[s.add, { width: tile, height: tile + 44 }]}
+              onPress={() => void addFiles(tray).then(setTray, (e) => Alert.alert('Couldn’t add that', String(e?.message ?? e)))}
+            >
               <Text style={s.addPlus}>+</Text>
               <Text style={s.addText}>Add files</Text>
             </Pressable>

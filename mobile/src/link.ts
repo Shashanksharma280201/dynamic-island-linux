@@ -35,6 +35,18 @@ async function call(url: string, init: RequestInit & { timeoutMs?: number } = {}
   }
 }
 
+/** The first promise to succeed (like Promise.any, which not every JS engine has). */
+function firstOf<T>(tries: Promise<T>[]): Promise<T> {
+  return new Promise((resolve, reject) => {
+    let left = tries.length
+    if (!left) reject(new Error('nothing to try'))
+    for (const t of tries)
+      t.then(resolve, (e) => {
+        if (--left === 0) reject(e)
+      })
+  })
+}
+
 /** The first of the pairing's addresses that answers as an island, or null and why. */
 export async function findComputer(p: Pairing): Promise<{ url: string; name: string } | { error: string }> {
   let last = ''
@@ -54,7 +66,7 @@ export async function findComputer(p: Pairing): Promise<{ url: string; name: str
     }
   })
   try {
-    return await Promise.any(tries)
+    return await firstOf(tries)
   } catch {
     return { error: last || 'Can’t reach your computer.' }
   }
