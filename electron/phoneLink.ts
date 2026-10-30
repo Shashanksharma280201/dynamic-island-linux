@@ -4,7 +4,7 @@ import { stat } from 'node:fs/promises'
 import { basename } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { cleanDevice, dropKind, isDropId } from '@shared/drop'
-import type { PhoneIncoming, PhoneView } from '@shared/phone'
+import type { PhoneCallResult, PhoneIncoming, PhoneTopic, PhoneView } from '@shared/phone'
 import type { DecisionMsg, MediaCmd } from '@shared/types'
 import { parseDecisionMsg, parseMediaCmd } from './ipc'
 
@@ -22,12 +22,16 @@ type Deps = {
   progress?: (id: string, got: number, size: number) => void
   /** A phone connected or went away. */
   onPhones?: () => void
+  /** One of the island's own functions, for the phone (checked there). */
+  call?: (fn: unknown, args: unknown) => Promise<PhoneCallResult & { status: number }>
 }
 
 type Phone = { res: ServerResponse; device: string; since: number }
 type Outgoing = PhoneIncoming & { path: string }
 
 const KEEPALIVE_MS = 15_000
+/** Pushes of one topic come at most this often (the latest wins): Claude streams its reply. */
+const PUSH_MS = 200
 /** A file nobody fetched is forgotten after this long. */
 const OUT_MS = 15 * 60_000
 
@@ -64,8 +68,22 @@ export class PhoneLink {
   private outgoing = new Map<string, Outgoing>()
   private timer: ReturnType<typeof setTimeout> | null = null
   private keepalive: ReturnType<typeof setInterval> | null = null
+  private stopped = false
+  private pushes = new Map<PhoneTopic, unknown>()
+  private pushTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(private d: Deps) {}
+
+  /** Something the island's window was told (Claude's reply so far, new mail…): the phone hears it too. */
+  push(topic: PhoneTopic, data: unknown): void {
+    if (!this.phones.size) return
+    this.pushes.set(topic, data)
+    this.pushTimer ??= setTimeout(() => {
+      this.pushTimer = null
+      for (const [t, d] of this.pushes) this.broadcast('push', { topic: t, data: d ?? null })
+      this.pushes.clear()
+    }, PUSH_MS)
+  }
 
   /** The phones listening now (one entry per phone name). */
   connected(): { device: string; since: number }[] {
@@ -102,12 +120,17 @@ export class PhoneLink {
   }
 
   stop(): void {
+    // Phones going away now is the island quitting: nothing to tell anyone.
+    this.stopped = true
     for (const p of this.phones) p.res.end()
     this.phones.clear()
     if (this.keepalive) clearInterval(this.keepalive)
     this.keepalive = null
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
+    if (this.pushTimer) clearTimeout(this.pushTimer)
+    this.pushTimer = null
+    this.pushes.clear()
   }
 
   /** Requests for /island/… and /drop/out/…, already authorized. True if it was one of ours. */
@@ -139,6 +162,15 @@ export class PhoneLink {
       }
       this.d.decide(m)
       send(res, 200, { ok: true })
+      this.changed()
+      return true
+    }
+    if (route === 'POST /island/call' && this.d.call) {
+      const body = await json(req, 400_000)
+      const r = await this.d.call(body?.fn, body?.args)
+      const { status, ...reply } = r
+      send(res, status, reply)
+      // Answers and changes show on the phone at once.
       this.changed()
       return true
     }
@@ -189,6 +221,7 @@ export class PhoneLink {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' })
     res.write('retry: 3000\n\n')
     const phone: Phone = { res, device, since: Date.now() }
+    this.stopped = false
     this.phones.add(phone)
     this.d.onPhones?.()
     res.write(`event: view\ndata: ${JSON.stringify(this.d.view())}\n\n`)
@@ -202,7 +235,7 @@ export class PhoneLink {
     }, KEEPALIVE_MS)
     req.on('close', () => {
       this.phones.delete(phone)
-      this.d.onPhones?.()
+      if (!this.stopped) this.d.onPhones?.()
       if (!this.phones.size && this.keepalive) {
         clearInterval(this.keepalive)
         this.keepalive = null

@@ -7,7 +7,7 @@ import type { PhoneIncoming } from '../islandTypes'
 import type { DropLink } from '../link'
 import { notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
-import { EdgeGlow, Wash } from './Glow'
+import { EdgeGlow, Ripple, Wash } from './Glow'
 import { C, extOf, kindColor } from './theme'
 
 const SPRING = { damping: 16, stiffness: 150, mass: 1 }
@@ -34,6 +34,9 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
   const edge = useSharedValue(0)
   const along = useSharedValue(0.5)
   const wash = useSharedValue(0)
+  // The wave of colour that leaves the light as the file comes out.
+  const ring = useSharedValue(0)
+  const ringOut = useSharedValue(1)
 
   useEffect(
     () =>
@@ -60,7 +63,10 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
       edge.value = EDGES.indexOf(phoneEdge)
       along.value = 0.42
       level.value = withTiming(0.9, { duration: 480, easing: Easing.out(Easing.quad) })
-      wash.value = withSequence(withTiming(0.18, { duration: 260, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) }))
+      wash.value = withSequence(withTiming(0.12, { duration: 260, easing: Easing.out(Easing.quad) }), withTiming(0, { duration: 800, easing: Easing.inOut(Easing.quad) }))
+      ringOut.value = 1
+      ring.value = 0
+      ring.value = withDelay(150, withTiming(1, { duration: 1600, easing: Easing.linear }))
       x.value = from.x
       y.value = from.y
       scale.value = 0.55
@@ -105,6 +111,7 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <EdgeGlow edge={edge} along={along} level={level} w={W} h={H} />
+      <Ripple edge={edge} along={along} t={ring} out={ringOut} w={W} h={H} />
       <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: size }, cardStyle]}>
         <View style={[s.card, { width: size, height: size }]}>
           {isPhoto ? (

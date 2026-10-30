@@ -34,6 +34,7 @@ const until = async (fn, ms = 5000) => {
   return fn()
 }
 const SCRIPT = path.join(TMP, 'drag.jsonl')
+const WA_LOG = path.join(TMP, 'whatsapp.log')
 const say = (o) => fs.appendFileSync(SCRIPT, JSON.stringify(o) + '\n')
 /** The pointer gliding to (x, y), as samples. */
 const glide = async (from, to, steps = 8) => {
@@ -89,7 +90,7 @@ function listen() {
   const enginePort = await new Promise((r) => engine.stdout.on('data', (d) => /port (\d+)/.test(d) && r(Number(/port (\d+)/.exec(d)[1]))))
   const control = (what, body) => fetch(`http://127.0.0.1:${enginePort}/__control/${what}`, { method: 'POST', body: JSON.stringify(body ?? {}) }).then((r) => r.json())
   const connected = { on: true, url: `http://127.0.0.1:${enginePort}`, secret: 'plain:' + Buffer.from('good-token').toString('base64') }
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top' }, drop: { on: true }, connected }))
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top' }, drop: { on: true }, connected, whatsapp: true }))
   fs.writeFileSync(SCRIPT, '')
   const player = spawn('node', [path.join(__dirname, 'fake-player.cjs')])
   let playerLog = ''
@@ -99,7 +100,7 @@ function listen() {
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1', DI_FAKE_DRAG: SCRIPT },
+    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1', DI_FAKE_DRAG: SCRIPT, DI_CLAUDE_BIN: path.join(__dirname, 'fake-claude.cjs'), DI_WHATSAPP_ENGINE: 'fake', DI_FAKE_WA_READY_MS: '500', DI_DEMO_LOG: WA_LOG },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -161,6 +162,50 @@ function listen() {
     check('and the engine gets the approval', !!posts?.some((x) => x.path === '/island/answer' && x.body.ask_id === ASK.id && x.body.answer === 'approve'), JSON.stringify(posts))
     await control('view', { asks: [] })
     check('the trade goes from the island and the phone', (await page.waitForSelector('.card.connected-ask', { state: 'detached', timeout: 4000 }).then(() => true, () => false)) && (await until(() => !phone.view?.approvals.some((x) => x.kind === 'trade'), 4000)))
+
+    // ---- The island's own functions, from the phone ----
+    const call = (fn, ...args) =>
+      fetch(`${BASE}/island/call`, { method: 'POST', headers: { ...auth, 'Content-Type': 'application/json' }, body: JSON.stringify({ fn, args }) }).then(async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) }))
+    const pushes = (topic) => phone.events.filter((e) => e.ev === 'push' && e.msg.topic === topic).map((e) => e.msg.data)
+
+    const saved = await call('notes.save', null, 'Groceries\nMilk, eggs')
+    check('the phone writes a note on the computer', saved.ok && typeof saved.value === 'string', JSON.stringify(saved))
+    const notes = await call('notes.list')
+    check('and finds it among the notes', notes.ok && notes.value.some((n) => n.title === 'Groceries'), JSON.stringify(notes.value?.slice?.(0, 2)))
+
+    const asked = await call('claude.ask', 'say hello from the phone')
+    check('the phone asks Claude Code', asked.ok, JSON.stringify(asked))
+    const answered = () => pushes('claude').some((v) => v?.turns?.some((t) => t.prompt === 'say hello from the phone' && t.reply))
+    check('and hears the reply as it comes', await until(answered, 15000), JSON.stringify(pushes('claude').slice(-1)[0]?.run ?? null).slice(0, 200))
+
+    const tv = await call('connected.view')
+    check('it reads the trading engine’s view, positions and all', tv.ok && tv.value.phase === 'live' && Array.isArray(tv.value.view?.sections), JSON.stringify(tv).slice(0, 200))
+    const act = await call('connected.action', 'stop_today')
+    const actPosts = await control('posts')
+    check('and runs its actions', act.ok && act.value?.ok === true && actPosts.some((x) => x.path === '/island/action' && x.body.action_id === 'stop_today'), JSON.stringify(act) + ' ' + JSON.stringify(actPosts.slice(-1)))
+
+    await call('notifications.setDnd', true)
+    check('Do Not Disturb from the phone', await until(() => phone.view?.dnd === true, 3000))
+    await call('notifications.setDnd', false)
+    check('and off again', await until(() => phone.view?.dnd === false, 3000))
+
+    const chats = await until(async () => {
+      const c = await call('inbox.chats')
+      return c.ok && c.value?.length ? c : null
+    }, 12000)
+    check('the phone lists WhatsApp chats', !!chats && chats.value.some((c) => c.name === 'Alice'), JSON.stringify(chats?.value?.map?.((c) => c.name)))
+    const alice = chats?.value.find((c) => c.name === 'Alice')
+    const thread = alice && (await call('inbox.chat', alice.id))
+    check('opens one', !!thread?.ok && Array.isArray(thread.value) && thread.value.length > 0)
+    const sentChat = alice && (await call('inbox.sendChat', alice.id, 'On my way'))
+    check('and sends a message', !!sentChat?.ok && (await until(() => fs.existsSync(WA_LOG) && fs.readFileSync(WA_LOG, 'utf8').includes('On my way'), 4000)), JSON.stringify(sentChat))
+
+    const notIsland = await call('settings.setAiKey', 'anthropic', 'sk-x')
+    check('only the island’s own calls', notIsland.status === 400 && notIsland.ok === false)
+    const wrongArgs = await call('notes.get', 5)
+    check('with the right arguments', wrongArgs.status === 400)
+    const unpaired = await fetch(`${BASE}/island/call`, { method: 'POST', headers: { Authorization: 'Bearer ' + 'x'.repeat(44) }, body: '{}' })
+    check('and only from a paired phone', unpaired.status === 401)
 
     // ---- A file from the computer to the phone ----
     const file = path.join(TMP, 'Slides.pdf')

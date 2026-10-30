@@ -46,6 +46,9 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
   const edge = useSharedValue(1)
   const along = useSharedValue(0.5)
   const wash = useSharedValue(0)
+  // The wave of colour closing in on the edge the file leaves by.
+  const ring = useSharedValue(0)
+  const ringOut = useSharedValue(0)
   const approached = useSharedValue(-1)
 
   /** Picked up at (fx, fy); it came from (hx, hy). */
@@ -99,7 +102,10 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
       y.value = withTiming(out.y, { duration: 340, easing: Easing.in(Easing.cubic) })
       scale.value = withTiming(0.7, { duration: 340, easing: GENTLE })
       level.value = withSequence(withTiming(1, { duration: 220, easing: SOFT }), withTiming(0, { duration: 1100, easing: GENTLE }))
-      wash.value = withDelay(120, withSequence(withTiming(0.35, { duration: 260, easing: SOFT }), withTiming(0, { duration: 900, easing: GENTLE })))
+      wash.value = withDelay(120, withSequence(withTiming(0.22, { duration: 260, easing: SOFT }), withTiming(0, { duration: 900, easing: GENTLE })))
+      ringOut.value = 0
+      ring.value = 0
+      ring.value = withTiming(1, { duration: 1300, easing: Easing.linear })
       shown.value = withDelay(340, withTiming(0, { duration: 120 }))
       scheduleOnRN(onSend, computerSide(r.edge), r.along)
       return
@@ -125,7 +131,10 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
     edge.value = e
     along.value = 0.5
     level.value = withSequence(withTiming(0.9, { duration: 260, easing: SOFT }), withTiming(0, { duration: 1000, easing: GENTLE }))
-    wash.value = withSequence(withTiming(0.3, { duration: 260, easing: SOFT }), withTiming(0, { duration: 850, easing: GENTLE }))
+    wash.value = withSequence(withTiming(0.2, { duration: 260, easing: SOFT }), withTiming(0, { duration: 850, easing: GENTLE }))
+    ringOut.value = 0
+    ring.value = 0
+    ring.value = withTiming(1, { duration: 1300, easing: Easing.linear })
   }
 
   const cardStyle = useAnimatedStyle(() => ({
@@ -133,5 +142,5 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
     transform: [{ translateX: x.value - size / 2 }, { translateY: y.value - size / 2 }, { scale: scale.value }, { rotate: `${tilt.value * 9}deg` }],
   }))
 
-  return { lift, move, end, flash, cardStyle, level, edge, along, wash, shown }
+  return { lift, move, end, flash, cardStyle, level, edge, along, wash, shown, ring, ringOut }
 }
