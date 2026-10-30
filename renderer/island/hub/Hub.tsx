@@ -15,12 +15,13 @@ import { DocsAppIcon } from './AppIcons'
 import { NotificationsView } from './NotificationsView'
 import { SessionsView } from './SessionsView'
 import { ServicesView, useServices } from './ServicesView'
+import { ConnectedView, useConnected } from './ConnectedView'
 import type { AgentSession } from '@shared/sessions'
 import type { CenterView } from '@shared/notifCenter'
 
-export type HubTab = 'controls' | 'alerts' | 'claude' | 'sessions' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
+export type HubTab = 'controls' | 'alerts' | 'claude' | 'sessions' | 'connected' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'sessions', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
+export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'sessions', 'connected', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {
@@ -80,6 +81,7 @@ export function Hub({
     'sources',
   )
   const services = useServices()
+  const connected = useConnected()
   // A new tab slides in from the direction you went on the rail.
   const last = useRef({ tab, dir: '' })
   if (last.current.tab !== tab) last.current = { tab, dir: HUB_TABS.indexOf(tab) > HUB_TABS.indexOf(last.current.tab) ? 'from-below' : 'from-above' }
@@ -92,6 +94,7 @@ export function Hub({
       {tab === 'notes' && <NotesView onTyping={onTyping} />}
       {tab === 'claude' && <ClaudePanel view={claude} voice={voice} onTyping={onTyping} />}
       {tab === 'sessions' && <SessionsView sessions={sessions} claude={claude} />}
+      {tab === 'connected' && <ConnectedView state={connected} />}
       {tab === 'services' && <ServicesView list={services} />}
       {tab === 'music' && <MusicView onTyping={onTyping} />}
       {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}

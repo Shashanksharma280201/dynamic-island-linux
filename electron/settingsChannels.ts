@@ -15,6 +15,8 @@ export const SETTINGS = {
   CLEAR_RECAP: 'settings:clear-recap', // forget it
   SHOW_RECAP: 'settings:show-recap', // show last week's on the island
   SET_SERVICE: 'settings:set-service', // (id, { on?, url?, token? }) -> error | null
+  SET_CONNECTED: 'settings:set-connected', // ({ on?, url?, token? }) -> error | null
+  QR: 'settings:qr', // invoke(pairing link) -> PNG data URL (the phone scans it)
   SET_DISPLAY: 'settings:set-display', // 'primary' | 'cursor' | a display's key
   SET_COMPANION: 'settings:set-companion', // boolean: the character on the desktop
   SET_DRAG: 'settings:set-drag', // patch of the drag actions options

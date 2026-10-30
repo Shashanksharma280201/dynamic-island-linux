@@ -10,6 +10,7 @@ import { parseShortcuts, type Shortcuts } from '@shared/shortcuts'
 import { parseDisplayPref, type DisplayPref } from '@shared/displays'
 import { DRAG_DEFAULTS, parseDragConfig, type DragConfig } from '@shared/dragActions'
 import { parseServices, type ServicesConfig } from './services'
+import { parseConnectedConfig, type ConnectedConfig } from '@shared/connected'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -36,6 +37,8 @@ export type Config = {
   recap: boolean
   /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
   services: ServicesConfig
+  /** A connected package (your trading engine…): on/off, address, encrypted token. */
+  connected: ConnectedConfig
   /** Which display the island lives on: 'primary', 'cursor' or a monitor's key. */
   display: DisplayPref
   /** Dictate anywhere with a shortcut (typed into the app you're in). */
@@ -115,6 +118,7 @@ const DEFAULTS: Config = {
   dictation: true,
   display: 'primary',
   services: parseServices(null),
+  connected: parseConnectedConfig(null),
   recap: true,
   frosted: true,
   sounds: false,
@@ -153,7 +157,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, services: parseServices(null), keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -171,6 +175,7 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.dictation === 'boolean') c.dictation = r.dictation
   c.display = parseDisplayPref(r.display)
   c.services = parseServices(r.services)
+  c.connected = parseConnectedConfig(r.connected)
   if (typeof r.recap === 'boolean') c.recap = r.recap
   c.drag = parseDragConfig(r.drag)
   c.companion = {

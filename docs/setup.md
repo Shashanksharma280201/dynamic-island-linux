@@ -169,6 +169,28 @@ import back.
 Everything is kept in `~/.config/dynamic-island-linux/crm/crm.json`, with a
 copy each day for the last week in `crm/backups/`.
 
+## Connect your trading engine
+
+The **Connected** package shows the [Day-Trading](https://github.com/Shashanksharma280201/Day-Trading)
+engine on the island: today's P&L on the capsule, each trade it wants to make
+as a card you answer, and a **Trading** tab.
+
+1. Start the engine on this computer (paper trading by default):
+   `python3 -m daytrader.cli serve --feed replay --data data/sample.csv` to try
+   it with sample data, or `--feed groww` for live Groww prices.
+2. Open **Settings → Connected**, turn it on, keep the address
+   `http://127.0.0.1:8765`, and paste the token from the engine's
+   `state/api_token` file. It's tried before it's saved.
+3. When a trade comes up, a card shows it with a countdown: **Buy** (or
+   **Sell**) to approve, **Skip** to say no, or the approval shortcuts. No
+   answer means no trade.
+
+To approve from your phone too, start the engine with
+`--phone-host <your Tailscale IP>`, then **Settings → Connected → Show QR** and
+scan it with the Day-Trading Android app. Whichever device answers first wins.
+
+Turn the tab and capsule off any time in **Settings → Packages → Connected**.
+
 ## Connect Spotify
 
 Spotify only lets apps you register yourself use its Web API, so there's a
