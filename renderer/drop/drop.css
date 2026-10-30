@@ -1,0 +1,129 @@
+#glow {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  perspective: 1100px;
+  font-family: -apple-system, 'SF Pro Text', 'Inter', 'Segoe UI', 'Ubuntu', sans-serif;
+}
+
+.thumb {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-style: preserve-3d;
+  will-change: transform, opacity;
+}
+
+.bob {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: bob 2.4s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(-4px) rotateZ(-0.6deg);
+  }
+  50% {
+    transform: translateY(4px) rotateZ(0.6deg);
+  }
+}
+
+.card {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #1c1c1e;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.28),
+    0 0 40px rgba(255, 255, 255, 0.35),
+    0 24px 60px rgba(0, 0, 0, 0.45);
+}
+
+.card.photo img {
+  display: block;
+  max-width: 220px;
+  max-height: 200px;
+  min-width: 120px;
+  min-height: 90px;
+  object-fit: cover;
+}
+
+.tile {
+  --c: #8e8e93;
+  width: 148px;
+  height: 184px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 16px;
+  box-sizing: border-box;
+  color: #fff;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0) 45%),
+    linear-gradient(200deg, color-mix(in srgb, var(--c) 80%, white), color-mix(in srgb, var(--c) 70%, black));
+}
+
+.label {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(20, 20, 24, 0.55);
+  backdrop-filter: blur(10px);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.bar {
+  width: 120px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.25);
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.bar.on {
+  opacity: 1;
+}
+
+.bar i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: #fff;
+  border-radius: inherit;
+  transition: width 0.15s linear;
+}
+
+.splash {
+  position: absolute;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bob {
+    animation: none;
+  }
+}

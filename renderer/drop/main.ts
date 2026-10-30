@@ -1,0 +1,357 @@
+import type { DropCmd, DropSide } from '@shared/drop'
+import './drop.css'
+
+/**
+ * Phone Drop's glow. While a file heads for your phone's edge, light comes up
+ * at this screen's edge next to it: a white bloom with a ring of colour
+ * around it, the rest of the screen dimmed a little. When the bytes start,
+ * the file comes out of the light; when it's saved, a band of colour sweeps
+ * across the screen and the file flies into the island.
+ */
+
+type V = { x: number; y: number }
+type Thumb = { id: string; el: HTMLDivElement; bar: HTMLElement; at: V; shown: number; leaving: boolean; out: Promise<void> }
+
+const canvas = document.getElementById('glow') as HTMLCanvasElement
+const stage = document.getElementById('stage') as HTMLDivElement
+const ctx = canvas.getContext('2d')!
+/** The glow is soft: drawing it at half size is plenty, and four times cheaper. */
+const K = 0.5
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+
+const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1 }
+const pending = new Map<string, { side: DropSide; at: number; thumb?: string; name: string; ext: string; color: string }>()
+const thumbs = new Map<string, Thumb>()
+let running = false
+let idleSent = true
+let lastT = 0
+
+const W = () => window.innerWidth
+const H = () => window.innerHeight
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
+
+/** Where the light comes in, and which way is into the screen. */
+function edge(side: DropSide, at: number): { p: V; n: V; span: number } {
+  const a = clamp(at, 0.18, 0.82)
+  if (side === 'right') return { p: { x: W(), y: a * H() }, n: { x: -1, y: 0 }, span: W() }
+  if (side === 'left') return { p: { x: 0, y: a * H() }, n: { x: 1, y: 0 }, span: W() }
+  if (side === 'top') return { p: { x: a * W(), y: 0 }, n: { x: 0, y: 1 }, span: H() }
+  return { p: { x: a * W(), y: H() }, n: { x: 0, y: -1 }, span: H() }
+}
+
+function resize() {
+  canvas.width = Math.ceil(W() * K)
+  canvas.height = Math.ceil(H() * K)
+}
+resize()
+window.addEventListener('resize', resize)
+
+function setPhase(phase: string) {
+  document.body.dataset.phase = phase
+}
+
+function wake() {
+  idleSent = false
+  if (running) return
+  running = true
+  lastT = performance.now()
+  requestAnimationFrame(frame)
+}
+
+function frame(now: number) {
+  const dt = Math.min(0.05, (now - lastT) / 1000)
+  lastT = now
+  const t = now / 1000
+  // Up quickly, down a little slower.
+  const rate = glow.goal > glow.level ? 5.5 : 2.6
+  glow.level += (glow.goal - glow.level) * (1 - Math.exp(-dt * rate))
+  glow.flash *= Math.exp(-dt * 3.2)
+  glow.tint *= Math.exp(-dt * 1.5)
+  if (glow.sweep >= 0) {
+    glow.sweep += dt / (reduced ? 0.5 : 1.1)
+    if (glow.sweep > 1) glow.sweep = -1
+  }
+  draw(t)
+  document.body.dataset.level = glow.level.toFixed(2)
+  const quiet = glow.goal === 0 && glow.level < 0.004 && glow.flash < 0.01 && glow.sweep < 0 && !thumbs.size
+  if (quiet) {
+    running = false
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    setPhase('idle')
+    if (!idleSent) {
+      idleSent = true
+      window.island.drop.idle()
+    }
+    return
+  }
+  requestAnimationFrame(frame)
+}
+
+function draw(t: number) {
+  ctx.setTransform(1, 0, 0, 1, 0, 0)
+  ctx.clearRect(0, 0, canvas.width, canvas.height)
+  ctx.setTransform(K, 0, 0, K, 0, 0)
+  const { p, n, span } = edge(glow.side, glow.at)
+  const L = glow.level * (1 + 0.035 * Math.sin(t * 2.3))
+  const F = glow.flash
+  const big = Math.hypot(W(), H())
+
+  if (L > 0.003 || F > 0.01) {
+    // The rest of the screen, a little dimmer, so the light shows.
+    const dim = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, big)
+    dim.addColorStop(0, 'rgba(3,5,12,0)')
+    dim.addColorStop(0.22, `rgba(3,5,12,${0.1 * L})`)
+    dim.addColorStop(1, `rgba(3,5,12,${0.36 * L})`)
+    ctx.fillStyle = dim
+    ctx.fillRect(0, 0, W(), H())
+
+    // A ring of colour around the light, like light through glass.
+    const sway = Math.sin(t * 0.9) * 0.025 * span
+    for (const [scale, a] of [
+      [1, 1],
+      [0.8, 0.55],
+    ] as const) {
+      const c = { x: p.x - n.x * 0.04 * span + n.y * sway * 0.6, y: p.y - n.y * 0.04 * span + n.x * sway * 0.6 }
+      const r = span * (0.4 + 0.24 * L + 0.18 * F) * scale + sway
+      const g = ctx.createRadialGradient(c.x, c.y, 0, c.x, c.y, r)
+      const k = (L + F * 0.6) * a
+      const s = scale === 1 ? 0 : 0.03
+      g.addColorStop(0, 'rgba(255,255,255,0)')
+      g.addColorStop(0.36 + s, 'rgba(255,255,255,0)')
+      g.addColorStop(0.46 + s, `rgba(140,225,255,${0.26 * k})`)
+      g.addColorStop(0.54 + s, `rgba(120,255,190,${0.25 * k})`)
+      g.addColorStop(0.62 + s, `rgba(255,226,120,${0.24 * k})`)
+      g.addColorStop(0.7 + s, `rgba(255,140,150,${0.2 * k})`)
+      g.addColorStop(0.79 + s, `rgba(206,120,255,${0.19 * k})`)
+      g.addColorStop(0.9, `rgba(120,110,255,${0.05 * k})`)
+      g.addColorStop(1, 'rgba(120,110,255,0)')
+      ctx.fillStyle = g
+      ctx.fillRect(0, 0, W(), H())
+    }
+
+    // The light itself: white where the phone is.
+    const rb = span * (0.18 + 0.3 * L + 0.25 * F)
+    const b = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rb)
+    const w = Math.min(1, 0.96 * L + 0.5 * F)
+    const red = glow.tint
+    b.addColorStop(0, `rgba(255,${Math.round(255 - 140 * red)},${Math.round(255 - 150 * red)},${w})`)
+    b.addColorStop(0.2, `rgba(255,255,255,${0.82 * w})`)
+    b.addColorStop(0.45, `rgba(238,246,255,${0.42 * w})`)
+    b.addColorStop(0.72, `rgba(220,236,255,${0.12 * w})`)
+    b.addColorStop(1, 'rgba(220,236,255,0)')
+    ctx.fillStyle = b
+    ctx.fillRect(0, 0, W(), H())
+
+    // The edge itself catches the light.
+    const along = n.x !== 0 ? H() : W()
+    const line = n.x !== 0 ? ctx.createLinearGradient(0, p.y - along * 0.4, 0, p.y + along * 0.4) : ctx.createLinearGradient(p.x - along * 0.4, 0, p.x + along * 0.4, 0)
+    line.addColorStop(0, 'rgba(255,255,255,0)')
+    line.addColorStop(0.5, `rgba(255,255,255,${0.9 * w})`)
+    line.addColorStop(1, 'rgba(255,255,255,0)')
+    ctx.fillStyle = line
+    const th = 5
+    if (glow.side === 'right') ctx.fillRect(W() - th, 0, th, H())
+    else if (glow.side === 'left') ctx.fillRect(0, 0, th, H())
+    else if (glow.side === 'top') ctx.fillRect(0, 0, W(), th)
+    else ctx.fillRect(0, H() - th, W(), th)
+  }
+
+  // On arrival, a band of colour sweeps across the screen.
+  if (glow.sweep >= 0) {
+    const u = glow.sweep
+    const e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2
+    const env = Math.sin(Math.PI * u)
+    const reach = span * 1.25
+    const c = { x: p.x + n.x * e * reach, y: p.y + n.y * e * reach }
+    const half = span * 0.13
+    const g = ctx.createLinearGradient(c.x - n.x * half, c.y - n.y * half, c.x + n.x * half, c.y + n.y * half)
+    const stops: [number, string][] = [
+      [0, '170,120,255,0'],
+      [0.14, `170,120,255,${0.16 * env}`],
+      [0.3, `90,160,255,${0.2 * env}`],
+      [0.44, `110,240,255,${0.24 * env}`],
+      [0.52, `255,255,255,${0.3 * env}`],
+      [0.6, `140,255,170,${0.22 * env}`],
+      [0.74, `255,235,130,${0.2 * env}`],
+      [0.88, `255,150,120,${0.14 * env}`],
+      [1, '255,150,120,0'],
+    ]
+    // The leading edge goes first (into the screen).
+    for (const [o, rgba] of stops) g.addColorStop(1 - o, `rgba(${rgba})`)
+    ctx.fillStyle = g
+    ctx.fillRect(0, 0, W(), H())
+  }
+}
+
+// ---- The file ----
+
+function makeThumb(id: string, info: { thumb?: string; name: string; ext: string; color: string }): Thumb {
+  const el = document.createElement('div')
+  el.className = 'thumb'
+  el.dataset.id = id
+  const bob = document.createElement('div')
+  bob.className = 'bob'
+  const card = document.createElement('div')
+  card.className = 'card'
+  if (info.thumb) {
+    const img = document.createElement('img')
+    img.src = info.thumb
+    img.alt = ''
+    card.appendChild(img)
+    card.classList.add('photo')
+  } else {
+    const tile = document.createElement('div')
+    tile.className = 'tile'
+    tile.style.setProperty('--c', info.color)
+    tile.textContent = (info.ext || 'file').toUpperCase().slice(0, 5)
+    card.appendChild(tile)
+  }
+  const label = document.createElement('div')
+  label.className = 'label'
+  label.textContent = info.name
+  const bar = document.createElement('div')
+  bar.className = 'bar'
+  bar.appendChild(document.createElement('i'))
+  bob.append(card, label, bar)
+  el.appendChild(bob)
+  stage.appendChild(el)
+  return { id, el, bar, at: { x: 0, y: 0 }, shown: performance.now(), leaving: false, out: Promise.resolve() }
+}
+
+const place = (v: V, s: number, extra = '') => `translate3d(${v.x}px, ${v.y}px, 0) translate(-50%, -50%) ${extra} scale(${s})`
+
+function arrive(id: string) {
+  const info = pending.get(id)
+  if (!info || thumbs.has(id)) return
+  glow.side = info.side
+  glow.at = info.at
+  glow.goal = 1
+  glow.flash = Math.max(glow.flash, 0.35)
+  const { p, n, span } = edge(info.side, info.at)
+  const th = makeThumb(id, info)
+  thumbs.set(id, th)
+  const into = Math.min(span * 0.24, 360)
+  const from = { x: p.x - n.x * 70, y: p.y - n.y * 70 }
+  th.at = { x: p.x + n.x * into, y: p.y + n.y * into }
+  // It turns toward you as it comes out of the edge.
+  const turn = n.x !== 0 ? `rotateY(${n.x < 0 ? -42 : 42}deg)` : `rotateX(${n.y < 0 ? 42 : -42}deg)`
+  const emerge = th.el.animate(
+    [
+      { transform: place(from, 0.5, turn), opacity: 0, filter: 'blur(6px) brightness(1.8)' },
+      { opacity: 1, offset: 0.25 },
+      { transform: place(th.at, 1, 'rotateY(0deg) rotateX(0deg) rotateZ(-2deg)'), opacity: 1, filter: 'blur(0) brightness(1)' },
+    ],
+    { duration: reduced ? 200 : 820, easing: 'cubic-bezier(.16,.84,.24,1)', fill: 'forwards' },
+  )
+  // Even a file that's already here shows itself in the light for a moment.
+  th.out = emerge.finished.then(() => new Promise((r) => setTimeout(r, reduced ? 0 : 380)))
+  setPhase('arrive')
+  wake()
+}
+
+function progress(id: string, p: number) {
+  const th = thumbs.get(id)
+  if (!th) return
+  if (p < 1 && performance.now() - th.shown > 450) th.bar.classList.add('on')
+  ;(th.bar.firstChild as HTMLElement).style.width = `${Math.round(p * 100)}%`
+}
+
+/** Into the island, along a curve, getting smaller. */
+async function fly(id: string, to: V, sweep: boolean) {
+  const th = thumbs.get(id)
+  if (!th || th.leaving) return
+  th.leaving = true
+  await th.out
+  th.bar.classList.remove('on')
+  if (sweep) {
+    glow.sweep = 0
+    glow.flash = 1
+  }
+  glow.goal = 0
+  const from = th.at
+  const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - Math.max(60, Math.abs(from.x - to.x) * 0.12) }
+  const a = th.el.animate(
+    [
+      { transform: place(from, 1, 'rotateZ(-2deg)') },
+      { transform: place(from, 1.07, 'rotateZ(0deg)'), offset: 0.12 },
+      { transform: place(mid, 0.6, 'rotateZ(-6deg)'), offset: 0.55 },
+      { transform: place(to, 0.12, 'rotateZ(0deg)'), opacity: 1, offset: 0.92 },
+      { transform: place(to, 0.06, 'rotateZ(0deg)'), opacity: 0 },
+    ],
+    { duration: reduced ? 300 : 980, easing: 'cubic-bezier(.55,0,.25,1)', fill: 'forwards' },
+  )
+  setPhase(sweep ? 'land' : 'stow')
+  a.onfinish = () => {
+    splash(to)
+    th.el.remove()
+    thumbs.delete(id)
+    pending.delete(id)
+    window.island.drop.landed(id)
+  }
+  wake()
+}
+
+/** A ring where the file went in. */
+function splash(at: V) {
+  const s = document.createElement('div')
+  s.className = 'splash'
+  s.style.left = `${at.x}px`
+  s.style.top = `${at.y}px`
+  stage.appendChild(s)
+  s.animate(
+    [
+      { transform: 'translate(-50%, -50%) scale(0.2)', opacity: 0.9 },
+      { transform: 'translate(-50%, -50%) scale(1.6)', opacity: 0 },
+    ],
+    { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' },
+  ).onfinish = () => s.remove()
+}
+
+function fail(id: string) {
+  pending.delete(id)
+  glow.tint = 1
+  glow.goal = 0
+  const th = thumbs.get(id)
+  setPhase('fail')
+  if (!th) return wake()
+  th.leaving = true
+  const a = th.el.animate(
+    [
+      { transform: place(th.at, 1) },
+      { transform: place({ x: th.at.x - 10, y: th.at.y }, 1), offset: 0.12 },
+      { transform: place({ x: th.at.x + 10, y: th.at.y }, 1), offset: 0.24 },
+      { transform: place({ x: th.at.x - 6, y: th.at.y }, 1), offset: 0.36 },
+      { transform: place(th.at, 1), offset: 0.48, opacity: 1 },
+      { transform: place({ x: th.at.x, y: th.at.y + 50 }, 0.85), opacity: 0 },
+    ],
+    { duration: 900, easing: 'ease-in-out', fill: 'forwards' },
+  )
+  a.onfinish = () => {
+    th.el.remove()
+    thumbs.delete(id)
+  }
+  wake()
+}
+
+window.island.drop.onCmd((c: DropCmd) => {
+  if (c.t === 'approach') {
+    pending.set(c.id, { side: c.side, at: c.at, thumb: c.thumb, name: c.name, ext: c.ext, color: c.color })
+    if (c.thumb) new Image().src = c.thumb // ready when it comes out
+    glow.side = c.side
+    glow.at = c.at
+    glow.goal = Math.max(glow.goal, 0.55)
+    setPhase('approach')
+    wake()
+  } else if (c.t === 'arrive') arrive(c.id)
+  else if (c.t === 'progress') progress(c.id, c.p)
+  else if (c.t === 'land') void fly(c.id, c.to, true)
+  else if (c.t === 'stow') void fly(c.id, c.to, false)
+  else if (c.t === 'cancel') {
+    pending.delete(c.id)
+    if (!pending.size && !thumbs.size) glow.goal = 0
+    setPhase('cancel')
+    wake()
+  } else if (c.t === 'fail') fail(c.id)
+})
+setPhase('idle')
+window.island.drop.ready()

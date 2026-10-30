@@ -21,6 +21,7 @@
 | The mic does nothing / "No microphone found" | Check the input device in GNOME Settings → Sound. The first use downloads the speech model, so it needs internet once. |
 | Speech is transcribed badly | Switch Settings → Claude Code → Speech recognition to **Accurate**, and speak close to the mic. |
 | Ctrl+Alt+Space does nothing | Another app owns it (Settings says so). Use the mic button instead. |
+| Island Drop says it can't reach your computer | Both need the same Wi-Fi (guest networks often keep devices apart), or Tailscale on both. Check **Settings → Phone Drop** says *Ready on port 8790*. A firewall may block it: `sudo ufw allow 8790/tcp` on Ubuntu; Windows asks once to allow Dynamic Island on private networks. If the computer's address changed, scan the QR again. |
 | Can't type in the reply box | Your window manager refused keyboard focus for the island. Please open an issue with your desktop environment. |
 
 ## Limitations

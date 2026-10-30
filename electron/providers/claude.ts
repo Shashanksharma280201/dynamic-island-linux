@@ -44,6 +44,8 @@ function isListening(path: string): Promise<boolean> {
 export class ClaudeServer {
   private server: net.Server | null = null
   private pending = new Map<string, net.Socket>()
+  /** Every connected hook and bridge: closing the server waits for them all. */
+  private sockets = new Set<net.Socket>()
   private reqCb: ((req: ToolRequest) => void) | null = null
   private cancelCb: ((id: string, why: 'timeout' | 'gone') => void) | null = null
   /** Requests whose hook said it gave up waiting (Claude asks in the terminal now). */
@@ -78,6 +80,7 @@ export class ClaudeServer {
     }
     await unlink(this.socketPath).catch(() => {})
     this.server = net.createServer((socket) => {
+      this.sockets.add(socket)
       const decode = createDecoder()
       const ids = new Set<string>()
       socket.on('data', (chunk) => {
@@ -105,6 +108,7 @@ export class ClaudeServer {
         }
       })
       socket.on('close', () => {
+        this.sockets.delete(socket)
         for (const id of ids) {
           if (this.pending.get(id) !== socket) continue
           this.pending.delete(id)
@@ -134,7 +138,8 @@ export class ClaudeServer {
   }
 
   async stop(): Promise<void> {
-    for (const s of this.pending.values()) s.destroy()
+    for (const s of this.sockets) s.destroy()
+    this.sockets.clear()
     this.pending.clear()
     if (this.server) await new Promise<void>((res) => this.server!.close(() => res()))
     this.server = null

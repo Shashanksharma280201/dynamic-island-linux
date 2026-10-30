@@ -15,6 +15,8 @@ import { CompactMedia } from './states/CompactMedia'
 import { DetachedCircle } from './states/DetachedCircle'
 import { NotificationCard } from './states/NotificationCard'
 import { Hub, savedTab, rememberTab, type HubTab } from './hub/Hub'
+import { useConnected } from './hub/ConnectedView'
+import { CompactConnected, ConnectedStatusCard } from './states/ConnectedActivity'
 import { Rail } from './hub/Rail'
 import { offerDraft } from './hub/claudeDraft'
 import { MessageCard } from './states/MessageCard'
@@ -207,6 +209,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   }
   // Claude Code in your terminals.
   const sessions = useSessions()
+  const connected = useConnected()
   const openSessions = () => {
     setTab('sessions')
     setPanel(true)
@@ -584,6 +587,18 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               )
             ) : p.primary.kind === 'job' ? (
               <JobCard id={p.primary.id} job={p.primary.job} />
+            ) : p.primary.kind === 'connected' ? (
+              p.mode === 'expanded' ? (
+                <ConnectedStatusCard
+                  status={p.primary.status}
+                  onOpen={() => {
+                    setTab('connected')
+                    setPanel(true)
+                  }}
+                />
+              ) : (
+                <CompactConnected status={p.primary.status} />
+              )
             ) : p.mode === 'expanded' ? (
               <MediaCard media={p.primary.media} />
             ) : (
@@ -759,7 +774,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             // Follows the panel a beat later.
             transition={{ ...pop, delay: 0.04 }}
           >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length} hidden={pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []} />
+            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length}
+              connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
+              // The Connected tab only once something is connected (Settings → Connected).
+              hidden={[...(pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []), ...(connected?.configured ? [] : (['connected'] as const))]}
+            />
           </motion.div>
         )}
       </AnimatePresence>

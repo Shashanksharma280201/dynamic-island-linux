@@ -23,6 +23,8 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    # A run takes about 12 minutes; a hang fails instead of running for hours.
+    timeout-minutes: 30
     env:
       ELECTRON_DISABLE_SANDBOX: '1'
     steps:
