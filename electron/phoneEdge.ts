@@ -76,8 +76,11 @@ export class PhoneEdge {
     this.files = files?.length ? files.slice(0, 20) : undefined
     this.asked = false
     this.done = false
-    // The strip's page loads with the first drag while a phone listens.
-    if (this.d.phone()) this.ensureWindow()
+    // The strip's page and the light's load with the first drag while a phone listens.
+    if (this.d.phone()) {
+      this.ensureWindow()
+      this.d.overlay.prepare()
+    }
   }
 
   onSample(s: DragSample): void {

@@ -19,7 +19,7 @@ const ctx = canvas.getContext('2d')!
 const K = 0.5
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const glow = { side: 'right' as DropSide, at: 0.5, level: 0, goal: 0, flash: 0, tint: 0, sweep: -1, sweepIn: true }
+const glow = { side: 'right' as DropSide, at: 0.5, level: 0, vel: 0, goal: 0, flash: 0, kick: 0, tint: 0, sweep: -1, sweepIn: true }
 const pending = new Map<string, { side: DropSide; at: number; thumb?: string; name: string; ext: string; color: string }>()
 const thumbs = new Map<string, Thumb>()
 /** A file dragged toward the phone's edge: the light follows the pointer along it, with a label. */
@@ -64,22 +64,26 @@ function frame(now: number) {
   const dt = Math.min(0.05, (now - lastT) / 1000)
   lastT = now
   const t = now / 1000
-  // Up quickly, down a little slower.
-  const rate = glow.goal > glow.level ? 5.5 : 2.6
-  glow.level += (glow.goal - glow.level) * (1 - Math.exp(-dt * rate))
-  if (aim.on) glow.at += (aim.at - glow.at) * (1 - Math.exp(-dt * 12))
+  // The light moves on a soft spring (critically damped): it eases in and
+  // out, never jumps or overshoots. Up in about half a second, down slower.
+  const k = glow.goal > glow.level ? 48 : 14
+  glow.vel += ((glow.goal - glow.level) * k - 2 * Math.sqrt(k) * glow.vel) * dt
+  glow.level = Math.max(0, glow.level + glow.vel * dt)
+  if (aim.on) glow.at += (aim.at - glow.at) * (1 - Math.exp(-dt * 9))
   // The label comes with the light, and goes at once when the file is let go.
   aim.vis += ((aim.on && aim.text?.textContent ? Math.min(1, glow.level * 1.4) : 0) - aim.vis) * (1 - Math.exp(-dt * (aim.on ? 8 : 14)))
-  glow.flash *= Math.exp(-dt * 3.2)
+  // A flash swells over a moment, then fades.
+  glow.flash += (glow.kick - glow.flash) * (1 - Math.exp(-dt * 9))
+  glow.kick *= Math.exp(-dt * 3.4)
   glow.tint *= Math.exp(-dt * 1.5)
   if (glow.sweep >= 0) {
-    glow.sweep += dt / (reduced ? 0.5 : 1.1)
+    glow.sweep += dt / (reduced ? 0.6 : 1.5)
     if (glow.sweep > 1) glow.sweep = -1
   }
   draw(t)
   placeAim()
   document.body.dataset.level = glow.level.toFixed(2)
-  const quiet = glow.goal === 0 && glow.level < 0.004 && glow.flash < 0.01 && glow.sweep < 0 && !thumbs.size && aim.vis < 0.01
+  const quiet = glow.goal === 0 && glow.level < 0.004 && Math.abs(glow.vel) < 0.01 && glow.flash < 0.01 && glow.kick < 0.01 && glow.sweep < 0 && !thumbs.size && aim.vis < 0.01
   if (quiet) {
     running = false
     ctx.clearRect(0, 0, canvas.width, canvas.height)
@@ -98,7 +102,7 @@ function draw(t: number) {
   ctx.clearRect(0, 0, canvas.width, canvas.height)
   ctx.setTransform(K, 0, 0, K, 0, 0)
   const { p, n, span } = edge(glow.side, glow.at)
-  const L = glow.level * (1 + 0.035 * Math.sin(t * 2.3))
+  const L = glow.level * (1 + 0.03 * Math.sin(t * 1.6))
   const F = glow.flash
   const big = Math.hypot(W(), H())
 
@@ -106,8 +110,8 @@ function draw(t: number) {
     // The rest of the screen, a little dimmer, so the light shows.
     const dim = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, big)
     dim.addColorStop(0, 'rgba(3,5,12,0)')
-    dim.addColorStop(0.22, `rgba(3,5,12,${0.1 * L})`)
-    dim.addColorStop(1, `rgba(3,5,12,${0.36 * L})`)
+    dim.addColorStop(0.22, `rgba(3,5,12,${0.06 * L})`)
+    dim.addColorStop(1, `rgba(3,5,12,${0.22 * L})`)
     ctx.fillStyle = dim
     ctx.fillRect(0, 0, W(), H())
 
@@ -124,12 +128,12 @@ function draw(t: number) {
       const s = scale === 1 ? 0 : 0.03
       g.addColorStop(0, 'rgba(255,255,255,0)')
       g.addColorStop(0.36 + s, 'rgba(255,255,255,0)')
-      g.addColorStop(0.46 + s, `rgba(140,225,255,${0.26 * k})`)
-      g.addColorStop(0.54 + s, `rgba(120,255,190,${0.25 * k})`)
-      g.addColorStop(0.62 + s, `rgba(255,226,120,${0.24 * k})`)
-      g.addColorStop(0.7 + s, `rgba(255,140,150,${0.2 * k})`)
-      g.addColorStop(0.79 + s, `rgba(206,120,255,${0.19 * k})`)
-      g.addColorStop(0.9, `rgba(120,110,255,${0.05 * k})`)
+      g.addColorStop(0.46 + s, `rgba(140,225,255,${0.16 * k})`)
+      g.addColorStop(0.54 + s, `rgba(120,255,190,${0.15 * k})`)
+      g.addColorStop(0.62 + s, `rgba(255,226,120,${0.145 * k})`)
+      g.addColorStop(0.7 + s, `rgba(255,140,150,${0.12 * k})`)
+      g.addColorStop(0.79 + s, `rgba(206,120,255,${0.115 * k})`)
+      g.addColorStop(0.9, `rgba(120,110,255,${0.03 * k})`)
       g.addColorStop(1, 'rgba(120,110,255,0)')
       ctx.fillStyle = g
       ctx.fillRect(0, 0, W(), H())
@@ -138,12 +142,12 @@ function draw(t: number) {
     // The light itself: white where the phone is.
     const rb = span * (0.18 + 0.3 * L + 0.25 * F)
     const b = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rb)
-    const w = Math.min(1, 0.96 * L + 0.5 * F)
+    const w = Math.min(0.72, 0.68 * L + 0.32 * F)
     const red = glow.tint
     b.addColorStop(0, `rgba(255,${Math.round(255 - 140 * red)},${Math.round(255 - 150 * red)},${w})`)
-    b.addColorStop(0.2, `rgba(255,255,255,${0.82 * w})`)
-    b.addColorStop(0.45, `rgba(238,246,255,${0.42 * w})`)
-    b.addColorStop(0.72, `rgba(220,236,255,${0.12 * w})`)
+    b.addColorStop(0.2, `rgba(255,255,255,${0.7 * w})`)
+    b.addColorStop(0.45, `rgba(238,246,255,${0.3 * w})`)
+    b.addColorStop(0.72, `rgba(220,236,255,${0.08 * w})`)
     b.addColorStop(1, 'rgba(220,236,255,0)')
     ctx.fillStyle = b
     ctx.fillRect(0, 0, W(), H())
@@ -152,7 +156,7 @@ function draw(t: number) {
     const along = n.x !== 0 ? H() : W()
     const line = n.x !== 0 ? ctx.createLinearGradient(0, p.y - along * 0.4, 0, p.y + along * 0.4) : ctx.createLinearGradient(p.x - along * 0.4, 0, p.x + along * 0.4, 0)
     line.addColorStop(0, 'rgba(255,255,255,0)')
-    line.addColorStop(0.5, `rgba(255,255,255,${0.9 * w})`)
+    line.addColorStop(0.5, `rgba(255,255,255,${0.6 * w})`)
     line.addColorStop(1, 'rgba(255,255,255,0)')
     ctx.fillStyle = line
     const th = 5
@@ -175,13 +179,13 @@ function draw(t: number) {
     const g = ctx.createLinearGradient(c.x - n.x * half, c.y - n.y * half, c.x + n.x * half, c.y + n.y * half)
     const stops: [number, string][] = [
       [0, '170,120,255,0'],
-      [0.14, `170,120,255,${0.16 * env}`],
-      [0.3, `90,160,255,${0.2 * env}`],
-      [0.44, `110,240,255,${0.24 * env}`],
-      [0.52, `255,255,255,${0.3 * env}`],
-      [0.6, `140,255,170,${0.22 * env}`],
-      [0.74, `255,235,130,${0.2 * env}`],
-      [0.88, `255,150,120,${0.14 * env}`],
+      [0.14, `170,120,255,${0.09 * env}`],
+      [0.3, `90,160,255,${0.12 * env}`],
+      [0.44, `110,240,255,${0.14 * env}`],
+      [0.52, `255,255,255,${0.17 * env}`],
+      [0.6, `140,255,170,${0.13 * env}`],
+      [0.74, `255,235,130,${0.12 * env}`],
+      [0.88, `255,150,120,${0.08 * env}`],
       [1, '255,150,120,0'],
     ]
     // The leading edge goes first (into the screen).
@@ -278,7 +282,7 @@ function arrive(id: string) {
   glow.side = info.side
   glow.at = info.at
   glow.goal = 1
-  glow.flash = Math.max(glow.flash, 0.35)
+  glow.kick = Math.max(glow.kick, 0.3)
   const { p, n, span } = edge(info.side, info.at)
   const th = makeThumb(id, info)
   thumbs.set(id, th)
@@ -289,11 +293,11 @@ function arrive(id: string) {
   const turn = n.x !== 0 ? `rotateY(${n.x < 0 ? -42 : 42}deg)` : `rotateX(${n.y < 0 ? 42 : -42}deg)`
   const emerge = th.el.animate(
     [
-      { transform: place(from, 0.5, turn), opacity: 0, filter: 'blur(6px) brightness(1.8)' },
+      { transform: place(from, 0.5, turn), opacity: 0, filter: 'blur(6px) brightness(1.5)' },
       { opacity: 1, offset: 0.25 },
       { transform: place(th.at, 1, 'rotateY(0deg) rotateX(0deg) rotateZ(-2deg)'), opacity: 1, filter: 'blur(0) brightness(1)' },
     ],
-    { duration: reduced ? 200 : 820, easing: 'cubic-bezier(.16,.84,.24,1)', fill: 'forwards' },
+    { duration: reduced ? 200 : 940, easing: 'cubic-bezier(.22,.8,.26,1)', fill: 'forwards' },
   )
   // Even a file that's already here shows itself in the light for a moment.
   th.out = emerge.finished.then(() => new Promise((r) => setTimeout(r, reduced ? 0 : 380)))
@@ -318,7 +322,7 @@ async function fly(id: string, to: V, sweep: boolean) {
   if (sweep) {
     glow.sweep = 0
     glow.sweepIn = true
-    glow.flash = 1
+    glow.kick = 0.85
   }
   glow.goal = 0
   const from = th.at
@@ -331,7 +335,7 @@ async function fly(id: string, to: V, sweep: boolean) {
       { transform: place(to, 0.12, 'rotateZ(0deg)'), opacity: 1, offset: 0.92 },
       { transform: place(to, 0.06, 'rotateZ(0deg)'), opacity: 0 },
     ],
-    { duration: reduced ? 300 : 980, easing: 'cubic-bezier(.55,0,.25,1)', fill: 'forwards' },
+    { duration: reduced ? 300 : 1100, easing: 'cubic-bezier(.5,0,.25,1)', fill: 'forwards' },
   )
   setPhase(sweep ? 'land' : 'stow')
   a.onfinish = () => {
@@ -356,7 +360,7 @@ function splash(at: V) {
       { transform: 'translate(-50%, -50%) scale(0.2)', opacity: 0.9 },
       { transform: 'translate(-50%, -50%) scale(1.6)', opacity: 0 },
     ],
-    { duration: 520, easing: 'cubic-bezier(.2,.7,.3,1)' },
+    { duration: 640, easing: 'cubic-bezier(.2,.7,.3,1)' },
   ).onfinish = () => s.remove()
 }
 
@@ -380,16 +384,16 @@ function sendOut(c: DropSendCmd) {
       { transform: place(from, 0.85), opacity: 0, filter: 'brightness(1)' },
       { transform: place(from, 1.06), opacity: 1, offset: 0.14 },
       { transform: place(mid, 0.82, 'rotateZ(4deg)'), offset: 0.5 },
-      { transform: place(p, 0.34, turn), opacity: 1, filter: 'brightness(1.9) blur(1px)', offset: 0.86 },
-      { transform: place(gone, 0.12, turn), opacity: 0, filter: 'brightness(2.4) blur(4px)' },
+      { transform: place(p, 0.34, turn), opacity: 1, filter: 'brightness(1.5) blur(1px)', offset: 0.86 },
+      { transform: place(gone, 0.12, turn), opacity: 0, filter: 'brightness(1.8) blur(5px)' },
     ],
-    { duration: reduced ? 320 : 1150, easing: 'cubic-bezier(.45,0,.3,1)', fill: 'forwards' },
+    { duration: reduced ? 320 : 1300, easing: 'cubic-bezier(.42,0,.28,1)', fill: 'forwards' },
   )
   setPhase('send')
   a.onfinish = () => {
     th.el.remove()
     thumbs.delete(c.id)
-    glow.flash = 1
+    glow.kick = 0.85
     glow.sweep = 0
     glow.sweepIn = false
     glow.goal = 0

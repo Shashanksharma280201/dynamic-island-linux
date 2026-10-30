@@ -6,7 +6,9 @@ import type { Side } from '../protocol'
 
 /** Closer than this to an edge and the computer's edge starts to glow. */
 const APPROACH_AT = 0.2
-const SPRING = { damping: 18, stiffness: 220, mass: 0.9 }
+const SPRING = { damping: 20, stiffness: 200, mass: 0.9 }
+const SOFT = Easing.out(Easing.quad)
+const GENTLE = Easing.inOut(Easing.quad)
 
 export type FlickEvents = {
   /** Heading for the edge that faces the computer: it lights up there. */
@@ -65,19 +67,19 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
     'worklet'
     x.value = fx
     y.value = fy
-    tilt.value = withTiming(Math.max(-1, Math.min(1, vx / 2200)), { duration: 120 })
+    tilt.value = withTiming(Math.max(-1, Math.min(1, vx / 2600)), { duration: 160, easing: SOFT })
     const a = aim(fx, fy, w, h)
     if (a) {
       const i = EDGES.indexOf(a.edge)
       edge.value = i
       along.value = a.along
-      level.value = withTiming(Math.min(1, a.closeness * 1.15), { duration: 90 })
+      level.value = withTiming(Math.min(1, a.closeness * 1.15), { duration: 160, easing: SOFT })
       if (a.closeness >= APPROACH_AT && approached.value !== i) {
         approached.value = i
         scheduleOnRN(onApproach, computerSide(a.edge), a.along)
       }
     } else {
-      level.value = withTiming(0, { duration: 180 })
+      level.value = withTiming(0, { duration: 280, easing: SOFT })
       if (approached.value !== -1) {
         approached.value = -1
         scheduleOnRN(onLeave)
@@ -93,12 +95,12 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
       const out = exitPoint(r.edge, fx, fy, w, h, size)
       edge.value = EDGES.indexOf(r.edge)
       along.value = r.along
-      x.value = withTiming(out.x, { duration: 280, easing: Easing.in(Easing.cubic) })
-      y.value = withTiming(out.y, { duration: 280, easing: Easing.in(Easing.cubic) })
-      scale.value = withTiming(0.7, { duration: 280 })
-      level.value = withSequence(withTiming(1.2, { duration: 110 }), withTiming(0, { duration: 950, easing: Easing.out(Easing.quad) }))
-      wash.value = withDelay(130, withSequence(withTiming(0.9, { duration: 150 }), withTiming(0, { duration: 720, easing: Easing.out(Easing.quad) })))
-      shown.value = withDelay(300, withTiming(0, { duration: 1 }))
+      x.value = withTiming(out.x, { duration: 340, easing: Easing.in(Easing.cubic) })
+      y.value = withTiming(out.y, { duration: 340, easing: Easing.in(Easing.cubic) })
+      scale.value = withTiming(0.7, { duration: 340, easing: GENTLE })
+      level.value = withSequence(withTiming(1, { duration: 220, easing: SOFT }), withTiming(0, { duration: 1100, easing: GENTLE }))
+      wash.value = withDelay(120, withSequence(withTiming(0.35, { duration: 260, easing: SOFT }), withTiming(0, { duration: 900, easing: GENTLE })))
+      shown.value = withDelay(340, withTiming(0, { duration: 120 }))
       scheduleOnRN(onSend, computerSide(r.edge), r.along)
       return
     }
@@ -106,8 +108,8 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
       approached.value = -1
       scheduleOnRN(onLeave)
     }
-    level.value = withTiming(0, { duration: 220 })
-    tilt.value = withTiming(0, { duration: 200 })
+    level.value = withTiming(0, { duration: 320, easing: SOFT })
+    tilt.value = withTiming(0, { duration: 260, easing: SOFT })
     scale.value = withSpring(1, SPRING)
     x.value = withSpring(homeX.value, SPRING)
     y.value = withSpring(homeY.value, SPRING, (done) => {
@@ -122,8 +124,8 @@ export function useFlick(w: number, h: number, size: number, events: FlickEvents
     'worklet'
     edge.value = e
     along.value = 0.5
-    level.value = withSequence(withTiming(1, { duration: 140 }), withTiming(0, { duration: 900 }))
-    wash.value = withSequence(withTiming(0.85, { duration: 160 }), withTiming(0, { duration: 650 }))
+    level.value = withSequence(withTiming(0.9, { duration: 260, easing: SOFT }), withTiming(0, { duration: 1000, easing: GENTLE }))
+    wash.value = withSequence(withTiming(0.3, { duration: 260, easing: SOFT }), withTiming(0, { duration: 850, easing: GENTLE }))
   }
 
   const cardStyle = useAnimatedStyle(() => ({
