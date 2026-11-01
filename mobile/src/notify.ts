@@ -154,6 +154,17 @@ export function followIsland(link: DropLink, prefs: NotifyPrefs): () => void {
 }
 
 /** A file arrived from the computer (shown when the app isn't open). */
+/** Many files sent together (a folder): one notification when they've all come in. */
+export function notifyBatch(title: string, n: number, failed: number, bytes: number, from: string): void {
+  if (AppState.currentState === 'active') return
+  void Notifications.scheduleNotificationAsync({
+    content: failed
+      ? { title: `${title}: ${failed} of ${n} didn’t arrive`, body: `From ${from}. The rest are in Island Drop.` }
+      : { title, body: `${n} files from ${from} · ${sizeText(bytes)}. Tap to open Island Drop.`, data: { received: title } },
+    trigger: now(CH_FILES),
+  })
+}
+
 export function notifyReceived(f: PhoneIncoming, from: string, ok: boolean, message?: string): void {
   if (AppState.currentState === 'active') return
   void Notifications.scheduleNotificationAsync({

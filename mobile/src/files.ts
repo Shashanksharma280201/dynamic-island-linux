@@ -8,9 +8,13 @@ export type Item = {
   uri: string
   name: string
   size: number
-  kind: 'photo' | 'video' | 'file'
+  kind: 'photo' | 'video' | 'file' | 'folder'
   /** For the grid: "13:10", "Yesterday", "3 Oct". */
   when: number
+  /** A folder: how many files are in it. */
+  count?: number
+  /** A file that came in a folder: which ("Holiday/Day 1"). */
+  dir?: string
   width?: number
   height?: number
 }
@@ -59,7 +63,7 @@ export function loadTray(): Item[] {
     const f = new File(Paths.document, TRAY_LIST)
     if (!f.exists) return []
     const list = JSON.parse(f.textSync())
-    return Array.isArray(list) ? list.filter((i: Item) => i && typeof i.uri === 'string' && new File(i.uri).exists) : []
+    return Array.isArray(list) ? list.filter((i: Item) => i && typeof i.uri === 'string' && (i.kind === 'folder' ? new Directory(i.uri).exists : new File(i.uri).exists)) : []
   } catch {
     return []
   }
@@ -94,11 +98,63 @@ export async function addFiles(current: Item[]): Promise<Item[]> {
   return next
 }
 
+/** A folder's files, each with the folder it's in (the folder's own name first), at most `max`. */
+export function folderFiles(uri: string, name: string, max = 500): { uri: string; name: string; size: number; dir: string }[] {
+  const out: { uri: string; name: string; size: number; dir: string }[] = []
+  const walk = (d: Directory, dir: string) => {
+    let list: (Directory | File)[] = []
+    try {
+      list = d.list().sort((a, b) => a.name.localeCompare(b.name))
+    } catch {
+      return
+    }
+    for (const e of list) {
+      if (out.length >= max) return
+      if (e instanceof Directory) walk(e, `${dir}/${e.name}`)
+      else out.push({ uri: e.uri, name: e.name, size: e.size ?? 0, dir })
+    }
+  }
+  walk(new Directory(uri), name)
+  return out
+}
+
+/** Copy a folder (and everything in it) into the app. */
+async function copyTree(src: Directory, dest: Directory): Promise<void> {
+  if (!dest.exists) dest.create({ intermediates: true })
+  for (const e of src.list()) {
+    if (e instanceof Directory) await copyTree(e, new Directory(dest, e.name))
+    else await e.copy(new File(dest, e.name))
+  }
+}
+
+/** Pick a folder with the system picker and add a copy of it to the tray (sent as all its files, in their folders). */
+export async function addFolder(current: Item[]): Promise<Item[]> {
+  let picked: Directory
+  try {
+    picked = await Directory.pickDirectoryAsync()
+  } catch {
+    return current // cancelled
+  }
+  if (!picked) return current
+  const base = picked.name || 'Folder'
+  const folders = new Directory(trayDir(), 'folders')
+  if (!folders.exists) folders.create({ intermediates: true })
+  let dest = new Directory(folders, base)
+  for (let i = 2; dest.exists; i++) dest = new Directory(folders, `${base} (${i})`)
+  await copyTree(picked, dest)
+  const files = folderFiles(dest.uri, base)
+  const item: Item = { key: `d-${Date.now()}`, uri: dest.uri, name: base, size: files.reduce((n, f) => n + f.size, 0), kind: 'folder', count: files.length, when: Date.now() }
+  const next = [item, ...current]
+  saveTray(next)
+  return next
+}
+
 /** Take a file off the tray (and delete the app's copy). */
 export function removeFromTray(current: Item[], key: string): Item[] {
   const item = current.find((i) => i.key === key)
   try {
-    if (item) new File(item.uri).delete()
+    if (item?.kind === 'folder') new Directory(item.uri).delete()
+    else if (item) new File(item.uri).delete()
   } catch {
     // already gone
   }

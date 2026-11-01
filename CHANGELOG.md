@@ -6,6 +6,20 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Phone Drop: any files, both ways**
+
+- Up to 500 files at once (it was 20), from the phone or to it.
+- Hidden files keep their names: `.env` stays `.env`.
+- Whole folders, both ways. Drag a folder to the phone's edge, or use **Send
+  a folder to <your phone>…** in the tray menu; on the phone, **+ → A
+  folder**. It arrives as the same folder with its folders inside it, called
+  "Name (2)" if one by that name is already there. The island shows one card
+  for it, counting the files in; the phone shows them coming in as one card
+  too and keeps the folder as one entry in **Received**, which opens to list
+  its files.
+- A long send no longer gives up on files the phone hasn't got to yet: they
+  wait while any of the others are still moving.
+
 **Phone Drop: a ribbon of light**
 
 - The colour is now a ribbon of light, red and orange through yellow and

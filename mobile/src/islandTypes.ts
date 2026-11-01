@@ -61,5 +61,5 @@ export type PhoneView = {
   dnd: boolean
 }
 
-/** A file the computer is sending to the phone. */
-export type PhoneIncoming = { id: string; name: string; size: number; kind: string; thumb?: string; side: 'left' | 'right' | 'top' | 'bottom'; at: number }
+/** A file the computer is sending to the phone; `dir` is its folder when a folder is sent, `batch` where it is among the files sent together. */
+export type PhoneIncoming = { id: string; name: string; size: number; kind: string; thumb?: string; side: 'left' | 'right' | 'top' | 'bottom'; at: number; dir?: string; batch?: { id: string; i: number; n: number; title: string } }

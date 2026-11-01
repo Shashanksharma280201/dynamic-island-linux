@@ -4,13 +4,14 @@ import { FlatList, GestureDetector, usePanGesture, useTapGesture, useExclusiveGe
 import Animated, { FadeIn, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 import * as Haptics from 'expo-haptics'
-import { addFiles, loadTray, recentMedia, removeFromTray, thumbOf, whenText, type Item } from '../files'
+import { addFiles, addFolder, loadTray, recentMedia, removeFromTray, thumbOf, whenText, type Item } from '../files'
 import { EDGES, computerSide } from '../gesture'
 import type { DropLink } from '../link'
 import { newDropId, sizeText, type Side } from '../protocol'
 import { forgetReceived, openReceived, type Received } from '../received'
-import { sendAll, setSideUsed, sideUsed, sizeOf } from '../send'
+import { filesOf, sendAll, setSideUsed, sideUsed } from '../send'
 import { Face } from './Face'
+import { FolderSheet } from './FolderSheet'
 import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
 import { C } from './theme'
@@ -41,11 +42,12 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
   const loadMedia = () => void recentMedia().then(setMedia, () => setMedia({ items: [], allowed: false, canAsk: false }))
   useEffect(loadMedia, [])
 
-  const info = (item: Item) => ({ name: item.name, size: sizeOf(item) })
+  // What the computer is told is coming: the file, or every file of a folder (in its folders).
+  const infos = (item: Item) => filesOf([item]).map((f) => (f.dir ? { name: f.name, size: f.size, dir: f.dir } : { name: f.name, size: f.size }))
 
   const deliver = async (item: Item, id: string, side: Side, along: number, approach: boolean, thumb?: Promise<string | undefined>) => {
     setSending({ key: id, name: item.name, p: 0, phase: 'sending' })
-    const r = await sendAll(link, id, [item], side, along, { approach, thumb, onProgress: (p) => setSending((s) => (s && s.key === id && s.phase === 'sending' ? { ...s, p } : s)) })
+    const r = await sendAll(link, id, filesOf([item]), side, along, { approach, thumb, onProgress: (p) => setSending((s) => (s && s.key === id && s.phase === 'sending' ? { ...s, p } : s)) })
     setSending({ key: id, name: r.name ?? item.name, p: 1, phase: r.ok ? 'sent' : 'failed', message: r.ok ? undefined : r.message })
     if (!r.ok) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
   }
@@ -58,7 +60,7 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
       void Haptics.selectionAsync()
       void (async () => {
         const thumb = await Promise.race([drag.current.thumb ?? Promise.resolve(undefined), new Promise<undefined>((r) => setTimeout(r, 450))])
-        await link.approach(drag.current.id, side, along, [info(item)], thumb)
+        await link.approach(drag.current.id, side, along, infos(item), thumb)
       })()
     },
     leave: () => {
@@ -91,6 +93,7 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
     void deliver(item, newDropId(), side, 0.5, true, thumbOf(item))
   }
 
+  const [folder, setFolder] = useState<Item | null>(null)
   const items: Item[] = tab === 'photos' ? (media?.items ?? []) : tab === 'files' ? tray : received
   const data = tab === 'files' ? [ADD, ...items] : items
   const sel = selected ? items.find((i) => i.key === selected) : null
@@ -123,9 +126,19 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
         }
         renderItem={({ item }: { item: Item }) =>
           item.key === ADD.key ? (
-            <Pressable style={[s.add, { width: tile, height: tile + 44 }]} onPress={() => void addFiles(tray).then(setTray, (e) => Alert.alert('Couldn’t add that', String(e?.message ?? e)))}>
+            <Pressable
+              style={[s.add, { width: tile, height: tile + 44 }]}
+              onPress={() => {
+                const failed = (e: any) => Alert.alert('Couldn’t add that', String(e?.message ?? e))
+                Alert.alert('Add to send', 'Files of any kind, or a whole folder (sent with everything in it).', [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'A folder', onPress: () => void addFolder(tray).then(setTray, failed) },
+                  { text: 'Files', onPress: () => void addFiles(tray).then(setTray, failed) },
+                ])
+              }}
+            >
               <Text style={s.addPlus}>+</Text>
-              <Text style={s.addText}>Add files</Text>
+              <Text style={s.addText}>Files or a folder</Text>
             </Pressable>
           ) : (
             <Tile
@@ -138,7 +151,7 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
               onLift={onLift}
               flick={flick}
               onRemove={tab === 'files' ? () => setTray(removeFromTray(tray, item.key)) : tab === 'received' ? () => setReceived(forgetReceived(received, item.key)) : undefined}
-              onOpen={tab === 'received' ? () => void openReceived(item as Received) : undefined}
+              onOpen={tab === 'received' ? () => (item.kind === 'folder' ? setFolder(item) : void openReceived(item as Received)) : undefined}
             />
           )
         }
@@ -161,6 +174,7 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
         </Animated.View>
       )}
       {sending && !sel && <SendPill sending={sending} to={link.pairing.name} onDismiss={() => setSending(null)} />}
+      {folder && <FolderSheet folder={folder} onClose={() => setFolder(null)} />}
     </View>
   )
 }
@@ -251,6 +265,7 @@ function Tile({
               {item.name}
             </Text>
             <Text style={s.sub} numberOfLines={1}>
+              {item.kind === 'folder' ? `${item.count ?? 0} ${item.count === 1 ? 'file' : 'files'} · ` : ''}
               {item.size ? `${sizeText(item.size)} · ` : ''}
               {from ? `from ${from} · ` : ''}
               {whenText(item.when)}

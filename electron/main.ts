@@ -1484,6 +1484,10 @@ async function main() {
         const r = await dialog.showOpenDialog({ title: 'Send to your phone', properties: ['openFile', 'multiSelections'] })
         if (!r.canceled && r.filePaths.length) void phoneOut.send(r.filePaths)
       },
+      sendFolderToPhone: async () => {
+        const r = await dialog.showOpenDialog({ title: 'Send a folder to your phone', properties: ['openDirectory', 'multiSelections'] })
+        if (!r.canceled && r.filePaths.length) void phoneOut.send(r.filePaths)
+      },
       uninstall: () => void runUninstall(),
       quit: () => app.quit(),
     },

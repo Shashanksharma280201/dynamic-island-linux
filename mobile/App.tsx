@@ -161,8 +161,16 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
 
   const receivedRef = useRef(received)
   receivedRef.current = received
-  const onReceived = (uri: string, f: { name: string; size: number }) => {
-    void keepReceived(receivedRef.current, uri, f.name, f.size, link.pairing.name).then(setReceived)
+  // One after another, each from the list the last one left (many can arrive at once: a folder).
+  const keeping = useRef(Promise.resolve())
+  const onReceived = (uri: string, f: { name: string; size: number }, folder?: { uri: string; name: string }) => {
+    keeping.current = keeping.current
+      .then(() => keepReceived(receivedRef.current, uri, f.name, f.size, link.pairing.name, folder))
+      .then((r) => {
+        receivedRef.current = r
+        setReceived(r)
+      })
+      .catch(() => {})
   }
 
   const top = insets.top + 12

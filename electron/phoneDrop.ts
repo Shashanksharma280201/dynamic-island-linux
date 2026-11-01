@@ -20,6 +20,8 @@ type Drop = {
   phase: 'near' | 'coming' | 'stowed' | 'landing' | 'done'
   got: number[]
   saved: string[]
+  /** The folder the files went into, when a folder was sent. */
+  top?: string
   timer?: ReturnType<typeof setTimeout>
   lastCard?: number
 }
@@ -92,10 +94,11 @@ export class PhoneDrop implements DropEvents {
     }
   }
 
-  saved(id: string, index: number, path: string): void {
+  saved(id: string, index: number, path: string, top?: string): void {
     const drop = this.drops.get(id)
     if (!drop) return
     drop.saved.push(path)
+    if (top) drop.top = top
     drop.got[index] = drop.a.files[index]?.size ?? 0
     if (drop.saved.length < drop.a.files.length) return
     clearTimeout(drop.timer)
@@ -138,6 +141,21 @@ export class PhoneDrop implements DropEvents {
     const last = drop.saved[drop.saved.length - 1]
     const name = drop.saved.length === 1 ? basename(last) : dropTitle(drop.a.files)
     const total = drop.a.files.reduce((n, f) => n + f.size, 0)
+    // A folder: the card is the folder (open it, show it, undo it), with how many files are in it.
+    const top = drop.top && drop.saved.every((p) => p.startsWith(drop.top!)) ? drop.top : undefined
+    if (top) {
+      const n = drop.saved.length
+      return this.d.present(
+        `drop-${id}`,
+        {
+          title: `From ${drop.a.device}`,
+          sub: basename(top),
+          phase: 'done',
+          result: { path: top, name: basename(top), ext: 'folder', color: '#0a84ff', meta: `${n} file${n === 1 ? '' : 's'} · Saved to ${this.d.folderLabel()} · ${sizeText(total)}`, thumb: drop.a.thumb },
+        },
+        [top],
+      )
+    }
     this.d.present(
       `drop-${id}`,
       {
