@@ -7,7 +7,7 @@ import type { PhoneIncoming } from '../islandTypes'
 import type { DropLink } from '../link'
 import { notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
-import { EdgeGlow, Ripple, Wash } from './Glow'
+import { Aurora, EdgeGlow, Wash } from './Glow'
 import { C, extOf, kindColor } from './theme'
 
 const SPRING = { damping: 16, stiffness: 150, mass: 1 }
@@ -111,7 +111,7 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <EdgeGlow edge={edge} along={along} level={level} w={W} h={H} />
-      <Ripple edge={edge} along={along} t={ring} out={ringOut} w={W} h={H} />
+      <Aurora edge={edge} along={along} level={level} t={ring} out={ringOut} w={W} h={H} />
       <Animated.View style={[{ position: 'absolute', left: 0, top: 0, width: size }, cardStyle]}>
         <View style={[s.card, { width: size, height: size }]}>
           {isPhoto ? (
