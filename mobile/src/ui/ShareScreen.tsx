@@ -11,7 +11,7 @@ import type { DropLink, LinkState } from '../link'
 import { newDropId, sizeText, type Side } from '../protocol'
 import { sendAll, setSideUsed, sideUsed } from '../send'
 import { Face } from './Face'
-import { EdgeGlow, Ripple, Wash } from './Glow'
+import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
 import { C } from './theme'
 import { useFlick } from './useFlick'
@@ -121,7 +121,7 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
       </View>
 
       <EdgeGlow edge={flick.edge} along={flick.along} level={flick.level} w={W} h={H} />
-      <Ripple edge={flick.edge} along={flick.along} t={flick.ring} out={flick.ringOut} w={W} h={H} />
+      <Aurora edge={flick.edge} along={flick.along} level={flick.level} t={flick.ring} out={flick.ringOut} w={W} h={H} />
 
       {items.length > 1 && !flying && !grabbed && <View pointerEvents="none" style={[s.ghost, { width: size, height: size, left: home.x - size / 2 + 14, top: home.y - size / 2 - 10 }]} />}
       {/* At rest it sits in the middle; once grabbed, the flick moves its copy. */}
