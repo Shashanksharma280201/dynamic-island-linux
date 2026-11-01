@@ -233,7 +233,8 @@ export class WwebjsEngine implements WhatsAppEngine {
       show: false,
       width: 1100,
       height: 800,
-      webPreferences: { partition: 'persist:whatsapp', backgroundThrottling: false },
+      // Never typed into (messages go through WhatsApp Web's own code): no spellchecker for it.
+      webPreferences: { partition: 'persist:whatsapp', backgroundThrottling: false, spellcheck: false },
     })
     await this.win.loadURL(`about:blank#${marker}`)
     const client = new Client({

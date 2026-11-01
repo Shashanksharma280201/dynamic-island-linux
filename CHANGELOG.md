@@ -6,6 +6,26 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Lighter: far less CPU and memory**
+
+- At rest the island used most of a CPU core; it now uses about a fifth of
+  what it did. The character's orb drew 60 frames a second, each one also
+  redrawing the island's large soft shadow. Now the shadow sits on the
+  island's boxes (it looks the same and isn't redrawn), the resting orb
+  drifts at 20 frames a second and busy orbs at 30 (following your voice
+  still gets every frame).
+- While you're away from the computer (a minute without the keyboard or
+  mouse) or its screen is locked, the orbs stop drawing altogether; they
+  carry on the moment you're back.
+- The mail, Word, PDF and AI libraries load the first time they're needed
+  instead of at startup: about 40 MB less memory and a quicker start, more
+  if you don't use mail or the assistant.
+- The drag actions ring, the Phone Drop light and the "Send to phone" strip
+  close after three minutes unused (each was a hidden window of 60 to 100
+  MB kept for good); they open again in a moment with the next drag.
+- The island looks at the pointer less often while it's far away, so the
+  computer wakes up less.
+
 **Phone Drop: any files, both ways**
 
 - Up to 500 files at once (it was 20), from the phone or to it.

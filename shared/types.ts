@@ -147,6 +147,7 @@ export const IPC = {
   PANEL: 'island:panel', // renderer -> main: boolean (Control Center open)
   HOVER: 'island:hover', // main -> renderer: boolean (cursor over the island)
   CURSOR: 'island:cursor', // main -> renderer: { x, y } pointer in window coords (eyes follow it)
+  CALM: 'island:calm', // main -> renderer: boolean (you're away or the screen is locked: the orbs rest)
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
   HOLD: 'island:hold', // renderer -> main: { id, hold } keep a transient card open

@@ -109,6 +109,7 @@ import type { DocsView } from '@shared/docs'
 import { Backdrop } from './backdrop'
 import { FakeMailWatcher } from './providers/mailFake'
 import { IPC } from '@shared/types'
+import { watchCalm } from './calm'
 import type { NotificationData, SystemState } from '@shared/types'
 import type { Dock, Side } from '@shared/dock'
 import { defaultSocketPath } from '@shared/protocol'
@@ -208,6 +209,9 @@ async function main() {
   win.showInactive()
 
   const pushState = () => send(win, IPC.STATE, store.list())
+  // Away from the computer, or its screen locked: the orbs stop drawing.
+  const calm = watchCalm((c) => send(win, IPC.CALM, c))
+  app.on('before-quit', () => calm.stop())
   // The character's eyes follow the pointer anywhere on screen: 15 times a
   // second, and only when it moved.
   let lastCursor = ''
@@ -219,6 +223,7 @@ async function main() {
     const k = `${at.x},${at.y}`
     if (k === lastCursor) return
     lastCursor = k
+    calm.poke()
     send(win, IPC.CURSOR, at)
   }, 66)
   store.onChange(pushState)

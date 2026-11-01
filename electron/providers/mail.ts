@@ -1,7 +1,11 @@
-import { ImapFlow, type FetchMessageObject } from 'imapflow'
-import nodemailer from 'nodemailer'
-import MailComposer from 'nodemailer/lib/mail-composer/index.js'
-import { simpleParser } from 'mailparser'
+import type { ImapFlow, FetchMessageObject } from 'imapflow'
+
+// The mail libraries load when they're first needed (an account connecting, a
+// message to read, a reply to send): with no mail accounts, never.
+const imapflow = () => import('imapflow')
+const mailparser = () => import('mailparser')
+const nodemailer = async () => (await import('nodemailer')).default
+const mailComposer = async () => (await import('nodemailer/lib/mail-composer/index.js')).default
 
 import type { MailServer, MailStatus, MailSummary, MailMessageView } from '@shared/types'
 
@@ -167,6 +171,8 @@ export class MailAccountWatcher {
     if (this.stopped) return
     this.onStatus({ state: 'connecting' })
     const { imap, user } = this.account
+    const { ImapFlow } = await imapflow()
+    if (this.stopped) return
     const client = new ImapFlow({
       host: imap.host,
       port: imap.port,
@@ -227,6 +233,7 @@ export class MailAccountWatcher {
     let references: string[] | undefined
     let to: string | undefined
     try {
+      const { simpleParser } = await mailparser()
       const parsed = await simpleParser(msg.source ?? Buffer.alloc(0))
       text = parsed.text?.trim() || htmlToText(typeof parsed.html === 'string' ? parsed.html : '')
       const r = parsed.references
@@ -373,8 +380,9 @@ export class MailAccountWatcher {
       text,
       ...replyThreading(orig.messageId, orig.references),
     }
+    const MailComposer = await mailComposer()
     const raw = await new MailComposer(mail).compile().build()
-    const transport = nodemailer.createTransport({
+    const transport = (await nodemailer()).createTransport({
       host: smtp.host,
       port: smtp.port,
       secure: smtp.secure,
@@ -414,6 +422,7 @@ export class MailAccountWatcher {
 /** Try logging in to IMAP and SMTP with these settings; throws a readable error. */
 export async function testMailAccount(account: MailAccount, password: string): Promise<void> {
   const { imap, smtp, user } = account
+  const { ImapFlow } = await imapflow()
   const client = new ImapFlow({
     host: imap.host,
     port: imap.port,
@@ -429,7 +438,7 @@ export async function testMailAccount(account: MailAccount, password: string): P
   } finally {
     await client.logout().catch(() => client.close())
   }
-  const transport = nodemailer.createTransport({
+  const transport = (await nodemailer()).createTransport({
     host: smtp.host,
     port: smtp.port,
     secure: smtp.secure,

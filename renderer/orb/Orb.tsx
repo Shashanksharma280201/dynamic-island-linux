@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { MODE_FRAMES, paintFrame, resolvePreset, type OrbState } from 'thinking-orbs/engine'
 import { scaleCounts, scaleRadii } from 'thinking-orbs'
+import { isCalm, onCalm } from '../anim/calm'
 
 export type { OrbState }
 
@@ -41,13 +42,29 @@ const LABELS: Record<OrbState, string> = {
   shaping: 'Shaping',
 }
 
+/**
+ * Frame pacing: whether to draw at `now` (ms), given when the next frame is
+ * due, and when the one after is. Keeps the average at the asked rate on any
+ * refresh rate, and never bunches frames up after a pause. Pure.
+ */
+export function pace(now: number, due: number, every: number): { draw: boolean; due: number } {
+  // A millisecond early still counts: rAF times jitter around the refresh.
+  if (now < due - 1) return { draw: false, due }
+  return { draw: true, due: Math.max(due + every, now + every / 2) }
+}
+
+/** How often orbs are drawn unless asked otherwise: smooth for their slow motion, half the work of every screen refresh. */
+export const ORB_FPS = 30
+
 const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
 /**
  * A dotted "thinking orb" (thinking-orbs, MIT) at any size, in light ink for
  * the island's dark glass. Drawn on its own canvas so it stays sharp from
  * 16 to 200 px. With `level` (0–1, e.g. the microphone) it swells and speeds
- * up with your voice. It stops drawing while hidden, off screen or paused.
+ * up with your voice. It stops drawing while hidden, off screen or paused,
+ * and while you're away from the computer; it draws at most `fps` frames a
+ * second (each frame repaints the window, so fewer is lighter).
  */
 export function Orb({
   state,
@@ -58,6 +75,8 @@ export function Orb({
   dotSize = 1,
   paused = false,
   level,
+  fps = ORB_FPS,
+  tuned = false,
   className,
   title,
 }: {
@@ -72,6 +91,10 @@ export function Orb({
   paused?: boolean
   /** Read every frame: 0 (quiet) to 1 (loud). */
   level?: () => number
+  /** At most this many frames a second (each one is a repaint of the window). */
+  fps?: number
+  /** Drawn exactly as tuned for this size (20, 32 or 64 px), without the small-size bolding. */
+  tuned?: boolean
   className?: string
   title?: string
 }) {
@@ -91,10 +114,16 @@ export function Orb({
     const { mode, speed: baseSpeed, opts: preset } = resolvePreset(state, base)
     // Bigger than the tuned size: a few more dots, a little bolder, not blown up.
     const grow = scale > 1 ? scale : 1
-    let opts = scaleCounts(preset, Math.max(0.1, dots * Math.sqrt(grow)))
-    // Small ones get bolder dots, or they fade into a grey smudge on dark glass.
-    const bold = size <= 24 ? 1.35 : size <= 32 ? 1.15 : 1
-    opts = scaleRadii(opts, Math.max(0.1, dotSize * bold * Math.pow(scale, 0.6)))
+    let opts = preset
+    if (tuned) {
+      if (dots !== 1) opts = scaleCounts(opts, Math.max(0.1, dots))
+      if (dotSize !== 1) opts = scaleRadii(opts, Math.max(0.1, dotSize))
+    } else {
+      opts = scaleCounts(preset, Math.max(0.1, dots * Math.sqrt(grow)))
+      // Small ones get bolder dots, or they fade into a grey smudge on dark glass.
+      const bold = size <= 24 ? 1.35 : size <= 32 ? 1.15 : 1
+      opts = scaleRadii(opts, Math.max(0.1, dotSize * bold * Math.pow(scale, 0.6)))
+    }
     const draw = MODE_FRAMES[mode]
     const tint = parseTint(color)
 
@@ -126,14 +155,20 @@ export function Orb({
     let raf = 0
     let running = false
     let onScreen = true
+    let due = 0
+    let stilled = isCalm()
+    const every = 1000 / Math.max(1, Math.min(120, fps))
     const loop = (now: number) => {
-      frame(now)
+      const p = pace(now, due, every)
+      due = p.due
+      if (p.draw) frame(now)
       if (running) raf = requestAnimationFrame(loop)
     }
     const start = () => {
-      if (running || !onScreen || document.visibilityState === 'hidden') return
+      if (running || !onScreen || stilled || document.visibilityState === 'hidden') return
       running = true
       last = performance.now()
+      due = 0
       raf = requestAnimationFrame(loop)
     }
     const stop = () => {
@@ -148,13 +183,19 @@ export function Orb({
     io.observe(canvas)
     const onVis = () => (document.visibilityState === 'hidden' ? stop() : start())
     document.addEventListener('visibilitychange', onVis)
+    const offCalm = onCalm((c) => {
+      stilled = c
+      if (c) stop()
+      else start()
+    })
     start()
     return () => {
       stop()
+      offCalm()
       io.disconnect()
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [state, size, color, speed, dots, dotSize, paused])
+  }, [state, size, color, speed, dots, dotSize, paused, fps, tuned])
 
   return (
     <canvas
