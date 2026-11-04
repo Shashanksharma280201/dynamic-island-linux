@@ -85,7 +85,8 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
 
   try {
     await page.waitForSelector('.capsule', { timeout: 15000 })
-    await sleep(2500) // the helper starts
+    // The helper only notices drags that start after it's running: wait for it, however long startup takes.
+    check('the drag watcher starts', await until(() => logs.join('').includes('drag watcher ready'), 30000), (logs.join('').match(/\[island\] drag[^\n]*/g) || []).slice(0, 3).join(' | '))
     const area = await app.evaluate(({ screen }) => screen.getPrimaryDisplay().workArea)
     const C = [Math.round(area.x + area.width / 2 - 120), Math.round(area.y + area.height / 2)]
     warp(...C)

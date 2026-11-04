@@ -128,7 +128,11 @@ export function darwinDragSource(e: DragEvents): DragSource {
         createInterface({ input: child.stdout }).on('line', (line) => {
           const m = dragLine(line)
           if (!m) return
-          if ('ready' in m) return done(true)
+          if ('ready' in m) {
+            // Said once, as on Windows: a drag started before this isn't seen.
+            console.log('[island] drag watcher ready')
+            return done(true)
+          }
           if ('start' in m) {
             // A result dragged out of the island itself: leave it be.
             ours = e.ownDrag()
