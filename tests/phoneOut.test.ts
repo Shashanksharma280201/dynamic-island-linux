@@ -1,6 +1,6 @@
 import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, relative, sep } from 'node:path'
 import type { JobState } from '@shared/types'
 
 vi.mock('electron', () => ({
@@ -18,7 +18,12 @@ function tree(): string {
   writeFileSync(join(root, 'Holiday', '.hidden'), 'h')
   writeFileSync(join(root, 'Holiday', 'Day 1', 'a.txt'), 'aaa')
   writeFileSync(join(root, 'single.pdf'), 'pdf!')
-  symlinkSync(join(root, 'Holiday'), join(root, 'Holiday', 'loop'))
+  try {
+    // A link back to the folder it's in (Windows may not allow making one: then there's simply none).
+    symlinkSync(join(root, 'Holiday'), join(root, 'Holiday', 'loop'), 'dir')
+  } catch {
+    // no link
+  }
   return root
 }
 
@@ -27,7 +32,8 @@ describe('files to send', () => {
     const root = tree()
     const { files, more } = await filesToSend([join(root, 'single.pdf'), join(root, 'Holiday'), join(root, 'missing')])
     expect(more).toBe(false)
-    const got = Object.fromEntries(files.map((f) => [f.path.slice(root.length + 1), { dir: f.dir, size: f.size }]))
+    // (Paths with '/' on every system; `dir` already is.)
+    const got = Object.fromEntries(files.map((f) => [relative(root, f.path).split(sep).join('/'), { dir: f.dir, size: f.size }]))
     expect(got).toEqual({
       'single.pdf': { dir: undefined, size: 4 },
       'Holiday/b.jpg': { dir: 'Holiday', size: 2 },
