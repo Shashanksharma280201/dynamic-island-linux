@@ -3,11 +3,12 @@ import { StyleSheet, Switch, Text, View } from 'react-native'
 import type { SystemState } from '../../../shared/types'
 import type { DropLink, Live } from '../link'
 import { NowPlaying } from './IslandScreen'
-import { Card, Empty, ErrorLine, Page, Slider, s as k, useAction, useCall } from './kit'
-import { C } from './theme'
+import { Card, Empty, ErrorLine, Page, Slider, useKit, useAction, useCall } from './kit'
+import { themed, useTheme } from './theme'
 
 /** The island's Control Center from your phone: volume, brightness, mute, Wi-Fi, Bluetooth, Do Not Disturb. */
 export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; live: Live; top: number; onBack: () => void }) {
+  const C = useTheme()
   // The computer's levels, looked at again every few seconds while this is open.
   const { data, error, setData } = useCall<SystemState>(link, 'system.read', [], { poll: 2500 })
   const act = useAction(link)
@@ -24,7 +25,7 @@ export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; li
       {!!error && !data && <Empty title="Can’t read them" text={error} />}
       {data && (
         <Card style={{ gap: 18 }}>
-          <Slider label={data.muted ? 'Volume (muted)' : 'Volume'} value={data.volume} color={data.muted ? C.text3 : '#fff'} onChange={(v) => cmd({ type: 'volume', value: v }, { volume: v })} />
+          <Slider label={data.muted ? 'Volume (muted)' : 'Volume'} value={data.volume} color={data.muted ? C.text3 : C.accent} onChange={(v) => cmd({ type: 'volume', value: v }, { volume: v })} />
           {data.brightness !== null && <Slider label="Brightness" value={data.brightness} color={C.orange} onChange={(v) => cmd({ type: 'brightness', value: v }, { brightness: v })} />}
         </Card>
       )}
@@ -50,15 +51,19 @@ export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; li
   )
 }
 
-function Toggle({ title, value, onChange, last, color = C.green }: { title: string; value: boolean; onChange: (on: boolean) => void; last?: boolean; color?: string }) {
+function Toggle({ title, value, onChange, last, color: tint }: { title: string; value: boolean; onChange: (on: boolean) => void; last?: boolean; color?: string }) {
+  const C = useTheme()
+  const color = tint ?? C.green
+  const st = useSt()
+  const k = useKit()
   return (
     <View style={[st.toggle, !last && k.rowLine]}>
       <Text style={[k.rowTitle, { flex: 1 }]}>{title}</Text>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: color, false: 'rgba(255,255,255,0.15)' }} thumbColor="#fff" />
+      <Switch value={value} onValueChange={onChange} trackColor={{ true: color, false: C.dark ? '#3a3a3f' : '#d9d9de' }} thumbColor="#fff" />
     </View>
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   toggle: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
-})
+}))

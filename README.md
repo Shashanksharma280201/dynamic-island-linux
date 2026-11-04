@@ -103,8 +103,9 @@ Bug reports, ideas and pull requests are welcome: see
 
 [MIT](LICENSE) © 2026 Shashank Sharma. Bundled work keeps its own license:
 the Inter typeface (SIL Open Font License), [thinking-orbs](https://libraries.dev/orbs)
-by Jakub Antalik (MIT), and the libraries in `package.json` (MIT, Apache-2.0
-and BSD).
+by Jakub Antalik (MIT), the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy)
+by Ryan (MIT; `mobile/src/iso/`), and the libraries in `package.json` (MIT,
+Apache-2.0 and BSD).
 
 Dynamic Island is an independent project, not made by or affiliated with
 Apple. "Dynamic Island" names the iPhone feature that inspired it.

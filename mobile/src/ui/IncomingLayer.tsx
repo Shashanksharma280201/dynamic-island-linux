@@ -5,10 +5,11 @@ import * as Haptics from 'expo-haptics'
 import { EDGES, computerSide, exitPoint } from '../gesture'
 import type { PhoneIncoming } from '../islandTypes'
 import type { DropLink } from '../link'
+import { setActivity } from '../activity'
 import { notifyBatch, notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
 import { Aurora, EdgeGlow, Wash } from './Glow'
-import { C, extOf, kindColor } from './theme'
+import { extOf, kindColor, themed, useTheme } from './theme'
 
 const SPRING = { damping: 16, stiffness: 150, mass: 1 }
 
@@ -20,6 +21,7 @@ const SPRING = { damping: 16, stiffness: 150, mass: 1 }
  * in the background they're saved quietly and a notification says so.
  */
 export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink; onReceived: (uri: string, f: PhoneIncoming, folder?: { uri: string; name: string }) => void; filesTabX: number }) {
+  const s = useS()
   const { width: W, height: H } = useWindowDimensions()
   const [queue, setQueue] = useState<PhoneIncoming[]>([])
   const queueRef = useRef(queue)
@@ -90,7 +92,14 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
       y.value = withDelay(120, withSpring(centre.y, SPRING))
       scale.value = withDelay(120, withSpring(1, SPRING))
     }
-    void link.receive(current, (v) => !cancelled && setP(v)).then((r) => {
+    const label = together ? together.title : current.name
+    const tell = (v: number) => setActivity({ kind: 'receiving', label: together ? `${label} · ${together.i + 1} of ${together.n}` : label, progress: together ? (together.i + v) / together.n : v })
+    tell(0)
+    void link.receive(current, (v) => {
+      if (cancelled) return
+      setP(v)
+      tell(v)
+    }).then((r) => {
       if (cancelled) return
       if (r.ok && r.uri) onReceived(r.uri, current, r.folder)
       if (r.ok) b.ok++
@@ -101,6 +110,7 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
       // More of these still to come: on to the next, the card staying where it is.
       const more = !!together && together.i < together.n - 1 && queueRef.current.slice(1).some((q) => q.batch?.id === together.id)
       if (more) return next()
+      setActivity(null)
       batch.current = null
       if (quiet) {
         if (together) notifyBatch(together.title, together.n, b.failed, b.bytes, link.pairing.name)
@@ -201,17 +211,17 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
   )
 }
 
-const s = StyleSheet.create({
-  card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)', backgroundColor: C.card, elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
+const useS = themed((C) => ({
+  card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: C.dark ? 'rgba(255,255,255,0.45)' : C.lineStrong, backgroundColor: C.card, elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   tile: { flex: 1, justifyContent: 'flex-end', padding: 16 },
-  tileText: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  tileText: { color: '#fff', fontSize: 26, fontWeight: '700' },
   tileSub: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700' },
   folderTab: { position: 'absolute', top: 16, left: 16, width: 42, height: 11, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.45)' },
   check: { position: 'absolute', right: 10, top: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
-  checkText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  checkText: { color: '#fff', fontSize: 18, fontWeight: '800' },
   caption: { alignItems: 'center', marginTop: 12 },
   name: { color: C.text, fontSize: 15, fontWeight: '700' },
   sub: { color: C.text2, fontSize: 13, marginTop: 3 },
-  track: { width: 140, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)', marginTop: 8, overflow: 'hidden' },
-  fill: { height: 4, borderRadius: 2, backgroundColor: '#fff' },
-})
+  track: { width: 140, height: 4, borderRadius: 2, backgroundColor: C.fill, marginTop: 8, overflow: 'hidden' },
+  fill: { height: 4, borderRadius: 2, backgroundColor: C.accent },
+}))

@@ -2,13 +2,15 @@ import { StyleSheet, Text, View } from 'react-native'
 import type { ServiceState } from '../../../shared/services'
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Kicker, Page, Row, ago, useAction, useCall } from './kit'
-import { C } from './theme'
+import { themed, useTheme, type Palette } from './theme'
 
 const NAME: Record<string, string> = { github: 'GitHub', vercel: 'Vercel', stripe: 'Stripe', resend: 'Resend', notion: 'Notion' }
-const DOT: Record<string, string> = { good: C.green, bad: C.red, busy: C.orange }
+const dotOf = (C: Palette): Record<string, string> => ({ good: C.green, bad: C.red, busy: C.orange })
 
 /** The services the island follows (GitHub, Vercel, Stripe…): what each says now. */
 export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
+  const C = useTheme()
+  const st = useSt()
   const { data, error, reload } = useCall<ServiceState[]>(link, 'services.view', [], { topic: 'services', fromPush: true })
   const act = useAction(link)
   const on = (data ?? []).filter((x) => x.ready || x.error)
@@ -35,7 +37,7 @@ export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: num
               <Kicker>{sec.title}</Kicker>
               {!sec.rows.length && <Text style={st.empty}>{sec.empty}</Text>}
               {sec.rows.slice(0, 6).map((r, i, a) => (
-                <Row key={r.id} title={r.title} sub={r.sub} last={i === a.length - 1} left={<View style={[st.dot, { backgroundColor: DOT[r.tone ?? ''] ?? 'transparent' }]} />} right={r.side ?? (r.at ? ago(r.at) : undefined)} />
+                <Row key={r.id} title={r.title} sub={r.sub} last={i === a.length - 1} left={<View style={[st.dot, { backgroundColor: dotOf(C)[r.tone ?? ''] ?? 'transparent' }]} />} right={r.side ?? (r.at ? ago(r.at) : undefined)} />
               ))}
             </View>
           ))}
@@ -45,11 +47,11 @@ export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: num
   )
 }
 
-const st = StyleSheet.create({
-  name: { color: C.text, fontSize: 17, fontWeight: '800', flex: 1 },
+const useSt = themed((C) => ({
+  name: { color: C.text, fontSize: 17, fontWeight: '700', flex: 1 },
   when: { color: C.text3, fontSize: 12 },
-  big: { color: C.text, fontSize: 24, fontWeight: '800' },
+  big: { color: C.text, fontSize: 24, fontWeight: '700' },
   bigLabel: { color: C.text2, fontSize: 14, fontWeight: '600' },
   empty: { color: C.text3, fontSize: 13 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-})
+}))

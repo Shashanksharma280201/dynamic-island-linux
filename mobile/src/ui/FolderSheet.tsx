@@ -4,10 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { folderFiles } from '../files'
 import { sizeText } from '../protocol'
 import { openReceived } from '../received'
-import { C, kindColor, extOf } from './theme'
+import { kindColor, extOf, themed, useTheme } from './theme'
 
 /** What's in a folder the computer sent: every file in it (in its folders); tap one to open it in another app. */
 export function FolderSheet({ folder, onClose }: { folder: { uri: string; name: string }; onClose: () => void }) {
+  const s = useS()
   const insets = useSafeAreaInsets()
   const files = useMemo(() => folderFiles(folder.uri, folder.name), [folder.uri, folder.name])
   const bytes = files.reduce((n, f) => n + f.size, 0)
@@ -61,19 +62,19 @@ export function FolderSheet({ folder, onClose }: { folder: { uri: string; name: 
   )
 }
 
-const s = StyleSheet.create({
+const useS = themed((C) => ({
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
   sheet: { maxHeight: '78%', backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderColor: C.line },
-  grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.25)', marginTop: 8 },
+  grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.lineStrong, marginTop: 8 },
   head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 },
-  title: { color: C.text, fontSize: 20, fontWeight: '800' },
+  title: { color: C.text, fontSize: 20, fontWeight: '700' },
   sub: { color: C.text2, fontSize: 13, marginTop: 2 },
-  close: { backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  closeText: { color: '#000', fontSize: 14, fontWeight: '700' },
+  close: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
+  closeText: { color: C.onPrimary, fontSize: 14, fontWeight: '600' },
   empty: { color: C.text3, fontSize: 14, marginTop: 10 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   badge: { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
   name: { color: C.text, fontSize: 15, fontWeight: '600' },
   meta: { color: C.text3, fontSize: 12, marginTop: 2 },
-})
+}))

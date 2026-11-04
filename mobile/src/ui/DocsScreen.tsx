@@ -4,8 +4,8 @@ import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-re
 import * as Haptics from 'expo-haptics'
 import type { ConvertTarget, DocAction, DocActionResult, DocEntry, DocKind, DocsView } from '../../../shared/docs'
 import type { DropLink } from '../link'
-import { Btn, Card, Empty, ErrorLine, Page, ago, s as k, useAction, useCall } from './kit'
-import { C, kindColor } from './theme'
+import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
+import { kindColor, themed, useTheme } from './theme'
 
 const TARGETS: ConvertTarget[] = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md']
 /** What a file can become (as the island's Documents tab decides; it checks again). */
@@ -24,6 +24,7 @@ const size = (n: number) => (n < 1024 ? `${n} B` : n < 1024 ** 2 ? `${Math.round
 
 /** The island's Documents: the files there, and what it can do with them (no AI needed), right from your phone. */
 export function DocsScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
+  const st = useSt()
   const { data, error, reload } = useCall<DocsView>(link, 'docs.view', [], { topic: 'docs' })
   const act = useAction(link)
   const [open, setOpen] = useState<string | null>(null)
@@ -81,6 +82,9 @@ export function DocsScreen({ link, top, onBack }: { link: DropLink; top: number;
 }
 
 function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun, onSend, onRemove }: { f: DocEntry; open: boolean; picked: boolean; libreOffice: boolean; busy: string; onToggle: () => void; onPick: () => void; onRun: (key: string, a: DocAction) => void; onSend: () => void; onRemove: () => void }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const color = kindColor(f.name)
   return (
     <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOut} layout={LinearTransition.springify().damping(20)}>
@@ -97,7 +101,7 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
           </View>
           {f.kind === 'pdf' && (
             <Pressable hitSlop={10} onPress={onPick} style={[st.pick, picked && { backgroundColor: C.blue, borderColor: C.blue }]}>
-              {picked && <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>✓</Text>}
+              {picked && <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>✓</Text>}
             </Pressable>
           )}
         </Pressable>
@@ -126,11 +130,11 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   note: { color: C.green, fontSize: 14, fontWeight: '700' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   tile: { width: 44, height: 52, borderRadius: 10, justifyContent: 'flex-end', padding: 6 },
-  tileText: { color: '#fff', fontSize: 10, fontWeight: '900' },
+  tileText: { color: '#fff', fontSize: 10, fontWeight: '800' },
   pick: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: C.text3, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-})
+}))
