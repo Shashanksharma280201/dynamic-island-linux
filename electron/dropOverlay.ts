@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, type Display } from 'electron'
+import { closeWhenIdle } from './idleClose'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import type { DropCmd } from '@shared/drop'
@@ -117,6 +118,7 @@ export class DropOverlay {
     })
     if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/drop.html`)
     else void win.loadFile(resolve(here, '../renderer/drop.html'))
+    closeWhenIdle(win)
     this.win = win
     return win
   }

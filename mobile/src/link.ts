@@ -11,7 +11,7 @@ export type Live = { phase: 'off' | 'connecting' | 'live' | 'offline'; view?: Ph
 export type Phase = 'finding' | 'ready' | 'offline'
 export type LinkState = { phase: Phase; error?: string; url?: string }
 export type SendResult = { ok: boolean; message: string; name?: string }
-export type Outgoing = { uri: string; name: string; size: number }
+export type Outgoing = { uri: string; name: string; size: number; dir?: string }
 
 /** "Pixel 9": what the island's card says it came from. */
 export const DEVICE = (() => {
@@ -131,7 +131,7 @@ export class DropLink {
   }
 
   /** A file is heading for the edge: the computer's edge lights up. Fire and forget. */
-  async approach(id: string, side: Side, at: number, files: { name: string; size: number }[], thumb?: string): Promise<void> {
+  async approach(id: string, side: Side, at: number, files: { name: string; size: number; dir?: string }[], thumb?: string): Promise<void> {
     const url = await this.url()
     if (!url) return
     await call(`${url}/drop/approach`, {
@@ -153,7 +153,7 @@ export class DropLink {
   async send(id: string, index: number, f: Outgoing, onProgress: (p: number) => void, signal?: AbortSignal): Promise<SendResult> {
     let url = await this.url()
     if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
-    const target = () => `${url}/drop/file?id=${id}&index=${index}&name=${encodeURIComponent(f.name)}&size=${f.size}`
+    const target = () => `${url}/drop/file?id=${id}&index=${index}&name=${encodeURIComponent(f.name)}&size=${f.size}${f.dir ? `&dir=${encodeURIComponent(f.dir)}` : ''}`
     const attempt = async (): Promise<SendResult> => {
       const task = new File(f.uri).createUploadTask(target(), {
         httpMethod: 'PUT',
@@ -326,14 +326,48 @@ export class DropLink {
     return { uri: path.startsWith('/') ? `${url}${path}` : path, headers: path.startsWith('/') ? this.auth : {} }
   }
 
-  /** Take a file the computer sent: saved in the app's Received folder, then the computer hears it arrived. */
-  async receive(f: PhoneIncoming, onProgress: (p: number) => void): Promise<{ ok: boolean; uri?: string; message?: string }> {
+  /** Each folder being received (by the files sent together), and where it's going in Received. */
+  private tops = new Map<string, Directory>()
+
+  /**
+   * Where a file the computer sent goes: Received, or for a file in a folder
+   * that folder (made inside Received, its first part renamed if Received
+   * already has one by that name: "Holiday (2)"). Only cleaned names, never
+   * a path from the other side.
+   */
+  private destFor(f: PhoneIncoming): { dir: Directory; folder?: Directory } {
+    const root = new Directory(Paths.document, 'received')
+    if (!root.exists) root.create({ intermediates: true })
+    const parts = cleanParts(f.dir ?? '')
+    if (!parts.length) return { dir: root }
+    const key = f.batch?.id ?? f.id
+    let top = this.tops.get(key)
+    if (!top) {
+      top = new Directory(root, parts[0])
+      for (let i = 2; top.exists || new File(root, top.name).exists; i++) top = new Directory(root, `${parts[0]} (${i})`)
+      top.create({ intermediates: true })
+      this.tops.set(key, top)
+      if (this.tops.size > 20) this.tops.delete(this.tops.keys().next().value!)
+    }
+    let dir = top
+    for (const p of parts.slice(1)) dir = new Directory(dir, p)
+    if (!dir.exists) dir.create({ intermediates: true })
+    return { dir, folder: top }
+  }
+
+  /** Take a file the computer sent: saved in the app's Received folder (in its folders, when a folder was sent), then the computer hears it arrived. */
+  async receive(f: PhoneIncoming, onProgress: (p: number) => void): Promise<{ ok: boolean; uri?: string; folder?: { uri: string; name: string }; message?: string }> {
     const url = await this.url()
     if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
-    const dir = new Directory(Paths.document, 'received')
-    if (!dir.exists) dir.create({ intermediates: true })
-    // Only a plain name, in Received: never a path from the other side.
-    const name = f.name.replace(/[\\/\u0000-\u001f]/g, '_').replace(/^\.+/, '').slice(0, 200) || 'file'
+    let place: { dir: Directory; folder?: Directory }
+    try {
+      place = this.destFor(f)
+    } catch (e: any) {
+      await this.post(`/drop/out/${f.id}/done`, { ok: false })
+      return { ok: false, message: String(e?.message ?? e) }
+    }
+    const dir = place.dir
+    const name = cleanName(f.name)
     let dest = new File(dir, name)
     const dot = name.lastIndexOf('.')
     for (let i = 2; dest.exists; i++) dest = new File(dir, dot > 0 ? `${name.slice(0, dot)} (${i})${name.slice(dot)}` : `${name} (${i})`)
@@ -345,7 +379,7 @@ export class DropLink {
       const got = await task.downloadAsync()
       if (!got || (f.size && got.size !== f.size)) throw new Error('It didn’t arrive whole')
       await this.post(`/drop/out/${f.id}/done`, { ok: true })
-      return { ok: true, uri: got.uri }
+      return { ok: true, uri: got.uri, folder: place.folder && { uri: place.folder.uri, name: place.folder.name } }
     } catch (e: any) {
       try {
         if (dest.exists) dest.delete()
@@ -356,4 +390,20 @@ export class DropLink {
       return { ok: false, message: String(e?.message ?? e) }
     }
   }
+}
+
+/** A name the computer sent, safe to save under: no path, no control characters, not only dots (hidden files keep theirs). */
+export function cleanName(name: string): string {
+  const n = (String(name).split(/[\\/]/).pop() ?? '').replace(/[\u0000-\u001f\u007f:*?"<>|]/g, '').trim().replace(/[.\s]+$/, '').slice(0, 200)
+  return !n || /^\.+$/.test(n) ? 'file' : n
+}
+
+/** The folders of a path the computer sent ("Holiday/Day 1"), each cleaned like a name; "." and ".." left out, at most 8 deep. */
+export function cleanParts(dir: string): string[] {
+  return String(dir)
+    .split(/[\\/]/)
+    .map((p) => p.replace(/[\u0000-\u001f\u007f:*?"<>|]/g, '').trim().replace(/[.\s]+$/, ''))
+    .filter((p) => p && !/^\.+$/.test(p))
+    .map((p) => p.slice(0, 100).trim())
+    .slice(0, 8)
 }

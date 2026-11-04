@@ -21,7 +21,7 @@ export const DROP_MAX_BYTES = 8 * 1024 ** 3
 /** A thumbnail the phone sends with its approach (a small JPEG, as a data URL). */
 export const DROP_MAX_THUMB = 300_000
 /** At most this many files in one drop. */
-export const DROP_MAX_FILES = 20
+export const DROP_MAX_FILES = 500
 /** An approach that isn't followed by its file this soon fades away. */
 export const APPROACH_MS = 10_000
 
@@ -29,7 +29,8 @@ export const APPROACH_MS = 10_000
 export type DropSide = 'left' | 'right' | 'top' | 'bottom'
 export const DROP_SIDES: DropSide[] = ['left', 'right', 'top', 'bottom']
 
-export type DropFileInfo = { name: string; size: number }
+/** A file in a drop; `dir` is the folder it's in when a folder is sent ("Holiday/Day 1"). */
+export type DropFileInfo = { name: string; size: number; dir?: string }
 
 /** A file on its way: the phone is dragging it toward its edge. */
 export type DropApproach = {
@@ -102,7 +103,8 @@ export function parseApproach(raw: any): DropApproach | null {
   const files: DropFileInfo[] = []
   for (const f of raw.files) {
     if (!f || typeof f.name !== 'string' || !validSize(f.size)) return null
-    files.push({ name: cleanFileName(f.name), size: f.size })
+    const dir = typeof f.dir === 'string' ? cleanDir(f.dir) : ''
+    files.push(dir ? { name: cleanFileName(f.name), size: f.size, dir } : { name: cleanFileName(f.name), size: f.size })
   }
   const at = typeof raw.at === 'number' && Number.isFinite(raw.at) ? Math.min(1, Math.max(0, raw.at)) : 0.5
   const thumb = typeof raw.thumb === 'string' && raw.thumb.length <= DROP_MAX_THUMB && /^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(raw.thumb) ? raw.thumb : undefined
@@ -126,13 +128,28 @@ export function cleanDevice(v: unknown): string {
 export function cleanFileName(name: string): string {
   let n = String(name).split(/[\\/]/).pop() ?? ''
   n = n.replace(/[\u0000-\u001f\u007f:*?"<>|]/g, '').trim()
-  n = n.replace(/^[.\s]+/, '').replace(/[.\s]+$/, '')
-  if (!n) return 'file'
+  // Hidden files keep their dot (".env"); a name of only dots isn't one.
+  n = n.replace(/[.\s]+$/, '')
+  if (!n || /^\.+$/.test(n)) return 'file'
   if (n.length > 150) {
     const { base, ext } = splitName(n)
     n = ext && ext.length <= 12 ? `${base.slice(0, 150 - ext.length - 1).trim()}.${ext}` : n.slice(0, 150)
   }
   return n
+}
+
+/**
+ * A folder path inside a drop ("Holiday/Day 1"), safe to make under the drop
+ * folder: each part cleaned like a file name, "." and ".." and empty parts
+ * left out, at most 8 deep. '' when nothing is left. Pure.
+ */
+export function cleanDir(dir: string): string {
+  const parts = String(dir)
+    .split(/[\\/]/)
+    .map((p) => p.replace(/[\u0000-\u001f\u007f:*?"<>|]/g, '').trim().replace(/[.\s]+$/, ''))
+    .filter((p) => p && !/^\.+$/.test(p))
+    .map((p) => (p.length > 100 ? p.slice(0, 100).trim() : p))
+  return parts.slice(0, 8).join('/')
 }
 
 /** "Report.final.pdf" -> { base: "Report.final", ext: "pdf" } (ext lowercased). */
@@ -186,6 +203,9 @@ export function sizeText(n: number): string {
 
 /** "3 photos", "2 files", or the one file's name. */
 export function dropTitle(files: DropFileInfo[]): string {
+  // A folder: its name, and how many files.
+  const top = files.every((f) => f.dir) ? new Set(files.map((f) => f.dir!.split('/')[0])) : null
+  if (top?.size === 1) return files.length === 1 ? [...top][0] : `${[...top][0]} · ${files.length} files`
   if (files.length === 1) return files[0].name
   const kinds = new Set(files.map((f) => dropKind(f.name)))
   if (kinds.size === 1 && kinds.has('image')) return `${files.length} photos`

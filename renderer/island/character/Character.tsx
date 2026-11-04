@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useId, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion'
-import { ThinkingOrb } from 'thinking-orbs'
+import { Orb } from '../../orb/Orb'
 import type { OrbMood } from '@shared/claude'
 import { DEFAULT_CHARACTER, MOOD_COLOR, gazeToward, ringKind, wearing, type CharacterConfig, type CharacterId, type CharacterMood, type Outfit, type Wear } from '@shared/character'
 import { ANCHORS, FaceWear, HATS, HeadWear } from './Outfits'
@@ -525,7 +525,8 @@ export function Character({
         style={{ position: 'absolute', left: 0, top: 0, width: size, height: size, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.85 }}
       >
         <span style={{ display: 'block', flex: 'none', transform: `scale(${(size * 1.08) / halo})` }}>
-          <ThinkingOrb state={orbMood} size={halo as 20 | 32 | 64} theme="dark" color={paint ?? (mood === 'listening' ? '#ffb35c' : '#f0a483')} />
+          {/* Resting, it drifts slowly: 20 frames a second is plenty (and a third of the work). */}
+          <Orb state={orbMood} size={halo} tuned fps={orbMood === 'breathing' ? 20 : 30} color={paint ?? (mood === 'listening' ? '#ffb35c' : '#f0a483')} />
         </span>
       </span>
       <span style={{ position: 'absolute', inset: 0 }}>{svg}</span>

@@ -1,9 +1,10 @@
-import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { DropServer, type DropEvents } from '../electron/dropServer'
 import {
   cleanDevice,
+  cleanDir,
   cleanFileName,
   dropAddresses,
   dropKind,
@@ -22,7 +23,11 @@ import {
 describe('drop protocol', () => {
   test('file names are safe to save as', () => {
     expect(cleanFileName('IMG_2041.jpg')).toBe('IMG_2041.jpg')
-    expect(cleanFileName('../../.bashrc')).toBe('bashrc')
+    // Hidden files keep their dot; a name of only dots is no name.
+    expect(cleanFileName('../../.bashrc')).toBe('.bashrc')
+    expect(cleanFileName('.env')).toBe('.env')
+    expect(cleanFileName('..')).toBe('file')
+    expect(cleanFileName('notes. ')).toBe('notes')
     expect(cleanFileName('C:\\Users\\me\\Report.pdf')).toBe('Report.pdf')
     expect(cleanFileName('a\u0000b<c>.txt')).toBe('abc.txt')
     expect(cleanFileName('...')).toBe('file')
@@ -30,6 +35,18 @@ describe('drop protocol', () => {
     const long = cleanFileName('x'.repeat(300) + '.jpeg')
     expect(long.length).toBe(150)
     expect(long.endsWith('.jpeg')).toBe(true)
+  })
+
+  test('folders inside a drop are cleaned, never leaving it', () => {
+    expect(cleanDir('Holiday/Day 1')).toBe('Holiday/Day 1')
+    expect(cleanDir('../../etc/x')).toBe('etc/x')
+    expect(cleanDir('Work\\Q3\\')).toBe('Work/Q3')
+    expect(cleanDir('./.git/hooks')).toBe('.git/hooks')
+    expect(cleanDir('a/ /../b')).toBe('a/b')
+    expect(cleanDir('')).toBe('')
+    expect(cleanDir('/')).toBe('')
+    expect(cleanDir('a/b/c/d/e/f/g/h/i/j')).toBe('a/b/c/d/e/f/g/h')
+    expect(cleanDir('x'.repeat(300)).length).toBe(100)
   })
 
   test('a taken name gets a number', () => {
@@ -49,6 +66,12 @@ describe('drop protocol', () => {
     expect(parseApproach({ ...ok, thumb: 'javascript:alert(1)' })?.thumb).toBeUndefined()
     expect(parseApproach({ ...ok, device: '<b>' })?.device).toBe('b')
     expect(cleanDevice(undefined)).toBe('Your phone')
+    // Files in folders keep their (cleaned) folder; up to 500 at once.
+    expect(parseApproach({ ...ok, files: [{ name: '.env', size: 1, dir: '../Holiday/Day 1' }] })?.files).toEqual([{ name: '.env', size: 1, dir: 'Holiday/Day 1' }])
+    expect(parseApproach({ ...ok, files: [{ name: 'a', size: 1, dir: '../..' }] })?.files).toEqual([{ name: 'a', size: 1 }])
+    const many = (n: number) => Array.from({ length: n }, (_, i) => ({ name: `${i}.txt`, size: 1 }))
+    expect(parseApproach({ ...ok, files: many(500) })?.files.length).toBe(500)
+    expect(parseApproach({ ...ok, files: many(501) })).toBeNull()
   })
 
   test('kinds, sizes and titles', () => {
@@ -60,6 +83,10 @@ describe('drop protocol', () => {
     expect(dropTitle([{ name: 'a.jpg', size: 1 }])).toBe('a.jpg')
     expect(dropTitle([{ name: 'a.jpg', size: 1 }, { name: 'b.png', size: 1 }])).toBe('2 photos')
     expect(dropTitle([{ name: 'a.jpg', size: 1 }, { name: 'b.pdf', size: 1 }])).toBe('2 files')
+    // A folder is called by its name.
+    expect(dropTitle([{ name: 'a.jpg', size: 1, dir: 'Holiday' }, { name: 'b.jpg', size: 1, dir: 'Holiday/Day 1' }])).toBe('Holiday · 2 files')
+    expect(dropTitle([{ name: 'a.jpg', size: 1, dir: 'Holiday' }])).toBe('Holiday')
+    expect(dropTitle([{ name: 'a.jpg', size: 1, dir: 'Holiday' }, { name: 'b.jpg', size: 1 }])).toBe('2 photos')
   })
 
   test('addresses: Wi-Fi first, then Tailscale, then others, no bridges', () => {
@@ -143,6 +170,23 @@ describe('drop server', () => {
     expect(readFileSync(join(folder, 'Photo.jpg'), 'utf8')).toBe('old')
     expect(log).toEqual([`start drop02 0 Photo.jpg ${body.length}`, 'saved drop02 0 Photo (2).jpg'])
     expect(readdirSync(folder).filter((n) => n.endsWith('.part'))).toEqual([])
+  })
+
+  test('a folder is made again, beside one of the same name', async () => {
+    mkdirSync(join(folder, 'v1.2'))
+    const put = (id: string, name: string, dir: string, index = 0) =>
+      call(`/drop/file?id=${id}&index=${index}&name=${encodeURIComponent(name)}&dir=${encodeURIComponent(dir)}&size=2`, { method: 'PUT', body: 'hi' })
+    expect((await put('drop10', 'a.txt', 'v1.2/Day 1')).status).toBe(200)
+    expect((await put('drop10', '.env', 'v1.2', 1)).status).toBe(200)
+    expect((await put('drop10', 'c.txt', '../../v1.2', 499)).status).toBe(200)
+    expect((await put('drop11', 'a.txt', 'v1.2')).status).toBe(200)
+    expect(readFileSync(join(folder, 'v1.2 (2)', 'Day 1', 'a.txt'), 'utf8')).toBe('hi')
+    expect(readFileSync(join(folder, 'v1.2 (2)', '.env'), 'utf8')).toBe('hi')
+    expect(readFileSync(join(folder, 'v1.2 (2)', 'c.txt'), 'utf8')).toBe('hi')
+    expect(readFileSync(join(folder, 'v1.2 (3)', 'a.txt'), 'utf8')).toBe('hi')
+    expect(readdirSync(join(folder, 'v1.2'))).toEqual([])
+    // 500 at most in one drop.
+    expect((await put('drop10', 'd.txt', 'v1.2', 500)).status).toBe(400)
   })
 
   test('a file that is not the size it said is thrown away', async () => {

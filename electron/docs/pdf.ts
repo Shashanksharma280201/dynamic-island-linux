@@ -1,7 +1,11 @@
-import { PDFDocument, StandardFonts, degrees, rgb, type PDFPage } from 'pdf-lib'
+import type { PDFDocument, PDFPage } from 'pdf-lib'
+
+/** pdf-lib, loaded the first time a PDF is worked on. */
+const pdfLib = () => import('pdf-lib')
 
 /** Open a PDF, with a readable error for the common failures. */
 export async function loadPdf(bytes: Uint8Array): Promise<PDFDocument> {
+  const { PDFDocument } = await pdfLib()
   try {
     return await PDFDocument.load(bytes, { updateMetadata: false })
   } catch (e: any) {
@@ -19,6 +23,7 @@ const save = (doc: PDFDocument) => doc.save({ useObjectStreams: true })
 /** One PDF made of all pages of several, in order. */
 export async function mergePdfs(files: Uint8Array[]): Promise<Uint8Array> {
   if (files.length < 2) throw new Error('Merging needs at least two PDFs.')
+  const { PDFDocument } = await pdfLib()
   const out = await PDFDocument.create()
   for (const bytes of files) {
     const src = await loadPdf(bytes)
@@ -32,6 +37,7 @@ export async function mergePdfs(files: Uint8Array[]): Promise<Uint8Array> {
 export async function selectPages(bytes: Uint8Array, indexes: number[]): Promise<Uint8Array> {
   if (!indexes.length) throw new Error('That leaves no pages.')
   const src = await loadPdf(bytes)
+  const { PDFDocument } = await pdfLib()
   const out = await PDFDocument.create()
   const pages = await out.copyPages(src, indexes)
   for (const p of pages) out.addPage(p)
@@ -51,6 +57,7 @@ export async function deletePages(bytes: Uint8Array, indexes: number[]): Promise
 export async function rotatePages(bytes: Uint8Array, by: number, indexes?: number[]): Promise<Uint8Array> {
   if (by % 90 !== 0) throw new Error('Pages can only turn by 90, 180 or 270 degrees.')
   const doc = await loadPdf(bytes)
+  const { degrees } = await pdfLib()
   const pick = new Set(indexes ?? doc.getPageIndices())
   doc.getPages().forEach((p, i) => {
     if (pick.has(i)) p.setRotation(degrees((((p.getRotation().angle + by) % 360) + 360) % 360))
@@ -86,6 +93,7 @@ export type StampOptions = {
 export async function stampPdf(bytes: Uint8Array, o: StampOptions): Promise<Uint8Array> {
   if (!o.text?.trim() && !o.pageNumbers) throw new Error('Say what to add: some text, page numbers, or both.')
   const doc = await loadPdf(bytes)
+  const { StandardFonts, degrees, rgb } = await pdfLib()
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const bold = await doc.embedFont(StandardFonts.HelveticaBold)
   const text = o.text?.trim() ?? ''

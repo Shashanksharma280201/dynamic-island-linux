@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk'
-import OpenAI from 'openai'
+import type Anthropic from '@anthropic-ai/sdk'
+import type OpenAI from 'openai'
 import type { ProviderKind } from '@shared/ai'
 import { runTool, type AgentTool, type Approver } from './tools'
 
@@ -37,6 +37,13 @@ export const MAX_STEPS = 12
 
 export class AgentError extends Error {}
 
+// The SDKs load the first time a provider is used: the island otherwise
+// carries tens of MB of them from the start, mostly for nothing.
+let anthropicSdk: typeof Anthropic | null = null
+let openaiSdk: typeof OpenAI | null = null
+const loadAnthropic = async (): Promise<typeof Anthropic> => (anthropicSdk ??= (await import('@anthropic-ai/sdk')).default)
+const loadOpenAI = async (): Promise<typeof OpenAI> => (openaiSdk ??= (await import('openai')).default)
+
 // ------------------------------------------------------------- Anthropic ----
 
 /** Models that take server-side refusal fallbacks (`fallbacks: "default"`). Pure. */
@@ -57,7 +64,8 @@ export function echoContent<T extends { type: string }>(content: T[]): T[] {
 }
 
 async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
-  const client = new Anthropic({ apiKey: r.apiKey, authToken: null, baseURL: r.baseUrl || undefined, maxRetries: 2 })
+  const AnthropicSdk = await loadAnthropic()
+  const client = new AnthropicSdk({ apiKey: r.apiKey, authToken: null, baseURL: r.baseUrl || undefined, maxRetries: 2 })
   const messages: Anthropic.Beta.BetaMessageParam[] = []
   for (const t of r.history) {
     messages.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.assistant })
@@ -138,7 +146,8 @@ export function rejectsTools(e: any): boolean {
 }
 
 async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
-  const client = new OpenAI({ apiKey: r.apiKey || 'not-needed', baseURL: r.baseUrl, maxRetries: 2 })
+  const OpenAISdk = await loadOpenAI()
+  const client = new OpenAISdk({ apiKey: r.apiKey || 'not-needed', baseURL: r.baseUrl, maxRetries: 2 })
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [{ role: 'system', content: r.system }]
   for (const t of r.history) messages.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.assistant })
   messages.push({ role: 'user', content: r.prompt })
@@ -213,9 +222,12 @@ export function runTurn(r: TurnRequest): Promise<TurnResult> {
 /** A plain-language message for what went wrong talking to a provider. */
 export function friendlyError(e: any, label: string, baseUrl?: string): string {
   if (e instanceof AgentError) return e.message
-  if (e?.name === 'AbortError' || e instanceof Anthropic.APIUserAbortError || e instanceof OpenAI.APIUserAbortError) return 'Stopped.'
+  // (An SDK's own errors can only come from an SDK that has been loaded.)
+  const A = anthropicSdk
+  const O = openaiSdk
+  if (e?.name === 'AbortError' || (A && e instanceof A.APIUserAbortError) || (O && e instanceof O.APIUserAbortError)) return 'Stopped.'
   const status: number | undefined = e?.status
-  if (e instanceof Anthropic.APIConnectionError || e instanceof OpenAI.APIConnectionError || (!status && /ECONNREFUSED|fetch failed|ENOTFOUND/i.test(String(e?.message ?? e?.cause ?? ''))))
+  if ((A && e instanceof A.APIConnectionError) || (O && e instanceof O.APIConnectionError) || (!status && /ECONNREFUSED|fetch failed|ENOTFOUND/i.test(String(e?.message ?? e?.cause ?? ''))))
     return baseUrl?.includes('localhost') || baseUrl?.includes('127.0.0.1')
       ? `Couldn't reach ${baseUrl}. Is it running? (For Ollama: start it and pull the model.)`
       : `Couldn't reach ${label}. Check your internet connection.`
@@ -230,12 +242,14 @@ export function friendlyError(e: any, label: string, baseUrl?: string): string {
 /** The models a provider offers (to pick from in Settings). */
 export async function listModels(kind: Exclude<ProviderKind, 'claude-code'>, apiKey: string, baseUrl?: string): Promise<string[]> {
   if (kind === 'anthropic') {
-    const client = new Anthropic({ apiKey, authToken: null, baseURL: baseUrl || undefined, maxRetries: 1, timeout: 15_000 })
+    const AnthropicSdk = await loadAnthropic()
+    const client = new AnthropicSdk({ apiKey, authToken: null, baseURL: baseUrl || undefined, maxRetries: 1, timeout: 15_000 })
     const out: string[] = []
     for await (const m of client.models.list()) out.push(m.id)
     return out
   }
-  const client = new OpenAI({ apiKey: apiKey || 'not-needed', baseURL: baseUrl, maxRetries: 1, timeout: 15_000 })
+  const OpenAISdk = await loadOpenAI()
+  const client = new OpenAISdk({ apiKey: apiKey || 'not-needed', baseURL: baseUrl, maxRetries: 1, timeout: 15_000 })
   const out: string[] = []
   for await (const m of client.models.list()) out.push(m.id)
   return out.sort()

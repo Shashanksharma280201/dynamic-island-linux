@@ -79,6 +79,7 @@ const api = {
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),
   onCursor: (cb: (at: { x: number; y: number }) => void) => on(IPC.CURSOR, cb),
+  onCalm: (cb: (calm: boolean) => void) => on(IPC.CALM, cb),
   onGreet: (cb: (g: { first: boolean }) => void) => on(IPC.GREET, cb),
   sendDecision: (msg: DecisionMsg) => ipcRenderer.send(IPC.DECISION, msg),
   sendMediaCmd: (cmd: MediaCmd) => ipcRenderer.send(IPC.MEDIA_CMD, cmd),

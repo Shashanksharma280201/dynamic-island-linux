@@ -32,7 +32,8 @@ export function OrbHalo({
             exit={{ opacity: 0, scale: 1.15 }}
             transition={{ type: 'spring', stiffness: 260, damping: 26 }}
           >
-            <Orb state={state} size={size} color={color} level={level} />
+            {/* Following your voice wants every frame; otherwise the usual pace. */}
+            <Orb state={state} size={size} color={color} level={level} fps={level ? 60 : undefined} />
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,4 +1,5 @@
 import { BrowserWindow, ipcMain, type Display, type Rectangle } from 'electron'
+import { closeWhenIdle } from './idleClose'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { isAbsolutePath } from '@shared/dragActions'
@@ -206,6 +207,7 @@ export class PhoneEdge {
     })
     if (process.env.ELECTRON_RENDERER_URL) void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/catch.html`)
     else void win.loadFile(resolve(here, '../renderer/catch.html'))
+    closeWhenIdle(win)
     this.win = win
     return win
   }

@@ -1,21 +1,16 @@
 import { Marked, type Token, type Tokens } from 'marked'
-import {
-  AlignmentType,
-  BorderStyle,
-  Document,
-  ExternalHyperlink,
-  HeadingLevel,
-  LevelFormat,
-  Packer,
-  Paragraph,
-  ShadingType,
-  Table,
-  TableCell,
-  TableRow,
-  TextRun,
-  WidthType,
-  type ParagraphChild,
-} from 'docx'
+import type * as Docx from 'docx'
+
+// docx (the Word writer) loads the first time a Word file is made; until
+// then these names are empty, and only the async makers below use them.
+type Paragraph = Docx.Paragraph
+type Table = Docx.Table
+type ParagraphChild = Docx.ParagraphChild
+let { AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType } = {} as typeof Docx
+async function loadDocx(): Promise<void> {
+  if (Document) return
+  ;({ AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, LevelFormat, Packer, Paragraph, ShadingType, Table, TableCell, TableRow, TextRun, WidthType } = await import('docx'))
+}
 
 /**
  * New documents from Markdown (what the agent writes): a Word file with real
@@ -76,7 +71,7 @@ function inline(tokens: Token[] | undefined, style: Style = {}): ParagraphChild[
 /** marked escapes &, <, > in text tokens; Word wants the characters. */
 const decode = (s: string) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
 
-const HEADINGS = [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6]
+const headings = () => [HeadingLevel.HEADING_1, HeadingLevel.HEADING_2, HeadingLevel.HEADING_3, HeadingLevel.HEADING_4, HeadingLevel.HEADING_5, HeadingLevel.HEADING_6]
 
 function blocks(tokens: Token[], ctx: { lists: number }, level = 0): Array<Paragraph | Table> {
   const out: Array<Paragraph | Table> = []
@@ -84,7 +79,7 @@ function blocks(tokens: Token[], ctx: { lists: number }, level = 0): Array<Parag
     switch (t.type) {
       case 'heading': {
         const h = t as Tokens.Heading
-        out.push(new Paragraph({ heading: HEADINGS[Math.min(5, h.depth - 1)], children: inline(h.tokens) }))
+        out.push(new Paragraph({ heading: headings()[Math.min(5, h.depth - 1)], children: inline(h.tokens) }))
         break
       }
       case 'paragraph':
@@ -159,6 +154,7 @@ function blocks(tokens: Token[], ctx: { lists: number }, level = 0): Array<Parag
 
 /** A Word file from Markdown. */
 export async function markdownToDocx(md: string, title?: string): Promise<Uint8Array> {
+  await loadDocx()
   const tokens = markdown().lexer(md)
   const doc = new Document({
     creator: 'Dynamic Island',
@@ -185,6 +181,7 @@ export async function markdownToDocx(md: string, title?: string): Promise<Uint8A
 
 /** A Word file from plain text: one paragraph per block, page breaks where given. */
 export async function textToDocx(pages: string[], title?: string): Promise<Uint8Array> {
+  await loadDocx()
   const children: Paragraph[] = []
   pages.forEach((page, i) => {
     const paras = page.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)

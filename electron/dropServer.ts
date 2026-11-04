@@ -3,7 +3,7 @@ import { createWriteStream, existsSync } from 'node:fs'
 import { mkdir, rename, rm, statfs } from 'node:fs/promises'
 import { join } from 'node:path'
 import { timingSafeEqual } from 'node:crypto'
-import { DROP_PROTOCOL, cleanFileName, freeName, isDropId, parseApproach, validSize, type DropApproach } from '@shared/drop'
+import { DROP_MAX_FILES, DROP_PROTOCOL, cleanDir, cleanFileName, freeName, isDropId, parseApproach, validSize, type DropApproach } from '@shared/drop'
 
 export type DropEvents = {
   /** A file is heading for the edge. */
@@ -14,8 +14,8 @@ export type DropEvents = {
   start: (id: string, index: number, name: string, size: number) => void
   /** Bytes of this file so far (at most ten times a second). */
   progress: (id: string, index: number, got: number, size: number) => void
-  /** Saved, under this path. */
-  saved: (id: string, index: number, path: string) => void
+  /** Saved, under this path; `top` is the folder it went into when a folder was sent. */
+  saved: (id: string, index: number, path: string, top?: string) => void
   /** It didn't arrive whole. */
   failed: (id: string, why: string) => void
 }
@@ -32,7 +32,8 @@ type Deps = {
   extra?: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>
 }
 
-const MAX_JSON = 400_000
+/** An approach can list 500 files (with their folders) and a picture. */
+const MAX_JSON = 1_500_000
 const MAX_UPLOADS = 4
 /** Room left on the disk after a file. */
 const SPARE_BYTES = 64 * 1024 * 1024
@@ -48,6 +49,8 @@ export class DropServer {
   private uploads = 0
   /** Paths being saved right now: two files with one name get two names. */
   private claimed = new Set<string>()
+  /** A sent folder's name in the drop folder, per drop (free when it arrived: "Holiday (2)"). */
+  private tops = new Map<string, { path: string; at: number }>()
 
   constructor(private d: Deps) {}
 
@@ -111,12 +114,29 @@ export class DropServer {
     return send(res, 404, { ok: false, message: 'Not here' })
   }
 
+  /** Where a drop's folder goes: its own name, or a free one if that's taken (the same for every file of the drop). */
+  private topFor(id: string, folder: string, name: string): string {
+    const key = `${id}/${name}`
+    const now = Date.now()
+    for (const [k, v] of this.tops) if (now - v.at > 6 * 3600_000) this.tops.delete(k)
+    const known = this.tops.get(key)
+    if (known) return known.path
+    const taken = new Set([...this.tops.values()].map((v) => v.path))
+    // Numbered as a folder ("v1.2 (2)"), not as a file with an extension.
+    let free = name
+    for (let i = 2; existsSync(join(folder, free)) || taken.has(join(folder, free)); i++) free = `${name} (${i})`
+    const path = join(folder, free)
+    this.tops.set(key, { path, at: now })
+    return path
+  }
+
   private async receive(req: IncomingMessage, res: ServerResponse, url: URL): Promise<void> {
     const id = url.searchParams.get('id')
     const index = Number(url.searchParams.get('index') ?? 0)
     const size = Number(url.searchParams.get('size'))
     const name = cleanFileName(url.searchParams.get('name') ?? '')
-    if (!isDropId(id) || !Number.isInteger(index) || index < 0 || index > 99 || !validSize(size)) {
+    const dir = cleanDir(url.searchParams.get('dir') ?? '')
+    if (!isDropId(id) || !Number.isInteger(index) || index < 0 || index >= DROP_MAX_FILES || !validSize(size)) {
       req.resume()
       return send(res, 400, { ok: false, message: 'That file’s details look wrong' })
     }
@@ -182,7 +202,20 @@ export class DropServer {
     if (broken) return finish(400, { ok: false, message: broken }, broken)
     if (got !== size) return finish(400, { ok: false, message: 'It didn’t arrive whole' }, 'It didn’t arrive whole')
     this.d.events.progress(id, index, size, size)
-    const path = join(folder, freeName(name, (n) => existsSync(join(folder, n)) || this.claimed.has(join(folder, n))))
+    // A file from a folder goes into that folder, made again here.
+    let top: string | undefined
+    let into = folder
+    if (dir) {
+      const [first, ...rest] = dir.split('/')
+      top = this.topFor(id, folder, first)
+      into = join(top, ...rest)
+      try {
+        await mkdir(into, { recursive: true })
+      } catch {
+        return finish(500, { ok: false, message: 'Couldn’t make its folder' }, 'Couldn’t make its folder')
+      }
+    }
+    const path = join(into, freeName(name, (n) => existsSync(join(into, n)) || this.claimed.has(join(into, n))))
     this.claimed.add(path)
     try {
       await rename(part, path)
@@ -191,7 +224,7 @@ export class DropServer {
     } finally {
       this.claimed.delete(path)
     }
-    this.d.events.saved(id, index, path)
+    this.d.events.saved(id, index, path, top)
     return finish(200, { ok: true, name: path.split(/[\\/]/).pop() })
   }
 }

@@ -156,6 +156,28 @@ const put = (id, name, body, extra = {}) => fetch(`${BASE}/drop/file?id=${id}&in
     check('never over another file', again.ok && again.name === 'Sunset (2).png' && fs.existsSync(path.join(FOLDER, 'Sunset.png')), JSON.stringify(again))
     await until(async () => (await overlayWin())?.visible === false, 6000)
 
+    // ---- A folder (hidden files and all), beside one of the same name ----
+    fs.mkdirSync(path.join(FOLDER, 'Trip'), { recursive: true })
+    const trip = [
+      { name: 'map.jpg', size: 3, dir: 'Trip' },
+      { name: '.notes', size: 2, dir: 'Trip/Day 2' },
+      { name: 'plan.txt', size: 4, dir: '../Trip/Day 2' },
+    ]
+    await post('/drop/approach', { id: 'drop-folder', side: 'right', at: 0.5, files: trip, device: 'Test Phone' })
+    const bodies = ['abc', 'hi', 'plan']
+    const ups = []
+    for (const [i, f] of trip.entries())
+      ups.push(await fetch(`${BASE}/drop/file?id=drop-folder&index=${i}&name=${encodeURIComponent(f.name)}&dir=${encodeURIComponent(f.dir)}&size=${f.size}`, { method: 'PUT', headers: auth(), body: bodies[i] }))
+    const T2 = path.join(FOLDER, 'Trip (2)')
+    const read = (...p) => (fs.existsSync(path.join(T2, ...p)) ? fs.readFileSync(path.join(T2, ...p), 'utf8') : null)
+    check(
+      'a folder from the phone is made again, beside the one already there',
+      ups.every((r) => r.ok) && read('map.jpg') === 'abc' && read('Day 2', '.notes') === 'hi' && read('Day 2', 'plan.txt') === 'plan' && fs.readdirSync(path.join(FOLDER, 'Trip')).length === 0,
+      JSON.stringify(fs.readdirSync(FOLDER)),
+    )
+    check('the island shows the folder, with how many files are in it', await until(async () => (await card())?.state === 'done' && (await card()).text.includes('Trip (2)') && (await card()).text.includes('3 files'), 6000), JSON.stringify(await card()))
+    await until(async () => (await overlayWin())?.visible === false, 6000)
+
     // ---- A big one, slowly: it carries on in the island ----
     const big = Buffer.alloc(600_000, 7)
     await post('/drop/approach', { id: 'drop-slow', side: 'left', at: 0.5, files: [{ name: 'Holiday.mp4', size: big.length }], device: 'Test Phone' })

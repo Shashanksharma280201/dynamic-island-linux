@@ -27,12 +27,14 @@ type Deps = {
 }
 
 type Phone = { res: ServerResponse; device: string; since: number }
-type Outgoing = PhoneIncoming & { path: string }
+/** A file waiting for the phone; `touched` is when it (or a file sent with it) last moved. */
+type Outgoing = PhoneIncoming & { path: string; touched: number }
 
 const KEEPALIVE_MS = 15_000
 /** Pushes of one topic come at most this often (the latest wins): Claude streams its reply. */
 const PUSH_MS = 200
 /** A file nobody fetched is forgotten after this long. */
+/** How long a file waits for the phone to start on it (after the last of the files sent with it moved). */
 const OUT_MS = 15 * 60_000
 
 async function json(req: IncomingMessage, max = 200_000): Promise<any> {
@@ -102,16 +104,41 @@ export class PhoneLink {
   }
 
   /** Send a file to the phone: it hears about it now and fetches it. False if no phone is listening. */
-  offer(path: string, size: number, side: PhoneIncoming['side'], thumb?: string): string | null {
+  offer(path: string, size: number, side: PhoneIncoming['side'], thumb?: string, more: Pick<PhoneIncoming, 'dir' | 'batch'> = {}): string | null {
     if (!this.phones.size) return null
     const id = `out${Date.now().toString(36)}${randomBytes(4).toString('hex')}`
     const name = basename(path)
-    const out: Outgoing = { id, name, size, kind: dropKind(name), thumb, side, at: Date.now(), path }
+    const out: Outgoing = { id, name, size, kind: dropKind(name), thumb, side, at: Date.now(), path, touched: Date.now(), ...more }
     this.outgoing.set(id, out)
-    setTimeout(() => this.outgoing.delete(id), OUT_MS)
-    const { path: _p, ...incoming } = out
+    this.expire(id, OUT_MS)
+    const { path: _p, touched: _t, ...incoming } = out
     this.broadcast('incoming', incoming)
     return id
+  }
+
+  /**
+   * Forget a file the phone never came for: the phone hears nothing more of
+   * it and the island says it didn't arrive. Files sent together wait for
+   * each other (the phone takes them one at a time), so a long folder keeps
+   * every file of it waiting while any of it is moving.
+   */
+  private expire(id: string, after: number): void {
+    setTimeout(() => {
+      const o = this.outgoing.get(id)
+      if (!o) return
+      const idle = Date.now() - o.touched
+      if (idle < OUT_MS) return this.expire(id, OUT_MS - idle)
+      this.outgoing.delete(id)
+      this.d.delivered(id, false, 'your phone')
+    }, after).unref?.()
+  }
+
+  /** The phone is working on this file: it and the files sent with it wait longer. */
+  private touch(o: Outgoing): void {
+    const now = Date.now()
+    o.touched = now
+    if (!o.batch) return
+    for (const other of this.outgoing.values()) if (other.batch?.id === o.batch.id) other.touched = now
   }
 
   private broadcast(event: string, data: unknown): void {
@@ -202,6 +229,7 @@ export class PhoneLink {
         send(res, 404, { ok: false, message: 'That file isn’t waiting any more' })
         return true
       }
+      this.touch(o)
       if (req.method === 'POST' && out[2]) {
         const body = await json(req, 2000)
         this.outgoing.delete(o.id)
@@ -227,7 +255,7 @@ export class PhoneLink {
     res.write(`event: view\ndata: ${JSON.stringify(this.d.view())}\n\n`)
     // Files offered while it was away (it reconnected).
     for (const o of this.outgoing.values()) {
-      const { path: _p, ...incoming } = o
+      const { path: _p, touched: _t, ...incoming } = o
       res.write(`event: incoming\ndata: ${JSON.stringify(incoming)}\n\n`)
     }
     this.keepalive ??= setInterval(() => {

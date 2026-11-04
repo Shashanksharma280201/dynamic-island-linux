@@ -225,6 +225,30 @@ function listen() {
       check('a file is only offered until it’s taken', again.status === 404)
     }
 
+    // ---- A folder from the computer to the phone ----
+    const album = path.join(TMP, 'Album')
+    fs.mkdirSync(path.join(album, 'Day 1'), { recursive: true })
+    fs.writeFileSync(path.join(album, '.env'), 'secret=1')
+    fs.writeFileSync(path.join(album, 'b.txt'), 'bb')
+    fs.writeFileSync(path.join(album, 'Day 1', 'a.txt'), 'aaa')
+    const seen = phone.events.filter((e) => e.ev === 'incoming').length
+    await app.evaluate((_e, d) => globalThis.__islandSendToPhone?.([d]), album)
+    const batch = await until(() => {
+      const l = phone.events.filter((e) => e.ev === 'incoming').slice(seen).map((e) => e.msg)
+      return l.length >= 3 && l
+    }, 5000)
+    const where = batch ? batch.map((f) => `${f.dir}/${f.name}`).sort() : []
+    check('a folder reaches the phone as every file in it, hidden ones too, in its folders', JSON.stringify(where) === JSON.stringify(['Album/.env', 'Album/Day 1/a.txt', 'Album/b.txt']), JSON.stringify(where))
+    check('sent together', !!batch && batch.every((f, i) => f.batch?.id === batch[0].batch.id && f.batch.i === i && f.batch.n === 3 && f.batch.title === 'Album · 3 files'), JSON.stringify(batch?.map((f) => f.batch)))
+    const jobs = () => page.$$eval('.card.job', (els) => els.map((e) => e.textContent).join(' | ')).catch(() => '')
+    check('the island shows one card for all of it', await until(async () => (await jobs()).includes('Album · 3 files'), 3000), await jobs())
+    for (const f of batch || []) {
+      const got = Buffer.from(await (await fetch(`${BASE}/drop/out/${f.id}`, { headers: auth })).arrayBuffer())
+      if (!got.equals(fs.readFileSync(path.join(TMP, f.dir, f.name)))) check(`${f.name} arrives whole`, false)
+      await post(`/drop/out/${f.id}/done`, { ok: true })
+    }
+    check('and says when it has all reached the phone', await until(async () => (await jobs()).split(' | ').some((t) => t.includes('Sent to Test Phone') && t.includes('Album · 3 files')), 5000), await jobs())
+
     // ---- Dragging a file to the screen's edge where the phone is ----
     const photo = path.join(TMP, 'Holiday.png')
     fs.writeFileSync(photo, Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64'))
