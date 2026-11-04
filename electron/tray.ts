@@ -28,6 +28,8 @@ export type TrayActions = {
   recap: () => void
   /** Pick files and send them to the phone. */
   sendToPhone: () => void
+  /** Folders: every file in them, in their folders. */
+  sendFolderToPhone: () => void
   uninstall: () => void
   quit: () => void
 }
@@ -72,7 +74,12 @@ export class IslandTray {
         { type: 'separator' },
         { label: 'Settings… (WhatsApp, Mail)', click: () => this.actions.openSettings() },
         { label: 'Weekly recap', click: () => this.actions.recap() },
-        ...(s.phone ? [{ label: `Send a file to ${s.phone}…`, click: () => this.actions.sendToPhone() }] : []),
+        ...(s.phone
+          ? [
+              { label: `Send a file to ${s.phone}…`, click: () => this.actions.sendToPhone() },
+              { label: `Send a folder to ${s.phone}…`, click: () => this.actions.sendFolderToPhone() },
+            ]
+          : []),
         { label: 'Show me around', click: () => this.actions.tour() },
         { type: 'separator' },
         {

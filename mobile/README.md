@@ -54,9 +54,13 @@ scan it from the app.
   trade's own **Buy** / **Skip** with its countdown; a question's choices).
   When nothing is waiting it says so. Pull down to refresh.
 - **Files → Photos** lists your latest photos and videos; **Files** has what
-  you add with **+**; **Received** has what your computer sent (tap to open
+  you add with **+** (files of any kind, or **A folder**, sent with
+  everything in it); **Received** has what your computer sent (tap to open
   or share; it's also in your gallery's **Island Drop** album when it's a
-  photo or video).
+  photo or video; a folder opens to list its files).
+- Up to 500 files go at once either way, hidden files (`.env`) too. A folder
+  arrives as the same folder, its folders inside it kept, renamed "Name (2)"
+  if one by that name is already there.
 - **Hold** a file until it lifts, then move it toward the edge that faces your
   computer (phone on the right of the screen: toward the left edge). That edge
   of the computer lights up. Let go near the edge, or flick, and it's sent.
@@ -67,9 +71,10 @@ scan it from the app.
   A link or text arrives on the computer as a `.txt` file.
 - **From the computer**: drag a file to the edge of the computer's screen
   where the phone is (it lights up and says **Send to <your phone>**) and let
-  go, or click the tray icon, **Send a file to <your phone>…**. The phone's
-  edge that faces the computer glows, the file comes out of it and drops into
-  **Received**.
+  go, or click the tray icon, **Send a file to <your phone>…** (or **Send a
+  folder…**). The phone's edge that faces the computer glows, the file comes
+  out of it and drops into **Received**. Many files (a folder) come out as
+  one card that counts them in.
 - **More → Settings**: stay connected in the background (a quiet ongoing notification
   keeps the link open so approvals and files reach you within seconds; turn
   it off and they arrive when you open the app), show the computer's own

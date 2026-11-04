@@ -1,6 +1,14 @@
 import type { BrowserWindow } from 'electron'
 import { pointInRect, type Rect } from '@shared/hitbox'
 
+/** How soon to look at the pointer again: often near the island, less when it's far away (fewer wake-ups). Pure. */
+export function nextCheckMs(p: { x: number; y: number } | null, r: Rect | null): number {
+  if (!p || !r) return 100
+  const dx = Math.max(r.x - p.x, 0, p.x - (r.x + r.width))
+  const dy = Math.max(r.y - p.y, 0, p.y - (r.y + r.height))
+  return Math.hypot(dx, dy) > 200 ? 100 : 40
+}
+
 /**
  * Drives island interactivity on X11 without relying on Electron's `forward`
  * flag (unimplemented on Linux). Polls the global cursor and toggles
@@ -10,7 +18,8 @@ import { pointInRect, type Rect } from '@shared/hitbox'
  */
 export class Interactivity {
   private rect: Rect | null = null
-  private timer: ReturnType<typeof setInterval> | null = null
+  private timer: ReturnType<typeof setTimeout> | null = null
+  private running = false
   private ignoring = true
   private busy = false
   private hoverCb: ((inside: boolean) => void) | null = null
@@ -44,15 +53,23 @@ export class Interactivity {
   }
 
   start(): void {
-    if (this.timer) return
-    this.timer = setInterval(() => this.tick(), 40)
+    if (this.running) return
+    this.running = true
+    this.schedule(40)
+  }
+
+  private schedule(ms: number): void {
+    if (!this.running) return
+    this.timer = setTimeout(() => void this.tick(), ms)
   }
 
   private async tick(): Promise<void> {
-    if (this.busy || this.locked || this.win.isDestroyed()) return
+    let p: { x: number; y: number } | null = null
+    if (this.win.isDestroyed()) return this.stop()
+    if (this.busy || this.locked) return this.schedule(40)
     this.busy = true
     try {
-      const p = this.rect ? await this.readCursor().catch(() => null) : null
+      p = this.rect ? await this.readCursor().catch(() => null) : null
       if (this.rect && !p && ++this.failures === 25) {
         console.error(
           '[interactivity] cannot read the cursor; the island will stay click-through. ' +
@@ -69,11 +86,13 @@ export class Interactivity {
         console.error(`[interactivity] ${inside ? 'INTERACTIVE' : 'click-through'}`)
     } finally {
       this.busy = false
+      this.schedule(nextCheckMs(p, this.rect))
     }
   }
 
   stop(): void {
-    if (this.timer) clearInterval(this.timer)
+    this.running = false
+    if (this.timer) clearTimeout(this.timer)
     this.timer = null
   }
 }

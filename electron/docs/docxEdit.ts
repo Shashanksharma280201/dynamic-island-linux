@@ -1,5 +1,4 @@
-import JSZip from 'jszip'
-import { DOMParser, XMLSerializer, type Document as XmlDocument, type Element } from '@xmldom/xmldom'
+import type { Document as XmlDocument, Element } from '@xmldom/xmldom'
 
 /**
  * Corrections in a Word file, made as tracked changes (insertions and
@@ -162,6 +161,9 @@ function apply(p: Element, start: number, end: number, replace: string, c: Ctx):
 /** Apply corrections to a .docx (in memory); the original file is untouched. */
 export async function editDocx(bytes: Uint8Array, edits: DocxEdit[], o: DocxEditOptions): Promise<DocxEditResult> {
   if (!edits.length) throw new Error('No corrections given.')
+  // Loaded the first time a Word file is edited.
+  const JSZip = (await import('jszip')).default
+  const { DOMParser, XMLSerializer } = await import('@xmldom/xmldom')
   const zip = await JSZip.loadAsync(bytes)
   const parts = Object.keys(zip.files).filter((f) => TEXT_PARTS.test(f))
   if (!parts.includes('word/document.xml')) throw new Error('This isn’t a Word document (no word/document.xml).')

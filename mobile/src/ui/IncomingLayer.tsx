@@ -5,7 +5,7 @@ import * as Haptics from 'expo-haptics'
 import { EDGES, computerSide, exitPoint } from '../gesture'
 import type { PhoneIncoming } from '../islandTypes'
 import type { DropLink } from '../link'
-import { notifyReceived } from '../notify'
+import { notifyBatch, notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
 import { Aurora, EdgeGlow, Wash } from './Glow'
 import { C, extOf, kindColor } from './theme'
@@ -15,15 +15,21 @@ const SPRING = { damping: 16, stiffness: 150, mass: 1 }
 /**
  * Files arriving from the computer, one at a time: the edge that faces the
  * computer lights up, the file comes out of the light into the middle while
- * its bytes arrive, then drops into Files. With the app in the background
- * it's saved quietly and a notification says so.
+ * its bytes arrive, then drops into Files. Files sent together (a folder)
+ * come out once and stay while the rest arrive, counting them. With the app
+ * in the background they're saved quietly and a notification says so.
  */
-export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink; onReceived: (uri: string, f: PhoneIncoming) => void; filesTabX: number }) {
+export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink; onReceived: (uri: string, f: PhoneIncoming, folder?: { uri: string; name: string }) => void; filesTabX: number }) {
   const { width: W, height: H } = useWindowDimensions()
   const [queue, setQueue] = useState<PhoneIncoming[]>([])
+  const queueRef = useRef(queue)
+  queueRef.current = queue
   const [p, setP] = useState(0)
   const [done, setDone] = useState<'' | 'ok' | 'fail'>('')
   const handled = useRef(new Set<string>())
+  // The files sent together that are arriving now: which, whether the card is up, how it's going.
+  const batch = useRef<{ id: string; shown: boolean; ok: number; failed: number; bytes: number } | null>(null)
+  const [tally, setTally] = useState({ ok: 0, failed: 0, bytes: 0 })
   const size = Math.min(W * 0.5, 220)
 
   const x = useSharedValue(-size)
@@ -56,9 +62,18 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
     const phoneEdge = computerSide(current.side)
     const from = exitPoint(phoneEdge, phoneEdge === 'left' || phoneEdge === 'right' ? 0 : W / 2, H * 0.42, W, H, size)
     const centre = { x: W / 2, y: H * 0.42 }
+    const together = current.batch
+    const same = !!together && batch.current?.id === together.id
+    if (!same) batch.current = { id: together?.id ?? current.id, shown: false, ok: 0, failed: 0, bytes: 0 }
+    const b = batch.current!
     setP(0)
     setDone('')
-    if (!quiet) {
+    setTally({ ok: b.ok, failed: b.failed, bytes: b.bytes })
+    if (!quiet && b.shown) {
+      // Already out: a little nod for each file that comes in.
+      scale.value = withSequence(withTiming(1.035, { duration: 120 }), withSpring(1, SPRING))
+    } else if (!quiet) {
+      b.shown = true
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)
       edge.value = EDGES.indexOf(phoneEdge)
       along.value = 0.42
@@ -77,14 +92,26 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
     }
     void link.receive(current, (v) => !cancelled && setP(v)).then((r) => {
       if (cancelled) return
-      if (quiet) notifyReceived(current, link.pairing.name, r.ok, r.message)
-      if (r.ok && r.uri) onReceived(r.uri, current)
+      if (r.ok && r.uri) onReceived(r.uri, current, r.folder)
+      if (r.ok) b.ok++
+      else b.failed++
+      if (r.ok) b.bytes += current.size
+      setTally({ ok: b.ok, failed: b.failed, bytes: b.bytes })
       const next = () => setQueue((q) => q.slice(1))
-      if (quiet) return next()
-      setDone(r.ok ? 'ok' : 'fail')
-      void Haptics.notificationAsync(r.ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error)
+      // More of these still to come: on to the next, the card staying where it is.
+      const more = !!together && together.i < together.n - 1 && queueRef.current.slice(1).some((q) => q.batch?.id === together.id)
+      if (more) return next()
+      batch.current = null
+      if (quiet) {
+        if (together) notifyBatch(together.title, together.n, b.failed, b.bytes, link.pairing.name)
+        else notifyReceived(current, link.pairing.name, r.ok, r.message)
+      }
+      if (quiet || !b.shown) return next()
+      const ok = b.failed === 0
+      setDone(ok ? 'ok' : 'fail')
+      void Haptics.notificationAsync(ok ? Haptics.NotificationFeedbackType.Success : Haptics.NotificationFeedbackType.Error)
       level.value = withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.quad) })
-      if (r.ok) {
+      if (ok) {
         scale.value = withSequence(withSpring(1.08, { damping: 8, stiffness: 300 }), withDelay(450, withTiming(0.12, { duration: 520, easing: Easing.in(Easing.cubic) })))
         x.value = withDelay(650, withTiming(filesTabX, { duration: 520, easing: Easing.in(Easing.cubic) }))
         y.value = withDelay(650, withTiming(H - 40, { duration: 520, easing: Easing.in(Easing.cubic) }))
@@ -107,7 +134,20 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
   }))
 
   if (!current) return null
-  const isPhoto = current.kind === 'image' && !!current.thumb
+  const together = current.batch
+  const isPhoto = !together && current.kind === 'image' && !!current.thumb
+  const folder = !!together && !!current.dir
+  const progress = together ? (together.i + p) / together.n : p
+  const sub =
+    done === 'fail'
+      ? together && tally.ok
+        ? `${tally.failed} of ${together.n} didn’t arrive`
+        : 'Didn’t arrive'
+      : done === 'ok'
+        ? `Saved · ${together ? `${together.n} files · ` : ''}${sizeText(together ? tally.bytes : current.size)}`
+        : together
+          ? `From ${link.pairing.name} · ${together.i + 1} of ${together.n}`
+          : `From ${link.pairing.name} · ${Math.round(p * 100)}%`
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <EdgeGlow edge={edge} along={along} level={level} w={W} h={H} />
@@ -116,6 +156,17 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
         <View style={[s.card, { width: size, height: size }]}>
           {isPhoto ? (
             <Image source={{ uri: current.thumb }} style={{ width: size, height: size }} />
+          ) : folder ? (
+            <View style={[s.tile, { backgroundColor: '#0a84ff' }]}>
+              <View style={s.folderTab} />
+              <Text style={s.tileText}>{together!.n}</Text>
+              <Text style={s.tileSub}>files</Text>
+            </View>
+          ) : together ? (
+            <View style={[s.tile, { backgroundColor: kindColor(current.name) }]}>
+              <Text style={s.tileSub}>{together.i + 1} of {together.n}</Text>
+              <Text style={s.tileText}>{extOf(current.name)}</Text>
+            </View>
           ) : (
             <View style={[s.tile, { backgroundColor: kindColor(current.name) }]}>
               <Text style={s.tileText}>{extOf(current.name)}</Text>
@@ -129,12 +180,18 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
         </View>
         <View style={s.caption}>
           <Text style={s.name} numberOfLines={1}>
-            {current.name}
+            {together ? together.title : current.name}
           </Text>
-          <Text style={s.sub}>{done === 'fail' ? 'Didn’t arrive' : done === 'ok' ? `Saved · ${sizeText(current.size)}` : `From ${link.pairing.name} · ${Math.round(p * 100)}%`}</Text>
+          {!!together && !done && (
+            <Text style={s.sub} numberOfLines={1}>
+              {current.dir ? `${current.dir}/` : ''}
+              {current.name}
+            </Text>
+          )}
+          <Text style={s.sub}>{sub}</Text>
           {!done && (
             <View style={s.track}>
-              <View style={[s.fill, { width: `${Math.max(4, p * 100)}%` }]} />
+              <View style={[s.fill, { width: `${Math.max(4, progress * 100)}%` }]} />
             </View>
           )}
         </View>
@@ -148,6 +205,8 @@ const s = StyleSheet.create({
   card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)', backgroundColor: C.card, elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   tile: { flex: 1, justifyContent: 'flex-end', padding: 16 },
   tileText: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  tileSub: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700' },
+  folderTab: { position: 'absolute', top: 16, left: 16, width: 42, height: 11, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.45)' },
   check: { position: 'absolute', right: 10, top: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
   checkText: { color: '#fff', fontSize: 18, fontWeight: '900' },
   caption: { alignItems: 'center', marginTop: 12 },

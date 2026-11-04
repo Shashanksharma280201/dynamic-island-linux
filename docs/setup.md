@@ -206,8 +206,14 @@ Once paired, the app is also **the island on your phone**:
 - To send a file to the phone, drag it from any app to the edge of the screen
   where your phone is (the side its files come in from; the right edge until
   it has sent one). The edge lights up and says **Send to <your phone>**; let
-  go there. Or click the tray icon, then **Send a file to <your phone>…**. It
-  lands in the app's **Files → Received**.
+  go there. Or click the tray icon, then **Send a file to <your phone>…** (or
+  **Send a folder to <your phone>…**). It lands in the app's **Files →
+  Received**.
+- Any kind of file goes, either way, up to 500 at once, hidden files (like
+  `.env`) too. A folder goes with everything in it and arrives as the same
+  folder, its folders inside it kept; if one by that name is already there
+  the new one is called "Name (2)". On the phone, **+ → A folder** adds a
+  folder to send.
 
 ## Connect your trading engine
 

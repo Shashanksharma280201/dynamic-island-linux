@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { orbForRun, orbForTool, orbForVoice } from '../shared/orbs'
-import { orbBase, parseTint } from '../renderer/orb/Orb'
+import { orbBase, pace, parseTint } from '../renderer/orb/Orb'
 
 describe('orbs', () => {
   it('pick an animation for what an agent is doing', () => {
@@ -30,5 +30,29 @@ describe('orbs', () => {
     expect(parseTint('#f80')).toEqual({ r: 255, g: 136, b: 0 })
     expect(parseTint('rgb(10, 20, 30)')).toEqual({ r: 10, g: 20, b: 30 })
     expect(parseTint('teal')).toBeUndefined()
+  })
+})
+
+describe('orb frame pacing', () => {
+  test('draws at the asked rate on a faster screen', () => {
+    // 30 frames a second on a 60 Hz screen: every other refresh.
+    let due = 0
+    const drawn: number[] = []
+    for (let i = 0; i < 60; i++) {
+      const now = i * (1000 / 60)
+      const r = pace(now, due, 1000 / 30)
+      due = r.due
+      if (r.draw) drawn.push(i)
+    }
+    expect(drawn.length).toBeGreaterThanOrEqual(29)
+    expect(drawn.length).toBeLessThanOrEqual(31)
+    expect(drawn.slice(0, 4)).toEqual([0, 2, 4, 6])
+  })
+
+  test('after a pause it carries on, without a burst of frames', () => {
+    const every = 50
+    const after = pace(10_000, 100, every)
+    expect(after.draw).toBe(true)
+    expect(pace(10_001, after.due, every).draw).toBe(false)
   })
 })
