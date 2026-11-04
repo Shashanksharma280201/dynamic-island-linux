@@ -6,6 +6,26 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island Drop: a new look, light and dark, and a steadier link**
+
+- A cleaner design throughout: one type scale, grouped settings lists, line
+  icons instead of symbols, calmer buttons and cards, and a proper welcome
+  screen with the three steps to pair.
+- **Light and dark**: Settings → Appearance: System (follows the phone),
+  Light or Dark, with pictures of each.
+- **Fig. 1, the link**: the Island tab opens with an isometric drawing of
+  your computer and phone on one bench, joined by a glass tube, built with
+  the kit from Anatomy (github.com/wheresryan22/anatomy, MIT). A capsule runs
+  along the tube while files go, the lamp shows whether they can reach each
+  other, and a dial gauge reads the round trip. Tap it to test the link. It
+  only moves while it's on screen.
+- **Staying connected**: the app reconnects as soon as the phone's Wi-Fi
+  changes, follows the computer when its address changes (it tries every
+  address it knows, then looks across the Wi-Fi), and learns the computer's
+  other addresses (Wi-Fi, Tailscale) each time it connects. Settings →
+  Connection shows the route, address and round trip, with **Test the
+  connection** and **Find my computer again**.
+
 **Lighter: far less CPU and memory**
 
 - At rest the island used most of a CPU core; it now uses about a fifth of

@@ -27,6 +27,8 @@ type Deps = {
   folder: () => string
   /** This computer's name, for the phone's list. */
   name: () => string
+  /** Where a phone can reach it now (Wi-Fi, Tailscale…): a paired phone keeps these, so it finds the computer after its address changes. */
+  addresses?: () => string[]
   events: DropEvents
   /** Everything else a paired phone asks for (the island on the phone: /island/…, /drop/out/…): true if handled. */
   extra?: (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>
@@ -95,7 +97,7 @@ export class DropServer {
       return send(res, 401, { ok: false, message: 'This phone isn’t paired with this computer. Scan the QR again.' })
     }
     const route = `${req.method} ${url.pathname}`
-    if (route === 'GET /drop/hello') return send(res, 200, { ok: true, protocol: DROP_PROTOCOL, app: 'dynamic-island', name: this.d.name() })
+    if (route === 'GET /drop/hello') return send(res, 200, { ok: true, protocol: DROP_PROTOCOL, app: 'dynamic-island', name: this.d.name(), ...(this.d.addresses ? { urls: this.d.addresses().slice(0, 8) } : {}) })
     if (route === 'POST /drop/approach') {
       const a = parseApproach(await readJson(req))
       if (!a) return send(res, 400, { ok: false, message: 'That isn’t a file on its way' })

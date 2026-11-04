@@ -13,7 +13,7 @@ import { sendAll, setSideUsed, sideUsed } from '../send'
 import { Face } from './Face'
 import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 import { useFlick } from './useFlick'
 
 /**
@@ -21,6 +21,8 @@ import { useFlick } from './useFlick'
  * computer and let go (or tap Send), all of it as one drop.
  */
 export function ShareScreen({ link, files, onDone }: { link: DropLink; files: SharedFile[]; onDone: () => void }) {
+  const C = useTheme()
+  const s = useS()
   const { width: W, height: H } = useWindowDimensions()
   const [st, setSt] = useState<LinkState>(link.state)
   const [sending, setSending] = useState<Sending | null>(null)
@@ -167,23 +169,23 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
   )
 }
 
-const s = StyleSheet.create({
+const useS = themed((C) => ({
   wrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.bg },
   head: { paddingTop: 60, paddingHorizontal: 22 },
-  h1: { color: C.text, fontSize: 26, fontWeight: '800' },
+  h1: { color: C.text, fontSize: 26, fontWeight: '700' },
   status: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
   dot: { width: 8, height: 8, borderRadius: 4 },
   statusText: { color: C.text2, fontSize: 14, fontWeight: '600', flexShrink: 1 },
   card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
   ghost: { position: 'absolute', borderRadius: 22, backgroundColor: C.card2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', transform: [{ rotate: '6deg' }] },
-  count: { position: 'absolute', top: 10, right: 10, minWidth: 30, height: 30, borderRadius: 15, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  countText: { color: '#000', fontWeight: '800', fontSize: 15 },
+  count: { position: 'absolute', top: 10, right: 10, minWidth: 30, height: 30, borderRadius: 15, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
+  countText: { color: C.onPrimary, fontWeight: '700', fontSize: 15 },
   caption: { position: 'absolute', left: 24, right: 24, alignItems: 'center' },
   name: { color: C.text, fontSize: 16, fontWeight: '700' },
   sub: { color: C.text3, fontSize: 13, marginTop: 4 },
   buttons: { position: 'absolute', left: 16, right: 16, bottom: 34, gap: 8 },
-  send: { backgroundColor: '#fff', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  sendText: { color: '#000', fontSize: 16, fontWeight: '800' },
+  send: { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
+  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' },
   cancel: { paddingVertical: 12, alignItems: 'center' },
   cancelText: { color: C.text2, fontSize: 15, fontWeight: '600' },
-})
+}))

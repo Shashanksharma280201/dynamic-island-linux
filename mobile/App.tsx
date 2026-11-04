@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, AppState, BackHandler, Linking, StyleSheet, View, useWindowDimensions } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
+import * as SystemUI from 'expo-system-ui'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated'
@@ -9,7 +10,7 @@ import { DropLink, findComputer, type Live, type LinkState } from './src/link'
 import { followIsland, setupNotifications } from './src/notify'
 import { forgetPairing, loadPairing, savePairing } from './src/pairing'
 import { loadPrefs, savePrefs, type Prefs } from './src/prefs'
-import { parsePairingLink, type Pairing } from './src/protocol'
+import { mergeUrls, parsePairingLink, type Pairing } from './src/protocol'
 import { keepReceived, loadReceived, type Received } from './src/received'
 import type { InboxUnread } from '../shared/types'
 import { ClaudeScreen } from './src/ui/ClaudeScreen'
@@ -22,20 +23,41 @@ import { MoreScreen, type MoreId } from './src/ui/MoreScreen'
 import { PairScreen } from './src/ui/PairScreen'
 import { ShareScreen } from './src/ui/ShareScreen'
 import { TABS, TabBar, type TabId } from './src/ui/TabBar'
-import { C } from './src/ui/theme'
+import { ThemeProvider, useTheme, type ThemePref } from './src/ui/theme'
 
 export default function App() {
+  const [prefs, setPrefsState] = useState<Prefs>(() => loadPrefs())
+  const setPrefs = (p: Prefs) => {
+    savePrefs(p)
+    setPrefsState(p)
+  }
+  return (
+    <ThemeProvider pref={prefs.theme}>
+      <Themed>
+        <Root prefs={prefs} setPrefs={setPrefs} />
+      </Themed>
+    </ThemeProvider>
+  )
+}
+
+/** The page colour, status bar and Android's navigation bar for the theme in use. */
+function Themed({ children }: { children: React.ReactNode }) {
+  const C = useTheme()
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(C.bg).catch(() => {})
+  }, [C])
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: C.bg }}>
       <SafeAreaProvider>
-        <StatusBar style="light" />
-        <Root />
+        <StatusBar style={C.statusBar} />
+        {children}
       </SafeAreaProvider>
     </GestureHandlerRootView>
   )
 }
 
-function Root() {
+function Root({ prefs, setPrefs }: { prefs: Prefs; setPrefs: (p: Prefs) => void }) {
+  const C = useTheme()
   const [pairing, setPairing] = useState<Pairing | null | undefined>(undefined)
   const [shared, setShared] = useState<SharedFile[] | null>(null)
 
@@ -47,7 +69,7 @@ function Root() {
       if (!p) return
       const r = await findComputer(p)
       if ('error' in r) return
-      const found = { ...p, name: r.name || p.name, urls: [r.url, ...p.urls.filter((u) => u !== r.url)] }
+      const found = { ...p, name: r.name || p.name, urls: mergeUrls([r.url, ...r.urls], p.urls) }
       await savePairing(found)
       setPairing(found)
     }
@@ -71,12 +93,13 @@ function Root() {
     }
   }, [])
 
-  const link = useMemo(() => (pairing ? new DropLink(pairing) : null), [pairing])
+  // One link per pairing; when the computer's addresses change, they're saved for next time (the link carries on).
+  const link = useMemo(() => (pairing ? new DropLink(pairing, (p) => void savePairing(p)) : null), [pairing?.token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (pairing === undefined)
     return (
       <View style={{ flex: 1, backgroundColor: C.bg, justifyContent: 'center' }}>
-        <ActivityIndicator color="#fff" />
+        <ActivityIndicator color={C.text2} />
       </View>
     )
   if (!pairing || !link)
@@ -92,6 +115,8 @@ function Root() {
     <Paired
       key={pairing.token}
       link={link}
+      prefs={prefs}
+      setPrefs={setPrefs}
       shared={shared}
       clearShared={() => setShared(null)}
       onUnpair={async () => {
@@ -103,7 +128,8 @@ function Root() {
   )
 }
 
-function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; shared: SharedFile[] | null; clearShared: () => void; onUnpair: () => void }) {
+function Paired({ link, shared, clearShared, onUnpair, prefs, setPrefs: savePrefsUp }: { link: DropLink; shared: SharedFile[] | null; clearShared: () => void; onUnpair: () => void; prefs: Prefs; setPrefs: (p: Prefs) => void }) {
+  const C = useTheme()
   const insets = useSafeAreaInsets()
   const { width: W } = useWindowDimensions()
   const [tab, setTabState] = useState<TabId>('island')
@@ -126,9 +152,14 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
     return () => sub.remove()
   }, [tab, more])
   const [live, setLive] = useState<Live>(link.live)
+  // In front (the figure only moves then).
+  const [appActive, setAppActive] = useState(AppState.currentState === 'active')
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (st) => setAppActive(st === 'active'))
+    return () => sub.remove()
+  }, [])
   const [state, setState] = useState<LinkState>(link.state)
   const [received, setReceived] = useState<Received[]>(() => loadReceived())
-  const [prefs, setPrefsState] = useState<Prefs>(() => loadPrefs())
   const prefsRef = useRef(prefs)
   prefsRef.current = prefs
 
@@ -137,6 +168,7 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
   useEffect(() => {
     let stop = () => {}
     void link.find().then(() => link.startLive())
+    const offNet = link.watchNetwork()
     void setupNotifications().then(() => {
       stop = followIsland(link, { computer: () => prefsRef.current.computerNotes, background: () => prefsRef.current.background })
     })
@@ -146,14 +178,14 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
     })
     return () => {
       stop()
+      offNet()
       sub.remove()
       link.stopLive()
     }
   }, [link])
 
   const setPrefs = (p: Prefs) => {
-    savePrefs(p)
-    setPrefsState(p)
+    savePrefsUp(p)
     prefsRef.current = p
     // Starts or stops the background link now, not at the next change.
     if (p.background !== prefs.background) void link.refresh()
@@ -183,6 +215,8 @@ function Paired({ link, shared, clearShared, onUnpair }: { link: DropLink; share
         <IslandScreen
           link={link}
           live={live}
+          state={state}
+          active={tab === 'island' && appActive}
           top={top}
           onOpen={(id) => {
             setMore(id)
