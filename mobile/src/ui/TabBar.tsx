@@ -4,7 +4,7 @@ import Animated, { ZoomIn, ZoomOut, useAnimatedStyle, useSharedValue, withSpring
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import { useKeyboard } from './kit'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 
 export type TabId = 'island' | 'claude' | 'files' | 'inbox' | 'more'
 export const TABS: TabId[] = ['island', 'claude', 'files', 'inbox', 'more']
@@ -43,6 +43,8 @@ function Icon({ id, color }: { id: TabId; color: string }) {
 
 /** The tabs, floating at the bottom, with what's waiting on the Island tab. */
 export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t: TabId) => void; badges: Partial<Record<TabId, number>>; bottom: number }) {
+  const C = useTheme()
+  const s = useS()
   const [w, setW] = useState(0)
   const i = TABS.indexOf(tab)
   const x = useSharedValue(0)
@@ -68,13 +70,16 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
             <Pressable
               key={t}
               style={s.tab}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: on }}
+              accessibilityLabel={n > 0 ? `${LABEL[t]}, ${n} new` : LABEL[t]}
               onPress={() => {
                 if (!on) void Haptics.selectionAsync()
                 setTab(t)
               }}
             >
-              <Icon id={t} color={on ? '#fff' : C.text3} />
-              <Text style={[s.label, on && { color: '#fff' }]}>{LABEL[t]}</Text>
+              <Icon id={t} color={on ? C.accent : C.text3} />
+              <Text style={[s.label, on && { color: C.accent }]}>{LABEL[t]}</Text>
               {n > 0 && (
                 <Animated.View entering={ZoomIn.springify()} exiting={ZoomOut} style={s.badge}>
                   <Text style={s.badgeText}>{n > 9 ? '9+' : n}</Text>
@@ -88,12 +93,12 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
   )
 }
 
-const s = StyleSheet.create({
+const useS = themed((C) => ({
   wrap: { position: 'absolute', left: 12, right: 12 },
-  bar: { flexDirection: 'row', backgroundColor: 'rgba(24,26,32,0.96)', borderRadius: 26, padding: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)', elevation: 18, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
-  pill: { position: 'absolute', top: 6, bottom: 6, left: 6, borderRadius: 20, backgroundColor: 'rgba(255,255,255,0.1)' },
+  bar: { flexDirection: 'row', backgroundColor: C.bar, borderRadius: 26, padding: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.lineStrong, elevation: 18, shadowColor: '#000', shadowOpacity: C.dark ? 0.4 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
+  pill: { position: 'absolute', top: 6, bottom: 6, left: 6, borderRadius: 20, backgroundColor: C.accentSoft },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 7, gap: 2 },
-  label: { color: C.text3, fontSize: 11, fontWeight: '700' },
+  label: { color: C.text3, fontSize: 11, fontWeight: '600' },
   badge: { position: 'absolute', top: 2, right: '24%', minWidth: 18, height: 18, borderRadius: 9, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '800' },
-})
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+}))

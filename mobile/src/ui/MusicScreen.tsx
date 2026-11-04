@@ -6,12 +6,14 @@ import type { SpCollection, SpDevice, SpHome, SpSearch, SpTrack, SpotifyView } f
 import type { DropLink, Live } from '../link'
 import { NowPlaying } from './IslandScreen'
 import { Btn, Card, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 
 const SPOTIFY = '#1db954'
 
 /** What's playing, and Spotify on your computer: search, your playlists, play anything, pick where it plays. */
 export function MusicScreen({ link, live, top, onBack }: { link: DropLink; live: Live; top: number; onBack: () => void }) {
+  const C = useTheme()
+  const st = useSt()
   const sp = useCall<SpotifyView>(link, 'spotify.state', [], { topic: 'spotify', fromPush: true })
   const ready = sp.data?.status === 'ready'
   const home = useCall<SpHome>(link, 'spotify.home', [], { when: ready })
@@ -59,7 +61,7 @@ export function MusicScreen({ link, live, top, onBack }: { link: DropLink; live:
                   title={d.name}
                   sub={d.type}
                   last={i === devices.length - 1}
-                  right={d.active ? <Text style={{ color: SPOTIFY, fontWeight: '800' }}>Active</Text> : undefined}
+                  right={d.active ? <Text style={{ color: SPOTIFY, fontWeight: '700' }}>Active</Text> : undefined}
                   onPress={async () => {
                     await act.run('transfer', 'spotify.transfer', d.id)
                     setDevices(null)
@@ -120,6 +122,8 @@ function Results({ found, play, busy }: { found: SpSearch; play: (o: { contextUr
 }
 
 function TrackRow({ t, onPress, last, busy }: { t: SpTrack; onPress: () => void; last?: boolean; busy?: boolean }) {
+  const C = useTheme()
+  const st = useSt()
   return (
     <Row
       title={t.name}
@@ -134,6 +138,8 @@ function TrackRow({ t, onPress, last, busy }: { t: SpTrack; onPress: () => void;
 
 /** Playlists, albums or artists side by side; tap one to play it. */
 function Shelf({ title, items, play, round }: { title: string; items: SpCollection[]; play: (o: { contextUri?: string }, key: string) => void; round?: boolean }) {
+  const C = useTheme()
+  const st = useSt()
   return (
     <View>
       <Text style={st.section}>{title}</Text>
@@ -156,13 +162,13 @@ function Shelf({ title, items, play, round }: { title: string; items: SpCollecti
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   p: { color: C.text2, fontSize: 14, lineHeight: 20 },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   search: { flex: 1, backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
   cover: { width: 42, height: 42, borderRadius: 6 },
-  section: { color: C.text3, fontSize: 12, fontWeight: '800', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
+  section: { color: C.text3, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
   tile: { width: 120, height: 120, borderRadius: 12 },
   tileTitle: { color: C.text, fontSize: 13, fontWeight: '700', marginTop: 6 },
   tileSub: { color: C.text3, fontSize: 12, marginTop: 1 },
-})
+}))

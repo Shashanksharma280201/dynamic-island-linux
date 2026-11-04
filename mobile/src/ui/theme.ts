@@ -1,17 +1,34 @@
-export const C = {
-  bg: '#0b0c0f',
-  card: '#16181d',
-  card2: '#1e2128',
-  line: 'rgba(255,255,255,0.08)',
-  text: '#f5f5f7',
-  text2: 'rgba(235,235,245,0.62)',
-  text3: 'rgba(235,235,245,0.36)',
-  green: '#30d158',
-  red: '#ff453a',
-  orange: '#ff9f0a',
-  blue: '#0a84ff',
-  violet: '#bf5af2',
-  cyan: '#64d2ff',
+import { createContext, createElement, useContext, type ReactNode } from 'react'
+import { StyleSheet, useColorScheme } from 'react-native'
+import { DARK, paletteFor, type Palette, type ThemePref } from './palette'
+
+export { DARK, LIGHT, paletteFor, type IsoPalette, type Palette, type ThemePref } from './palette'
+
+const ThemeContext = createContext<Palette>(DARK)
+
+/** The colours in use now. */
+export const useTheme = (): Palette => useContext(ThemeContext)
+
+/** Light, dark or the phone's own, for everything inside. */
+export function ThemeProvider({ pref, children }: { pref: ThemePref; children: ReactNode }) {
+  const system = useColorScheme()
+  return createElement(ThemeContext.Provider, { value: paletteFor(pref, system) }, children)
+}
+
+/**
+ * Styles that follow the theme: `const useS = themed((C) => ({ … }))` beside
+ * a component, `const s = useS()` inside it. Made once per palette.
+ */
+export function themed<S extends Parameters<typeof StyleSheet.create>[0]>(make: (C: Palette) => S & Parameters<typeof StyleSheet.create>[0]): () => Readonly<S> {
+  const made = new Map<Palette, Readonly<S>>()
+  return function useThemed(): Readonly<S> {
+    const C = useTheme()
+    const known = made.get(C)
+    if (known) return known
+    const styles = StyleSheet.create(make(C)) as Readonly<S>
+    made.set(C, styles)
+    return styles
+  }
 }
 
 /** A file type's colour on its tile (as on the island). */

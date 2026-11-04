@@ -2,6 +2,7 @@ import { File } from 'expo-file-system'
 import { folderFiles, type Item } from './files'
 import type { DropLink, SendResult } from './link'
 import type { Side } from './protocol'
+import { setActivity } from './activity'
 
 /** A file to send; `dir` is the folder it's in when a folder is sent ("Holiday/Day 1"). */
 export type Outgoing = { uri: string; name: string; size: number; dir?: string }
@@ -55,12 +56,22 @@ export async function sendAll(
   const total = infos.reduce((n, f) => n + f.size, 0) || 1
   let done = 0
   let last: SendResult = { ok: true, message: '' }
-  for (const [i, f] of files.entries()) {
-    const base = done
-    last = await link.send(id, i, { uri: f.uri, name: f.name, size: infos[i].size, dir: f.dir }, (p) => opts.onProgress((base + p * infos[i].size) / total))
-    if (!last.ok) return { ...last, sent: i }
-    done += infos[i].size
+  const label = files.length === 1 ? files[0].name : `${files.length} files`
+  const progress = (p: number) => {
+    opts.onProgress(p)
+    setActivity({ kind: 'sending', label, progress: p })
   }
-  opts.onProgress(1)
-  return { ...last, sent: files.length }
+  progress(0)
+  try {
+    for (const [i, f] of files.entries()) {
+      const base = done
+      last = await link.send(id, i, { uri: f.uri, name: f.name, size: infos[i].size, dir: f.dir }, (p) => progress((base + p * infos[i].size) / total))
+      if (!last.ok) return { ...last, sent: i }
+      done += infos[i].size
+    }
+    opts.onProgress(1)
+    return { ...last, sent: files.length }
+  } finally {
+    setActivity(null)
+  }
 }

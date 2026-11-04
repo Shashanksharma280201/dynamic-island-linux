@@ -861,7 +861,14 @@ async function main() {
   phoneChanged = () => phoneLink.changed()
   store.onChange(phoneChanged)
   center.onChange(phoneChanged)
-  const dropServer = new DropServer({ token: dropToken, folder: dropFolder, name: () => hostname(), events: phoneDrop, extra: (req, res, url) => phoneLink.handle(req, res, url) })
+  const dropServer = new DropServer({
+    token: dropToken,
+    folder: dropFolder,
+    name: () => hostname(),
+    addresses: () => dropAddresses(networkInterfaces(), dropPort()),
+    events: phoneDrop,
+    extra: (req, res, url) => phoneLink.handle(req, res, url),
+  })
   let dropProblem: string | null = null
   const applyDrop = async () => {
     dropServer.stop()

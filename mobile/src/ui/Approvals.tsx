@@ -4,9 +4,9 @@ import Animated, { FadeInDown, LinearTransition, SlideOutLeft, SlideOutRight } f
 import * as Haptics from 'expo-haptics'
 import type { PhoneApproval, PhoneLine } from '../islandTypes'
 import type { DropLink } from '../link'
-import { C } from './theme'
+import { themed, useTheme, type Palette } from './theme'
 
-const toneColor = (t?: PhoneLine['tone']) => (t === 'up' ? C.green : t === 'down' ? C.red : t === 'warn' ? C.orange : C.text)
+const toneColor = (C: Palette, t?: PhoneLine['tone']) => (t === 'up' ? C.green : t === 'down' ? C.red : t === 'warn' ? C.orange : C.text)
 
 /** Seconds left on a trade, counted down here from when the view arrived. */
 function useCountdown(a: PhoneApproval, seenAt: number): number | null {
@@ -26,6 +26,8 @@ function useCountdown(a: PhoneApproval, seenAt: number): number | null {
  * about to act for you, or a trade. Only your tap answers it.
  */
 export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: DropLink; seenAt: number }) {
+  const C = useTheme()
+  const s = useS()
   const [busy, setBusy] = useState<'' | 'allow' | 'deny' | 'always'>('')
   const [error, setError] = useState('')
   const [answered, setAnswered] = useState<'' | 'allow' | 'deny'>('')
@@ -93,7 +95,7 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
           {a.lines.map((l, i) => (
             <View key={i} style={s.line}>
               <Text style={s.lineLabel}>{l.label}</Text>
-              <Text style={[s.lineValue, { color: toneColor(l.tone) }]}>{l.value}</Text>
+              <Text style={[s.lineValue, { color: toneColor(C, l.tone) }]}>{l.value}</Text>
             </View>
           ))}
         </View>
@@ -116,8 +118,8 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
                     setPicks({ ...picks, [q.question]: q.multiSelect ? (on ? cur.filter((x) => x !== o.label) : [...cur, o.label]) : [o.label] })
                   }}
                 >
-                  <Text style={[s.optionText, on && { color: '#000' }]}>{o.label}</Text>
-                  {!!o.description && <Text style={[s.optionSub, on && { color: 'rgba(0,0,0,0.6)' }]}>{o.description}</Text>}
+                  <Text style={[s.optionText, on && { color: C.onPrimary }]}>{o.label}</Text>
+                  {!!o.description && <Text style={[s.optionSub, on && { color: C.onPrimary, opacity: 0.7 }]}>{o.description}</Text>}
                 </Pressable>
               )
             })}
@@ -131,7 +133,7 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
         </Pressable>
         <Pressable
           disabled={!!busy || !!answered || (a.kind === 'question' && !ready)}
-          style={({ pressed }) => [s.btn, s.allow, { backgroundColor: a.kind === 'trade' ? a.color : '#fff' }, a.kind === 'question' && !ready && { opacity: 0.4 }, pressed && s.pressed]}
+          style={({ pressed }) => [s.btn, s.allow, { backgroundColor: a.kind === 'trade' ? a.color : C.primary }, a.kind === 'question' && !ready && { opacity: 0.4 }, pressed && s.pressed]}
           onPress={() => void answer('allow', a.kind === 'question' ? { answers } : {})}
         >
           {busy === 'allow' ? <ActivityIndicator color="#000" /> : <Text style={s.allowText}>{a.allow}</Text>}
@@ -147,41 +149,41 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
   )
 }
 
-const s = StyleSheet.create({
+const useS = themed((C) => ({
   card: { backgroundColor: C.card, borderRadius: 22, padding: 16, paddingLeft: 18, borderWidth: 1, overflow: 'hidden' },
   stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glyph: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  glyphText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  glyphText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   app: { color: C.text2, fontSize: 13, fontWeight: '700', flex: 1 },
   where: { color: C.text3, fontWeight: '600' },
-  timer: { backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
-  timerText: { color: C.text2, fontSize: 12, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  title: { color: C.text, fontSize: 18, fontWeight: '800', marginTop: 10, letterSpacing: -0.2 },
-  code: { backgroundColor: 'rgba(0,0,0,0.35)', borderRadius: 12, padding: 12, marginTop: 10 },
+  timer: { backgroundColor: C.fill, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
+  timerText: { color: C.text2, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  title: { color: C.text, fontSize: 18, fontWeight: '700', marginTop: 10, letterSpacing: -0.2 },
+  code: { backgroundColor: C.dark ? 'rgba(0,0,0,0.35)' : C.card2, borderRadius: 12, padding: 12, marginTop: 10 },
   codeText: { color: '#e5e5ea', fontFamily: 'monospace', fontSize: 13, lineHeight: 19 },
-  plan: { maxHeight: 220, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, padding: 12, marginTop: 10 },
+  plan: { maxHeight: 220, backgroundColor: C.dark ? 'rgba(0,0,0,0.25)' : C.card2, borderRadius: 12, padding: 12, marginTop: 10 },
   planText: { color: C.text, fontSize: 14, lineHeight: 20 },
   body: { color: C.text2, fontSize: 14, lineHeight: 20, marginTop: 6 },
-  lines: { marginTop: 10, backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 12, paddingVertical: 4 },
+  lines: { marginTop: 10, backgroundColor: C.dark ? 'rgba(0,0,0,0.25)' : C.card2, borderRadius: 12, paddingVertical: 4 },
   line: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 12, paddingVertical: 7 },
   lineLabel: { color: C.text2, fontSize: 13 },
   lineValue: { fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
   note: { color: C.text3, fontSize: 13, marginTop: 10, lineHeight: 18 },
   qText: { color: C.text, fontSize: 14, fontWeight: '700', marginBottom: 6 },
   options: { gap: 8 },
-  option: { backgroundColor: 'rgba(255,255,255,0.07)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: C.line },
-  optionOn: { backgroundColor: '#fff', borderColor: '#fff' },
+  option: { backgroundColor: C.fill, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, borderWidth: 1, borderColor: C.line },
+  optionOn: { backgroundColor: C.primary, borderColor: C.primary },
   optionText: { color: C.text, fontSize: 14, fontWeight: '700' },
   optionSub: { color: C.text3, fontSize: 12, marginTop: 2 },
   actions: { flexDirection: 'row', gap: 10, marginTop: 14 },
   btn: { flex: 1, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
-  deny: { backgroundColor: 'rgba(255,255,255,0.09)' },
-  allow: { backgroundColor: '#fff' },
+  deny: { backgroundColor: C.fill },
+  allow: { backgroundColor: C.primary },
   pressed: { transform: [{ scale: 0.97 }], opacity: 0.9 },
   denyText: { color: C.text, fontSize: 15, fontWeight: '700' },
-  allowText: { color: '#000', fontSize: 15, fontWeight: '800' },
+  allowText: { color: C.onPrimary, fontSize: 15, fontWeight: '700' },
   always: { alignSelf: 'center', paddingTop: 10 },
   alwaysText: { color: C.text2, fontSize: 13, fontWeight: '700' },
   error: { color: C.red, fontSize: 13, marginTop: 8 },
-})
+}))

@@ -137,7 +137,7 @@ describe('drop server', () => {
       saved: (id, i, path) => log.push(`saved ${id} ${i} ${basename(path)}`),
       failed: (id, why) => log.push(`failed ${id} ${why}`),
     }
-    server = new DropServer({ token: () => TOKEN, folder: () => folder, name: () => 'test-laptop', events })
+    server = new DropServer({ token: () => TOKEN, folder: () => folder, name: () => 'test-laptop', addresses: () => ['http://192.168.1.20:8790', 'http://100.101.102.103:8790'], events })
     port = 20000 + Math.floor(Math.random() * 20000)
     expect(await server.start(port, '127.0.0.1')).toBeNull()
   })
@@ -148,7 +148,7 @@ describe('drop server', () => {
 
   test('says hello only with the token', async () => {
     const r = await call('/drop/hello')
-    expect(await r.json()).toEqual({ ok: true, protocol: 1, app: 'dynamic-island', name: 'test-laptop' })
+    expect(await r.json()).toEqual({ ok: true, protocol: 1, app: 'dynamic-island', name: 'test-laptop', urls: ['http://192.168.1.20:8790', 'http://100.101.102.103:8790'] })
     expect((await call('/drop/hello', {}, 'b'.repeat(43))).status).toBe(401)
     expect((await call('/drop/hello', {}, '')).status).toBe(401)
   })

@@ -6,7 +6,7 @@ import type { ClaudeRun, ClaudeUsage, ClaudeView } from '../../../shared/claude'
 import type { DropLink } from '../link'
 import { LiveDot } from './IslandScreen'
 import { Composer, Empty, ErrorLine, Page, TAB_ROOM, useAction, useCall, useKeyboard } from './kit'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 
 const folderOf = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd
 
@@ -16,6 +16,7 @@ const folderOf = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cw
  * Anything it asks permission for comes to the Island tab (and a notification).
  */
 export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: number; bottom: number }) {
+  const st = useSt()
   const { data: v, error, reload } = useCall<ClaudeView>(link, 'claude.state', [], { topic: 'claude', fromPush: true })
   const act = useAction(link)
   const scroll = useRef<ScrollViewInstance>(null)
@@ -109,6 +110,7 @@ export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: numbe
 }
 
 function Mine({ text }: { text: string }) {
+  const st = useSt()
   return (
     <View style={st.mine}>
       <Text style={st.mineText} selectable>
@@ -119,6 +121,7 @@ function Mine({ text }: { text: string }) {
 }
 
 function Theirs({ text, failed }: { text: string; failed?: boolean }) {
+  const st = useSt()
   return (
     <View style={[st.theirs, failed && { borderColor: 'rgba(255,69,58,0.35)' }]}>
       <Text style={st.theirsText} selectable>
@@ -132,6 +135,8 @@ const PHASE: Record<string, string> = { starting: 'Starting…', thinking: 'Thin
 
 /** What Claude is doing right now: the step, the ones before it, and what it has written so far. */
 function Working({ run }: { run: ClaudeRun }) {
+  const C = useTheme()
+  const st = useSt()
   const trail = (run.trail ?? []).slice(-4)
   return (
     <View style={st.theirs}>
@@ -162,6 +167,8 @@ function Working({ run }: { run: ClaudeRun }) {
 
 /** Your plan's limits: the 5-hour window and the week. */
 function Usage({ u }: { u: ClaudeUsage }) {
+  const C = useTheme()
+  const st = useSt()
   const bars: [string, number | undefined, number | undefined][] = [
     ['5-hour', u.fiveHour?.pct, u.fiveHour?.resetsAt],
     ['Week', u.sevenDay?.pct, u.sevenDay?.resetsAt],
@@ -190,9 +197,9 @@ function Usage({ u }: { u: ClaudeUsage }) {
   )
 }
 
-const st = StyleSheet.create({
-  newBtn: { backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  newText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+const useSt = themed((C) => ({
+  newBtn: { backgroundColor: C.fill, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
+  newText: { color: C.text, fontWeight: '600', fontSize: 13 },
   mine: { alignSelf: 'flex-end', maxWidth: '86%', backgroundColor: '#d97757', borderRadius: 18, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 10 },
   mineText: { color: '#fff', fontSize: 15, lineHeight: 21 },
   theirs: { alignSelf: 'flex-start', maxWidth: '94%', backgroundColor: C.card, borderRadius: 18, borderBottomLeftRadius: 6, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.line },
@@ -203,10 +210,10 @@ const st = StyleSheet.create({
   trail: { color: C.text3, fontSize: 12 },
   stop: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,69,58,0.16)', borderRadius: 22, height: 52 },
   stopSquare: { width: 12, height: 12, borderRadius: 3, backgroundColor: C.red },
-  stopText: { color: C.red, fontSize: 16, fontWeight: '800' },
+  stopText: { color: C.red, fontSize: 16, fontWeight: '700' },
   usage: { flexDirection: 'row', gap: 16, marginHorizontal: 16, marginBottom: 8, padding: 12, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.line },
   usageLabel: { color: C.text2, fontSize: 12, fontWeight: '700' },
-  usageTrack: { height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.1)', marginTop: 6, overflow: 'hidden' },
+  usageTrack: { height: 5, borderRadius: 3, backgroundColor: C.fill, marginTop: 6, overflow: 'hidden' },
   usageFill: { height: 5, borderRadius: 3 },
   usageReset: { color: C.text3, fontSize: 11, marginTop: 4 },
-})
+}))

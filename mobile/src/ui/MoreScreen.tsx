@@ -13,7 +13,7 @@ import { MusicScreen } from './MusicScreen'
 import { NotesScreen } from './NotesScreen'
 import { ServicesScreen } from './ServicesScreen'
 import { SettingsScreen } from './SettingsScreen'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 import { TradingScreen } from './TradingScreen'
 
 export type MoreId = 'trading' | 'notes' | 'music' | 'controls' | 'crm' | 'docs' | 'services' | 'settings'
@@ -29,8 +29,8 @@ const APPS: { id: MoreId; name: string; color: string; icon: (c: string) => Reac
     icon: (c) => (
       <>
         <Path d="M5 7h14M5 17h14" stroke={c} strokeWidth={2} strokeLinecap="round" />
-        <Circle cx={9} cy={7} r={2.4} fill="#0b0c0f" stroke={c} strokeWidth={2} />
-        <Circle cx={15} cy={17} r={2.4} fill="#0b0c0f" stroke={c} strokeWidth={2} />
+        <Circle cx={9} cy={7} r={2.4} fill="none" stroke={c} strokeWidth={2} />
+        <Circle cx={15} cy={17} r={2.4} fill="none" stroke={c} strokeWidth={2} />
       </>
     ),
   },
@@ -75,6 +75,8 @@ type Props = { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPr
 
 /** The rest of the island: trading, notes, music, the Control Center, the CRM, documents, services, and this app's settings. */
 export function MoreScreen(p: Props) {
+  const C = useTheme()
+  const st = useSt()
   const { link, live, top, open, setOpen } = p
   useEffect(() => {
     if (!open) return
@@ -134,11 +136,11 @@ export function MoreScreen(p: Props) {
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
   cell: { width: '50%', padding: 5 },
   tile: { backgroundColor: C.card, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: C.line, height: 122 },
   icon: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  name: { color: C.text, fontSize: 16, fontWeight: '800', marginTop: 12 },
+  name: { color: C.text, fontSize: 16, fontWeight: '700', marginTop: 12 },
   detail: { color: C.text2, fontSize: 12, marginTop: 2 },
-})
+}))

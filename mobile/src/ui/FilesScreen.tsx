@@ -14,7 +14,7 @@ import { Face } from './Face'
 import { FolderSheet } from './FolderSheet'
 import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
-import { C } from './theme'
+import { themed, useTheme } from './theme'
 import { useFlick } from './useFlick'
 
 const GAP = 10
@@ -28,6 +28,8 @@ type Tab = 'photos' | 'files' | 'received'
  * and it flies across. Tap one to send it with a button instead.
  */
 export function FilesScreen({ link, received, setReceived, top }: { link: DropLink; received: Received[]; setReceived: (r: Received[]) => void; top: number }) {
+  const C = useTheme()
+  const s = useS()
   const { width: W, height: H } = useWindowDimensions()
   const [tab, setTab] = useState<Tab>('photos')
   const [media, setMedia] = useState<{ items: Item[]; allowed: boolean; canAsk: boolean } | null>(null)
@@ -182,6 +184,8 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
 const ADD: Item = { key: '__add', uri: '', name: '', size: 0, kind: 'file', when: 0 }
 
 function Segments({ tab, setTab, counts }: { tab: Tab; setTab: (t: Tab) => void; counts: { received: number } }) {
+  const s = useS()
+  const C = useTheme()
   const tabs: [Tab, string][] = [
     ['photos', 'Photos'],
     ['files', 'Files'],
@@ -199,7 +203,7 @@ function Segments({ tab, setTab, counts }: { tab: Tab; setTab: (t: Tab) => void;
       {w > 0 && <Animated.View style={[s.tabPill, { width: w / tabs.length }, pill]} />}
       {tabs.map(([t, label]) => (
         <Pressable key={t} style={s.tab} onPress={() => setTab(t)}>
-          <Text style={[s.tabText, tab === t && { color: '#000' }]}>{label}</Text>
+          <Text style={[s.tabText, tab === t && { color: C.text }]}>{label}</Text>
         </Pressable>
       ))}
     </View>
@@ -229,6 +233,7 @@ function Tile({
   onRemove?: () => void
   onOpen?: () => void
 }) {
+  const s = useS()
   const lift = (it: Item) => onLift(it)
   const pan = usePanGesture({
     activateAfterLongPress: 240,
@@ -291,24 +296,24 @@ function Tile({
   )
 }
 
-const s = StyleSheet.create({
-  h1: { color: C.text, fontSize: 32, fontWeight: '800', letterSpacing: -0.5 },
+const useS = themed((C) => ({
+  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
   hint: { color: C.text3, fontSize: 13, marginTop: 4 },
   empty: { color: C.text3, fontSize: 14, lineHeight: 20, marginTop: 18 },
   tabs: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 12, padding: 3, marginTop: 14, marginBottom: 8 },
-  tabPill: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 9, backgroundColor: '#fff' },
+  tabPill: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 9, backgroundColor: C.dark ? '#3a3a40' : '#ffffff', ...(C.dark ? {} : { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }) },
   tab: { flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: 'center' },
   tabText: { color: C.text2, fontSize: 13, fontWeight: '700' },
   notice: { backgroundColor: C.card, borderRadius: 14, padding: 14, marginTop: 6, gap: 10 },
   noticeText: { color: C.text2, fontSize: 14, lineHeight: 19 },
-  small: { alignSelf: 'flex-start', backgroundColor: '#fff', borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  smallText: { color: '#000', fontWeight: '700', fontSize: 13 },
+  small: { alignSelf: 'flex-start', backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
+  smallText: { color: C.onPrimary, fontWeight: '600', fontSize: 13 },
   face: { borderRadius: 18, overflow: 'hidden', backgroundColor: C.card },
-  faceOn: { borderWidth: 2, borderColor: '#fff' },
+  faceOn: { borderWidth: 2.5, borderColor: C.accent },
   meta: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
   name: { color: C.text, fontSize: 13, fontWeight: '600' },
   sub: { color: C.text3, fontSize: 11, marginTop: 1 },
-  add: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  add: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.lineStrong, alignItems: 'center', justifyContent: 'center' },
   addPlus: { color: C.text, fontSize: 34, fontWeight: '300' },
   addText: { color: C.text2, fontSize: 13, fontWeight: '600', marginTop: 2 },
   tileActions: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 6 },
@@ -321,7 +326,7 @@ const s = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
+    borderColor: C.dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.12)',
     elevation: 24,
     shadowColor: '#000',
     shadowOpacity: 0.5,
@@ -329,6 +334,6 @@ const s = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
   },
   bar: { position: 'absolute', left: 16, right: 16, bottom: 100 },
-  sendBtn: { backgroundColor: '#fff', borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  sendText: { color: '#000', fontSize: 16, fontWeight: '800' },
-})
+  sendBtn: { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 16, alignItems: 'center', ...C.shadow },
+  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+}))

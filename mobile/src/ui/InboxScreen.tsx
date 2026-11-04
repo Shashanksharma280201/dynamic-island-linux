@@ -5,14 +5,15 @@ import type { ChatMessage, ChatSummary, InboxSources, InboxUnread, MailMessageVi
 import type { PhoneNote } from '../islandTypes'
 import type { DropLink, Live } from '../link'
 import { whenText } from '../files'
-import { Avatar, Badge, Btn, Composer, Empty, ErrorLine, Page, Segmented, TAB_ROOM, ago, s as k, useAction, useCall, useKeyboard } from './kit'
-import { C } from './theme'
+import { Avatar, Badge, Btn, Composer, Empty, ErrorLine, Page, Segmented, TAB_ROOM, ago, useKit, useAction, useCall, useKeyboard } from './kit'
+import { themed, useTheme } from './theme'
 
 type Tab = 'chats' | 'mail' | 'alerts'
 type Open = { kind: 'chat'; chat: ChatSummary } | { kind: 'mail'; mail: MailSummary } | null
 
 /** Your computer's WhatsApp, mail and notifications: read, reply, clear. */
 export function InboxScreen({ link, live, top, bottom }: { link: DropLink; live: Live; top: number; bottom: number }) {
+  const C = useTheme()
   const [tab, setTab] = useState<Tab>('chats')
   const [open, setOpen] = useState<Open>(null)
   const unread = useCall<InboxUnread>(link, 'inbox.unread', [], { topic: 'inbox' })
@@ -59,6 +60,8 @@ export function InboxScreen({ link, live, top, bottom }: { link: DropLink; live:
 // ---- WhatsApp ----
 
 function Chats({ link, sources, onOpen }: { link: DropLink; sources: InboxSources | null; onOpen: (c: ChatSummary) => void }) {
+  const C = useTheme()
+  const k = useKit()
   const ready = sources?.whatsapp === 'ready'
   const { data, error, loading } = useCall<ChatSummary[]>(link, 'inbox.chats', [], { topic: 'inbox', when: ready })
   if (sources && !ready)
@@ -90,6 +93,7 @@ function Chats({ link, sources, onOpen }: { link: DropLink; sources: InboxSource
 }
 
 function Thread({ link, chat, top, bottom, onBack }: { link: DropLink; chat: ChatSummary; top: number; bottom: number; onBack: () => void }) {
+  const st = useSt()
   const { data, error, reload } = useCall<ChatMessage[]>(link, 'inbox.chat', [chat.id], { topic: 'inbox' })
   const act = useAction(link)
   const kb = useKeyboard()
@@ -138,6 +142,9 @@ function Thread({ link, chat, top, bottom, onBack }: { link: DropLink; chat: Cha
 // ---- Mail ----
 
 function Mail({ link, sources, onOpen }: { link: DropLink; sources: InboxSources | null; onOpen: (m: MailSummary) => void }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const has = !!sources?.mail.length
   const { data, error, loading } = useCall<MailSummary[]>(link, 'inbox.mailList', [], { topic: 'inbox', when: has })
   if (sources && !has) return <Empty title="No mail accounts" text="Add a mail account in the island’s Settings on your computer, and your inbox shows up here." />
@@ -169,6 +176,9 @@ function Mail({ link, sources, onOpen }: { link: DropLink; sources: InboxSources
 }
 
 function MailView({ link, m, top, bottom, onBack }: { link: DropLink; m: MailSummary; top: number; bottom: number; onBack: () => void }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const { data, error } = useCall<MailMessageView>(link, 'inbox.mailGet', [m.accountId, m.uid])
   const act = useAction(link)
   const kb = useKeyboard()
@@ -217,6 +227,9 @@ const colorFor = (app: string) => PALETTE[[...app].reduce((n, c) => (n * 31 + c.
 
 /** The computer's notification center: clear one or all, Do Not Disturb. */
 function Alerts({ link, live }: { link: DropLink; live: Live }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const notes = live.view?.notes ?? []
   const act = useAction(link)
   const [dnd, setDnd] = useState(!!live.view?.dnd)
@@ -234,7 +247,7 @@ function Alerts({ link, live }: { link: DropLink; live: Live }) {
             setDnd(on)
             void act.run('dnd', 'notifications.setDnd', on)
           }}
-          trackColor={{ true: C.violet, false: 'rgba(255,255,255,0.15)' }}
+          trackColor={{ true: C.violet, false: C.dark ? '#3a3a3f' : '#d9d9de' }}
           thumbColor="#fff"
         />
       </View>
@@ -263,6 +276,8 @@ function Alerts({ link, live }: { link: DropLink; live: Live }) {
 }
 
 function AlertCard({ n, index, onDismiss }: { n: PhoneNote; index: number; onDismiss: () => void }) {
+  const st = useSt()
+  const k = useKit()
   return (
     <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).springify().damping(18)} exiting={FadeOut.duration(180)} layout={LinearTransition.springify().damping(20)} style={st.note}>
       <View style={[st.appIcon, { backgroundColor: colorFor(n.app) }]}>
@@ -292,11 +307,14 @@ function AlertCard({ n, index, onDismiss }: { n: PhoneNote; index: number; onDis
 }
 
 function RowLink(p: { title: string; sub?: string; left?: React.ReactNode; right?: React.ReactNode; onPress: () => void; bold?: boolean }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   return (
-    <Pressable onPress={p.onPress} style={({ pressed }) => [st.link, pressed && { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+    <Pressable onPress={p.onPress} style={({ pressed }) => [st.link, pressed && { backgroundColor: C.fillPressed }]}>
       {p.left}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[k.rowTitle, p.bold && { fontWeight: '800' }]} numberOfLines={1}>
+        <Text style={[k.rowTitle, p.bold && { fontWeight: '700' }]} numberOfLines={1}>
           {p.title}
         </Text>
         {!!p.sub && (
@@ -310,24 +328,24 @@ function RowLink(p: { title: string; sub?: string; left?: React.ReactNode; right
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   link: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 14 },
   dot: { width: 9, height: 9, borderRadius: 5 },
   bubble: { maxWidth: '82%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
-  mine: { alignSelf: 'flex-end', backgroundColor: '#005c4b', borderBottomRightRadius: 5 },
+  mine: { alignSelf: 'flex-end', backgroundColor: C.dark ? '#005c4b' : '#d9fdd3', borderBottomRightRadius: 5 },
   theirs: { alignSelf: 'flex-start', backgroundColor: C.card2, borderBottomLeftRadius: 5 },
-  author: { color: C.cyan, fontSize: 12, fontWeight: '800', marginBottom: 2 },
-  bubbleText: { color: '#fff', fontSize: 15, lineHeight: 21 },
+  author: { color: C.cyan, fontSize: 12, fontWeight: '700', marginBottom: 2 },
+  bubbleText: { color: C.text, fontSize: 15, lineHeight: 21 },
   thumb: { width: 200, height: 150, borderRadius: 10, marginBottom: 4, backgroundColor: '#000' },
   media: { color: C.text2, fontSize: 13, fontStyle: 'italic' },
-  time: { color: 'rgba(255,255,255,0.5)', fontSize: 10, alignSelf: 'flex-end', marginTop: 2 },
+  time: { color: C.text3, fontSize: 10, alignSelf: 'flex-end', marginTop: 2 },
   mailBody: { color: C.text, fontSize: 15, lineHeight: 22, marginTop: 10 },
   dndRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   note: { flexDirection: 'row', gap: 12, backgroundColor: C.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.line },
   appIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  appIconText: { color: '#fff', fontSize: 16, fontWeight: '800' },
-  app: { color: C.text2, fontSize: 12, fontWeight: '800', flex: 1 },
+  appIconText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  app: { color: C.text2, fontSize: 12, fontWeight: '700', flex: 1 },
   noteTitle: { color: C.text, fontSize: 15, fontWeight: '700', marginTop: 2 },
-  x: { width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center' },
+  x: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center' },
   xText: { color: C.text2, fontSize: 17, lineHeight: 19, fontWeight: '600' },
-})
+}))

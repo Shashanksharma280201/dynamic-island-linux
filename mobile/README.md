@@ -2,7 +2,12 @@
 
 Your computer's Dynamic Island on your phone, and files both ways with a glow.
 
-- **Island**: what's waiting for your answer on the computer (Claude Code
+- **Island**: first, **Fig. 1, the link**: an isometric drawing of your
+  computer and phone on one bench, joined by a glass tube. A capsule runs
+  along it while files go (toward the computer when you send, toward the
+  phone when it sends), the lamp is green when they can reach each other
+  (amber while looking, red when they can't), and the gauge reads the round
+  trip in milliseconds. Tap it to test the link. Then what's waiting for your answer on the computer (Claude Code
   wanting to run a command or edit a file, its questions and plans, the island
   assistant about to act for you, a trade from your trading engine), with the
   same buttons as the island. Answer here or on the computer, whichever is
@@ -27,6 +32,25 @@ Your computer's Dynamic Island on your phone, and files both ways with a glow.
   this app's **Settings**.
 - **Notifications** on the phone for everything waiting, with **Allow** and
   **Deny** (or **Buy** / **Skip**) buttons right on them.
+- **Light and dark**: **More → Settings → Appearance**: System (follows the
+  phone), Light or Dark.
+
+## Staying connected
+
+- The app reconnects by itself the moment the phone's Wi-Fi changes or comes
+  back.
+- If the computer's address changes (routers hand them out again), the app
+  first tries every address it knows for it, then looks for it across this
+  Wi-Fi, and keeps the new address. Each time it connects, the computer tells
+  it all the addresses it has now (Wi-Fi, Tailscale), so it can follow it
+  from one to the other.
+- **More → Settings → Connection** shows the route (Wi-Fi or Tailscale), the
+  address, the last round trip, **Test the connection** and **Find my
+  computer again**.
+
+The link drawing is built with the isometric kit from
+[Anatomy](https://github.com/wheresryan22/anatomy) by Ryan (MIT), ported to
+react-native-svg in `src/iso/`.
 
 Everything runs on the computer itself, through the island's own functions:
 a note you write is saved there, a message you send goes from its WhatsApp,

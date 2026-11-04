@@ -3,11 +3,14 @@ import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleShe
 import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-reanimated'
 import type { Note, NoteSummary } from '../../../shared/types'
 import type { DropLink } from '../link'
-import { Btn, Card, Empty, ErrorLine, Page, ago, s as k, useAction, useCall } from './kit'
-import { C } from './theme'
+import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
+import { themed, useTheme } from './theme'
 
 /** Your notes on the computer (Markdown files): find, read, write. */
 export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const { data, error, reload } = useCall<NoteSummary[]>(link, 'notes.list')
   const [q, setQ] = useState('')
   const [open, setOpen] = useState<string | 'new' | null>(null)
@@ -22,7 +25,7 @@ export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number
         {shown.map((n, i) => (
           <Card key={n.id} onPress={() => setOpen(n.id)} style={{ gap: 4 }}>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Text style={[k.rowTitle, { flex: 1, fontWeight: '800' }]} numberOfLines={1}>
+              <Text style={[k.rowTitle, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>
                 {n.title || 'Untitled'}
               </Text>
               <Text style={k.rowRight}>{ago(n.updated)}</Text>
@@ -54,6 +57,8 @@ export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number
 
 /** One note: edits are saved when you leave (or tap Save). */
 function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null; top: number; onClose: () => void }) {
+  const C = useTheme()
+  const st = useSt()
   const note = useCall<Note>(link, 'notes.get', [id], { when: !!id })
   const act = useAction(link)
   const [body, setBody] = useState('')
@@ -130,7 +135,7 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   search: { backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
   editor: { flex: 1, color: C.text, fontSize: 16, lineHeight: 24, backgroundColor: C.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.line },
-})
+}))

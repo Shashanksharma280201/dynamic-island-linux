@@ -1,15 +1,15 @@
 import { Platform } from 'react-native'
 import EventSource from 'react-native-sse'
 import { Directory, File, Paths } from 'expo-file-system'
+import * as Network from 'expo-network'
 import type { PhoneIncoming, PhoneView } from './islandTypes'
 import type { PhoneCall, PhoneTopic } from '../../shared/phone'
-import { isIslandHello, type Pairing, type Side } from './protocol'
+import { helloUrls, isIslandHello, mergeUrls, neighbours, routeOf, type Pairing, type Side } from './protocol'
+import type { LinkState, Live } from './linkTypes'
 
-/** The island's live view on this phone. */
-export type Live = { phase: 'off' | 'connecting' | 'live' | 'offline'; view?: PhoneView; seenAt?: number; error?: string }
+export type { LinkState, Live, Phase } from './linkTypes'
 
-export type Phase = 'finding' | 'ready' | 'offline'
-export type LinkState = { phase: Phase; error?: string; url?: string }
+
 export type SendResult = { ok: boolean; message: string; name?: string }
 export type Outgoing = { uri: string; name: string; size: number; dir?: string }
 
@@ -53,21 +53,27 @@ function firstOf<T>(tries: Promise<T>[]): Promise<T> {
   })
 }
 
+/** What a computer's hello says: who it is, where else it can be reached, how long the round trip took. */
+type Found = { url: string; name: string; ms: number; urls: string[] }
+
+/** Ask one address whether our computer is there (with our token). */
+async function hello(url: string, token: string, timeoutMs: number): Promise<Found> {
+  const t0 = Date.now()
+  const r = await call(`${url}/drop/hello`, { headers: { Authorization: `Bearer ${token}` }, timeoutMs })
+  if (!r.ok) throw Object.assign(new Error(linkError(r.status)), { status: r.status })
+  const j = await r.json()
+  if (!isIslandHello(j)) throw new Error('That address isn’t a Dynamic Island.')
+  return { url, name: j.name, ms: Date.now() - t0, urls: helloUrls(j) }
+}
+
 /** The first of the pairing's addresses that answers as an island, or null and why. */
-export async function findComputer(p: Pairing): Promise<{ url: string; name: string } | { error: string }> {
+export async function findComputer(p: Pairing): Promise<Found | { error: string }> {
   let last = ''
   const tries = p.urls.map(async (url) => {
     try {
-      const r = await call(`${url}/drop/hello`, { headers: { Authorization: `Bearer ${p.token}` }, timeoutMs: 3500 })
-      if (!r.ok) {
-        last = linkError(r.status)
-        throw new Error(last)
-      }
-      const j = await r.json()
-      if (!isIslandHello(j)) throw new Error((last = 'That address isn’t a Dynamic Island.'))
-      return { url, name: j.name }
+      return await hello(url, p.token, 3500)
     } catch (e: any) {
-      last ||= linkError(undefined, String(e?.message ?? e))
+      last ||= e?.status ? String(e.message) : linkError(undefined, String(e?.message ?? e))
       throw e
     }
   })
@@ -84,6 +90,8 @@ export async function findComputer(p: Pairing): Promise<{ url: string; name: str
  */
 export class DropLink {
   state: LinkState = { phase: 'finding' }
+  /** The pairing as it is now (its addresses follow the computer's). */
+  pairing: Pairing
   live: Live = { phase: 'off' }
   private listeners = new Set<(s: LinkState) => void>()
   private liveListeners = new Set<(l: Live) => void>()
@@ -92,8 +100,16 @@ export class DropLink {
   private es: EventSource<'view' | 'incoming' | 'push'> | null = null
   private poll: ReturnType<typeof setInterval> | null = null
   private finding: Promise<string | null> | null = null
+  private netSub: { remove: () => void } | null = null
+  private lastNet = ''
 
-  constructor(readonly pairing: Pairing) {}
+  /** `onPairing` keeps the computer's new addresses (it moved, or has Tailscale now). */
+  constructor(
+    pairing: Pairing,
+    private onPairing?: (p: Pairing) => void,
+  ) {
+    this.pairing = pairing
+  }
 
   private set(s: LinkState) {
     this.state = s
@@ -110,20 +126,102 @@ export class DropLink {
     return { Authorization: `Bearer ${this.pairing.token}` }
   }
 
-  /** Look for the computer (again). */
+  /** Look for the computer (again): its known addresses, then this Wi-Fi if it moved. */
   find(): Promise<string | null> {
     this.finding ??= (async () => {
-      if (this.state.phase !== 'ready') this.set({ phase: 'finding' })
-      const r = await findComputer(this.pairing)
+      if (this.state.phase !== 'ready') this.set({ ...this.state, phase: 'finding', url: undefined })
+      let r = await findComputer(this.pairing)
+      if ('error' in r && !/didn’t accept/.test(r.error)) {
+        this.set({ ...this.state, phase: 'finding', scanning: true })
+        r = (await this.scan()) ?? r
+      }
       this.finding = null
       if ('error' in r) {
-        this.set({ phase: 'offline', error: r.error })
+        this.set({ phase: 'offline', error: r.error, route: undefined, ms: undefined, checkedAt: Date.now() })
         return null
       }
-      this.set({ phase: 'ready', url: r.url })
+      this.found(r)
       return r.url
     })()
     return this.finding
+  }
+
+  private found(r: Found) {
+    this.set({ phase: 'ready', url: r.url, route: routeOf(r.url), ms: r.ms, checkedAt: Date.now() })
+    // Keep where the computer is now, so it's found at once next time.
+    const urls = mergeUrls([r.url, ...r.urls], this.pairing.urls)
+    const name = r.name || this.pairing.name
+    if (urls.join() !== this.pairing.urls.join() || name !== this.pairing.name) {
+      this.pairing = { ...this.pairing, name, urls }
+      this.onPairing?.(this.pairing)
+    }
+  }
+
+  /**
+   * The computer's address may have changed on this Wi-Fi (routers hand them
+   * out again): ask every address on the phone's network, a few at a time,
+   * nearest first, on the port it had.
+   */
+  private async scan(): Promise<Found | null> {
+    let ip = ''
+    try {
+      const net = await Network.getNetworkStateAsync()
+      if (net.type !== Network.NetworkStateType.WIFI && net.type !== Network.NetworkStateType.ETHERNET) return null
+      ip = await Network.getIpAddressAsync()
+    } catch {
+      return null
+    }
+    const port = /:(\d+)$/.exec(this.pairing.urls[0] ?? '')?.[1] ?? '8790'
+    const hosts = neighbours(ip)
+    for (let i = 0; i < hosts.length; i += 32) {
+      const batch = hosts.slice(i, i + 32).map((h) => hello(`http://${h}:${port}`, this.pairing.token, 900))
+      try {
+        return await firstOf(batch)
+      } catch {
+        // none of these
+      }
+    }
+    return null
+  }
+
+  /** How the link is now: one round trip (it looks again if that fails). */
+  async ping(): Promise<number | null> {
+    const url = this.state.url
+    if (!url) return (await this.find()) ? (this.state.ms ?? null) : null
+    try {
+      const r = await hello(url, this.pairing.token, 5000)
+      this.set({ ...this.state, phase: 'ready', ms: r.ms, checkedAt: Date.now(), error: undefined })
+      if (this.live.phase !== 'live' && this.es) void this.startLive()
+      return r.ms
+    } catch {
+      const again = await this.find()
+      if (again) void this.startLive()
+      return again ? (this.state.ms ?? null) : null
+    }
+  }
+
+  /** Wi-Fi came back, or the phone moved networks: find the computer again at once. */
+  watchNetwork(): () => void {
+    this.netSub?.remove()
+    try {
+      this.netSub = Network.addNetworkStateListener((n) => {
+        const key = `${n.type}:${n.isConnected}:${n.isInternetReachable}`
+        if (key === this.lastNet) return
+        const first = !this.lastNet
+        this.lastNet = key
+        if (first || !n.isConnected) return
+        this.set({ ...this.state, url: undefined })
+        void this.find().then((u) => {
+          if (u) void this.startLive()
+        })
+      })
+    } catch {
+      this.netSub = null
+    }
+    return () => {
+      this.netSub?.remove()
+      this.netSub = null
+    }
   }
 
   private async url(): Promise<string | null> {
@@ -270,12 +368,17 @@ export class DropLink {
     })
     es.addEventListener('error', (e: any) => {
       this.setLive({ phase: 'offline', error: linkError(e?.xhrStatus || undefined, e?.message) })
-      // The computer may have moved to another address: look again.
-      if (!e?.xhrStatus) void this.find()
+      // The computer may have moved to another address: look again, then listen there.
+      if (!e?.xhrStatus) {
+        const was = this.state.url
+        void this.find().then((u) => {
+          if (u && u !== was) void this.startLive()
+        })
+      }
     })
     this.es = es
-    // A slow poll as a safety net: idle connections can die quietly on mobile networks.
-    this.poll = setInterval(() => void this.refresh(), 30_000)
+    // A round trip every 20 s: the gauge's reading, and a safety net (idle connections can die quietly on mobile networks).
+    this.poll = setInterval(() => void this.ping(), 20_000)
   }
 
   stopLive(): void {

@@ -4,12 +4,12 @@ import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-
 import * as Haptics from 'expo-haptics'
 import type { ActivityKind, ContactPage, ContactSummary, CrmOverview, DealSummary, TaskSummary } from '../../../shared/crm'
 import type { DropLink } from '../link'
-import { Avatar, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, Segmented, ago, s as k, useAction, useCall } from './kit'
-import { C } from './theme'
+import { Avatar, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, Segmented, ago, useKit, useAction, useCall } from './kit'
+import { themed, useTheme, type Palette } from './theme'
 
 type Tab = 'followups' | 'people' | 'deals'
 const STAGE: Record<string, string> = { new: 'New', qualified: 'Qualified', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won', lost: 'Lost' }
-const STAGE_COLOR: Record<string, string> = { won: C.green, lost: C.red, negotiation: C.orange, proposal: C.blue }
+const stageColor = (C: Palette, stage: string): string | undefined => ({ won: C.green, lost: C.red, negotiation: C.orange, proposal: C.blue })[stage]
 
 /** "Today", "Overdue · 3 Oct", "Fri 10 Oct". */
 function due(d?: string): string {
@@ -26,6 +26,7 @@ const money = (v: number | undefined, cur: string) => (v === undefined ? '' : `$
 
 /** Your CRM on the computer: follow-ups to do, people (log a call), deals. */
 export function CrmScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
+  const C = useTheme()
   const [tab, setTab] = useState<Tab>('followups')
   const [person, setPerson] = useState<string | null>(null)
   const ov = useCall<CrmOverview>(link, 'crm.overview', [], { topic: 'crm' })
@@ -56,6 +57,8 @@ export function CrmScreen({ link, top, onBack }: { link: DropLink; top: number; 
 }
 
 function FollowUps({ link, onPerson }: { link: DropLink; onPerson: (id: string) => void }) {
+  const C = useTheme()
+  const st = useSt()
   const { data, error, reload } = useCall<TaskSummary[]>(link, 'crm.tasks', ['open'], { topic: 'crm' })
   const act = useAction(link)
   if (!data && !error) return <Empty busy title="Getting follow-ups…" />
@@ -90,6 +93,9 @@ function FollowUps({ link, onPerson }: { link: DropLink; onPerson: (id: string) 
 }
 
 function People({ link, onPerson }: { link: DropLink; onPerson: (id: string) => void }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const [q, setQ] = useState('')
   const [query, setQuery] = useState('')
   useEffect(() => {
@@ -121,6 +127,9 @@ function People({ link, onPerson }: { link: DropLink; onPerson: (id: string) => 
 }
 
 function Deals({ link, currency }: { link: DropLink; currency: string }) {
+  const C = useTheme()
+  const st = useSt()
+  const k = useKit()
   const { data, error } = useCall<DealSummary[]>(link, 'crm.deals', [], { topic: 'crm' })
   const open = (data ?? []).filter((d) => d.stage !== 'won' && d.stage !== 'lost')
   const total = open.reduce((n, d) => n + (d.value ?? 0), 0)
@@ -146,7 +155,7 @@ function Deals({ link, currency }: { link: DropLink; currency: string }) {
             right={
               <View style={{ alignItems: 'flex-end', gap: 3 }}>
                 <Text style={st.value}>{money(d.value, d.currency ?? currency)}</Text>
-                <Text style={[st.stage, { color: STAGE_COLOR[d.stage] ?? C.text2 }]}>{STAGE[d.stage] ?? d.stage}</Text>
+                <Text style={[st.stage, { color: stageColor(C, d.stage) ?? C.text2 }]}>{STAGE[d.stage] ?? d.stage}</Text>
               </View>
             }
           />
@@ -165,6 +174,8 @@ const KINDS: [ActivityKind, string][] = [
 
 /** One person: how to reach them, what happened, what to do, deals; log a call or note. */
 function Person({ link, id, top, currency, onBack }: { link: DropLink; id: string; top: number; currency: string; onBack: () => void }) {
+  const st = useSt()
+  const k = useKit()
   const { data, error, reload } = useCall<ContactPage>(link, 'crm.contact', [id], { topic: 'crm' })
   const act = useAction(link)
   const [kind, setKind] = useState<ActivityKind>('call')
@@ -240,11 +251,11 @@ function Person({ link, id, top, currency, onBack }: { link: DropLink; id: strin
   )
 }
 
-const st = StyleSheet.create({
+const useSt = themed((C) => ({
   check: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.text3 },
   search: { backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
-  big: { color: C.text, fontSize: 30, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  value: { color: C.text, fontSize: 14, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  stage: { fontSize: 11, fontWeight: '800' },
+  big: { color: C.text, fontSize: 30, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  value: { color: C.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  stage: { fontSize: 11, fontWeight: '700' },
   contact: { color: C.cyan, fontSize: 15, paddingVertical: 2 },
-})
+}))
