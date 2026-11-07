@@ -19,6 +19,7 @@ import type { ServiceHub } from './services'
 import type { ConnectedHub } from './connected'
 import { cleanUrl } from '@shared/connected'
 import { displayChoices } from './window'
+import type { BrainView } from '@shared/brain'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
@@ -92,6 +93,8 @@ type Deps = {
   onAi: (previous: ProviderId) => void
   listModels: (provider: ProviderId) => Promise<string[]>
   onPackages: () => void
+  /** The second brain, for Settings → You and Brain. */
+  brain: () => BrainView
 }
 
 /** Settings window + the IPC it uses. */
@@ -107,6 +110,7 @@ export class SettingsController {
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),
       agentHooks: agentHooks(),
+      brain: this.d.brain(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,

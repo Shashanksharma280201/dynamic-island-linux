@@ -1,3 +1,4 @@
+import type { BrainView } from './brain'
 import type { AgentSession } from './sessions'
 import type { Shortcuts } from './shortcuts'
 import type { CharacterConfig } from './character'
@@ -361,6 +362,8 @@ export type SettingsState = {
   character: CharacterConfig
   ai: AiSettings
   packages: PackagesConfig
+  /** The second brain (Settings → You and Settings → Brain). */
+  brain: BrainView
 }
 
 export type ClaudeSettings = {

@@ -35,6 +35,7 @@ import { dropAddresses, dropPairingLink, type DropStatus } from '@shared/drop'
 import { isAutostartEnabled, setAutostart } from './autostart'
 import {
   agentHooks,
+  brainHookCommand,
   findExecutable,
   hookDir,
   hookNeedsUpgrade,
@@ -114,6 +115,11 @@ import type { NotificationData, SystemState } from '@shared/types'
 import type { Dock, Side } from '@shared/dock'
 import { defaultSocketPath } from '@shared/protocol'
 import { toPhysicalRect, type Rect } from '@shared/hitbox'
+import { Brain } from './brain'
+import { Wiring } from './brain/wire'
+import { claudeOnce } from './brain/writer'
+import { wireBrain } from './brainIpc'
+import { runTurn } from './agent/providers'
 
 const WAYLAND = process.env.XDG_SESSION_TYPE === 'wayland'
 app.commandLine.appendSwitch('enable-transparent-visuals')
@@ -439,6 +445,54 @@ async function main() {
     if (set) return set
     return findExecutable('claude', claudeSearchDirs(homedir()))
   }
+
+  // ---- the second brain (Settings → Brain) ----
+  // Session notes are written by your island AI, or by Claude Code (Haiku)
+  // when that is the island's AI; without either they are plain.
+  const writerDir = join(app.getPath('userData'), 'brain-writer')
+  const brainWriter = () => {
+    const ai = config.ai
+    const provider = providerInfo(ai.provider)
+    if (provider.kind !== 'claude-code' && !setupProblem(ai)) {
+      const stored = ai.keys[ai.provider]
+      const model = modelFor(ai)
+      return {
+        label: `${provider.label} (${model})`,
+        ask: (prompt: string) =>
+          runTurn({
+            kind: provider.kind as 'anthropic' | 'openai-compatible',
+            model,
+            apiKey: stored ? decryptSecret(stored) : '',
+            baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
+            system: 'You write short, plain notes for the user’s second brain.',
+            history: [],
+            prompt,
+            tools: [],
+            signal: AbortSignal.timeout(120_000),
+            events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
+          }).then((r) => r.text),
+      }
+    }
+    const bin = findClaude()
+    return bin ? { label: 'Claude Code (Haiku)', ask: (prompt: string) => claudeOnce(bin, prompt, writerDir) } : null
+  }
+  const brain = new Brain({
+    config: () => config.brain,
+    setConfig: (patch) => {
+      config.brain = { ...config.brain, ...patch }
+      saveConfig(config)
+    },
+    ...brainPaths(),
+    userData: app.getPath('userData'),
+    claudeBinary: findClaude,
+    hookCommand: brainHookCommand,
+    writer: brainWriter,
+    findExecutable: (name) => findExecutable(name, ['/snap/bin', '/var/lib/flatpak/exports/bin', join(homedir(), '.local/share/flatpak/exports/bin')]),
+    openPath: (p) => void shell.openPath(p),
+    openUrl: (u) => void shell.openExternal(u),
+    onChange: () => settings?.changed(),
+    ownFolders: [writerDir],
+  })
   const alertsSeen = new Set<string>()
   // What the agent is doing, on the island: a live card, then the answer.
   const agentChanged = (run?: ClaudeRun) => {
@@ -583,9 +637,9 @@ async function main() {
       }
     },
     // Called per question, after every service below exists.
-    tools: () => islandTools(),
+    tools: () => [...islandTools(), ...brain.tools('island')],
     askUser: (o) => agentApprovals.ask(o),
-    system: () => agentSystemPrompt(config.character),
+    system: () => agentSystemPrompt(config.character, brain.briefForAgent()),
     onChange: (s) => {
       // Only the active engine's runs reach the island.
       if (claudeUi?.engine() === apiAgent) agentChanged(s.run)
@@ -886,6 +940,7 @@ async function main() {
   }
 
   settings = new SettingsController({
+    brain: () => brain.view(),
     drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
     drop: dropStatus,
     setDrop: async (p) => {
@@ -1031,6 +1086,8 @@ async function main() {
   })
   settings.wire()
   void spotify.start() // after Settings exists: it reports status there
+  wireBrain(brain)
+  void brain.start().catch((e) => console.error('[brain] start:', e instanceof Error ? e.message : e))
 
   claudeUi = new ClaudeController({
     win,
@@ -1508,6 +1565,7 @@ async function main() {
 
   cleanup = async () => {
     globalShortcut.unregisterAll()
+    brain.stop()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()
@@ -1650,6 +1708,34 @@ function runDemo(
  * `--uninstall`). Asks first unless `--yes`; `--delete-data` also removes its
  * settings and data without asking. Quits when done.
  */
+/** Where Claude Code, Codex and Gemini CLI keep what the brain connects to. */
+function brainPaths() {
+  const home = process.env.DI_HOME || homedir()
+  const claudeDir = process.env.CLAUDE_CONFIG_DIR || join(home, '.claude')
+  return {
+    home,
+    claudeDir,
+    claudeJson: join(process.env.CLAUDE_CONFIG_DIR || home, '.claude.json'),
+    codexDir: process.env.CODEX_HOME || join(home, '.codex'),
+    geminiDir: join(home, '.gemini'),
+    projectsDir: join(claudeDir, 'projects'),
+  }
+}
+
+/** Undo the brain's connections without starting it (uninstalling). */
+async function disconnectBrain(): Promise<void> {
+  const paths = brainPaths()
+  const w = new Wiring({
+    ...paths,
+    vault: () => '',
+    claudeBinary: () => process.env.DI_CLAUDE_BIN || findExecutable('claude', claudeSearchDirs(homedir())),
+    hookCommand: () => '',
+    mcp: () => null,
+    brief: () => '',
+  })
+  for (const t of w.status()) if (t.parts.some((p) => p.done)) await w.disconnect(t.id)
+}
+
 async function runUninstall(argv: string[] = []): Promise<void> {
   let removeData = argv.includes('--delete-data')
   if (!argv.includes('--yes')) {
@@ -1679,6 +1765,8 @@ async function runUninstall(argv: string[] = []): Promise<void> {
         // Claude Code's hooks, and those added for Codex, Gemini CLI or Cursor.
         removeHook: async () => {
           if (isHookInstalled()) await setHookInstalled(false)
+          // The brain's hooks, brief and tools in Claude Code, Codex and Gemini CLI (the brain itself stays).
+          await disconnectBrain().catch((e) => console.error('uninstall: brain', e))
           for (const a of agentHooks()) if (a.installed) await setAgentHook(a.id, false).catch((e) => console.error(`uninstall: ${a.id} hook`, e))
         },
         removeStatusLine: async () => isUsageBridgeInstalled() && setUsageBridgeInstalled(false),

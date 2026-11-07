@@ -4,7 +4,7 @@ import { accessSync, constants, cpSync, mkdirSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { delimiter, join } from 'node:path'
 
-const FILES = ['claude-island-hook.cjs', 'claude-island-hook-events.cjs', 'agents.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs']
+const FILES = ['claude-island-hook.cjs', 'claude-island-hook-events.cjs', 'agents.cjs', 'decision.cjs', 'install.cjs', 'claude-island-status.cjs', 'statusline.cjs', 'island-brain-hook.cjs']
 
 function settingsPath(): string {
   return join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'settings.json')
@@ -56,6 +56,11 @@ export function nodeRunner(): string {
   if (node) return JSON.stringify(node)
   const self = process.env.APPIMAGE || process.execPath
   return `ELECTRON_RUN_AS_NODE=1 ${JSON.stringify(self)}`
+}
+
+/** The command Claude Code runs for the second brain's hook (Settings → Brain). */
+export function brainHookCommand(vault: string): string {
+  return `${nodeRunner()} ${JSON.stringify(join(hookDir(), 'island-brain-hook.cjs'))} --vault ${JSON.stringify(vault)}`
 }
 
 function runInstaller(script: string, on: boolean, extra: string[] = []): Promise<string> {

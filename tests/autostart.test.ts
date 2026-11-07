@@ -48,6 +48,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     character: { id: 'orbit', name: 'Orbit', outfit: 'auto', color: null },
     ai: { provider: 'claude-code', models: {}, baseUrls: {}, keys: {} },
     packages: { disabled: [] },
+    brain: { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: 47823, since: 0 },
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
   }
   expect(mergeConfig(null)).toEqual(d)

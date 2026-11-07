@@ -6,6 +6,25 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**A second brain for you and every AI you use**
+
+- **Settings → Second brain** makes a folder of plain notes (`~/Brain`, in
+  the Living Brain layout) that Claude Code, Codex, Gemini CLI and the
+  island's assistant all share. Open it in Obsidian; it keeps its own git
+  history. [The guide](docs/brain.md).
+- **Settings → You**: four short notes about you (profile, how you work,
+  goals, how you write) become the brief every AI loads. **Interview me**
+  has Claude Code ask you about yourself and write them.
+- **Connect Claude Code** in one switch: your brief in `CLAUDE.md`, the
+  project's page and last sessions at the start of each session, and the
+  brain's tools (search, read, capture, decisions, promises) over MCP.
+  Switching it off undoes it.
+- **Every Claude Code session gets a note**: five lines (shipped, decided,
+  promised, the number, next), filed with its project.
+- **Find my projects** drafts a page for each project from your Claude Code
+  history and git; keep the ones you want from the inbox.
+- `08-restricted/` stays private: no tool, index or search reads it.
+
 **Island Drop: a new look, light and dark, and a steadier link**
 
 - A cleaner design throughout: one type scale, grouped settings lists, line

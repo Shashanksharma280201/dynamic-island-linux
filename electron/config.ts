@@ -12,6 +12,7 @@ import { DRAG_DEFAULTS, parseDragConfig, type DragConfig } from '@shared/dragAct
 import { parseServices, type ServicesConfig } from './services'
 import { parseConnectedConfig, type ConnectedConfig } from '@shared/connected'
 import { DROP_DEFAULTS, parseDropConfig, type DropConfig } from '@shared/drop'
+import { parseBrainConfig, type BrainConfig } from '@shared/brain'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -66,6 +67,8 @@ export type Config = {
   ai: AiConfig
   /** Packages you turned off. */
   packages: PackagesConfig
+  /** The second brain shared by your AI tools (Settings → Brain). */
+  brain: BrainConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -132,6 +135,7 @@ const DEFAULTS: Config = {
   character: parseCharacter(null),
   ai: parseAiConfig(null),
   packages: parsePackages(null),
+  brain: parseBrainConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -161,13 +165,14 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null), brain: parseBrainConfig(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
   c.character = parseCharacter(r.character)
   c.ai = parseAiConfig(r.ai)
   c.packages = parsePackages(r.packages)
+  c.brain = parseBrainConfig(r.brain)
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

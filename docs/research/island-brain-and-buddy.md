@@ -1,6 +1,6 @@
 # Island Brain and Buddy
 
-*Research and plan, 7 November 2026, for dynamic-island-linux.*
+*Research and plan, 7 November 2026, for dynamic-island-linux. Phase 1, the brain, is built: see [the guide](../brain.md).*
 
 How to give you and every AI you use one shared memory that stays on your computer, turn the island's character into a buddy that talks, sees your screen and points, grow it into a Jarvis, and make Ubuntu feel like an AI OS. It covers what others have built, what to borrow, what to build, and in what order.
 
@@ -338,7 +338,7 @@ The advanced version takes the best idea from each project above and adds what n
 
 **The deciding fact: X11 is ending on Ubuntu.** Since 25.10 "the Ubuntu Desktop session now runs only on the Wayland back end" ([release notes](https://discourse.ubuntu.com/t/resolute-raccoon-release-notes/59220)), and 26.04 LTS has no Xorg login. The island needs Xorg today. On Wayland an app cannot keep a window on top, place it, read the pointer or grab keys without help from the desktop.
 
-**Recommendation:** stay on 24.04 LTS with "Ubuntu on Xorg" while the buddy is built. 24.04's standard support runs to 2029, so there is no rush. Later, add a small companion GNOME Shell extension for Wayland that draws the pointer and island layer, reports the pointer position and talks to the island over D-Bus. Install it from the island rather than GNOME's extensions site, which is reported to have refused AI-written extensions since December 2025. The Screenshot and GlobalShortcuts portals cover capture and hold-to-talk there.
+**For you:** you are on Ubuntu 22.04 because ROS 2 Humble supports only that release. 22.04 still offers "Ubuntu on Xorg", so the island and the buddy work there as they are. Its standard support ends in April 2027, close to ROS 2 Humble's own end in May 2027, so the move to Wayland can wait until you move to ROS 2 Jazzy on 24.04 or later. Later, add a small companion GNOME Shell extension for Wayland that draws the pointer and island layer, reports the pointer position and talks to the island over D-Bus. Install it from the island rather than GNOME's extensions site, which is reported to have refused AI-written extensions since December 2025. The Screenshot and GlobalShortcuts portals cover capture and hold-to-talk there.
 
 **The island look,** applied in one click and undone in one click:
 
@@ -420,7 +420,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
 |---|---|---|
 | Cloud models see what they read | Storage is local, but any note or screenshot given to Claude is sent to Anthropic | Restricted is never served; you pick the model per job; local Ollama for capture and triage; the window deny-list; Settings shows every outbound call |
 | Prompt injection | Mail, chats, web clips and screen text can carry instructions aimed at AI | Captures are data, never instructions; AI writes only to the inbox and ledgers; every action needs your yes |
-| X11 is ending | Ubuntu 25.10 and later are Wayland only | Stay on 24.04 for now; the GNOME Shell extension in Phase 6 |
+| X11 is ending | Ubuntu 25.10 and later are Wayland only | Stay on 22.04 (or 24.04) with Xorg for now; the GNOME Shell extension in Phase 6 |
 | The laptop sleeps | Scheduled jobs miss their time | Catch-up on wake; an always-on box later |
 | Cost | Screenshots and weekly passes use tokens | About 1 cent per Sonnet look; a monthly budget cap in Settings |
 | GNOME extension churn | Extensions break on most GNOME releases | Keep the extension tiny; only the Wayland layer depends on it |
@@ -428,16 +428,18 @@ Each phase ends with something you use every day. Brain first, as you asked.
 | Third-party brain tools | Telemetry and auto-updates on by default (Basic Memory, mem0, Cognee); one tool's background agent skips permissions | Build our own; if one is used, turn those off first |
 | Licences | GPL and non-commercial parts | Reuse MIT and Apache code only (Clicky, Flicky, Kokoro, sherpa-onnx). Newelle and Piper (GPL-3) are ideas or separate programs. openWakeWord's models are non-commercial |
 
-## Decisions for you
+## Decisions
 
-1. **Ubuntu:** are you on 24.04 with "Ubuntu on Xorg"? Stay there for now (my recommendation) or move to 26.04 and Wayland?
-2. **The vault:** a new `~/Brain`, or an Obsidian vault you already have?
-3. **Models:** may Claude read your brain and screen, with Restricted held back (my recommendation), or should some areas be local-only? What GPU and RAM do you have for Ollama?
-4. **Capture:** which sources to switch on: Claude Code sessions, git, phone, WhatsApp, mail, notes? Full screen recording is possible, but I recommend against it.
-5. **The buddy:** local voice (Kokoro) or ElevenLabs? A wake word or only a key? Its name and personality?
-6. **The first recurring job** for the Chief of Staff, beyond the morning card: where does your week lose the most hours?
-7. **An always-on machine** now, later, or never?
-8. **Where to start:** Phase 1, the brain (my recommendation)?
+You chose the recommendations on 7 November 2026:
+
+1. **Ubuntu:** 22.04 with "Ubuntu on Xorg", kept for ROS 2 Humble.
+2. **The vault:** a new `~/Brain`.
+3. **Models:** Claude may read the brain and, later, the screen, with Restricted held back. Local models through Ollama where they are good enough (GPU and RAM still to check).
+4. **Capture:** Claude Code sessions and git first; phone, WhatsApp and mail later, each switched on by you. No screen recording.
+5. **The buddy:** local voice (Kokoro), a key rather than a wake word to start; its name and personality when Phase 3 starts.
+6. **The first recurring job:** the morning card, with the next job chosen in Phase 4.
+7. **An always-on machine:** later.
+8. **Where to start:** Phase 1, the brain. Built.
 
 ## Sources
 

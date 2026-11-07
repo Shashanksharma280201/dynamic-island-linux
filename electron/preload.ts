@@ -53,6 +53,7 @@ import type {
   Note,
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
+import { BRAIN } from '../electron/brainChannels'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
@@ -297,6 +298,25 @@ type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
 
 /** Used by the settings window only. */
 const settings = {
+  /** The second brain (Settings → You and Brain). */
+  brain: {
+    create: (folder?: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.CREATE, folder),
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke(BRAIN.PICK_FOLDER),
+    setOn: (on: boolean) => ipcRenderer.invoke(BRAIN.SET_ON, on),
+    set: (patch: { captureSessions?: boolean; distil?: 'ai' | 'plain'; skip?: string[] }) => ipcRenderer.invoke(BRAIN.SET, patch),
+    addSkip: () => ipcRenderer.invoke(BRAIN.ADD_SKIP),
+    connect: (id: string, on: boolean): Promise<string | null> => ipcRenderer.invoke(BRAIN.CONNECT, id, on),
+    mine: (): Promise<string> => ipcRenderer.invoke(BRAIN.MINE),
+    keep: (path: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.KEEP, path),
+    keepAll: (): Promise<number> => ipcRenderer.invoke(BRAIN.KEEP_ALL),
+    archive: (path: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.ARCHIVE, path),
+    open: (path = '') => ipcRenderer.invoke(BRAIN.OPEN, path),
+    openFolder: () => ipcRenderer.invoke(BRAIN.OPEN_FOLDER),
+    interview: (): Promise<string | null> => ipcRenderer.invoke(BRAIN.INTERVIEW),
+    meGet: (file: string): Promise<string> => ipcRenderer.invoke(BRAIN.ME_GET, file),
+    meSave: (file: string, text: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.ME_SAVE, file, text),
+    brief: (): Promise<string> => ipcRenderer.invoke(BRAIN.BRIEF),
+  },
   get: (): Promise<SettingsState> => ipcRenderer.invoke(SETTINGS.GET),
   onChange: (cb: (s: SettingsState) => void) => on(SETTINGS.CHANGED, cb),
   setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
