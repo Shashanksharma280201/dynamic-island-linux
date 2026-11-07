@@ -125,7 +125,8 @@ const lastSet = () => gsLog().split('\n').filter((l) => l.startsWith('set org.gn
     await settings.click('#wallpaper .wall-search .wall-tile:has-text("Misty mountains at dawn")')
     const photoSet = await until(() => /picture-uri file:\/\/.*misty-mountains-at-dawn-[0-9a-f]{8}\.jpg/.test(lastSet()) && lastSet())
     check('choosing one downloads it and sets it as the GNOME background', !!photoSet, lastSet())
-    check('also for dark style', /picture-uri-dark file:\/\/.*misty/.test(gsLog()))
+    // Set one after the other, so wait for the second too.
+    check('also for dark style', !!(await until(() => /picture-uri-dark file:\/\/.*misty/.test(gsLog()), 5000)))
     {
       const lines = gsLog().split('\n')
       const read = lines.indexOf('get org.gnome.desktop.background picture-uri')
