@@ -309,6 +309,37 @@ button {
 .card.notification.critical .app-name {
   color: var(--red);
 }
+/* macOS banner: a big app icon beside the words; close shows on hover. */
+.card.notification.mac {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.card.notification.mac .notif-main {
+  flex: 1;
+  min-width: 0;
+}
+.card.notification.mac .card-head {
+  margin-bottom: 1px;
+}
+.app-glyph.big {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  margin-top: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+.app-glyph.big.plain {
+  background: linear-gradient(180deg, #8e8e93, #636366);
+}
+.card.notification.mac .close-btn {
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.card.notification.mac:hover .close-btn,
+.card.notification.mac .close-btn:focus-visible {
+  opacity: 1;
+}
 /* Header line: app glyph, app name, time / badge / close. */
 .card-head {
   display: flex;
@@ -562,10 +593,61 @@ button {
   gap: 10px;
 }
 .module {
-  background: rgba(255, 255, 255, 0.07);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.075);
+  border: 0.5px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-module);
   padding: 12px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+/* macOS Control Center: connectivity on the left, tiles on the right. */
+.cc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.cc-grid.has-connect .cc-connect {
+  grid-row: span 2;
+  justify-content: center;
+}
+.cc-tile {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  min-width: 0;
+}
+button.cc-tile {
+  gap: 10px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.cc-tile:active .circle {
+  transform: scale(0.92);
+}
+.cc-tile .circle {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--fill-2);
+  color: var(--label);
+}
+.cc-wall .circle {
+  background: linear-gradient(160deg, #38d1e0, #3a5bff);
+  color: #fff;
+}
+.cc-wall .label {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.cc-wall .state {
+  font-size: 11.5px;
+  color: var(--label-2);
 }
 .module-title {
   font-size: 12px;
@@ -2159,9 +2241,6 @@ button {
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
   transition: transform 0.15s ease;
 }
-.rail-btn:hover .app-icon {
-  transform: scale(1.06);
-}
 .rail-btn.on,
 .rail-btn[aria-label='Music'].on {
   background: transparent;
@@ -2185,8 +2264,66 @@ button {
 .rail-btn > .app-icon {
   position: relative;
 }
-.rail-btn:hover .app-icon {
-  transform: translateY(-1px) scale(1.06);
+
+/* The Dock: icons grow under the pointer (--mag is set as it moves), show
+   their name beside them, bounce for news, and a dot marks what's running. */
+.rail-icon {
+  display: block;
+  position: relative;
+  transform: scale(var(--mag, 1));
+  transform-origin: center;
+  transition: transform 0.14s cubic-bezier(0.2, 0.8, 0.3, 1);
+  will-change: transform;
+}
+.rail-btn:hover {
+  background: transparent;
+}
+.rail-btn.running::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  width: 4px;
+  height: 4px;
+  margin-top: -2px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+}
+.rail[data-side='left'] .rail-btn.running::after {
+  right: auto;
+  left: -4px;
+}
+.rail-label {
+  position: fixed;
+  transform: translate(-100%, -50%);
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: rgba(30, 30, 34, 0.92);
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 50;
+  animation: rail-label-in 0.1s ease both;
+}
+.rail-label.to-right {
+  transform: translate(0, -50%);
+}
+@keyframes rail-label-in {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail-icon {
+    transition: none;
+  }
 }
 
 /* ---------------------------------------------------------------------------

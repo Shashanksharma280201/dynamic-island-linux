@@ -50,3 +50,12 @@ test('rail badge text', async () => {
   expect(badgeText(99)).toBe('99')
   expect(badgeText(250)).toBe('99+')
 })
+
+test('the Dock’s magnification: biggest under the pointer, normal a couple of icons away', async () => {
+  ;(globalThis as any).window ??= { addEventListener() {} }
+  const { magnify } = await import('../renderer/island/hub/Rail')
+  expect(magnify(0)).toBeCloseTo(1.42, 2)
+  expect(magnify(22)).toBeGreaterThan(1.3)
+  expect(magnify(-22)).toBeCloseTo(magnify(22), 6)
+  expect(magnify(140)).toBeLessThan(1.001)
+})

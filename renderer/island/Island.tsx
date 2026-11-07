@@ -775,6 +775,13 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             transition={{ ...pop, delay: 0.04 }}
           >
             <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length}
+              side={side}
+              running={[
+                ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
+                ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
+                ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
+                ...(connected?.manifest ? (['connected'] as const) : []),
+              ]}
               connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
               // The Connected tab only once something is connected (Settings → Connected).
               hidden={[...(pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []), ...(connected?.configured ? [] : (['connected'] as const))]}
