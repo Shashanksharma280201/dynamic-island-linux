@@ -2,7 +2,8 @@
 // /v1/models) and the OpenAI-compatible chat API (/chat/completions, /models),
 // both streaming, with tool calls. Records every request in s.log.
 //
-// Scripted by the prompt: "remember …" saves a note (tool call), "notes?"
+// Scripted by the prompt: "set my background to …" changes the wallpaper,
+// "remember …" saves a note (tool call), "notes?"
 // searches notes (tool call), "tell <name> <text>" sends a WhatsApp message
 // (tool call that asks first), "slow" waits 6 s, anything else is echoed.
 // With "(Files: … (id d3) …)" from the Documents tab: "grammar" corrects a
@@ -38,6 +39,7 @@ function startFakeAi() {
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
     if (result !== null) {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
+      if (/^Set as the background: /.test(result)) return { text: result.split(' (Say')[0] }
       if (/^Sent to/.test(result)) return { text: 'Sent it!' }
       if (/did not allow/.test(result)) return { text: 'Okay, I didn’t send it.' }
       if (/^Logged \(/.test(result) && /remind/i.test(prompt)) {
@@ -71,6 +73,8 @@ function startFakeAi() {
     if (del) return { text: '', tool: { name: 'crm_delete', input: { what: 'contact', id: del[1] } } }
     const tell = /^tell (\w+) (.+)/i.exec(prompt)
     if (tell) return { text: '', tool: { name: 'chats_send', input: { chat: tell[1], text: tell[2] } } }
+    const bg = /(?:background|wallpaper) to (?:an? )?(.+)/i.exec(prompt)
+    if (bg) return { text: '', tool: { name: 'wallpaper_set', input: { query: bg[1].replace(/^video of /i, ''), kind: /video/i.test(prompt) ? 'video' : 'image' } } }
     const m = /remember (?:to )?(.+)/i.exec(prompt)
     if (m) return { text: 'Sure, saving that.', tool: { name: 'notes_create', input: { text: m[1] } } }
     if (/notes\?/i.test(prompt)) return { text: '', tool: { name: 'notes_search', input: { query: '' } } }

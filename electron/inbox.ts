@@ -1,6 +1,7 @@
-import { app, ipcMain, protocol, shell, type BrowserWindow } from 'electron'
+import { app, ipcMain, net, protocol, shell, type BrowserWindow } from 'electron'
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { extname, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import type { ChatMediaFile, InboxSources, InboxUnread } from '@shared/types'
 import type { MailManager } from './mailManager'
 import type { NotesStore } from './notes'
@@ -102,10 +103,20 @@ export function byteRange(header: string | null, size: number): { start: number;
  * Serve WhatsApp attachments to the island. Call after app 'ready' but before
  * the island page loads: a page only knows the schemes handled when it loaded.
  */
-export function serveMedia(whatsapp: () => WhatsAppService | null, sound?: (kind: string) => { data: Buffer; mime: string } | null): void {
+export function serveMedia(
+  whatsapp: () => WhatsAppService | null,
+  sound?: (kind: string) => { data: Buffer; mime: string } | null,
+  wall?: (name: string) => string | null,
+): void {
   protocol.handle(MEDIA_SCHEME, async (req) => {
     // Your own sounds: island-media://sound/<kind>
     const u = new URL(req.url)
+    // Saved wallpapers (live videos): island-media://wall/<file>, streamed with ranges.
+    if (u.host === 'wall') {
+      const file = wall?.(decodeURIComponent(u.pathname.replace(/^\//, '')))
+      if (!file) return new Response('Not found', { status: 404 })
+      return net.fetch(pathToFileURL(file).toString(), { headers: req.headers })
+    }
     if (u.host === 'sound') {
       const f = sound?.(u.pathname.replace(/^\//, ''))
       if (!f) return new Response('Not found', { status: 404 })

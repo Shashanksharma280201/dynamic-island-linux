@@ -1,3 +1,4 @@
+import type { WallpaperView } from './wallpaper'
 import type { BrainView } from './brain'
 import type { AgentSession } from './sessions'
 import type { Shortcuts } from './shortcuts'
@@ -364,6 +365,8 @@ export type SettingsState = {
   packages: PackagesConfig
   /** The second brain (Settings → You and Settings → Brain). */
   brain: BrainView
+  /** The desktop background (Settings → Wallpaper). */
+  wallpaper: WallpaperView
 }
 
 export type ClaudeSettings = {

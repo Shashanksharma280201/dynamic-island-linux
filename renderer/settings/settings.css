@@ -702,3 +702,115 @@ pre.brief {
   white-space: nowrap;
   flex-shrink: 0;
 }
+
+/* Settings → Wallpaper */
+.wall-now {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.wall-now-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.wall-preview {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--field);
+  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+}
+.wall-preview.big {
+  width: 168px;
+  flex: none;
+}
+.wall-preview.empty {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11.5px;
+  background: linear-gradient(135deg, #2b2d42, #1c1c1e);
+}
+.wall-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wall-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+.wall-search,
+.wall-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.wall-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+button.wall-tile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  color: var(--text);
+}
+button.wall-tile:hover .wall-preview,
+button.wall-tile.on .wall-preview {
+  box-shadow: 0 0 0 2.5px var(--blue);
+}
+button.wall-tile:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.wall-tile-title,
+.wall-tile-meta {
+  display: block;
+  max-width: 100%;
+}
+.wall-tile-title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-tile-meta {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-key-name {
+  width: 150px;
+  flex: none;
+}
+#wallpaper .row > button,
+#wallpaper .wall-now button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}

@@ -125,6 +125,15 @@ export const MailAppIcon = () => (
   </Tile>
 )
 
+/** Wallpaper: a landscape (hills and a sun) on a teal-to-indigo tile, like macOS Wallpaper settings. */
+export const WallpaperAppIcon = () => (
+  <Tile from="#38d1e0" to="#3a5bff">
+    <rect x="5.5" y="7.5" width="17" height="13" rx="2.2" fill="#fff" />
+    <circle cx="17.6" cy="11.4" r="1.8" fill="#ffb02e" />
+    <path d="M6.6 19.4l4.6-5.2 3.2 3.4 2-2.1 4.4 3.9z" fill="#2f7cf6" />
+  </Tile>
+)
+
 /** Notes: a yellow-topped page with lines. */
 export const NotesAppIcon = () => (
   <svg className="app-icon" width={28} height={28} viewBox="0 0 28 28" aria-hidden>

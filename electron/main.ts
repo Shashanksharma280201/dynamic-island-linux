@@ -119,6 +119,11 @@ import { Brain } from './brain'
 import { Wiring } from './brain/wire'
 import { claudeOnce } from './brain/writer'
 import { wireBrain } from './brainIpc'
+import { Wallpapers } from './wallpaper'
+import { LiveWallpaper } from './wallpaper/live'
+import { DesktopBackground } from './wallpaper/desktop'
+import { endpointsAt } from './wallpaper/search'
+import { wireWallpaper } from './wallpaperIpc'
 import { runTurn } from './agent/providers'
 
 const WAYLAND = process.env.XDG_SESSION_TYPE === 'wayland'
@@ -199,7 +204,39 @@ async function main() {
   // Your own sounds (Settings → General → Sounds → Open Folder).
   let onSounds = () => {}
   const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
-  serveMedia(() => waForMedia, (kind) => customSounds.read(kind))
+  // ---- the desktop background (Settings → Wallpaper, or ask the assistant) ----
+  const liveWall = new LiveWallpaper({
+    pauseCovered: () => config.wallpaper.pauseCovered,
+    pauseBattery: () => config.wallpaper.pauseBattery,
+    onState: () => settings?.changed(),
+  })
+  const wallpapers = new Wallpapers({
+    config: () => config.wallpaper,
+    setConfig: (patch) => {
+      config.wallpaper = { ...config.wallpaper, ...patch }
+      saveConfig(config)
+    },
+    keys: () => {
+      const k = config.wallpaper.keys
+      const open = (v: string) => (v ? decryptSecret(v) : '')
+      return { pexels: open(k.pexels), unsplash: open(k.unsplash), pixabay: open(k.pixabay) }
+    },
+    dir: process.env.DI_WALL_DIR || join(app.getPath('pictures'), 'Dynamic Island Wallpapers'),
+    historyFile: join(app.getPath('userData'), 'wallpapers.json'),
+    screen: () => {
+      const p = screen.getPrimaryDisplay()
+      return { width: Math.round(p.size.width * p.scaleFactor), height: Math.round(p.size.height * p.scaleFactor) }
+    },
+    desktop: new DesktopBackground(),
+    live: liveWall,
+    endpoints: process.env.DI_WALL_API ? endpointsAt(process.env.DI_WALL_API) : undefined,
+    onChange: () => settings?.changed(),
+  })
+  serveMedia(
+    () => waForMedia,
+    (kind) => customSounds.read(kind),
+    (name) => wallpapers.mediaFile(name),
+  )
   let claudeUi: ClaudeController | null = null
   let display: Display = placeIslandWindow(win, config.dock.side, config.display)
   // The side actually shown: config.dock.side, or a preview while dragging.
@@ -604,6 +641,7 @@ async function main() {
           const v = connectedHub.view()
           return viewText(v.manifest, v.view, v.phase)
         } },
+        wallpaper: wallpapers,
         crm: {
           store: crm,
           // One batch per answer: its changes undo in one go.
@@ -941,6 +979,7 @@ async function main() {
 
   settings = new SettingsController({
     brain: () => brain.view(),
+    wallpaper: () => wallpapers.view(),
     drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
     drop: dropStatus,
     setDrop: async (p) => {
@@ -1087,6 +1126,24 @@ async function main() {
   settings.wire()
   void spotify.start() // after Settings exists: it reports status there
   wireBrain(brain)
+  wireWallpaper(wallpapers, {
+    setOptions: (patch) => {
+      config.wallpaper = { ...config.wallpaper, ...patch }
+      saveConfig(config)
+      settings?.changed()
+    },
+    setKey: (site, key) => {
+      config.wallpaper = { ...config.wallpaper, keys: { ...config.wallpaper.keys, [site]: key ? encryptSecret(key) : '' } }
+      saveConfig(config)
+      settings?.changed()
+    },
+    openFolder: () => void shell.openPath(process.env.DI_WALL_DIR || join(app.getPath('pictures'), 'Dynamic Island Wallpapers')),
+    openUrl: (u) => {
+      if (/^https:\/\//.test(u)) void shell.openExternal(u)
+    },
+  })
+  // A live wallpaper that was on plays again (a moment after start, so the island comes first).
+  setTimeout(() => void wallpapers.resume(), 2500)
   void brain.start().catch((e) => console.error('[brain] start:', e instanceof Error ? e.message : e))
 
   claudeUi = new ClaudeController({
@@ -1566,6 +1623,7 @@ async function main() {
   cleanup = async () => {
     globalShortcut.unregisterAll()
     brain.stop()
+    liveWall.stop()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()

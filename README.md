@@ -51,6 +51,7 @@ it from the code instead, see [Install](docs/install.md).
 - **Now Playing**: album art and a waveform on the capsule, with play, pause, skip and seek for Spotify, YouTube and any media player.
 - **Messages and mail**: WhatsApp messages and new mail pop up as cards, and you reply right there.
 - **A second brain**: one memory for you and every AI you use, as plain notes on your computer. Claude Code, Codex and Gemini CLI know who you are, every session gets a five-line note, and your projects get pages. [How it works](docs/brain.md).
+- **Wallpaper by asking**: “set my background to misty mountains” or “make it a video of rain” finds one on the web and sets it; videos and animations play live. [How it works](docs/wallpaper.md).
 - **Claude Code, live**: every session in your terminals shows what it's doing and what it changed. Allow its permission prompts, answer its questions and read its plans from any app.
 - **Drag actions**: drag any file and hold still, and a ring opens to convert it, shrink it, copy its text or ask Claude about it.
 - **Phone Drop**: flick a photo or file from your Android phone toward the screen; it comes out of a glow at the edge and lands in the island.
@@ -88,6 +89,7 @@ anywhere along the edges or to the top center, and click it (or press
 - [Install](docs/install.md): installers, building from the code, updating, uninstalling
 - [Features](docs/features.md): everything the island does
 - [Your second brain](docs/brain.md): the shared memory for your AI tools
+- [Wallpaper](docs/wallpaper.md): photos, videos and animations as your background
 - [macOS and Windows](docs/platforms.md): what's different there
 - [Set it up](docs/setup.md): Claude Code, AI providers, WhatsApp, mail, Spotify, documents, drag actions, the CRM
 - [Configuration, privacy and security](docs/configuration.md)

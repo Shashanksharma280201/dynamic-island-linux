@@ -20,6 +20,7 @@ import type { ConnectedHub } from './connected'
 import { cleanUrl } from '@shared/connected'
 import { displayChoices } from './window'
 import type { BrainView } from '@shared/brain'
+import type { WallpaperView } from '@shared/wallpaper'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
@@ -95,6 +96,8 @@ type Deps = {
   onPackages: () => void
   /** The second brain, for Settings → You and Brain. */
   brain: () => BrainView
+  /** The desktop background, for Settings → Wallpaper. */
+  wallpaper: () => WallpaperView
 }
 
 /** Settings window + the IPC it uses. */
@@ -111,6 +114,7 @@ export class SettingsController {
       hookInstalled: isHookInstalled(),
       agentHooks: agentHooks(),
       brain: this.d.brain(),
+      wallpaper: this.d.wallpaper(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,

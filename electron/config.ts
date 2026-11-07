@@ -13,6 +13,7 @@ import { parseServices, type ServicesConfig } from './services'
 import { parseConnectedConfig, type ConnectedConfig } from '@shared/connected'
 import { DROP_DEFAULTS, parseDropConfig, type DropConfig } from '@shared/drop'
 import { parseBrainConfig, type BrainConfig } from '@shared/brain'
+import { parseWallpaperConfig, type WallpaperConfig } from '@shared/wallpaper'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -69,6 +70,8 @@ export type Config = {
   packages: PackagesConfig
   /** The second brain shared by your AI tools (Settings → Brain). */
   brain: BrainConfig
+  /** The desktop background the island set, live wallpaper options and your photo-site keys. */
+  wallpaper: WallpaperConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -136,6 +139,7 @@ const DEFAULTS: Config = {
   ai: parseAiConfig(null),
   packages: parsePackages(null),
   brain: parseBrainConfig(null),
+  wallpaper: parseWallpaperConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -165,7 +169,7 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null), brain: parseBrainConfig(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null), brain: parseBrainConfig(null), wallpaper: parseWallpaperConfig(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
@@ -173,6 +177,7 @@ export function mergeConfig(raw: unknown): Config {
   c.ai = parseAiConfig(r.ai)
   c.packages = parsePackages(r.packages)
   c.brain = parseBrainConfig(r.brain)
+  c.wallpaper = parseWallpaperConfig(r.wallpaper)
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

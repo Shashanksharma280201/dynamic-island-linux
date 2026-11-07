@@ -6,6 +6,21 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Wallpaper by asking**
+
+- Ask the assistant (typed or spoken): “set my background to misty mountains
+  at sunrise”, “make it a video of rain on a window”, “another one”, “put
+  the old one back”. It finds a match on the web, downloads it to Pictures ›
+  Dynamic Island Wallpapers and sets it.
+- **Settings → Wallpaper**: search photos and videos, five live animations
+  (Soft glow, Aurora, Waves, Starfield, Gradient), recent wallpapers,
+  Previous, and the desktop's own background back.
+- Photos and videos from Openverse and Wikimedia Commons with no setup, and
+  Pexels, Unsplash and Pixabay with your free keys. Every wallpaper keeps
+  its credit and licence.
+- Videos and animations play live behind everything and rest while a window
+  covers the screen or on battery.
+
 **A second brain for you and every AI you use**
 
 - **Settings → Second brain** makes a folder of plain notes (`~/Brain`, in

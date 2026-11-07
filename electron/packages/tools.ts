@@ -31,6 +31,8 @@ export type PackageContext = {
   crm: CrmContext
   /** The connected package's view, as text (read only: only you answer its approvals). */
   connected: { text: () => string }
+  /** The desktop background's tools (Settings → Wallpaper). */
+  wallpaper?: { tools: () => AgentTool[] }
   now?: () => Date
 }
 
@@ -320,6 +322,7 @@ const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = {
   docs: (ctx) => docsTools(ctx.docs),
   crm: (ctx) => crmTools(ctx.crm),
   connected,
+  wallpaper: (ctx) => ctx.wallpaper?.tools() ?? [],
 }
 
 /** The agent's tools: those of the packages that are turned on. */

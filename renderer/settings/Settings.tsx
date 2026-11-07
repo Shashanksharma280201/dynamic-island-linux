@@ -12,6 +12,7 @@ import { DropSection } from './DropSection'
 import { DragSection } from './DragSection'
 import { BrainSection } from './BrainSection'
 import { YouSection } from './YouSection'
+import { WallpaperSection } from './WallpaperSection'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -333,6 +334,7 @@ export function Settings() {
 
       <YouSection s={s} />
       <BrainSection s={s} />
+      <WallpaperSection s={s} />
       <CharacterSection s={s} />
       <AiSection s={s} />
       <PackagesSection s={s} />

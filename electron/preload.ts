@@ -54,6 +54,8 @@ import type {
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
 import { BRAIN } from '../electron/brainChannels'
+import { WALLPAPER } from '../electron/wallpaperChannels'
+import type { WallItem } from '@shared/wallpaper'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
@@ -298,6 +300,18 @@ type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
 
 /** Used by the settings window only. */
 const settings = {
+  /** The desktop background (Settings → Wallpaper). */
+  wallpaper: {
+    search: (query: string, kind: 'image' | 'video'): Promise<{ items: WallItem[]; errors: string[] }> => ipcRenderer.invoke(WALLPAPER.SEARCH, query, kind),
+    set: (id: string): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.SET, id),
+    animation: (id: string): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.ANIMATION, id),
+    undo: (): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.UNDO),
+    restore: (): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.RESTORE),
+    options: (patch: { pauseCovered?: boolean; pauseBattery?: boolean }) => ipcRenderer.invoke(WALLPAPER.OPTIONS, patch),
+    setKey: (site: 'pexels' | 'unsplash' | 'pixabay', key: string) => ipcRenderer.invoke(WALLPAPER.KEY, site, key),
+    openFolder: () => ipcRenderer.invoke(WALLPAPER.OPEN_FOLDER),
+    openPage: (url: string) => ipcRenderer.invoke(WALLPAPER.OPEN_PAGE, url),
+  },
   /** The second brain (Settings → You and Brain). */
   brain: {
     create: (folder?: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.CREATE, folder),
