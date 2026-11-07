@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Bionic CEO: The Full Guide</title>
+<meta name="description" content="The full guide by Gabriel Judah: how to own your AI second brain instead of renting it, plug in any AI, and build a team of AI agents that gets smarter every week.">
+<meta property="og:title" content="The Bionic CEO">
+<meta property="og:description" content="The new AI agent apps are quietly building a map of you, on their computer. Here is how to build your own AI second brain, own the map, and plug in any AI. From Two Hour CEO.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://skool.twohourceo.com/living-brain/hero.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+  :root{
+    --ink:#0B0C0F; --ink-2:#14161B;
+    --cobalt:#2850E8; --cobalt-bright:#3A62FF; --wash:#E5EBFF;
+    --coral:#E85D4F; --coral-deep:#D14A3D;
+    --paper:#F5F6F9; --white:#FFFFFF;
+    --silver:#8A93A6; --ash-700:#4A4F5A; --body-dark:#C8CDD8;
+    --line:#1F2229; --line-light:#E6E9EE;
+    --font-serif:'Instrument Serif',Georgia,serif;
+    --font-sans:'DM Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    --font-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+    --maxw:1120px; --radius:20px;
+  }
+  html{scroll-behavior:smooth}
+  body{font-family:var(--font-sans);color:var(--ink);background:var(--paper);line-height:1.5;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+  section{padding:clamp(56px,8vw,96px) 0}
+  h2{font-family:var(--font-sans);font-weight:700;letter-spacing:-0.03em;line-height:1.0;font-size:clamp(2.1rem,4.6vw,3.4rem);margin-bottom:16px}
+  h2 + .sub{color:var(--ash-700);font-size:clamp(1.05rem,1.6vw,1.25rem);max-width:60ch;margin-bottom:clamp(34px,4vw,52px)}
+  em.serif{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--cobalt);font-size:1.08em}
+  .eyebrow{font-family:var(--font-mono);font-size:0.8rem;font-weight:500;letter-spacing:0.2em;text-transform:uppercase;color:var(--cobalt)}
+  .brandmark{font-family:var(--font-mono);font-weight:600;font-size:0.82rem;letter-spacing:0.22em;text-transform:uppercase;display:inline-flex;align-items:center;gap:9px}
+  .brandmark .dot{width:7px;height:7px;border-radius:50%;background:var(--coral)}
+
+  /* HERO with generated art */
+  .hero{position:relative;overflow:hidden;background:var(--ink);color:var(--white);padding:clamp(30px,4vw,44px) 0 clamp(80px,10vw,120px)}
+  .hero .art{position:absolute;inset:0;background-image:url('hero.jpg');background-size:cover;background-position:62% 50%;opacity:.85}
+  .hero .veil{position:absolute;inset:0;background:linear-gradient(100deg, rgba(11,12,15,.97) 0%, rgba(11,12,15,.92) 38%, rgba(11,12,15,.55) 66%, rgba(11,12,15,.35) 100%)}
+  .hero .wrap{position:relative;z-index:2}
+  .hero .brandmark{color:#fff;margin-bottom:clamp(48px,7vw,84px)}
+  .hero .eyebrow{color:var(--wash);margin-bottom:20px;display:block}
+  .hero h1{font-weight:700;letter-spacing:-0.035em;line-height:0.98;font-size:clamp(2.6rem,6.6vw,5rem);max-width:16ch;margin-bottom:22px}
+  .hero h1 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--coral);letter-spacing:-0.01em}
+  .byline{font-family:var(--font-mono);font-size:0.82rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--wash);margin-bottom:26px}
+  .hero .lead{font-size:clamp(1.12rem,2vw,1.42rem);color:var(--body-dark);max-width:56ch;line-height:1.45}
+  .hero .lead strong{color:#fff;font-weight:600}
+  .chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:32px}
+  .chip{font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.04em;background:rgba(229,235,255,.08);border:1px solid rgba(229,235,255,.22);color:var(--wash);border-radius:999px;padding:9px 15px;backdrop-filter:blur(6px)}
+  .cta-row{display:flex;flex-wrap:wrap;gap:14px;margin-top:36px}
+  .btn{display:inline-block;font-weight:600;font-size:1rem;border-radius:12px;padding:15px 28px;text-decoration:none;transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
+  .btn-primary{background:var(--cobalt);color:#fff;box-shadow:0 12px 34px rgba(40,80,232,.45)}
+  .btn-primary:hover{transform:translateY(-2px);background:var(--cobalt-bright)}
+  .btn-ghost{background:rgba(255,255,255,.06);color:#fff;border:1px solid rgba(255,255,255,.32);backdrop-filter:blur(6px)}
+  .btn-ghost:hover{background:rgba(255,255,255,.13)}
+
+  /* LOGO STRIP */
+  .strip{background:var(--white);border-bottom:1px solid var(--line-light);padding:34px 0}
+  .strip .lab{font-family:var(--font-mono);font-size:0.74rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--silver);text-align:center;margin-bottom:22px}
+  .logos{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:clamp(22px,4vw,46px)}
+  .logos .lg{display:flex;align-items:center;gap:9px;opacity:.78;transition:opacity .16s ease}
+  .logos .lg:hover{opacity:1}
+  .logos svg{width:24px;height:24px;flex:none}
+  .logos span{font-size:0.88rem;font-weight:500;color:var(--ash-700);white-space:nowrap}
+
+  /* PART DIVIDERS */
+  .part{background:var(--ink);color:#fff;padding:clamp(52px,7vw,84px) 0}
+  .part .pn{font-family:var(--font-mono);font-size:0.78rem;font-weight:600;letter-spacing:0.2em;color:var(--wash);text-transform:uppercase}
+  .part h2{margin:14px 0 14px;color:#fff;font-size:clamp(2rem,4.4vw,3.2rem)}
+  .part h2 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--cobalt-bright);font-size:1.06em}
+  .part p{color:var(--body-dark);font-size:clamp(1.05rem,1.7vw,1.25rem);max-width:58ch;line-height:1.55}
+  .part p strong{color:#fff;font-weight:600}
+
+  /* STEPS */
+  .stepblock{border-top:1px solid var(--line-light);padding-top:34px;margin-top:52px}
+  .stepblock:first-of-type{border-top:0;padding-top:0;margin-top:0}
+  .sh{display:flex;align-items:flex-start;gap:22px;margin-bottom:18px}
+  .sh .big{font-family:var(--font-mono);font-size:clamp(2.6rem,5vw,3.6rem);font-weight:600;line-height:.85;color:var(--wash);flex:none;letter-spacing:-0.04em}
+  .sh .txt{flex:1;min-width:0}
+  .sh .kick{font-family:var(--font-mono);font-size:0.74rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--cobalt)}
+  .sh h3{font-size:clamp(1.5rem,3vw,2.1rem);font-weight:700;letter-spacing:-0.025em;line-height:1.08;margin-top:9px}
+  .sh h3 em{font-family:var(--font-serif);font-style:italic;font-weight:400;color:var(--cobalt);font-size:1.06em}
+  .plain{background:var(--wash);border-radius:14px;padding:18px 22px;max-width:66ch;margin-bottom:18px}
+  .plain .l{font-family:var(--font-mono);font-size:0.7rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--cobalt);display:block;margin-bottom:6px}
+  .plain p{font-size:1.08rem;color:var(--ink);margin:0;line-height:1.5;font-weight:500}
+  .stepblock > p{font-size:1.05rem;color:var(--ash-700);line-height:1.62;margin-bottom:14px;max-width:66ch}
+  .stepblock > p strong{color:var(--ink);font-weight:600}
+  .stepblock ul{list-style:none;margin:0 0 16px;max-width:66ch}
+  .stepblock li{font-size:1.02rem;color:var(--ash-700);padding-left:22px;position:relative;margin-bottom:9px;line-height:1.5}
+  .stepblock li::before{content:"";position:absolute;left:0;top:10px;width:6px;height:6px;border-radius:50%;background:var(--cobalt)}
+  .stepblock li b{color:var(--ink);font-weight:600}
+
+  /* PROMPT BOX with copy */
+  .pbox{border:1px solid var(--line-light);border-radius:var(--radius);background:var(--white);overflow:hidden;margin:22px 0 12px;max-width:78ch;box-shadow:0 10px 30px rgba(11,12,15,.05)}
+  .pbox .ph{background:var(--ink);color:#fff;padding:14px 20px;font-family:var(--font-mono);font-size:0.78rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .pbox .cbtn{font-family:var(--font-mono);font-size:0.7rem;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:8px;padding:7px 13px;cursor:pointer;transition:background .14s ease;flex:none}
+  .pbox .cbtn:hover{background:var(--cobalt)}
+  .pbox .cbtn.ok{background:var(--cobalt);border-color:var(--cobalt)}
+  .pbox .pset{padding:16px 20px 0;font-size:0.98rem;color:var(--ash-700);line-height:1.55}
+  .pbox pre{margin:14px 20px 20px;background:var(--paper);border:1px solid var(--line-light);border-radius:12px;padding:18px;font-family:var(--font-mono);font-size:0.86rem;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-wrap:break-word}
+
+  /* WIN CALLOUT */
+  .win{border-left:4px solid var(--coral);background:rgba(232,93,79,.06);border-radius:12px;padding:22px 26px;max-width:70ch;margin:34px 0}
+  .win .l{font-family:var(--font-mono);font-size:0.72rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--coral-deep);display:block;margin-bottom:8px}
+  .win p{font-size:1.1rem;color:var(--ink);margin:0;line-height:1.5;font-weight:500}
+
+  /* REAL EXAMPLE */
+  .real{border:1px solid var(--line-light);border-radius:var(--radius);background:var(--white);padding:26px 28px;max-width:70ch;margin:24px 0}
+  .real .l{font-family:var(--font-mono);font-size:0.72rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--silver);display:block;margin-bottom:12px}
+  .real blockquote{font-size:1.06rem;line-height:1.55;color:var(--ink);border-left:3px solid var(--cobalt);padding-left:18px;margin-bottom:14px}
+  .real p{font-size:0.99rem;color:var(--ash-700);margin:0;line-height:1.55}
+
+  /* DIAGRAMS */
+  .dia{margin:26px 0 10px;border:1px solid var(--line-light);border-radius:var(--radius);background:var(--white);padding:22px 20px 16px;overflow-x:auto}
+  .dia svg{display:block;width:100%;min-width:640px;height:auto}
+  .dia .cap{font-size:0.92rem;color:var(--ash-700);margin-top:14px;line-height:1.55;min-width:640px}
+  .dia .cap b{color:var(--ink);font-weight:600}
+
+  /* IMAGE BAND */
+  .band{position:relative;background:var(--ink);overflow:hidden;padding:0}
+  .band img{display:block;width:100%;height:clamp(200px,26vw,340px);object-fit:cover;opacity:.9}
+
+  .teaser{background:var(--wash);border:1px solid rgba(40,80,232,.22);border-left:4px solid var(--cobalt);border-radius:14px;padding:26px 28px;max-width:70ch;margin:40px 0}
+  .teaser .lab{font-family:var(--font-mono);font-size:0.74rem;font-weight:600;letter-spacing:0.16em;text-transform:uppercase;color:var(--cobalt);display:block;margin-bottom:10px}
+  .teaser p{font-size:1.04rem;color:var(--ink);margin:0;line-height:1.55}
+
+  .rtable{border:1px solid var(--line-light);border-radius:var(--radius);overflow:hidden;background:var(--white)}
+  .rrow{display:grid;grid-template-columns:1fr 1.05fr 1.5fr;border-top:1px solid var(--line-light)}
+  .rrow:first-child{border-top:0}
+  .rrow>div{padding:15px 20px;font-size:0.96rem;color:var(--ash-700);line-height:1.45}
+  .rrow .r1{font-weight:600;color:var(--ink)}
+  .rrow .r2{font-family:var(--font-mono);font-size:0.84rem;color:var(--cobalt)}
+  .rhead>div{background:var(--paper);font-family:var(--font-mono);font-size:0.74rem;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--silver)}
+  .rrow.boss{background:#FBFCFE}
+  .rrow.boss .r1{color:var(--cobalt)}
+
+  .who .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  .panel{border:1px solid var(--line-light);border-radius:var(--radius);padding:30px;background:var(--white)}
+  .panel h3{font-size:1.18rem;font-weight:600;margin-bottom:18px;letter-spacing:-0.01em}
+  .panel ul{list-style:none}
+  .panel li{font-size:1.01rem;padding-left:28px;position:relative;margin-bottom:13px;color:var(--ink);line-height:1.45}
+  .panel li::before{content:"✓";position:absolute;left:0;top:0;color:var(--cobalt);font-weight:700}
+  .panel.req li::before{content:"›";color:var(--coral);font-weight:700;font-size:1.2rem;top:-2px}
+
+  .closer{background:radial-gradient(800px 380px at 50% -20%, rgba(40,80,232,.3) 0%, transparent 62%),var(--ink);color:#fff;text-align:center}
+  .closer .eyebrow{color:var(--wash);display:block;margin-bottom:24px}
+  .closer blockquote{max-width:26ch;margin:0 auto 32px;font-family:var(--font-serif);font-style:italic;font-weight:400;font-size:clamp(1.7rem,4.2vw,2.9rem);line-height:1.18;letter-spacing:-0.01em;color:#fff}
+  .closer .cta-row{justify-content:center}
+  .signoff{font-family:var(--font-serif);font-style:italic;font-size:1.5rem;color:#fff;margin-top:30px}
+  .ps{max-width:56ch;margin:22px auto 0;font-style:italic;color:var(--body-dark);font-size:1.02rem;line-height:1.6}
+  footer{padding:32px 0;text-align:center;background:var(--ink-2);color:var(--silver);font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.04em}
+  footer .dot{color:var(--coral)}
+
+  @media (max-width:840px){.who .grid{grid-template-columns:1fr}.rrow{grid-template-columns:1fr}.rrow>div{padding:10px 18px}.rrow>div:first-child{padding-top:16px}.rrow>div:last-child{padding-bottom:16px}.rhead{display:none}.sh{gap:14px}.hero .veil{background:linear-gradient(180deg, rgba(11,12,15,.94) 0%, rgba(11,12,15,.88) 55%, rgba(11,12,15,.7) 100%)}}
+  @media (max-width:540px){.sh .big{font-size:2.2rem}.pbox pre{font-size:0.8rem;margin:12px 14px 16px;padding:14px}}
+
+  .demo{border:1px solid var(--line-light);border-radius:var(--radius);background:var(--white);padding:30px 32px;max-width:74ch;box-shadow:0 10px 30px rgba(11,12,15,.05)}
+  .demo ul{list-style:none;margin:0}
+  .demo li{font-size:1.04rem;color:var(--ash-700);padding-left:26px;position:relative;margin-bottom:16px;line-height:1.55}
+  .demo li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:50%;background:var(--cobalt)}
+  .demo li b{color:var(--ink);font-weight:600}
+  .demo .honest{margin-top:22px;padding-top:20px;border-top:1px solid var(--line-light);font-size:1.02rem;color:var(--ash-700);line-height:1.55}
+  .demo .honest b{color:var(--ink);font-weight:600}
+  .prose{max-width:68ch}
+  .prose p{font-size:1.08rem;color:var(--ash-700);margin-bottom:16px;line-height:1.62}
+  .prose p strong{color:var(--ink);font-weight:600}
+  /* ===== book additions ===== */
+  .stagebar{border-top:4px solid var(--ink);padding-top:26px;margin-bottom:40px}
+  .stagebar .sn{font-family:var(--font-mono);font-size:0.78rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--cobalt);margin-bottom:12px}
+  .stagebar h2{font-size:clamp(1.9rem,4vw,2.9rem);margin-bottom:14px}
+  .stagebar p{font-size:1.08rem;color:var(--ash-700);max-width:64ch;line-height:1.6}
+  .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+  .card{border:1.5px solid var(--line-light);border-radius:var(--radius);padding:28px;background:var(--white)}
+  .card .num{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:11px;background:var(--wash);color:var(--cobalt);font-family:var(--font-mono);font-weight:600;font-size:0.95rem;margin-bottom:16px}
+  .card h3{font-size:1.22rem;font-weight:600;letter-spacing:-0.015em;margin-bottom:12px}
+  .card ul{list-style:none;margin:0}
+  .card li{font-size:0.97rem;color:var(--ash-700);padding-left:20px;position:relative;margin-bottom:9px;line-height:1.45}
+  .card li::before{content:"";position:absolute;left:0;top:9px;width:7px;height:7px;border-radius:50%;background:var(--cobalt)}
+  .card li b{color:var(--ink);font-weight:600}
+
+  .cover{min-height:min(92vh,880px);position:relative;overflow:hidden;background:var(--ink);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:60px 24px}
+  .cover .art{position:absolute;inset:0;background-image:url('hero.jpg');background-size:cover;background-position:center 60%;opacity:.55}
+  .cover .veil{position:absolute;inset:0;background:radial-gradient(1200px 700px at 50% 40%, rgba(11,12,15,.25) 0%, rgba(11,12,15,.88) 75%)}
+  .cover>div{position:relative;z-index:2}
+  .cover .brandmark{color:var(--wash);justify-content:center;margin-bottom:clamp(40px,7vh,80px)}
+  .cover .rule{width:56px;height:2px;background:var(--coral);margin:0 auto 30px}
+  .cover .kicker{font-family:var(--font-mono);font-size:0.8rem;letter-spacing:0.26em;text-transform:uppercase;color:var(--wash);margin-bottom:24px}
+  .cover h1{font-weight:700;letter-spacing:-0.03em;line-height:0.96;font-size:clamp(3rem,9vw,6.4rem);margin-bottom:26px}
+  .cover .subtitle{font-family:var(--font-serif);font-style:italic;font-size:clamp(1.3rem,2.8vw,1.9rem);color:var(--body-dark);max-width:34ch;margin:0 auto 34px;line-height:1.3}
+  .cover .author{font-family:var(--font-mono);font-size:0.85rem;letter-spacing:0.18em;text-transform:uppercase;color:#fff}
+  .cover .edition{font-family:var(--font-mono);font-size:0.75rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--silver);margin-top:52px}
+  .cover .down{margin-top:26px;color:var(--silver);font-size:1.4rem;animation:bob 2.2s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(7px)}}
+
+  .toc{background:var(--paper);padding:clamp(56px,8vw,90px) 0}
+  .toc .tochead{font-family:var(--font-mono);font-size:0.8rem;font-weight:600;letter-spacing:0.24em;text-transform:uppercase;color:var(--cobalt);margin-bottom:34px}
+  .tocrow{display:flex;align-items:baseline;gap:18px;text-decoration:none;padding:15px 4px;border-bottom:1px solid var(--line-light);transition:background .14s ease}
+  .tocrow:hover{background:var(--wash)}
+  .tocrow .n{font-family:var(--font-mono);font-size:0.85rem;font-weight:600;color:var(--cobalt);flex:none;width:2.2em}
+  .tocrow .t{font-size:1.12rem;font-weight:600;color:var(--ink);letter-spacing:-0.01em}
+  .tocrow .dots{flex:1;border-bottom:1.5px dotted var(--line-light);transform:translateY(-4px)}
+  .tocrow .m{font-family:var(--font-mono);font-size:0.78rem;color:var(--silver);flex:none}
+  .tocwrap{max-width:720px;margin:0 auto;padding:0 24px}
+
+  .chap{padding:clamp(64px,9vw,110px) 0 0}
+  .chap .cn{font-family:var(--font-mono);font-size:0.8rem;font-weight:600;letter-spacing:0.26em;text-transform:uppercase;color:var(--coral-deep);margin-bottom:16px}
+  .chap h2.ct{font-size:clamp(2.2rem,5vw,3.6rem);letter-spacing:-0.03em;line-height:1.02;margin-bottom:26px;max-width:20ch}
+  .chap .crule{width:56px;height:3px;background:var(--ink);margin-bottom:34px}
+  .bookprose{max-width:66ch}
+  .bookprose p{font-size:1.1rem;color:var(--ash-700);margin-bottom:18px;line-height:1.68}
+  .bookprose p strong{color:var(--ink);font-weight:600}
+  .pull{font-family:var(--font-serif);font-style:italic;font-size:clamp(1.4rem,2.6vw,1.9rem);line-height:1.3;color:var(--ink);border-left:3px solid var(--coral);padding:6px 0 6px 26px;margin:34px 0;max-width:30ch}
+  .fig .cap b.fg{color:var(--cobalt);font-family:var(--font-mono);font-weight:600;font-size:0.85rem;letter-spacing:0.08em}
+  .demo{border:1px solid var(--line-light);border-radius:var(--radius);background:var(--white);padding:30px 32px;max-width:74ch;box-shadow:0 10px 30px rgba(11,12,15,.05)}
+  .demo ul{list-style:none;margin:0}
+  .demo li{font-size:1.04rem;color:var(--ash-700);padding-left:26px;position:relative;margin-bottom:16px;line-height:1.55}
+  .demo li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:8px;border-radius:50%;background:var(--cobalt)}
+  .demo li b{color:var(--ink);font-weight:600}
+  .demo .honest{margin-top:22px;padding-top:20px;border-top:1px solid var(--line-light);font-size:1.02rem;color:var(--ash-700);line-height:1.55}
+  .demo .honest b{color:var(--ink);font-weight:600}
+  .prose{max-width:68ch}
+  .prose p{font-size:1.08rem;color:var(--ash-700);margin-bottom:16px;line-height:1.62}
+  .prose p strong{color:var(--ink);font-weight:600}
+  .minilogos{display:flex;flex-wrap:wrap;align-items:center;gap:22px;margin:26px 0 8px;opacity:.85}
+  .minilogos .lg{display:flex;align-items:center;gap:8px}
+  .minilogos svg{width:20px;height:20px}
+  .minilogos span{font-size:0.85rem;font-weight:500;color:var(--ash-700)}
+  .backcover{background:var(--ink);color:#fff;text-align:center;padding:clamp(80px,12vw,140px) 24px}
+  .backcover .rule{width:56px;height:2px;background:var(--coral);margin:0 auto 40px}
+  @media (max-width:840px){.cards{grid-template-columns:1fr}.cover{min-height:min(86vh,780px)}}
+
+  .bookprose ul{margin:18px 0 20px 4px;list-style:none}
+  .bookprose ul li{font-size:1.05rem;color:var(--ash-700);margin-bottom:10px;line-height:1.6;padding-left:24px;position:relative}
+  .bookprose ul li::before{content:"";position:absolute;left:0;top:11px;width:7px;height:7px;border-radius:50%;background:var(--cobalt)}
+  .bookprose ul li b{color:var(--ink)}
+  .steps{counter-reset:s;margin:24px 0;max-width:70ch;list-style:none;padding:0}
+  .steps li{position:relative;padding:15px 20px 15px 62px;background:var(--white);border:1px solid var(--line-light);border-radius:12px;margin-bottom:10px;font-size:1.02rem;color:var(--ash-700);line-height:1.55}
+  .steps li::before{counter-increment:s;content:counter(s);position:absolute;left:16px;top:50%;transform:translateY(-50%);width:30px;height:30px;border-radius:50%;background:var(--cobalt);color:#fff;font-weight:700;font-size:0.92rem;display:flex;align-items:center;justify-content:center;font-family:var(--font-mono)}
+  .steps li b{color:var(--ink)}
+  .steps li a{color:var(--cobalt);font-weight:600;text-decoration:none}
+  .tree{margin:28px 0;background:var(--ink);border-radius:14px;padding:24px 26px;overflow-x:auto;box-shadow:0 14px 40px rgba(11,12,15,.18)}
+  .tree pre{font-family:var(--font-mono);font-size:0.82rem;line-height:1.75;color:#C9CFDB;white-space:pre;margin:0}
+  .tree .f{color:#7C9BFF;font-weight:600}
+  .tree .hd{color:#FFFFFF;font-weight:700}
+  .teaser p+p{margin-top:12px}
+  .teaser .btn{margin-top:18px}
+  .teaser .fine{font-size:0.95rem;color:var(--ash-700);margin-top:14px}
+
+  /* ===== v11: framed in-column figures + waitlist / offer cards ===== */
+  .figimg{margin:28px 0;max-width:66ch}
+
+  .figimg.tall{max-width:290px}
+  .figimg.mid{max-width:440px}
+  /* Author plate — double-bezel portrait (high-end-visual-design: nested enclosure, concentric radii) */
+  .byline{display:flex;flex-direction:column;align-items:center;gap:18px;margin:6px 0 14px}
+  .portrait{width:clamp(112px,13vw,152px);height:clamp(112px,13vw,152px);padding:6px;border-radius:50%;
+    background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.035));
+    box-shadow:0 28px 70px rgba(0,0,0,.62),0 0 0 1px rgba(255,255,255,.07);
+    flex:none;animation:plateIn 900ms cubic-bezier(.32,.72,0,1) both}
+  .portrait .core{display:block;width:100%;height:100%;border-radius:50%;overflow:hidden;
+    box-shadow:inset 0 1px 2px rgba(255,255,255,.22),inset 0 -10px 24px rgba(0,0,0,.28)}
+  .portrait img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 16%}
+  @keyframes plateIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  /* Figures — same nested treatment: tray + plate */
+  .figshell{display:block;padding:7px;border-radius:22px;background:rgba(11,12,15,.05);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 22px 54px rgba(11,12,15,.13)}
+  .figimg img{display:block;width:100%;border-radius:15px;border:none;box-shadow:none}
+  .figimg.logo .figshell{padding:5px;border-radius:26px}
+  .figimg.logo img{border-radius:21px}
+
+  /* ===== ActiveCampaign waitlist form (account gabrieljudah, list/form 7) ===== */
+  .wl-form{margin-top:22px;background:#FFFFFF;border:1px solid rgba(255,255,255,.9);border-radius:14px;padding:24px;box-shadow:0 18px 46px rgba(0,0,0,.45)}
+  .wl-form .fr{margin-bottom:14px}
+  .wl-form label{display:block;font-family:var(--font-mono);font-size:0.72rem;letter-spacing:0.14em;text-transform:uppercase;color:#5A6273;margin-bottom:7px}
+  .wl-form label .req{color:#E85D4F}
+  .wl-form input{width:100%;box-sizing:border-box;background:#F5F6F9;border:1.5px solid #DCE0E8;border-radius:10px;padding:13px 14px;color:#0B0C0F;font-family:var(--font-sans);font-size:1rem;transition:border-color .18s cubic-bezier(.32,.72,0,1),background .18s cubic-bezier(.32,.72,0,1)}
+  .wl-form input::placeholder{color:#8A93A6}
+  .wl-form input:focus{outline:none;border-color:var(--cobalt);background:#FFFFFF;box-shadow:0 0 0 3px rgba(40,80,232,.13)}
+  .wl-form input.err{border-color:#E85D4F;background:#FFF6F5}
+  .wl-form button{width:100%;margin-top:8px;background:var(--cobalt);color:#fff;border:0;border-radius:12px;padding:15px 22px;font-family:var(--font-sans);font-size:1.02rem;font-weight:600;cursor:pointer;box-shadow:0 10px 26px rgba(40,80,232,.34);transition:transform .16s cubic-bezier(.32,.72,0,1),background .16s cubic-bezier(.32,.72,0,1)}
+  .wl-form button:hover{transform:translateY(-2px);background:var(--cobalt-bright)}
+  .wl-form button:active{transform:scale(.985)}
+  .wl-form button[disabled]{opacity:.55;cursor:not-allowed;transform:none}
+  .wl-form .note{font-size:0.88rem;color:#6B7488;margin:13px 0 0;text-align:center}
+  .wl-form .msg{display:none;font-size:1.04rem;line-height:1.5;color:#0B0C0F;text-align:center;padding:10px 0}
+  .wl-form .msg.bad{color:#C0392B}
+  .wl-form.done .fr,.wl-form.done button,.wl-form.done .note{display:none}
+  .wl-form.done .msg{display:block}
+  .wl-form-placeholder{font-family:var(--font-mono);font-size:0.82rem;color:#7C9BFF;margin:0;text-align:center;padding:8px 0}
+  .figimg video{display:block;width:100%;border-radius:15px;background:#0B0C0F}
+  .figimg.native-email{max-width:340px}
+  .figimg.native-photo{max-width:452px}
+  .figimg.logo{max-width:120px}
+  .figimg.logo img{border-radius:22px}
+  .figcap{font-family:var(--font-mono);font-size:0.76rem;color:var(--silver);text-align:left;margin-top:11px;letter-spacing:0.02em;line-height:1.5;max-width:52ch}
+  .wl{background:var(--ink);border-radius:18px;padding:34px 36px;max-width:74ch;margin:40px 0;color:#E6E9EE;box-shadow:0 20px 60px rgba(11,12,15,.25);border:1px solid rgba(40,80,232,.35)}
+  .wl .lab{font-family:var(--font-mono);font-size:0.74rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:#7C9BFF;display:block;margin-bottom:14px}
+  .wl h3{font-family:var(--font-serif);font-style:italic;font-weight:400;font-size:clamp(1.5rem,3vw,2rem);color:#FFFFFF;letter-spacing:-0.01em;margin-bottom:14px;line-height:1.25}
+  .wl p{font-size:1.02rem;line-height:1.6;color:#C9CFDB;margin:0 0 12px}
+  .wl p b{color:#FFFFFF}
+  .wl .wl-form .note{color:#6B7488}
+  .wl .wl-form .msg{color:#0B0C0F}
+  .wl .wl-form .msg.bad{color:#C0392B}
+  .wl .wl-form p{margin:0}
+  .wl .btn-primary{margin-top:6px}
+  .wl .fine{font-size:0.92rem;color:#8A93A6;margin-top:14px}
+  @media (max-width:540px){.wl{padding:26px 22px}.figimg,.figimg.tall,.figimg.mid{max-width:100%}.figimg.logo{max-width:104px}}
+
+  
+  /* ===== Copy deterrent (Gabriel 2026-08-28) =====
+     Blocks casual selection, right-click save and long-press copy.
+     Form fields stay fully selectable so the waitlist form works. */
+  body{-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
+       -webkit-touch-callout:none}
+  input,textarea,select,[contenteditable="true"]{
+       -webkit-user-select:text;-moz-user-select:text;-ms-user-select:text;user-select:text;
+       -webkit-touch-callout:default}
+  img{-webkit-user-drag:none;user-drag:none;pointer-events:none}
+  a img,button img{pointer-events:auto}
+  </style>
+</head>
+<body>
+
+<!-- ===== COVER ===== -->
+<header class="cover" id="top">
+  <div class="art"></div><div class="veil"></div>
+  <div>
+    <div class="brandmark"><span class="dot"></span>Two Hour CEO</div>
+    <div class="kicker">The full guide</div>
+    <h1>THE BIONIC<br>CEO</h1>
+    <p class="subtitle">How to own your AI second brain instead of renting it: one brain that runs your team of AI agents, gets smarter every week, and survives every AI hype.</p>
+    <div class="rule"></div>
+    <div class="byline"><span class="portrait"><span class="core"><img src="gabriel.jpg" alt="Gabriel Judah" loading="eager"></span></span><span class="author">by Gabriel Judah</span></div>
+    <div class="edition">About a 25 minute read · the complete build inside</div>
+    <div class="down">↓</div>
+  </div>
+</header>
+
+<!-- ===== CONTENTS ===== -->
+<nav class="toc">
+  <div class="tocwrap">
+    <div class="tochead">Contents</div>
+    <a class="tocrow" href="#ch1"><span class="n">01</span><span class="t">Owner or renter?</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch2"><span class="n">02</span><span class="t">Extended, not replaced</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch3"><span class="n">03</span><span class="t">What bionic actually looks like</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch4"><span class="n">04</span><span class="t">I am not who you would expect</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch5"><span class="n">05</span><span class="t">Why: time</span><span class="dots"></span><span class="m">1 min</span></a>
+    <a class="tocrow" href="#ch6"><span class="n">06</span><span class="t">The two moments</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch7"><span class="n">07</span><span class="t">Your first agent</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch8"><span class="n">08</span><span class="t">Brilliant, and forgetful</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch9"><span class="n">09</span><span class="t">One shared memory</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch10"><span class="n">10</span><span class="t">Your first living second brain</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch11"><span class="n">11</span><span class="t">The loop that learns</span><span class="dots"></span><span class="m">4 min</span></a>
+    <a class="tocrow" href="#ch12"><span class="n">12</span><span class="t">The compounding gap</span><span class="dots"></span><span class="m">1 min</span></a>
+    <a class="tocrow" href="#ch13"><span class="n">13</span><span class="t">It is not hard. It is a chat.</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch14"><span class="n">14</span><span class="t">Hire them like employees</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch15"><span class="n">15</span><span class="t">What mine looks like, honestly</span><span class="dots"></span><span class="m">2 min</span></a>
+    <a class="tocrow" href="#ch16"><span class="n">16</span><span class="t">Build yours: the first lap</span><span class="dots"></span><span class="m">1 min</span></a>
+    <a class="tocrow" href="#ch17"><span class="n">17</span><span class="t">Where this goes</span><span class="dots"></span><span class="m">2 min</span></a>
+  </div>
+</nav>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch1">
+  <div class="wrap">
+    <div class="cn">Chapter one</div>
+    <h2 class="ct">Owner <em class="serif">or renter?</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Have you noticed your AI is starting to know you?</p>
+      <p>You ask ChatGPT for an email, and it already knows how you like them written. It remembers your business, your clients, the thing you mentioned last month. And in the space of about ten weeks, four of the biggest AI companies each launched an agent: xAI's Grok Bot, Meta's Muse, OpenAI's Dots and Anthropic's Claude Duet. An agent is an AI app that does the work instead of just answering. Which one are you supposed to pick?</p>
+      <p>If you already use one, keep using it. They are good, and there is nothing to set up, because they run on the AI company's computer, not yours. Remember that last part.</p>
+      <p>Because while you use them, they are quietly building a map of you. And <strong>the most valuable thing your AI builds is not your chats. It is the map:</strong> your clients, what they like, what you promised, which decisions worked, and how it all connects.</p>
+      <p>Say you type "Reply to Sarah." With the map, your AI knows she is your biggest client, hates long emails, and is owed a call on Friday. Without it, you explain everything again.</p>
+      <p>So who keeps the map? Try exporting it. You keep the chat history and a list of memory notes. They keep the links between those notes, the months of context, and everything the AI learned about how you work.</p>
+      <p>If you closed the app tomorrow, what would you still have?</p>
+      <p>The way I see it, the future splits into two camps. Owners and renters.</p>
+      <p>Renters keep their map on someone else's computer. They are stuck with whatever AI their app chooses: Dots only works with OpenAI's own AI, and Grok Bot does not let you choose. Every time they switch apps, they start over. And they will keep being told the same thing: you will own nothing and be happy.</p>
+      <p>Owners keep the map on their own computer. They plug in any AI they want, and when they switch, they keep everything.</p>
+      <p>That is me. I plug in whichever AI is best that month: ChatGPT, Claude, Grok. When a better one ships, I swap it, and my map stays put. (Let them fight. I just use the best one.) My map is the one thing I built that made every new AI launch boring to me. In a good way.</p>
+      <p>I still rent the AI itself. The best AI models today, the engines that do the thinking, run on the big companies' computers, and yes, they see my data. There is no other choice yet. But my map is built on a computer I own. <strong>I rent the model. I own the map.</strong></p>
+      <p>That is what this guide is about: building your own AI second brain, a home for your map on a computer you own, with any AI plugged in. Keep the apps you like. Just make sure your map lives at home, not only inside them. Owner or renter? You can still choose.</p>
+      <p>So if the agent apps are not the valuable part, what are they? And the bigger question, the one everyone is quietly afraid of: will AI end up replacing you anyway? Let me answer both with an animal.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch2">
+  <div class="wrap">
+    <div class="cn">Chapter two</div>
+    <h2 class="ct">Extended, <em class="serif">not replaced</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg"><span class="figshell"><img src="p145926.jpg" alt="" loading="lazy"></span><figcaption class="figcap">An octopus has nine brains. One in the head, one in every arm.</figcaption></figure>
+    <div class="bookprose">
+      <p>An octopus has nine brains.</p>
+      <p>One central brain and a mini-brain in every arm. The central brain could be sleeping while the arms are still functioning, gathering food, preventing threats. The arms are not a threat to the octopus. They do not replace it. Each arm senses, reacts, and handles its own work, while the center decides where the whole creature goes. One animal is running eight things at once, and the center is more powerful because of the arms, not less.</p>
+      <p>That is the honest answer to the question everyone is afraid of. <strong>AI is not what replaces you. AI is your arms.</strong></p>
+      <p>Look at how the split actually works. You keep what only you can do: your intent, your values, your taste, the final call. AI extends everything else: the memory, the analysis, the drafting, the execution. You do not get replaced. You get extended. Grok Bot, Muse, Dots and Claude Duet are all arms, and good ones. Anyone can rent the arms. You want to own the second brain they all plug into.</p>
+      <p>There is a word for a person extended by machines this way: <strong>bionic.</strong></p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p150103.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>But here is what nobody tells you, and it is the entire reason this guide exists. The arms only work if they are connected to the centre. Eight brilliant arms with no centre is not an octopus. It is chaos. Remember that line, because it is exactly where I went wrong first, and it is exactly where almost everyone using AI today is stuck right now.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch3">
+  <div class="wrap">
+    <div class="cn">Chapter three</div>
+    <h2 class="ct">What bionic <em class="serif">actually looks like</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg"><span class="figshell"><img src="p150143.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>Before I teach you anything, you deserve to see the destination. This is what runs my business today, plainly described.</p>
+      <p>While I sleep, a team of AI agents works through my company. Each one has a real job. One watches my numbers and tells me what is behind. One turns things I said on calls into content, in my voice. One preps every sales conversation from the full client history. One chases invoices. And every morning, before I wake up, my AI chief of staff has read everything, picked the single move that matters most today, and drafted it. <strong>I wake up to a decision, not a blank page.</strong></p>
+      <p>Here is the part that matters. They can all do this because they share <strong>one brain</strong>: a living company brain that holds everything my business knows. Every decision, every call transcript, every client quirk, every past campaign with its results. So the work they produce is not generic AI output. It is built from my past work, my voice, my thinking, my numbers. A proposal from my system quotes what the client said on Tuesday's call. A post from my system sounds like me, because me is on file.</p>
+      <p>And when their work goes out, the results come back in. What landed, what flopped, what the numbers said. It all feeds back into the same brain. Which means the whole machine is self-improving. Every week it knows my business better than it did the week before. <strong>It is the closest thing to a compounding asset I have ever built</strong>, and no tool launch can take it away from me.</p>
+      <p>That is a bionic CEO. One human centre. Many connected arms. One shared, learning brain. This guide will show you how to build that.</p>
+    </div>
+
+    <div class="wl">
+      <span class="lab">Want this installed, not built?</span>
+      <p>Inside my community, Two Hour CEO, this entire system exists as downloads: the same AI chief of staff, the same agents, the same second brain setup, installed rather than built. Members report getting back 10 to 30 hours a week while making more money.</p>
+      <h3>Doors are closed. They reopen mid-November 2026.</h3>
+      <p>I close entry routinely, on purpose, because I want to be sure I can properly serve everyone already inside before letting more people in. The next slots open in mid-November 2026, and the waitlist hears first.</p>
+      <form class="wl-form" id="acwl1" method="POST" action="https://gabrieljudah.activehosted.com/proc.php" novalidate>
+        <input type="hidden" name="u" value="7"><input type="hidden" name="f" value="7">
+        <input type="hidden" name="s"><input type="hidden" name="c" value="0">
+        <input type="hidden" name="m" value="0"><input type="hidden" name="act" value="sub">
+        <input type="hidden" name="v" value="2">
+        <input type="hidden" name="or" value="b114d2be-4062-4d49-aeb3-cecf2c0e3415">
+        <div class="fr"><label for="acwl1n">Full name <span class="req">*</span></label>
+          <input id="acwl1n" type="text" name="fullname" placeholder="Type your name" autocomplete="name" required></div>
+        <div class="fr"><label for="acwl1e">Your email <span class="req">*</span></label>
+          <input id="acwl1e" type="email" name="email" placeholder="Enter your email" autocomplete="email" required></div>
+        <div class="fr"><label for="acwl1p">WhatsApp number (optional)</label>
+          <input id="acwl1p" type="tel" name="phone" placeholder="Enter your WhatsApp number" autocomplete="tel"></div>
+        <button type="submit">Join the waitlist</button>
+        <p class="note">You will be first to know when doors open in mid-November 2026.</p>
+        <p class="msg"></p>
+      </form>
+    </div>
+    <div class="bookprose" style="margin-top:30px">
+      <p>But if you want to build it yourself, keep reading. Everything you need for the first version is in this guide.</p>
+    </div>
+    <div class="bookprose" style="margin-top:22px">
+      <p>Now, before you take system advice from a stranger on the internet, you should know who is telling you this. Because I am not who you would expect.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch4">
+  <div class="wrap">
+    <div class="cn">Chapter four</div>
+    <h2 class="ct">I am not who <em class="serif">you would expect</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>I have never written a line of code. Not one.</p>
+    </div>
+    <figure class="figimg native-photo"><span class="figshell"><img src="p150534.png" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>My first venture, at sixteen, was sales in a company that later turned out to be a Ponzi scheme. When it collapsed, it took everything I had. I rebuilt from zero the only way I knew how: marketing. Funnels, webinars, ads, offers. I got good at it. Good enough to build my own performance marketing agency, Ascend, which I've run for eight years. Good enough to make my first million, and more...</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p150916.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>So when AI arrived, I did not come to it as a programmer. I came to it as a business owner who had already been burned once by betting on the wrong machine, and who had rebuilt by learning what actually lasts.</p>
+    </div>
+    <figure class="figimg native-email"><span class="figshell"><img src="p150450.png" alt="" loading="lazy"></span><figcaption class="figcap">2021: my GPT-3 beta access, before any of this was cool.</figcaption></figure>
+    <div class="bookprose">
+      <p>And I did not jump on AI because it was trendy. Every marketer is an AI guru now. I am not that. In 2021, before any of this was cool, I applied for beta access to OpenAI's GPT-3, back when you had to write to them and explain what you wanted to build. I have been quietly working with this technology since before ChatGPT existed. What you are reading is not a hype reaction. <strong>It is half a decade of watching this thing grow up.</strong></p>
+      <p>But none of that is the real reason I build the way I build.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch5">
+  <div class="wrap">
+    <div class="cn">Chapter five</div>
+    <h2 class="ct">Why: <em class="serif">time</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg"><span class="figshell"><img src="p150946.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>The year I made my first million was the year my mother died of cancer.</p>
+      <p>Within three years, my father was gone too. Cancer too. And sitting in that hospital, the question that would not leave me alone was: what was all this success actually buying me, if not more of this? More time. More presence. More of the only thing that was actually running out.</p>
+      <div class="pull">All that success meant nothing in that room.</div>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p151017.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>Since then, every business I build has to pass one test: the business feeds the life, not the other way around. I have three kids now (maybe one more next year...). Millions with no time for them is pointless to me. I am obsessed with leverage for exactly one reason: producing more without multiplying my hours, so the hours go where they cannot be replaced.</p>
+      <p>So understand what I am actually chasing with all this AI. Not a cool tech stack. Hours. Presence. The parts of life only I can live.</p>
+      <p>Keep that test in mind for the rest of this guide. Every piece of the system exists to pass it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch6">
+  <div class="wrap">
+    <div class="cn">Chapter six</div>
+    <h2 class="ct">The <em class="serif">two moments</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Two moments took me all in.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p151035.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>The first was December 2022, the ChatGPT moment. Everyone suddenly talked about AI. And it was impressive, honestly. But be precise about what it was: a smarter search box. It sat there waiting for you to type. Everything it wrote, you still had to take away, check, and do something with. A brilliant intern who never leaves the chair. That is why your first experience with AI probably underwhelmed you. You met a chatbot, and a chatbot still needs you to drive. It was revolutionary nonetheless. We started applying AI to every part of my company's processes. But everything still relied heavily on humans.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p151120.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>The second was early 2026. To me it was the Clawdbot moment (later renamed OpenClaw). OpenClaw is an AI agent that works like a digital employee. It does not wait to be asked. It can take over your computer, read your files, use your tools, take a job, go away, do the work, and come back with it finished. That is the word "agentic" in plain language: a chatbot answers you; an agent acts for you. The difference between asking a friend how to fix your sink, and a plumber showing up.</p>
+    </div>
+    <figure class="figimg tall"><span class="figshell"><img src="p151208.jpg" alt="" loading="lazy"></span><figcaption class="figcap">My initial excitement when I gave my agent a Gmail account and it onboarded itself.</figcaption></figure>
+    <figure class="figimg tall"><span class="figshell"><img src="p151305.jpg" alt="" loading="lazy"></span><figcaption class="figcap">I put Sonny, my first AI agent, into my company Slack and told it to read our onboarding playbook like any other employee... and it onboarded itself.</figcaption></figure>
+    <div class="bookprose">
+      <p><strong>The moment AI could act on its own, it stopped being software to me. It became a workforce.</strong></p>
+      <p>OpenClaw itself became less relevant today, but it triggered a new wave in AI. The Agentic Wave. I started learning how to build agents, and here is the part nobody tells you: you do not even need to learn how to code anymore. Claude or ChatGPT can help you set it up!</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch7">
+  <div class="wrap">
+    <div class="cn">Chapter seven</div>
+    <h2 class="ct">Your <em class="serif">first agent</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg logo"><span class="figshell"><img src="p151520.jpg" alt="Hermes" loading="lazy"></span><figcaption class="figcap">Hermes</figcaption></figure>
+    <div class="bookprose">
+      <p>Today my main agent is Hermes, powered by ChatGPT. And here is the brilliant part: agents like Hermes are just harnesses. They are model-agnostic, meaning you can swap in any model you want. Claude, Grok, DeepSeek... you name it. <strong>The harness stays; the engine swaps.</strong></p>
+    </div>
+<div class="dia fig">
+      <svg viewBox="0 0 1040 400" role="img" aria-label="A car labelled your business containing steering, controls and seats, with an engine bay. Below it, three engines: this year's model, next year's model, whichever is best. Arrows show engines swapping in and out of the bay.">
+        <g font-family="'DM Sans',sans-serif">
+          <rect x="120" y="40" width="800" height="180" rx="18" fill="#FFFFFF" stroke="#0B0C0F" stroke-width="2"/>
+          <text x="150" y="76" font-family="'JetBrains Mono',monospace" font-size="11" letter-spacing="1.6" fill="#0B0C0F">YOUR BUSINESS · THE CAR · YOU OWN THIS</text>
+
+          <rect x="150" y="98" width="170" height="92" rx="12" fill="#F5F6F9" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="235" y="136" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0B0C0F">The steering</text>
+          <text x="235" y="158" text-anchor="middle" font-size="11.5" fill="#4A4F5A">your goals, your</text>
+          <text x="235" y="174" text-anchor="middle" font-size="11.5" fill="#4A4F5A">standards, your rules</text>
+
+          <rect x="340" y="98" width="170" height="92" rx="12" fill="#F5F6F9" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="425" y="136" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0B0C0F">The seats</text>
+          <text x="425" y="158" text-anchor="middle" font-size="11.5" fill="#4A4F5A">your workers, each</text>
+          <text x="425" y="174" text-anchor="middle" font-size="11.5" fill="#4A4F5A">with one clear job</text>
+
+          <rect x="530" y="98" width="170" height="92" rx="12" fill="#F5F6F9" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="615" y="136" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0B0C0F">The chassis</text>
+          <text x="615" y="158" text-anchor="middle" font-size="11.5" fill="#4A4F5A">your company brain,</text>
+          <text x="615" y="174" text-anchor="middle" font-size="11.5" fill="#4A4F5A">plain files you own</text>
+
+          <rect x="720" y="98" width="170" height="92" rx="12" fill="#E5EBFF" stroke="#2850E8" stroke-width="1.8" stroke-dasharray="7 5"/>
+          <text x="805" y="130" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="10" letter-spacing="1.2" fill="#2850E8">ENGINE BAY</text>
+          <text x="805" y="154" text-anchor="middle" font-size="14.5" font-weight="700" fill="#0B0C0F">The model</text>
+          <text x="805" y="174" text-anchor="middle" font-size="11.5" fill="#4A4F5A">swappable</text>
+
+          <g fill="none" stroke="#2850E8" stroke-width="2" stroke-linecap="round">
+            <path d="M 805 232 V 268"/>
+            <path d="M 797 240 L 805 231 L 813 240"/>
+            <path d="M 770 268 V 232" transform="translate(60,0)" opacity="0"/>
+          </g>
+          <path d="M 835 268 V 236 M 827 259 L 835 268 L 843 259" fill="none" stroke="#8A93A6" stroke-width="2" stroke-linecap="round"/>
+
+          <rect x="360" y="284" width="180" height="76" rx="12" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="450" y="317" text-anchor="middle" font-size="13.5" font-weight="600" fill="#0B0C0F">This year's best</text>
+          <text x="450" y="340" text-anchor="middle" font-size="11.5" fill="#8A93A6">plugged in today</text>
+
+          <rect x="560" y="284" width="180" height="76" rx="12" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="650" y="317" text-anchor="middle" font-size="13.5" font-weight="600" fill="#0B0C0F">Next year's best</text>
+          <text x="650" y="340" text-anchor="middle" font-size="11.5" fill="#8A93A6">swaps in later</text>
+
+          <rect x="760" y="284" width="180" height="76" rx="12" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.5"/>
+          <text x="850" y="317" text-anchor="middle" font-size="13.5" font-weight="600" fill="#0B0C0F">Whoever wins</text>
+          <text x="850" y="340" text-anchor="middle" font-size="11.5" fill="#8A93A6">does not matter</text>
+
+          <text x="150" y="330" font-size="13" fill="#4A4F5A">The engines churn.</text>
+          <text x="150" y="350" font-size="13" font-weight="600" fill="#0B0C0F">The car is yours for good.</text>
+        </g>
+      </svg>
+      <p class="cap"><b class="fg">Figure 1</b> · <b>How to read it:</b> everything inside the black outline is yours and does not expire: the steering, the seats, the chassis. The dashed bay on the right is where the AI model plugs in, and it is the only part that changes. When a better engine ships, you swap it and the same car gets faster. I have swapped engines several times this year and rebuilt nothing. It is the same deal as chapter one: rent the engine, own the car.</p>
+    </div>
+    <div class="bookprose" style="margin-top:30px">
+      <p>Hermes isn't the only choice; there are many. The key is just to pick one. Here is how to set up a Hermes agent:</p>
+    </div>
+    <ol class="steps">
+      <li>Go to <a href="https://hermes-agent.nousresearch.com/" rel="noopener">hermes-agent.nousresearch.com</a></li>
+      <li>Download the <b>Hermes desktop app</b></li>
+      <li>Connect it to your <b>ChatGPT account</b></li>
+      <li>Connect Hermes to your <b>WhatsApp or Telegram</b> so you can talk to it on your phone</li>
+    </ol>
+    <div class="bookprose">
+      <p>That's it. It's really that simple.</p>
+      <p>Connect your agent to all the other tools you use, such as Slack, Notion, and Google Workspace, and you get your very own executive assistant or chief of staff to run your life.</p>
+      <div class="minilogos"><span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#D97757" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z"/></svg><span>Claude</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#1F2229" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg><span>Codex</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#26A5E4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg><span>Telegram</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <rect x="6.4" y="13.7" width="3.6" height="3.6" rx="1.8" fill="#E01E5A"/>
+  <rect x="6.4" y="6.7" width="3.6" height="3.6" rx="1.8" fill="#ECB22E"/>
+  <rect x="13.7" y="6.7" width="3.6" height="3.6" rx="1.8" fill="#2EB67D"/>
+  <rect x="13.7" y="13.7" width="3.6" height="3.6" rx="1.8" fill="#36C5F0"/>
+  <path d="M 8.2 0.7 a1.8 1.8 0 1 0 0 3.6 h1.8 V2.5 a1.8 1.8 0 0 0 -1.8 -1.8" fill="#36C5F0"/>
+  <path d="M 8.2 5.4 H 3.4 a1.8 1.8 0 1 0 0 3.6 h4.8 a1.8 1.8 0 1 0 0 -3.6" fill="#36C5F0"/>
+  <path d="M 23.3 8.2 a1.8 1.8 0 0 0 -3.6 0 v1.8 h1.8 a1.8 1.8 0 0 0 1.8 -1.8" fill="#2EB67D"/>
+  <path d="M 18.6 8.2 V 3.4 a1.8 1.8 0 1 0 -3.6 0 v4.8 a1.8 1.8 0 1 0 3.6 0" fill="#2EB67D"/>
+  <path d="M 15.8 23.3 a1.8 1.8 0 1 0 0 -3.6 h-1.8 v1.8 a1.8 1.8 0 0 0 1.8 1.8" fill="#ECB22E"/>
+  <path d="M 15.8 18.6 h4.8 a1.8 1.8 0 1 0 0 -3.6 h-4.8 a1.8 1.8 0 1 0 0 3.6" fill="#ECB22E"/>
+  <path d="M 0.7 15.8 a1.8 1.8 0 0 0 3.6 0 v-1.8 H 2.5 a1.8 1.8 0 0 0 -1.8 1.8" fill="#E01E5A"/>
+  <path d="M 5.4 15.8 v4.8 a1.8 1.8 0 1 0 3.6 0 v-4.8 a1.8 1.8 0 1 0 -3.6 0" fill="#E01E5A"/>
+</svg><span>Slack</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#EA4335" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z"/></svg><span>Gmail</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#4285F4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z"/></svg><span>Calendar</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#4285F4" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z"/></svg><span>Drive</span></span>
+        <span class="lg"><svg width="20" height="20" aria-hidden="true" fill="#1F2229" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z"/></svg><span>Notion</span></span></div>
+      <p style="margin-top:26px">It can even take over your computer and browser to click stuff for you. It's an employee that lives in your laptop... (more on security later.)</p>
+    </div>
+
+    <div class="wl">
+      <span class="lab">My chief of staff build &middot; 10-minute install</span>
+      <p>Inside Two Hour CEO I give my own Chief of Staff build away as a download. It does not just read emails; it helps set and track my goals, analyses them, and tells me the ONE thing I need to do daily that has the biggest leverage. I customised it myself, and members simply install it.</p>
+      <p>Members also get a new agent from my own business every month: Media Buyer agent, Finance agent, Writer agent, COO agent and more, plus a live call with me every week.</p>
+      <h3>Doors are closed. They reopen mid-November 2026.</h3>
+      <p>I close entry routinely, on purpose, because I want to be sure I can properly serve everyone already inside before letting more people in. The next slots open in mid-November 2026, and the waitlist hears first.</p>
+      <form class="wl-form" id="acwl2" method="POST" action="https://gabrieljudah.activehosted.com/proc.php" novalidate>
+        <input type="hidden" name="u" value="7"><input type="hidden" name="f" value="7">
+        <input type="hidden" name="s"><input type="hidden" name="c" value="0">
+        <input type="hidden" name="m" value="0"><input type="hidden" name="act" value="sub">
+        <input type="hidden" name="v" value="2">
+        <input type="hidden" name="or" value="b114d2be-4062-4d49-aeb3-cecf2c0e3415">
+        <div class="fr"><label for="acwl2n">Full name <span class="req">*</span></label>
+          <input id="acwl2n" type="text" name="fullname" placeholder="Type your name" autocomplete="name" required></div>
+        <div class="fr"><label for="acwl2e">Your email <span class="req">*</span></label>
+          <input id="acwl2e" type="email" name="email" placeholder="Enter your email" autocomplete="email" required></div>
+        <div class="fr"><label for="acwl2p">WhatsApp number (optional)</label>
+          <input id="acwl2p" type="tel" name="phone" placeholder="Enter your WhatsApp number" autocomplete="tel"></div>
+        <button type="submit">Join the waitlist</button>
+        <p class="note">You will be first to know when doors open in mid-November 2026.</p>
+        <p class="msg"></p>
+      </form>
+    </div>
+    <div class="bookprose" style="margin-top:30px">
+      <p>But if you want to build it yourself, keep reading. Everything you need for the first version is in this guide.</p>
+    </div>
+    <div class="bookprose" style="margin-top:22px">
+      <p>You can also create unlimited Hermes agents. This means a multi-team of agents working on different things!</p>
+      <p>So I did what any excited business owner would do. I started creating more agents for everything. I tried to replace a lot of roles in my marketing agency as an experiment... But that is when I made the mistake this entire next half of the guide is built on.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch8">
+  <div class="wrap">
+    <div class="cn">Chapter eight</div>
+    <h2 class="ct">Brilliant, <em class="serif">and forgetful</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg"><span class="figshell"><img src="p151702.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>I set up agents everywhere.</p>
+      <p>One agent doing content. One doing research. One doing follow-ups. One watching numbers. Each one, on its own, was genuinely brilliant. Better than I expected.</p>
+      <p><strong>And my company got messier, not smoother.</strong></p>
+      <p>Because none of them shared a memory. The content agent did not know what the research agent had found. The follow-up agent did not know what I had promised a client on Tuesday. Each one finished its job and remembered nothing. Every day was everyone's first day. The work simply did not compile into anything.</p>
+      <p>The agents were so forgetful that I spent more time scolding them than producing valuable work. And this is where I also learned that unlike employees, you can scold your agents and they won't resign ;)</p>
+      <p>But guess who carried all the context between them? Me. Every wire ran through me. Every brief started with me explaining the business again. Every output came back to me for the missing piece only I knew. I had added all this AI to my company and somehow given myself more to hold, not less.</p>
+      <p>Remember the octopus. I had built eight brilliant arms and no center.</p>
+      <p>If you have ever tried AI tools and quietly given up because nothing stuck together, read that again. You did not fail, and you are not bad at AI. You built arms. Nobody told you about the BRAIN. <strong>Disconnected tools forget, and forgetting is why nothing you tried ever compounded.</strong></p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch9">
+  <div class="wrap">
+    <div class="cn">Chapter nine</div>
+    <h2 class="ct">One <em class="serif">shared memory</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg mid"><span class="figshell"><video src="secondbrain.mp4" autoplay muted loop playsinline preload="metadata" poster="secondbrain.gif" aria-label="My second brain graph, growing as notes and links are added"></video></span></figure>
+    <div class="bookprose">
+      <p>The fix was embarrassingly simple. I remembered a book I read many years ago: Building a Second Brain, by Tiago Forte.</p>
+      <p>As someone with ADHD, I tend to be very forgetful. I would write down lots of notes, bookmark and save stuff on social media, only to never open it again. I was exploring a system that would help me remember everything.</p>
+      <p>The book taught me a system called CODE. Capture, Organize, Distill, Express.</p>
+      <ul>
+        <li><b>Capture</b> everything important into an inbox folder</li>
+        <li><b>Organize</b> it into Projects, Areas, Resources, Archives (aka PARA)</li>
+        <li><b>Distill</b> it into atomic notes (like taking a meeting transcript and distilling ten reusable points)</li>
+        <li>Then use those points to <b>Express</b> new output (new scripts, new ideas, new plans)</li>
+      </ul>
+      <p>The system was simple. The execution was hard. I had to manually capture my own notes, then sit down once a week to organize and distill them before I could use them. Nahhh. My ADHD brain said doomscrolling was more fun.</p>
+      <p>Then an idea hit me: <strong>what if I let my AI agents manage and use this second brain as our shared memory?</strong></p>
+      <p>One place where everything I know and my company knows lives. Every decision and why I made it. Every call, transcribed. Every client's history and quirks. Every number. Everything that worked and everything that flopped. Every agent reads from it before acting, and writes back into it after. The day it existed, the arms finally connected to a brain. The mess became an octopus. That is the day I became bionic.</p>
+      <p>Now, the part that surprises everyone I show this to. That shared memory, the company brain, is not technology.</p>
+      <div class="pull">It is just a folder.</div>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch10">
+  <div class="wrap">
+    <div class="cn">Chapter ten</div>
+    <h2 class="ct">Your first <em class="serif">living second brain</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg tall"><span class="figshell"><img src="p152344.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p>Plain files, on a computer you own. Not an app. Not a database. Not another subscription. This is where your map lives. If it is not on your computer, you are renting it. What makes the folder a brain is this: everything inside is organized so you can find the right piece at the exact moment you need it. Inspired by Tiago's PARA system, I expanded it:</p>
+    </div>
+    <div class="tree"><pre><span class="hd">YOUR-LIVING-SECOND-BRAIN/</span>
+├── <span class="f">01 Inbox/</span>         new captures land here first (your data from Google,
+│                     Notion, Meta ads, socials, Slack...)
+├── <span class="f">02 Projects/</span>      active builds with a time limit (new initiatives,
+│                     new offers, clients)
+├── <span class="f">03 Areas/</span>         the departments, one hub note each:
+│                     Marketing · Sales · Operations · Fulfilment · Community
+│                     Customer Support · HR &amp; Admin · Finance &amp; Legal
+├── <span class="f">04 Resources/</span>     reference material (company context sheet, brand
+│                     rules, pricing)
+├── <span class="f">05 Archives/</span>      retired things, never deleted
+├── <span class="f">06 Brain/</span>         DISTILLED notes only, on shelves: sales · marketing ·
+│                     product · community · ops · brand · finance
+├── <span class="f">07 World Model/</span>   the entity layer: people · clients · products ·
+│                     decisions (dated, append-only) · ledgers of
+│                     predictions and promises
+├── <span class="f">08 Restricted/</span> 🔒  finance data · payroll · client-confidential; the
+│                     ONE subtree every agent and index is told to skip
+├── <span class="f">09 Sources/</span>       raw ingest streams (Slack · meetings · Drive · CRM),
+│                     once you have capture agents writing daily
+└── <span class="f">_System/</span>          machinery only (scripts, manifest, logs); never content</pre></div>
+    <div class="bookprose" style="margin-top:30px">
+      <p>What goes in? One test decides everything: <strong>would a brilliant new employee do their job better if they knew it?</strong> If yes, it belongs in the brain.</p>
+      <p>And here is the bridge to you. You already carry a rough version of this. It is your phone. Your inbox, your chats, your notes, your camera roll. You cannot compete in modern life without it, which means you are already half a cyborg and already collecting the raw material. It is just scattered and unorganized. That, honestly, is the entire gap between you and everything I showed you earlier.</p>
+      <p>Right now, you can literally create a folder with these nine subfolders yourself. Or ask your agent to do it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch11">
+  <div class="wrap">
+    <div class="cn">Chapter eleven</div>
+    <h2 class="ct">The loop <em class="serif">that learns</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>A folder full of files is still just a filing cabinet. What turned mine into a living brain is a loop that runs through it. This is the climax of the whole guide, so slow down for two minutes.</p>
+      <p>Not better tools. Better architecture. The loop has five beats. I call it CLOSE: Capture, Link, Organise, Signal, Execute. The last beat feeds the first, so the loop closes on itself.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p152505.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p><strong>Capture.</strong> Your business already produces everything the brain needs. It just evaporates. So everything flows in, from every place information lives: your inbox, your WhatsApp and Slack threads, meeting recordings, your notes, the numbers in your ad account. Calls get transcribed the day they happen. Nothing valuable dies just because you were busy.</p>
+      <p>You set up a capture agent just to do this every 30 minutes or every hour (depending on how big your company is). This is also known as a "cron job": agents that wake up every X minutes, hours, days or weeks to do something.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p152527.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p><strong>Link.</strong> This is the beat every notes system misses, and the reason my old one died. A WhatsApp thread, a call transcript, a proposal and a closed deal are four files in four places. To a filing cabinet they are four unrelated things. To a brain they are one customer. Link ties every new piece to the client, deal, project or person it belongs to, so when you ask about a client you get the whole story: what they said on the call, what you quoted, what they replied on WhatsApp, and whether they paid.</p>
+      <p>Mine is a linking pass that runs the moment a file lands: it gets tied to who and what it is about before it is filed.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="close-link.jpg" alt="Link: four files in four places become one client with one story" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p><strong>Organise.</strong> The linked pieces get filed onto the nine shelves, each with a date and a source. Why bother? Because a fact you cannot find at the moment you need it may as well not exist. Filing is what turns a pile into an answer.</p>
+      <p>Mine is a daily triage agent that files everything in the inbox folder into one of the nine folders.</p>
+    </div>
+    <figure class="figimg mid"><span class="figshell"><video src="secondbrain.mp4" autoplay muted loop playsinline preload="metadata" poster="secondbrain.gif" aria-label="My second brain graph, growing as notes and links are added"></video></span></figure>
+    <div class="bookprose">
+      <p><strong>Signal.</strong> Distill first, then detect. Every long thing gets boiled down to the few lines that matter. A sixty-minute client call becomes five lines: what they promised, what worried them, what changed, the number, the next step. Nobody, human or AI, acts on a pile. They act on the five lines. Then the brain reads across many of those five-line pieces until something appears that no single piece contained. Twelve sales calls, and the same objection sitting in nine of them. No one call told me that. The pile did, once it was sitting in one place. That one sentence rewrote my pitch, and it is the kind of thing your competitors never see about their own business.</p>
+      <p>Or across departments. Marketing reported cost per lead went down. Sales reported conversion went up. Customer support reported complaints went up. Maybe there is a link between those three numbers? Maybe the ad creative overpromised and produced higher complaints and refunds? You would not know without this system, and big companies pay billions of dollars to figure it out. Now it is available to you for the price of a ChatGPT subscription.</p>
+      <p>A signal is not a weekly summary, and it is not the AI having a feeling. It is a number that moved, with enough cases behind it to trust it: nine calls out of twelve, not one. My daily sweep does the boiling down at the end of every day, and my signal agent reads across it weekly and reports what it finds back into the brain.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="close-signal.jpg" alt="Signal: one call distilled to five lines, twelve calls read across, nine of twelve raised the same objection" loading="lazy"></span></figure>
+    <div class="bookprose">
+      <p><strong>Execute.</strong> The agents pull from the brain and act: proposals, posts, follow-ups, ads, slide decks, the stalled deal that gets a dated follow-up task. This is where everything pays off. Ask a bare AI for an output and you get the same generic AI slop your competitor produces, because it draws on nothing but the public internet.</p>
+      <p>Ask an agent that reads your brain, and the output quotes what the client said on Tuesday's call, prices from your rate card, and shows proof from your archive. <strong>Generic in, generic out. Your brain in, only-you out.</strong> And every action gets logged: what changed, and what happened next.</p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="close-execute.jpg" alt="Execute: the agent reads your brain, produces a proposal, a follow-up task and a post, logs what happened, and the results go back into capture" loading="lazy"></span></figure>
+    <div class="bookprose">
+    </div>
+    <div class="real" style="max-width:72ch;margin-top:26px">
+      <span class="l">A member ran this exact play</span>
+      <blockquote>The money is secondary. The speed of launch is insane.</blockquote>
+      <p>That is Joshua Chan, one of our Skool members. He loaded his company's knowledge base and over sixty client call transcripts into his brain, had his agent distill it into a coaching program in his voice and his frameworks, and built the entire 6-month program and pitch deck straight from his brain in a weekend. He presented it and made six figures in one day.</p>
+      <p style="margin-top:10px">A program like that used to take him months to assemble. The material was always his. The brain made <b>all of it usable at once.</b></p>
+    </div>
+    <figure class="figimg"><span class="figshell"><img src="p152748.jpg" alt="" loading="lazy"></span></figure>
+    <div class="bookprose" style="margin-top:30px">
+      <p>Execute closes the loop. Every action creates new results and new data. New creatives give you new click-through rates. New proposals give you new sales conversations. That data gets captured RIGHT back into your brain, wins and losses included. Next lap, the brain already knows what worked.</p>
+    </div>
+    <div class="dia fig">
+      <svg viewBox="0 0 1040 340" role="img" aria-label="Five beats in a cycle: capture, link, organise, signal, execute, with results returning to capture. Gets smarter every cycle.">
+        <defs>
+          <marker id="arL2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#2850E8"/>
+          </marker>
+        </defs>
+        <g font-family="'DM Sans',sans-serif">
+          <text x="30" y="66" font-family="'JetBrains Mono',monospace" font-size="10.5" letter-spacing="1.6" fill="#8A93A6">THE LOOP · RUN BY YOUR AGENTS, NOT BY YOUR DISCIPLINE</text>
+
+          <rect x="30" y="110" width="160" height="90" rx="14" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.6"/>
+          <text x="110" y="148" text-anchor="middle" font-size="15" font-weight="700" fill="#0B0C0F">Capture</text>
+          <text x="110" y="172" text-anchor="middle" font-size="11" fill="#4A4F5A">everything flows in</text>
+
+          <rect x="235" y="110" width="160" height="90" rx="14" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.6"/>
+          <text x="315" y="148" text-anchor="middle" font-size="15" font-weight="700" fill="#0B0C0F">Link</text>
+          <text x="315" y="172" text-anchor="middle" font-size="11" fill="#4A4F5A">one customer, one story</text>
+
+          <rect x="440" y="110" width="160" height="90" rx="14" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.6"/>
+          <text x="520" y="148" text-anchor="middle" font-size="15" font-weight="700" fill="#0B0C0F">Organise</text>
+          <text x="520" y="172" text-anchor="middle" font-size="11" fill="#4A4F5A">onto the nine shelves</text>
+
+          <rect x="645" y="110" width="160" height="90" rx="14" fill="#FFFFFF" stroke="#E6E9EE" stroke-width="1.6"/>
+          <text x="725" y="148" text-anchor="middle" font-size="15" font-weight="700" fill="#0B0C0F">Signal</text>
+          <text x="725" y="172" text-anchor="middle" font-size="11" fill="#4A4F5A">distilled, number-backed</text>
+
+          <rect x="850" y="110" width="160" height="90" rx="14" fill="#E5EBFF" stroke="#2850E8" stroke-width="1.8"/>
+          <text x="930" y="148" text-anchor="middle" font-size="15" font-weight="700" fill="#0B0C0F">Execute</text>
+          <text x="930" y="172" text-anchor="middle" font-size="11" fill="#4A4F5A">only-you action, logged</text>
+
+          <g fill="none" stroke="#2850E8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M 198 150 L 206 155 L 198 160"/>
+            <path d="M 403 150 L 411 155 L 403 160"/>
+            <path d="M 608 150 L 616 155 L 608 160"/>
+            <path d="M 813 150 L 821 155 L 813 160"/>
+          </g>
+
+          <path d="M 930 200 V 252 Q 930 268 914 268 H 126 Q 110 268 110 252 V 212"
+                fill="none" stroke="#2850E8" stroke-width="2.2" stroke-dasharray="8 6" marker-end="url(#arL2)"/>
+          <text x="520" y="296" text-anchor="middle" font-family="'JetBrains Mono',monospace" font-size="11.5" letter-spacing="0.7" fill="#2850E8">NEW RESULTS AND NEW DATA GET CAPTURED RIGHT BACK IN</text>
+          <text x="520" y="320" text-anchor="middle" font-size="13" font-weight="600" fill="#0B0C0F">Most automation repeats yesterday faster. This gets smarter every single cycle.</text>
+        </g>
+      </svg>
+      <p class="cap"><b class="fg">The CLOSE loop</b> · <b>How to read it:</b> left to right is one cycle. The dashed return is the difference between a filing cabinet and a living brain: every action creates new results and new data, and that data flows straight back to Capture. The label at the top matters most. The loop is run by your agents on a schedule, not by your willpower, which is why this survives where your last notes system did not.</p>
+    </div>
+    <div class="bookprose" style="margin-top:30px">
+      <p>Congratulations. Now you have a living brain that never forgets, gets smarter with every week of new output, is self-learning and self-improving, and one day will tell you what will happen before you act.</p>
+      <p>Most automation repeats yesterday faster. This gets smarter every single cycle. That is the whole secret. A brain, a team of agents working from it, and a loop feeding the results back in: a self-learning company. This is what allows me to work on my business only two hours a day (and maybe someday... two hours a week).</p>
+      <p>This complete system is what I call the <strong>Two Hour CEO OS</strong>, and it survives every AI hype because not one part of it depends on which model wins.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch12">
+  <div class="wrap">
+    <div class="cn">Chapter twelve</div>
+    <h2 class="ct">The <em class="serif">compounding gap</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Now flip everything you just read into one uncomfortable question.</p>
+      <div class="pull">How are you going to compete with a business that has a self-learning brain?</div>
+      <p>Everyone gets the same AI tools on the same day. The only thing nobody can copy is what your brain knows. Most business owners will not build this. Too busy, or still convinced they are not tech people. So they stay renters. But the ones who start first compound more. Every week their brain gets richer, their agents get sharper, their output gets more only-them. Start a year later and there is a year less to compound. The gap does not stay still. It snowballs.</p>
+      <p>I am not going to invent a deadline for you. There isn't one. Here's the truth: if you don't build it, sooner or later your competitor will.</p>
+    </div>
+
+    <div class="wl">
+      <span class="lab">The part you can skip the queue on</span>
+      <p>Members download my exact second brain setup and the agents that run it, and have the whole thing standing over a weekend. No code, no figuring things out alone. You are not just getting a system. You are getting speed, and speed is the whole game when the advantage compounds weekly.</p>
+      <h3>Doors are closed. They reopen mid-November 2026.</h3>
+      <p>I close entry routinely, on purpose, because I want to be sure I can properly serve everyone already inside before letting more people in. The next slots open in mid-November 2026, and the waitlist hears first.</p>
+      <form class="wl-form" id="acwl3" method="POST" action="https://gabrieljudah.activehosted.com/proc.php" novalidate>
+        <input type="hidden" name="u" value="7"><input type="hidden" name="f" value="7">
+        <input type="hidden" name="s"><input type="hidden" name="c" value="0">
+        <input type="hidden" name="m" value="0"><input type="hidden" name="act" value="sub">
+        <input type="hidden" name="v" value="2">
+        <input type="hidden" name="or" value="b114d2be-4062-4d49-aeb3-cecf2c0e3415">
+        <div class="fr"><label for="acwl3n">Full name <span class="req">*</span></label>
+          <input id="acwl3n" type="text" name="fullname" placeholder="Type your name" autocomplete="name" required></div>
+        <div class="fr"><label for="acwl3e">Your email <span class="req">*</span></label>
+          <input id="acwl3e" type="email" name="email" placeholder="Enter your email" autocomplete="email" required></div>
+        <div class="fr"><label for="acwl3p">WhatsApp number (optional)</label>
+          <input id="acwl3p" type="tel" name="phone" placeholder="Enter your WhatsApp number" autocomplete="tel"></div>
+        <button type="submit">Join the waitlist</button>
+        <p class="note">You will be first to know when doors open in mid-November 2026.</p>
+        <p class="msg"></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch13">
+  <div class="wrap">
+    <div class="cn">Chapter thirteen</div>
+    <h2 class="ct">It is not hard. <em class="serif">It is a chat.</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Right now you are picturing a black terminal screen, green text, and a version of yourself that does not exist.</p>
+      <p>Delete that picture. That was the old way in, and it scared me too. Today this is a chat window. You type plain English, the way you would text an employee, and agentic tools do the building for you. I say it again on purpose: I have never written a line of code, and I run all of this.</p>
+      <p>And here is the part that should genuinely relax you. Somewhere in the last two sections, an honest voice in your head said: capturing every call, filing every fact, distilling every transcript, this sounds like a full-time job. That voice is right. It is a full-time job. <strong>It is just not your job.</strong> The agents build the brain and the agents maintain the brain. Filing, dating, distilling, cross-referencing: that is exactly the work AI is already excellent at, on a schedule, without being reminded. The loop runs on their discipline, not yours. That is why this system survives where every notes app you ever abandoned did not.</p>
+      <p>Your seat is one level up. You direct: what matters, what good looks like, what gets built next. The machine does the machine's work.</p>
+      <p>Which leaves the obvious question: where do these agents come from? You do not program them. And now that you know what they are, I can finally use the right word for it.</p>
+      <div class="pull">You hire them.</div>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch14">
+  <div class="wrap">
+    <div class="cn">Chapter fourteen</div>
+    <h2 class="ct">Hire them <em class="serif">like employees</em></h2>
+    <div class="crule"></div>
+    <figure class="figimg"><span class="figshell"><img src="p152851.jpg" alt="" loading="lazy"></span><figcaption class="figcap">The shape a full roster grows into. Humans lead; agents execute; one brain feeds all of them.</figcaption></figure>
+    <div class="bookprose">
+      <p>You create an AI agent the way you would hire a person. Because that is what it is: a new member of staff who happens to read the entire company brain on day one.</p>
+      <p>Start with an org chart, exactly like a real company. Draw the departments your business already has: marketing, sales, delivery, finance, operations. The same departments as the Areas shelf in your brain, and that is not a coincidence. Then hire one agent per department, one at a time, each owning one job and one number, like real staff. The marketing agent owns cost per lead. The delivery agent owns retention. The finance agent owns cash.</p>
+      <p>A human hire spends three months learning how you do things. Your AI hire reads the brain and starts the same day, already knowing every decision you have made, every client's history, every standard you hold. And every piece of work it produces goes back into the brain with the result attached, which means next month's version of that agent is smarter than this month's. So is every other agent on the chart, because they all read the same brain.</p>
+      <p><strong>When a human employee leaves, their experience walks out the door. Here, the experience stays in the building forever.</strong> I will be honest about how much peace that gives me: I am no longer worried when someone on my team leaves, because the knowledge never leaves with them anymore.</p>
+      <p>One rule keeps the roster clean as it grows: agents own an outcome, skills are just abilities anyone can pick up. A "writing agent" owns nothing and needs briefing from scratch every time. An agent that owns booked calls is a colleague. Here is the shape a full roster grows into. You will not start with all seven. Neither did I.</p>
+    </div>
+      <div class="rtable" style="margin-top:30px">
+        <div class="rrow rhead"><div>The worker</div><div>Its one number</div><div>What it actually does for you</div></div>
+        <div class="rrow boss"><div class="r1">Chief of Staff</div><div class="r2">none of its own</div><div>Your single door. You give it the messy ask, it works out who handles it, and comes back with one answer instead of six. If you only ever build one, build this.</div></div>
+        <div class="rrow"><div class="r1">Content</div><div class="r2">audience growth</div><div>Turns things you already said on calls and voice notes into posts, in your voice, because your voice is on file.</div></div>
+        <div class="rrow"><div class="r1">Marketing</div><div class="r2">leads, cost per lead</div><div>Watches the numbers daily, tells you what is working, drafts the next round against what already worked.</div></div>
+        <div class="rrow"><div class="r1">Sales</div><div class="r2">revenue, close rate</div><div>Most business owners keep this seat themselves for a long time. The worker preps every call from the full history, drafts the follow up, chases the quiet ones.</div></div>
+        <div class="rrow"><div class="r1">Delivery</div><div class="r2">retention, client results</div><div>Knows every client's history and mood. Flags the account that has gone quiet <b>before</b> it leaves, not after.</div></div>
+        <div class="rrow"><div class="r1">Finance</div><div class="r2">cash, margin</div><div>Chases invoices, tracks what each client really costs to serve, tells you which work is quietly losing money.</div></div>
+        <div class="rrow"><div class="r1">Operations</div><div class="r2">on time, things working</div><div>Keeps projects moving and notices when something in your setup has quietly stopped running.</div></div>
+      </div>
+      <p style="margin-top:18px;color:var(--silver);font-size:0.95rem">There is no "builder" worker on that list. Building is <em>how</em> every worker works, not a job one of them owns.</p>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch15">
+  <div class="wrap">
+    <div class="cn">Chapter fifteen</div>
+    <h2 class="ct">What <em class="serif">mine</em> looks like, honestly</h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Theory is cheap, so here is my actual machine, described plainly, including the part most people selling AI will not say.</p>
+    </div>
+    <div class="demo" style="margin-top:26px">
+      <ul>
+        <li><b>It lives on a small computer at home that never sleeps.</b> Not my laptop. My laptop closes, travels and sleeps, so anything living on it is not staff.
+          <figure class="figimg"><span class="figshell"><img src="p152932.jpg" alt="" loading="lazy"></span></figure>
+        </li>
+        <li><b>The chief of staff reads its compass before it does anything.</b> What we are chasing this quarter, which number is behind, what is already in flight.</li>
+        <li><b>Every morning it picks the move that is furthest behind</b> and ships that one thing. Not a dashboard. Not twelve suggestions. One finished thing, and a note saying why.
+          <figure class="figimg"><span class="figshell"><img src="p153023.jpg" alt="" loading="lazy"></span><figcaption class="figcap">A Media Buyer agent that runs all my Meta ads and replaces a full-time media buyer.</figcaption></figure>
+        </li>
+        <li><b>Six agents sit under it</b>, one number each: audience, leads, revenue, retention, cash, and whether things are actually running.</li>
+        <li><b>The brain is plain files on a machine I own.</b> If every AI company I use went under tomorrow, I would still have my company's brain in the morning. New engine, same car.</li>
+      </ul>
+    </div>
+    <div class="pull">This is what survives all the AI hype.</div>
+    <div class="real" style="max-width:72ch;margin-top:26px">
+      <span class="l">The steering wheel, in one sentence</span>
+      <blockquote>Never report a problem alone. Explain it in human terms, give two or three real options with their trade-offs, recommend one, and take the next step inside the boundary you have been given.</blockquote>
+      <p>Without that line you get: "I could not send the invoice." With it you get: "The invoice bounced, their billing email changed. I can resend to the contact on the last paid invoice, ask in the shared thread, or hold until Monday. I would resend, and I have drafted it. Want it?"</p>
+      <p style="margin-top:10px">Same worker. Same AI. <b>One sentence of written-down judgement.</b> I wrote it once, several engines ago, and every worker since has inherited it.</p>
+    </div>
+    <div class="bookprose" style="margin-top:26px">
+      <p><strong>And the honest version, because this matters:</strong> it drafts, queues and chases. I tap send. AI does about 90% of the work and I own the last 10%. Anyone telling you their agents run a business unattended is selling you a fake dream.</p>
+    </div>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--paper);padding-bottom:clamp(56px,8vw,90px)" id="ch16">
+  <div class="wrap">
+    <div class="cn">Chapter sixteen</div>
+    <h2 class="ct">Build yours: <em class="serif">the first lap</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Everything before this was the machine: the brain, the loop, the org chart. Do not try to build all of it this month. The first lap is deliberately small, and you already have every step:</p>
+    </div>
+    <ol class="steps">
+      <li><b>Create the folder.</b> Nine subfolders, from the tree in chapter ten. Ten minutes.</li>
+      <li><b>Set up your first agent.</b> The Hermes steps from chapter seven, then connect your tools.</li>
+      <li><b>Give it one recurring job.</b> Pick the department where your week bleeds the most hours. The goal: at least ten hours a month back within thirty days.</li>
+      <li><b>Make it write back.</b> Everything it does, and what happened, goes into the folder. That is one full lap of the loop, and lap two starts smarter.</li>
+    </ol>
+  </div>
+</section>
+
+<section class="chap" style="background:var(--white);padding-bottom:clamp(56px,8vw,90px)" id="ch17">
+  <div class="wrap">
+    <div class="cn">Chapter seventeen</div>
+    <h2 class="ct">Where this <em class="serif">goes</em></h2>
+    <div class="crule"></div>
+    <div class="bookprose">
+      <p>Here is my honest prediction, and I have not built it yet: every person on a team with their own roster of agents, all reading from and feeding one shared company brain. Not replacing people. Multiplying them. One company, one brain.</p>
+      <p>I think that is where every serious business ends up within the decade. And I think the future is local. The day an AI model that runs on my own computer is good enough to run my business, I swap it in as my engine, and nothing leaves my computer anymore. Only an owner can make that switch. A renter's map is stuck on someone else's computer. But you do not start there. You start with your own brain and your first agent. That is the whole first move, and it is enough.</p>
+    </div>
+
+    <div class="wl">
+      <span class="lab">If you want the installed version</span>
+      <p>Everything in this guide works, and it is the build-it-yourself version. Inside Two Hour CEO you get the working copy instead: the same AI chief of staff and my Living company brain template that run my agency, packaged as downloads that you can just ask Claude or ChatGPT to install for you, a new agent every month pulled from my own business, and a live call every week where you bring whatever you are stuck on.</p>
+      <h3>Doors are closed. They reopen mid-November 2026.</h3>
+      <p>I close entry routinely, on purpose, because I want to be sure I can properly serve everyone already inside before letting more people in. The next slots open in mid-November 2026, and the waitlist hears first.</p>
+      <form class="wl-form" id="acwl4" method="POST" action="https://gabrieljudah.activehosted.com/proc.php" novalidate>
+        <input type="hidden" name="u" value="7"><input type="hidden" name="f" value="7">
+        <input type="hidden" name="s"><input type="hidden" name="c" value="0">
+        <input type="hidden" name="m" value="0"><input type="hidden" name="act" value="sub">
+        <input type="hidden" name="v" value="2">
+        <input type="hidden" name="or" value="b114d2be-4062-4d49-aeb3-cecf2c0e3415">
+        <div class="fr"><label for="acwl4n">Full name <span class="req">*</span></label>
+          <input id="acwl4n" type="text" name="fullname" placeholder="Type your name" autocomplete="name" required></div>
+        <div class="fr"><label for="acwl4e">Your email <span class="req">*</span></label>
+          <input id="acwl4e" type="email" name="email" placeholder="Enter your email" autocomplete="email" required></div>
+        <div class="fr"><label for="acwl4p">WhatsApp number (optional)</label>
+          <input id="acwl4p" type="tel" name="phone" placeholder="Enter your WhatsApp number" autocomplete="tel"></div>
+        <button type="submit">Join the waitlist</button>
+        <p class="note">You will be first to know when doors open in mid-November 2026.</p>
+        <p class="msg"></p>
+      </form>
+    </div>
+    <div class="cta-row" style="margin-top:10px;margin-bottom:clamp(56px,8vw,90px)">
+      <a class="btn btn-ghost" href="#ch16" style="color:var(--ink);border-color:var(--line-light);background:var(--white)">Back to the first lap</a>
+    </div>
+  </div>
+</section>
+
+<!-- ===== BACK COVER ===== -->
+<section class="backcover">
+  <div class="brandmark" style="color:var(--wash);justify-content:center;margin-bottom:44px"><span class="dot"></span>Two Hour CEO</div>
+  <blockquote style="max-width:26ch;margin:0 auto 30px;font-family:var(--font-serif);font-style:italic;font-weight:400;font-size:clamp(1.7rem,4.2vw,2.9rem);line-height:1.2;letter-spacing:-0.01em">AI should not make us unnecessary. It should return us to the parts of life only we can live.</blockquote>
+  <div class="rule"></div>
+  <div class="signoff" style="margin-top:0">Gabriel Judah</div>
+  <p class="ps">P.S. Create the folder today. Nine subfolders, ten minutes, even if you do nothing else this week. Your competitors are reading about AI tools. You will own a brain. And a brain does not expire when the next model launches. Rent the model for now. Own the map forever.</p>
+</section>
+
+<footer>Two Hour CEO <span class="dot">·</span> The Bionic CEO <span class="dot">·</span> One brain. Many arms.</footer>
+
+</body>
+</html>
+<script>
+(function(){
+  var ok = function(t){ return t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName || ''); };
+  ['copy','cut'].forEach(function(evt){
+    document.addEventListener(evt, function(e){
+      if(ok(e.target)) return;
+      e.preventDefault();
+    });
+  });
+  document.addEventListener('contextmenu', function(e){
+    if(ok(e.target)) return;
+    e.preventDefault();
+  });
+  document.addEventListener('dragstart', function(e){ e.preventDefault(); });
+
+  // ===== ActiveCampaign waitlist (form 7). Four native forms share one JSONP handler, because
+  // AC's official embed binds to a single DOM id (_form_7_) and cannot be repeated on one page. =====
+  (function(){
+    var active = null;
+    function serialize(f){
+      var out = [];
+      Array.prototype.forEach.call(f.elements, function(el){
+        if(!el.name || el.type === 'submit') return;
+        out.push(encodeURIComponent(el.name) + '=' + encodeURIComponent(el.value || ''));
+      });
+      return out.join('&');
+    }
+    function finish(msg, bad){
+      if(!active) return;
+      var m = active.querySelector('.msg');
+      m.innerHTML = msg;
+      if(bad){ m.classList.add('bad'); active.querySelector('button').disabled = false; }
+      else { active.classList.add('done'); }
+      active = null;
+    }
+    window._show_thank_you = function(id, message){ finish(message || 'You are on the list. Watch your inbox.', false); };
+    window._show_error = function(id, message){ finish(message || 'That did not go through. Please try again.', true); };
+    window._show_unsubscribe = function(){};
+    window._show_pc_confirmation = function(){};
+    window._load_script = function(url){
+      var s = document.createElement('script'); s.charset = 'utf-8'; s.src = url;
+      s.onerror = function(){ window._show_error('7', 'That did not go through. Please try again.'); };
+      document.head.appendChild(s);
+    };
+    document.querySelectorAll('form.wl-form').forEach(function(f){
+      f.addEventListener('submit', function(e){
+        e.preventDefault();
+        var nm = f.querySelector('input[name="fullname"]');
+        var em = f.querySelector('input[name="email"]');
+        var ok = true;
+        [nm, em].forEach(function(el){ el.classList.remove('err'); });
+        if(!nm.value.trim()){ nm.classList.add('err'); ok = false; }
+        if(!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/.test(em.value.trim())){ em.classList.add('err'); ok = false; }
+        if(!ok){ (nm.classList.contains('err') ? nm : em).focus(); return; }
+        active = f;
+        f.querySelector('button').disabled = true;
+        window._load_script('https://gabrieljudah.activehosted.com/proc.php?' + serialize(f) + '&jsonp=true');
+      });
+    });
+  })();
+
+
+  // Play looping figure videos only while they are on screen (battery + decode friendly)
+  var vids = document.querySelectorAll('.figimg video');
+  if (vids.length && 'IntersectionObserver' in window){
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        var v = en.target;
+        if (en.isIntersecting){ var p = v.play(); if (p && p.catch) p.catch(function(){}); }
+        else { v.pause(); }
+      });
+    }, {threshold: 0.25});
+    vids.forEach(function(v){ io.observe(v); });
+  } else {
+    vids.forEach(function(v){ var p = v.play(); if (p && p.catch) p.catch(function(){}); });
+  }
+
+  document.addEventListener('selectstart', function(e){
+    if(ok(e.target)) return;
+    e.preventDefault();
+  });
+  document.addEventListener('keydown', function(e){
+    if(ok(e.target)) return;
+    var k = (e.key || '').toLowerCase();
+    if((e.metaKey || e.ctrlKey) && (k === 'c' || k === 'x' || k === 'a' || k === 's' || k === 'p')){
+      e.preventDefault();
+    }
+  });
+})();
+</script>

@@ -1,0 +1,17 @@
+Source: https://skool.twohourceo.com/living-brain/#ch6
+
+CHAPTER SIX
+The two moments
+
+Two moments took me all in.
+
+The first was December 2022, the ChatGPT moment. Everyone suddenly talked about AI. And it was impressive, honestly. But be precise about what it was: a smarter search box. It sat there waiting for you to type. Everything it wrote, you still had to take away, check, and do something with. A brilliant intern who never leaves the chair. That is why your first experience with AI probably underwhelmed you. You met a chatbot, and a chatbot still needs you to drive. It was revolutionary nonetheless. We started applying AI to every part of my company's processes. But everything still relied heavily on humans.
+
+The second was early 2026. To me it was the Clawdbot moment (later renamed OpenClaw). OpenClaw is an AI agent that works like a digital employee. It does not wait to be asked. It can take over your computer, read your files, use your tools, take a job, go away, do the work, and come back with it finished. That is the word "agentic" in plain language: a chatbot answers you; an agent acts for you. The difference between asking a friend how to fix your sink, and a plumber showing up.
+
+My initial excitement when I gave my agent a Gmail account and it onboarded itself.
+I put Sonny, my first AI agent, into my company Slack and told it to read our onboarding playbook like any other employee... and it onboarded itself.
+
+The moment AI could act on its own, it stopped being software to me. It became a workforce.
+
+OpenClaw itself became less relevant today, but it triggered a new wave in AI. The Agentic Wave. I started learning how to build agents, and here is the part nobody tells you: you do not even need to learn how to code anymore. Claude or ChatGPT can help you set it up!

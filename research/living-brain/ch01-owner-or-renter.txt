@@ -1,0 +1,32 @@
+Source: https://skool.twohourceo.com/living-brain/#ch1
+
+CHAPTER ONE
+Owner or renter?
+
+Have you noticed your AI is starting to know you?
+
+You ask ChatGPT for an email, and it already knows how you like them written. It remembers your business, your clients, the thing you mentioned last month. And in the space of about ten weeks, four of the biggest AI companies each launched an agent: xAI's Grok Bot, Meta's Muse, OpenAI's Dots and Anthropic's Claude Duet. An agent is an AI app that does the work instead of just answering. Which one are you supposed to pick?
+
+If you already use one, keep using it. They are good, and there is nothing to set up, because they run on the AI company's computer, not yours. Remember that last part.
+
+Because while you use them, they are quietly building a map of you. And the most valuable thing your AI builds is not your chats. It is the map: your clients, what they like, what you promised, which decisions worked, and how it all connects.
+
+Say you type "Reply to Sarah." With the map, your AI knows she is your biggest client, hates long emails, and is owed a call on Friday. Without it, you explain everything again.
+
+So who keeps the map? Try exporting it. You keep the chat history and a list of memory notes. They keep the links between those notes, the months of context, and everything the AI learned about how you work.
+
+If you closed the app tomorrow, what would you still have?
+
+The way I see it, the future splits into two camps. Owners and renters.
+
+Renters keep their map on someone else's computer. They are stuck with whatever AI their app chooses: Dots only works with OpenAI's own AI, and Grok Bot does not let you choose. Every time they switch apps, they start over. And they will keep being told the same thing: you will own nothing and be happy.
+
+Owners keep the map on their own computer. They plug in any AI they want, and when they switch, they keep everything.
+
+That is me. I plug in whichever AI is best that month: ChatGPT, Claude, Grok. When a better one ships, I swap it, and my map stays put. (Let them fight. I just use the best one.) My map is the one thing I built that made every new AI launch boring to me. In a good way.
+
+I still rent the AI itself. The best AI models today, the engines that do the thinking, run on the big companies' computers, and yes, they see my data. There is no other choice yet. But my map is built on a computer I own. I rent the model. I own the map.
+
+That is what this guide is about: building your own AI second brain, a home for your map on a computer you own, with any AI plugged in. Keep the apps you like. Just make sure your map lives at home, not only inside them. Owner or renter? You can still choose.
+
+So if the agent apps are not the valuable part, what are they? And the bigger question, the one everyone is quietly afraid of: will AI end up replacing you anyway? Let me answer both with an animal.

@@ -1,0 +1,34 @@
+Source: https://skool.twohourceo.com/living-brain/#ch10
+
+CHAPTER TEN
+Your first living second brain
+
+Plain files, on a computer you own. Not an app. Not a database. Not another subscription. This is where your map lives. If it is not on your computer, you are renting it. What makes the folder a brain is this: everything inside is organized so you can find the right piece at the exact moment you need it. Inspired by Tiago's PARA system, I expanded it:
+
+YOUR-LIVING-SECOND-BRAIN/
+├── 01 Inbox/         new captures land here first (your data from Google,
+│                     Notion, Meta ads, socials, Slack...)
+├── 02 Projects/      active builds with a time limit (new initiatives,
+│                     new offers, clients)
+├── 03 Areas/         the departments, one hub note each:
+│                     Marketing · Sales · Operations · Fulfilment · Community
+│                     Customer Support · HR & Admin · Finance & Legal
+├── 04 Resources/     reference material (company context sheet, brand
+│                     rules, pricing)
+├── 05 Archives/      retired things, never deleted
+├── 06 Brain/         DISTILLED notes only, on shelves: sales · marketing ·
+│                     product · community · ops · brand · finance
+├── 07 World Model/   the entity layer: people · clients · products ·
+│                     decisions (dated, append-only) · ledgers of
+│                     predictions and promises
+├── 08 Restricted/ 🔒  finance data · payroll · client-confidential; the
+│                     ONE subtree every agent and index is told to skip
+├── 09 Sources/       raw ingest streams (Slack · meetings · Drive · CRM),
+│                     once you have capture agents writing daily
+└── _System/          machinery only (scripts, manifest, logs); never content
+
+What goes in? One test decides everything: would a brilliant new employee do their job better if they knew it? If yes, it belongs in the brain.
+
+And here is the bridge to you. You already carry a rough version of this. It is your phone. Your inbox, your chats, your notes, your camera roll. You cannot compete in modern life without it, which means you are already half a cyborg and already collecting the raw material. It is just scattered and unorganized. That, honestly, is the entire gap between you and everything I showed you earlier.
+
+Right now, you can literally create a folder with these nine subfolders yourself. Or ask your agent to do it.

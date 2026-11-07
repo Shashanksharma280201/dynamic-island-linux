@@ -1,0 +1,76 @@
+Source: https://skool.twohourceo.com/living-brain/#ch7
+
+CHAPTER SEVEN
+Your first agent
+Hermes
+
+Today my main agent is Hermes, powered by ChatGPT. And here is the brilliant part: agents like Hermes are just harnesses. They are model-agnostic, meaning you can swap in any model you want. Claude, Grok, DeepSeek... you name it. The harness stays; the engine swaps.
+
+YOUR BUSINESS · THE CAR · YOU OWN THIS
+The steering
+your goals, your
+standards, your rules
+The seats
+your workers, each
+with one clear job
+The chassis
+your company brain,
+plain files you own
+ENGINE BAY
+The model
+swappable
+This year's best
+plugged in today
+Next year's best
+swaps in later
+Whoever wins
+does not matter
+The engines churn.
+The car is yours for good.
+
+Figure 1 · How to read it: everything inside the black outline is yours and does not expire: the steering, the seats, the chassis. The dashed bay on the right is where the AI model plugs in, and it is the only part that changes. When a better engine ships, you swap it and the same car gets faster. I have swapped engines several times this year and rebuilt nothing. It is the same deal as chapter one: rent the engine, own the car.
+
+Hermes isn't the only choice; there are many. The key is just to pick one. Here is how to set up a Hermes agent:
+
+Go to hermes-agent.nousresearch.com
+Download the Hermes desktop app
+Connect it to your ChatGPT account
+Connect Hermes to your WhatsApp or Telegram so you can talk to it on your phone
+
+That's it. It's really that simple.
+
+Connect your agent to all the other tools you use, such as Slack, Notion, and Google Workspace, and you get your very own executive assistant or chief of staff to run your life.
+
+Claude
+Codex
+Telegram
+Slack
+Gmail
+Calendar
+Drive
+Notion
+
+It can even take over your computer and browser to click stuff for you. It's an employee that lives in your laptop... (more on security later.)
+
+MY CHIEF OF STAFF BUILD · 10-MINUTE INSTALL
+
+Inside Two Hour CEO I give my own Chief of Staff build away as a download. It does not just read emails; it helps set and track my goals, analyses them, and tells me the ONE thing I need to do daily that has the biggest leverage. I customised it myself, and members simply install it.
+
+Members also get a new agent from my own business every month: Media Buyer agent, Finance agent, Writer agent, COO agent and more, plus a live call with me every week.
+
+Doors are closed. They reopen mid-November 2026.
+
+I close entry routinely, on purpose, because I want to be sure I can properly serve everyone already inside before letting more people in. The next slots open in mid-November 2026, and the waitlist hears first.
+
+FULL NAME *
+YOUR EMAIL *
+WHATSAPP NUMBER (OPTIONAL)
+Join the waitlist
+
+You will be first to know when doors open in mid-November 2026.
+
+But if you want to build it yourself, keep reading. Everything you need for the first version is in this guide.
+
+You can also create unlimited Hermes agents. This means a multi-team of agents working on different things!
+
+So I did what any excited business owner would do. I started creating more agents for everything. I tried to replace a lot of roles in my marketing agency as an experiment... But that is when I made the mistake this entire next half of the guide is built on.

@@ -1,0 +1,25 @@
+Source: https://skool.twohourceo.com/living-brain/#ch9
+
+CHAPTER NINE
+One shared memory
+
+The fix was embarrassingly simple. I remembered a book I read many years ago: Building a Second Brain, by Tiago Forte.
+
+As someone with ADHD, I tend to be very forgetful. I would write down lots of notes, bookmark and save stuff on social media, only to never open it again. I was exploring a system that would help me remember everything.
+
+The book taught me a system called CODE. Capture, Organize, Distill, Express.
+
+Capture everything important into an inbox folder
+Organize it into Projects, Areas, Resources, Archives (aka PARA)
+Distill it into atomic notes (like taking a meeting transcript and distilling ten reusable points)
+Then use those points to Express new output (new scripts, new ideas, new plans)
+
+The system was simple. The execution was hard. I had to manually capture my own notes, then sit down once a week to organize and distill them before I could use them. Nahhh. My ADHD brain said doomscrolling was more fun.
+
+Then an idea hit me: what if I let my AI agents manage and use this second brain as our shared memory?
+
+One place where everything I know and my company knows lives. Every decision and why I made it. Every call, transcribed. Every client's history and quirks. Every number. Everything that worked and everything that flopped. Every agent reads from it before acting, and writes back into it after. The day it existed, the arms finally connected to a brain. The mess became an octopus. That is the day I became bionic.
+
+Now, the part that surprises everyone I show this to. That shared memory, the company brain, is not technology.
+
+It is just a folder.
