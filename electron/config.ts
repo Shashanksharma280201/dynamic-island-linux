@@ -72,6 +72,8 @@ export type Config = {
   brain: BrainConfig
   /** The desktop background the island set, live wallpaper options and your photo-site keys. */
   wallpaper: WallpaperConfig
+  /** Light or dark for Settings: following the desktop, or always one. */
+  theme: 'system' | 'light' | 'dark'
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -140,6 +142,7 @@ const DEFAULTS: Config = {
   packages: parsePackages(null),
   brain: parseBrainConfig(null),
   wallpaper: parseWallpaperConfig(null),
+  theme: 'system',
 }
 
 function server(raw: any): ServerConfig | null {
@@ -178,6 +181,7 @@ export function mergeConfig(raw: unknown): Config {
   c.packages = parsePackages(r.packages)
   c.brain = parseBrainConfig(r.brain)
   c.wallpaper = parseWallpaperConfig(r.wallpaper)
+  if (r.theme === 'system' || r.theme === 'light' || r.theme === 'dark') c.theme = r.theme
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

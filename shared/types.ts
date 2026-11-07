@@ -367,6 +367,9 @@ export type SettingsState = {
   brain: BrainView
   /** The desktop background (Settings → Wallpaper). */
   wallpaper: WallpaperView
+  /** Light or dark for Settings, and whether it's dark now. */
+  theme: 'system' | 'light' | 'dark'
+  dark: boolean
 }
 
 export type ClaudeSettings = {

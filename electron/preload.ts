@@ -361,6 +361,7 @@ const settings = {
   setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
+  setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
   setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),

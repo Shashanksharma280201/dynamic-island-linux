@@ -124,6 +124,7 @@ import { LiveWallpaper } from './wallpaper/live'
 import { DesktopBackground } from './wallpaper/desktop'
 import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
+import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
 
 const WAYLAND = process.env.XDG_SESSION_TYPE === 'wayland'
@@ -204,6 +205,12 @@ async function main() {
   // Your own sounds (Settings → General → Sounds → Open Folder).
   let onSounds = () => {}
   const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
+  // ---- light or dark (Settings follows the desktop, or your choice) ----
+  const theme = new SystemTheme(
+    () => config.theme,
+    () => settings?.changed(),
+  )
+
   // ---- the desktop background (Settings → Wallpaper, or ask the assistant) ----
   const liveWall = new LiveWallpaper({
     pauseCovered: () => config.wallpaper.pauseCovered,
@@ -980,6 +987,12 @@ async function main() {
   settings = new SettingsController({
     brain: () => brain.view(),
     wallpaper: () => wallpapers.view(),
+    theme: () => ({ pref: config.theme, dark: theme.isDark() }),
+    setTheme: (pref) => {
+      config.theme = pref
+      saveConfig(config)
+      theme.apply()
+    },
     drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
     drop: dropStatus,
     setDrop: async (p) => {
@@ -1126,6 +1139,8 @@ async function main() {
   settings.wire()
   void spotify.start() // after Settings exists: it reports status there
   wireBrain(brain)
+  // After Settings exists: following the desktop's style tells it.
+  theme.start()
   wireWallpaper(wallpapers, {
     setOptions: (patch) => {
       config.wallpaper = { ...config.wallpaper, ...patch }
@@ -1624,6 +1639,7 @@ async function main() {
     globalShortcut.unregisterAll()
     brain.stop()
     liveWall.stop()
+    theme.stop()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()

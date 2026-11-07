@@ -142,6 +142,7 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('Reset puts the default back', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+Space")'))
 
     // ---- Which display ----
+    await settings.click('.side-item[data-section="general"]')
     check('Settings offers where the island lives', (await settings.$$eval('#general select.display-select option', (o) => o.map((x) => x.value))).join() === 'primary,cursor')
     await settings.selectOption('#general select.display-select', 'cursor')
     check('"the display with the pointer" is saved', await (async () => {
@@ -192,6 +193,7 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('and the island is yours again', (await gone(page, '.tour-bar')) && (await seen(page, '.capsule.idle')))
 
     // ---- The desktop companion ----
+    await settings.click('.side-item[data-section="character"]')
     await settings.click('#character .toggle-row:has-text("On your desktop too") input.switch')
     const buddy = await (async () => {
       for (let i = 0; i < 50; i++) {
@@ -237,6 +239,7 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     })())
 
     // ---- Open on hover ----
+    await settings.click('.side-item[data-section="general"]')
     await settings.click('.toggle-row:has-text("Open the panel when the pointer rests on the island") input.switch')
     check('"Open on hover" is saved', await (async () => {
       for (let i = 0; i < 30; i++) {

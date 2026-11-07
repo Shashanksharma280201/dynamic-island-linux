@@ -113,7 +113,7 @@ const lastSet = () => gsLog().split('\n').filter((l) => l.startsWith('set org.gn
     await page.evaluate(() => window.island.openSettings('wallpaper'))
     const settings = await until(() => app.windows().find((p) => p.url().includes('settings.html')), 8000)
     await settings.waitForSelector('#wallpaper', { timeout: 8000 })
-    await settings.setViewportSize({ width: 680, height: 1500 }).catch(() => {})
+    await settings.setViewportSize({ width: 900, height: 1500 }).catch(() => {})
     await settings.evaluate(() => document.getElementById('wallpaper')?.scrollIntoView())
     check('Settings has a Wallpaper section, the desktop’s own to start', await seen(settings, '#wallpaper .wall-now:has-text("Your desktop’s own background")'))
 
@@ -126,7 +126,11 @@ const lastSet = () => gsLog().split('\n').filter((l) => l.startsWith('set org.gn
     const photoSet = await until(() => /picture-uri file:\/\/.*misty-mountains-at-dawn-[0-9a-f]{8}\.jpg/.test(lastSet()) && lastSet())
     check('choosing one downloads it and sets it as the GNOME background', !!photoSet, lastSet())
     check('also for dark style', /picture-uri-dark file:\/\/.*misty/.test(gsLog()))
-    check('the original was read first, to put back', gsLog().split('\n')[0] === 'get org.gnome.desktop.background picture-uri')
+    {
+      const lines = gsLog().split('\n')
+      const read = lines.indexOf('get org.gnome.desktop.background picture-uri')
+      check('the original was read first, to put back', read >= 0 && read < lines.findIndex((l) => l.startsWith('set org.gnome.desktop.background')))
+    }
     check('the file is in the wallpapers folder', fs.readdirSync(WALLS).some((f) => /^misty-mountains-at-dawn-.*\.jpg$/.test(f)))
     check('Settings shows what’s on, with credit', await seen(settings, '#wallpaper .wall-now:has-text("by Ana on Openverse")'))
 

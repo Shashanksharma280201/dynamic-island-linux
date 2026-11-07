@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
 import { CharacterSection } from './CharacterSection'
@@ -13,6 +13,7 @@ import { DragSection } from './DragSection'
 import { BrainSection } from './BrainSection'
 import { YouSection } from './YouSection'
 import { WallpaperSection } from './WallpaperSection'
+import { SIDE_ICONS } from './SideIcons'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -296,10 +297,54 @@ function WhatsAppStatus({ s }: { s: WaState }) {
   }
 }
 
+/** The sidebar: its groups and sections, in order (some only when they apply). */
+const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[][] = [
+  [
+    { id: 'you', label: 'You', when: (s) => s.brain.exists },
+    { id: 'brain', label: 'Second brain' },
+    { id: 'wallpaper', label: 'Wallpaper' },
+  ],
+  [
+    { id: 'character', label: 'Character' },
+    { id: 'ai', label: 'AI' },
+    { id: 'packages', label: 'Packages' },
+  ],
+  [
+    { id: 'general', label: 'General' },
+    { id: 'shortcuts', label: 'Keyboard shortcuts' },
+    { id: 'drag', label: 'Drag actions' },
+    { id: 'drop', label: 'Phone Drop' },
+  ],
+  [
+    { id: 'claude', label: 'Claude Code', when: (s) => !!s.claude },
+    { id: 'connected', label: 'Connected' },
+    { id: 'services', label: 'Services' },
+    { id: 'spotify', label: 'Spotify', when: (s) => !!s.spotify },
+    { id: 'notes', label: 'Notes' },
+    { id: 'whatsapp', label: 'WhatsApp' },
+    { id: 'mail', label: 'Mail' },
+  ],
+]
+
+/** The rows a search can light up inside a section. */
+const ROWS = '.toggle-row, .row, .package-row, .service-row, .brain-tool, .brain-item, .wall-block, .wall-now, .me-editor, .character-grid, .wardrobe-row, .slider-row, .range-row'
+
 export function Settings() {
   const [s, setS] = useState<SettingsState | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const general = useAction()
+  const [section, setSection] = useState(() => location.hash.slice(1))
+  const [query, setQuery] = useState('')
+  const [matches, setMatches] = useState<string[] | null>(null)
+  const paneRef = useRef<HTMLElement | null>(null)
+  useEffect(() => {
+    const on = () => {
+      setSection(location.hash.slice(1))
+      setQuery('')
+    }
+    addEventListener('hashchange', on)
+    return () => removeEventListener('hashchange', on)
+  }, [])
 
   useEffect(() => {
     if (!window.settings) return setLoadError('The settings bridge is missing.')
@@ -320,17 +365,67 @@ export function Settings() {
     }
   }, [])
 
+  const items = useMemo(() => (s ? NAV.map((g) => g.filter((it) => !it.when || it.when(s))) : []), [s])
+  const ids = items.flat().map((it) => it.id)
+  const current = ids.includes(section) ? section : (ids[0] ?? '')
+  // Searching: the sections (and rows) whose words match.
   useEffect(() => {
-    const id = location.hash.slice(1)
-    if (id && s) document.getElementById(id)?.scrollIntoView()
-  }, [s !== null])
+    const pane = paneRef.current
+    pane?.querySelectorAll('.hit').forEach((e) => e.classList.remove('hit'))
+    const q = query.trim().toLowerCase()
+    if (!q || !pane) return setMatches(null)
+    const found = ids.filter((id) => document.getElementById(id)?.textContent?.toLowerCase().includes(q))
+    setMatches(found)
+    for (const id of found) {
+      document.getElementById(id)?.querySelectorAll<HTMLElement>(ROWS).forEach((r) => {
+        if (r.textContent?.toLowerCase().includes(q) && !r.querySelector('.hit')) r.classList.add('hit')
+      })
+    }
+  }, [query, s]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => paneRef.current?.scrollTo(0, 0), [current])
+  // Light or dark, as the island says (it follows the desktop, or your choice).
+  useEffect(() => {
+    if (s) document.documentElement.dataset.theme = s.dark ? 'dark' : 'light'
+  }, [s?.dark]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loadError) return <SettingsProblem detail={loadError} />
   if (!s) return <main>Loading…</main>
 
+  const shown = matches ?? [current]
+  const go = (id: string) => {
+    if (location.hash.slice(1) === id) {
+      setSection(id)
+      setQuery('')
+    } else location.hash = id
+  }
   return (
-    <main>
-      <h1>Dynamic Island</h1>
+    <div className="settings-app">
+      <aside className="side" aria-label="Settings sections">
+        <div className="side-search">
+          <input type="search" placeholder="Search" aria-label="Search settings" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={(e) => e.key === 'Escape' && setQuery('')} />
+        </div>
+        <nav>
+          {items.map((group, i) =>
+            group.filter((it) => !matches || matches.includes(it.id)).length ? (
+              <div className="side-group" key={i}>
+                {group
+                  .filter((it) => !matches || matches.includes(it.id))
+                  .map((it) => (
+                    <button key={it.id} className={`side-item${!matches && it.id === current ? ' on' : ''}`} data-section={it.id} aria-current={!matches && it.id === current ? 'page' : undefined} onClick={() => go(it.id)}>
+                      <span className="side-icon">{SIDE_ICONS[it.id]}</span>
+                      <span className="ellipsis">{it.label}</span>
+                    </button>
+                  ))}
+              </div>
+            ) : null,
+          )}
+          {matches && !matches.length && <div className="side-empty">No results</div>}
+        </nav>
+      </aside>
+      <main ref={paneRef}>
+      {/* One pane at a time (or every match while searching). */}
+      <style>{shown.length ? `main > section:not(${shown.map((id) => `#${id}`).join(', ')}) { display: none; }` : 'main > section { display: none; }'}</style>
+      {matches && !matches.length && <div className="no-results">No settings match “{query}”.</div>}
 
       <YouSection s={s} />
       <BrainSection s={s} />
@@ -346,6 +441,23 @@ export function Settings() {
           on={s.notifications}
           onChange={(v) => general.run(() => window.settings.setNotifications(v))}
         />
+        <div className="toggle-row">
+          <div>
+            <div>Light or dark</div>
+            <div className="hint">
+              For this window. {s.theme === 'system' ? `Following your desktop: ${s.dark ? 'dark' : 'light'} now.` : 'The island itself stays dark, like the notch it’s named after.'}
+            </div>
+          </div>
+          <Segmented
+            value={s.theme}
+            options={[
+              { value: 'system', label: 'Auto' },
+              { value: 'light', label: 'Light' },
+              { value: 'dark', label: 'Dark' },
+            ]}
+            onChange={(v) => general.run(() => window.settings.setTheme(v))}
+          />
+        </div>
         <div className="toggle-row">
           <div>
             <div>Appearance</div>
@@ -555,6 +667,7 @@ export function Settings() {
         )}
         <MailSection accounts={s.mail} />
       </section>
-    </main>
+      </main>
+    </div>
   )
 }

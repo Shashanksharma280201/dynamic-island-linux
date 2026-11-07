@@ -4,7 +4,7 @@
  */
 import { useId, type ReactNode } from 'react'
 
-function Tile({ from, to, children, round = false, size = 28 }: { from: string; to: string; children: ReactNode; round?: boolean; size?: number }) {
+export function Tile({ from, to, children, round = false, size = 28 }: { from: string; to: string; children: ReactNode; round?: boolean; size?: number }) {
   const id = useId()
   return (
     <svg className="app-icon" width={size} height={size} viewBox="0 0 28 28" aria-hidden>

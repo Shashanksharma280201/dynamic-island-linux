@@ -6,6 +6,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**A look closer to macOS**
+
+- **The icon rail works like the Dock**: icons grow under the pointer (their
+  neighbours a little), show their name beside them, bounce when their count
+  goes up, and a dot marks what's running (music playing, Claude working,
+  sessions, a connected service). Reduced motion turns the movement off.
+- **Control Center** is laid out like macOS: Wi-Fi and Bluetooth in one
+  module, Do Not Disturb and a Wallpaper tile beside it, the sliders below.
+- **Banners** put the app's icon large on the left with the words beside it;
+  the close button shows on hover.
+- **Settings is laid out like System Settings**: a sidebar with coloured
+  icons in groups, one pane at a time, and a search field that finds any
+  setting by its name and takes you to it.
+- **Light and dark**: Settings follows Ubuntu's own style (Settings →
+  Appearance → Style) as it changes, or stays Light or Dark (Settings →
+  General → Light or dark).
+
 **Wallpaper by asking**
 
 - Ask the assistant (typed or spoken): “set my background to misty mountains

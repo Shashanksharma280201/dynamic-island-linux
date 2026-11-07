@@ -50,6 +50,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     packages: { disabled: [] },
     brain: { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: 47823, since: 0 },
     wallpaper: { current: null, pauseCovered: true, pauseBattery: true, keys: { pexels: '', unsplash: '', pixabay: '' }, original: '' },
+    theme: 'system',
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
   }
   expect(mergeConfig(null)).toEqual(d)

@@ -1,21 +1,93 @@
 @import '@fontsource-variable/inter';
 
-/* Apple System Settings, dark: grouped inset lists, iOS switches. */
+/* macOS System Settings: a sidebar of sections with coloured icons and a
+   search field, one pane at a time, grouped rounded lists. Light and dark
+   follow the desktop (or Settings → General). */
 :root {
-  color-scheme: dark;
-  --bg: #1c1c1e;
-  --group: #2c2c2e;
-  --field: #1c1c1e;
-  --separator: rgba(84, 84, 88, 0.6);
-  --text: rgba(255, 255, 255, 0.96);
-  --muted: rgba(235, 235, 245, 0.6);
-  --blue: #0a84ff;
-  --green: #30d158;
-  --red: #ff453a;
-  --fill: rgba(120, 120, 128, 0.32);
+  color-scheme: light;
+  --bg: #f5f5f7;
+  --side: #e8e8eb;
+  --group: #ffffff;
+  --field: #ffffff;
+  --separator: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 0, 0, 0.12);
+  --text: rgba(0, 0, 0, 0.87);
+  --muted: rgba(60, 60, 67, 0.64);
+  --blue: #007aff;
+  --green: #34c759;
+  --red: #ff3b30;
+  --fill: rgba(120, 120, 128, 0.18);
+  --tint: rgba(0, 0, 0, 0.035);
+  --tint-2: rgba(0, 0, 0, 0.06);
+  --hover: rgba(0, 0, 0, 0.05);
+  --seg-on: #ffffff;
+  --red-text: #d70015;
+  --green-text: #248a3d;
+  --orange-text: #c93400;
+  --warn-text: #9a5b00;
+  --group-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.08);
+  --hit: rgba(255, 204, 0, 0.55);
+}
+/* Dark: as the desktop or Settings → General says (set on <html> by the page), else the system's. */
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #1e1e20;
+    --side: #28282b;
+    --group: rgba(255, 255, 255, 0.05);
+    --field: rgba(255, 255, 255, 0.06);
+    --separator: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: rgba(255, 255, 255, 0.93);
+    --muted: rgba(235, 235, 245, 0.6);
+    --blue: #0a84ff;
+    --green: #30d158;
+    --red: #ff453a;
+    --fill: rgba(120, 120, 128, 0.32);
+    --tint: rgba(255, 255, 255, 0.04);
+    --tint-2: rgba(255, 255, 255, 0.08);
+    --hover: rgba(255, 255, 255, 0.06);
+    --seg-on: #636366;
+    --red-text: #ff6961;
+    --green-text: #30d158;
+    --orange-text: #ffb340;
+    --warn-text: #ffd60a;
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    --hit: rgba(255, 214, 10, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #1e1e20;
+    --side: #28282b;
+    --group: rgba(255, 255, 255, 0.05);
+    --field: rgba(255, 255, 255, 0.06);
+    --separator: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: rgba(255, 255, 255, 0.93);
+    --muted: rgba(235, 235, 245, 0.6);
+    --blue: #0a84ff;
+    --green: #30d158;
+    --red: #ff453a;
+    --fill: rgba(120, 120, 128, 0.32);
+    --tint: rgba(255, 255, 255, 0.04);
+    --tint-2: rgba(255, 255, 255, 0.08);
+    --hover: rgba(255, 255, 255, 0.06);
+    --seg-on: #636366;
+    --red-text: #ff6961;
+    --green-text: #30d158;
+    --orange-text: #ffb340;
+    --warn-text: #ffd60a;
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    --hit: rgba(255, 214, 10, 0.5);
+  }
 }
 * {
   box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
 }
 body {
   margin: 0;
@@ -25,34 +97,105 @@ body {
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.005em;
 }
-main {
-  max-width: 620px;
-  margin: 0 auto;
-  padding: 28px 22px 44px;
+
+/* The window: sidebar and pane. */
+.settings-app {
+  display: flex;
+  height: 100%;
 }
-h1 {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 20px;
+.side {
+  width: 228px;
+  flex: none;
+  background: var(--side);
+  border-right: 0.5px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-/* Section header sits above its group, like iOS. */
-h2 {
-  font-size: 12px;
+.side-search {
+  padding: 14px 12px 8px;
+}
+.side-search input[type='search'] {
+  width: 100%;
+  padding: 6px 10px 6px 28px;
+  border-radius: 8px;
+  background: var(--tint-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='M11 11l3.5 3.5'/%3E%3C/svg%3E") 9px center no-repeat;
+  border: 0.5px solid transparent;
+}
+.side nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 10px 16px;
+}
+.side-group + .side-group {
+  margin-top: 14px;
+}
+button.side-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 8px;
+  margin: 1px 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 13px;
+  text-align: left;
+  transform: none;
+}
+button.side-item:hover:not(.on) {
+  filter: none;
+  background: var(--hover);
+}
+button.side-item.on {
+  background: var(--blue);
+  color: #fff;
+}
+.side-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: inline-flex;
+}
+.side-icon svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.18));
+}
+.side-empty {
+  padding: 10px 8px;
   color: var(--muted);
-  margin: 0 0 6px 14px;
+}
+
+main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 28px 44px;
+}
+main > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* The pane's title: the section's own heading. */
+section > h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin: 0 0 14px 2px;
 }
 section {
-  margin-bottom: 24px;
+  margin-bottom: 30px;
 }
 section > h2 + * {
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
 }
-/* Everything after the header forms one rounded group of rows. */
+/* Everything after the heading forms one rounded group of rows. */
 section > :not(h2) {
   background: var(--group);
   padding: 11px 14px;
@@ -63,14 +206,17 @@ section > :not(h2):not(:last-child)::after {
   content: '';
   position: absolute;
   left: 14px;
-  right: 0;
+  right: 14px;
   bottom: 0;
   height: 0.5px;
   background: var(--separator);
 }
 section > :last-child {
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+section > h2 ~ :not(h2) {
+  box-shadow: var(--group-shadow);
 }
 .toggle-row {
   display: flex;
@@ -95,6 +241,17 @@ section > :last-child {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+/* A search match, glowing like System Settings' results. */
+.hit {
+  box-shadow: inset 0 0 0 2px var(--hit) !important;
+  border-radius: 8px;
+}
+.no-results {
+  text-align: center;
+  color: var(--muted);
+  padding: 60px 0;
+  font-size: 14px;
 }
 
 /* iOS switch */
@@ -148,8 +305,8 @@ input.switch:checked::after {
   cursor: pointer;
 }
 .segmented button.on {
-  background: #636366;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background: var(--seg-on);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Fields and buttons */
@@ -164,7 +321,7 @@ input:not([type='checkbox']) {
   min-width: 0;
 }
 input:not([type='checkbox']):focus {
-  outline: 3px solid rgba(10, 132, 255, 0.5);
+  outline: 3px solid color-mix(in srgb, var(--blue) 45%, transparent);
   outline-offset: 0;
   border-color: var(--blue);
 }
@@ -190,20 +347,20 @@ button.secondary {
   color: var(--text);
 }
 button.danger {
-  background: rgba(255, 69, 58, 0.18);
-  color: #ff6961;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red-text);
 }
 button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 .error {
-  color: #ff6961;
+  color: var(--red-text);
   font-size: 12.5px;
   margin: 0;
 }
 .warn {
-  color: #ffd60a;
+  color: var(--warn-text);
   font-size: 12.5px;
   margin: 0;
 }
@@ -309,7 +466,7 @@ section > button.row-button:last-child {
 }
 section > button.row-button:hover {
   filter: none;
-  background: #3a3a3c;
+  background: var(--hover);
 }
 ol.hint.steps {
   margin: 0;
@@ -317,7 +474,7 @@ ol.hint.steps {
   line-height: 1.6;
 }
 ol.hint.steps code {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-2);
   border-radius: 4px;
   padding: 1px 5px;
   color: var(--text);
@@ -346,17 +503,17 @@ button.link {
   padding: 12px 6px 10px;
   border-radius: 12px;
   border: 1.5px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint);
   color: inherit;
   font: inherit;
   cursor: pointer;
 }
 .character-tile:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-2);
 }
 .character-tile.on {
-  border-color: var(--accent, #0a84ff);
-  background: rgba(10, 132, 255, 0.12);
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 .character-tile b {
   margin-top: 6px;
@@ -388,8 +545,8 @@ select.display-select {
   padding: 1px 7px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(48, 209, 88, 0.18);
-  color: #30d158;
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green-text);
 }
 
 /* Packages */
@@ -423,12 +580,12 @@ select.display-select {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tint-2);
   color: var(--muted);
 }
 .package-tool.asks {
   background: rgba(255, 159, 10, 0.14);
-  color: #ffb340;
+  color: var(--orange-text);
 }
 .package-row .switch {
   margin-top: 4px;
@@ -454,7 +611,7 @@ button.key-recorder {
 button.key-recorder.recording {
   border-color: var(--blue);
   color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent);
 }
 button.link {
   background: none;
@@ -463,7 +620,7 @@ button.link {
   font-weight: 500;
 }
 .error-text {
-  color: #ff6961;
+  color: var(--red-text);
 }
 /* Character → outfit and colour. */
 .wardrobe-row {
@@ -491,7 +648,7 @@ button.link {
 }
 .wardrobe-item.on {
   border-color: var(--blue);
-  background: rgba(10, 132, 255, 0.14);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 .swatches {
   display: flex;
@@ -503,7 +660,7 @@ button.link {
   height: 26px;
   padding: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--border);
 }
 .swatch.own {
   background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
@@ -533,7 +690,7 @@ button.link {
   color: var(--green);
 }
 .service-status.bad {
-  color: #ff6961;
+  color: var(--red-text);
 }
 .svc-swatch {
   display: inline-block;
@@ -723,7 +880,7 @@ pre.brief {
   border-radius: 8px;
   overflow: hidden;
   background: var(--field);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 0.5px var(--border);
 }
 .wall-preview.big {
   width: 168px;
@@ -813,4 +970,10 @@ button.wall-tile:disabled {
 #wallpaper .wall-now button {
   white-space: nowrap;
   flex-shrink: 0;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }

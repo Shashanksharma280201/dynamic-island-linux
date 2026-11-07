@@ -98,6 +98,9 @@ type Deps = {
   brain: () => BrainView
   /** The desktop background, for Settings → Wallpaper. */
   wallpaper: () => WallpaperView
+  /** Light or dark: as you set it, and whether it's dark now. */
+  theme: () => { pref: 'system' | 'light' | 'dark'; dark: boolean }
+  setTheme: (pref: 'system' | 'light' | 'dark') => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -115,6 +118,8 @@ export class SettingsController {
       agentHooks: agentHooks(),
       brain: this.d.brain(),
       wallpaper: this.d.wallpaper(),
+      theme: this.d.theme().pref,
+      dark: this.d.theme().dark,
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -184,18 +189,19 @@ export class SettingsController {
   open(section?: string): void {
     if (this.win && !this.win.isDestroyed()) {
       // Already open: just go to the section asked for.
-      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(section)})?.scrollIntoView({ behavior: 'smooth' })`)
+      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`location.hash = ${JSON.stringify(section)}`)
       this.win.show()
       this.win.focus()
       return
     }
+    // Like macOS System Settings: a sidebar of sections beside one pane.
     this.win = new BrowserWindow({
-      width: 620,
-      height: 760,
-      minWidth: 480,
+      width: 900,
+      height: 700,
+      minWidth: 720,
       minHeight: 480,
       title: 'Dynamic Island Settings',
-      backgroundColor: '#15171c',
+      backgroundColor: this.d.theme().dark ? '#1e1e20' : '#f2f2f5',
       autoHideMenuBar: true,
       webPreferences: {
         preload: resolve(here, '../preload/preload.mjs'),
@@ -452,6 +458,10 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.SET_DOCK_SIDE, (_e, side) => {
       if (side === 'left' || side === 'right' || side === 'top') this.d.onDockSide(side)
+    })
+    ipcMain.handle(SETTINGS.SET_THEME, (_e, pref) => {
+      if (pref === 'system' || pref === 'light' || pref === 'dark') this.d.setTheme(pref)
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_HOOK, async (_e, on) => {
       await setHookInstalled(on === true)

@@ -49,4 +49,5 @@ export const SETTINGS = {
   SET_AI_KEY: 'settings:set-ai-key', // (provider, key | ''): '' removes it
   SET_PACKAGE: 'settings:set-package', // (id, on)
   AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
+  SET_THEME: 'settings:set-theme', // 'system' | 'light' | 'dark'
 } as const

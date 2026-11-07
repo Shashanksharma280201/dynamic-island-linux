@@ -115,12 +115,12 @@ function runHook(cmd, input) {
     await page.evaluate(() => window.island.openSettings('brain'))
     const settings = await until(() => app.windows().find((p) => p.url().includes('settings.html')), 8000)
     await settings.waitForSelector('#brain', { timeout: 8000 })
-    await settings.setViewportSize({ width: 680, height: 1600 }).catch(() => {})
+    await settings.setViewportSize({ width: 900, height: 1600 }).catch(() => {})
 
     // ---- make it ----
     check('Settings offers to make the brain', await seen(settings, '#brain button:has-text("Make my brain")'))
     await settings.click('#brain button:has-text("Make my brain")')
-    check('the You section appears once it exists', await seen(settings, '#you', 8000))
+    check('You appears in the sidebar once it exists', await seen(settings, '.side-item[data-section="you"]', 8000))
     check(
       'the vault has the Living Brain layout',
       ['00-me', '01-inbox', '02-projects', '07-world-model', '08-restricted', '09-sources', '_system'].every((d) => fs.existsSync(path.join(VAULT, d))) && read(path.join(VAULT, 'AGENTS.md')).includes('08-restricted'),
@@ -184,6 +184,7 @@ function runHook(cmd, input) {
     check('the brief lists the project', !!(await until(() => read(path.join(VAULT, '_system/brief.md')).includes('[[robot-arm]]'))))
 
     // ---- You ----
+    await settings.click('.side-item[data-section="you"]')
     await settings.click('#you [data-me="profile.md"] button:has-text("Edit")')
     await settings.waitForSelector('#you .me-editor textarea')
     await settings.fill('#you .me-editor textarea', '# Profile\n\n- Name: Sam\n- What I do: robotics on ROS 2 Humble\n')
@@ -194,6 +195,7 @@ function runHook(cmd, input) {
     await settings.screenshot({ path: `${OUT}/brain-you.png` })
 
     // ---- disconnect ----
+    await settings.click('.side-item[data-section="brain"]')
     await settings.click('[data-tool="claude-code"] input.switch')
     const undone = await until(() => !JSON.parse(read(path.join(CLAUDE_DIR, '.claude.json')) || '{}').mcpServers?.brain)
     const after = JSON.parse(read(path.join(CLAUDE_DIR, 'settings.json')) || '{}')
