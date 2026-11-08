@@ -1,3 +1,4 @@
+import type { Activity } from '@shared/intake'
 import { MeaningIndex, type Embedder } from './meaning'
 import type { MeaningView } from '@shared/meaning'
 import { Loop } from './loop'
@@ -11,6 +12,8 @@ import {
   INBOX,
   ME_FILES,
   SYSTEM,
+  RESTRICTED,
+  SOURCES,
   formatNote,
   noteTitle,
   parseNote,
@@ -27,7 +30,7 @@ import {
 } from '@shared/brain'
 import { IslandMcp } from '../agent/mcpServer'
 import type { AgentTool } from '../agent/tools'
-import { BrainIndex } from './search'
+import { BrainIndex, type Hit } from './search'
 import { buildBrief, filledIn, projectNames, projectSummary } from './brief'
 import { SessionCapture, QUEUE } from './capture'
 import { mineHistory } from './mine'
@@ -56,6 +59,8 @@ export type BrainDeps = {
   writer: () => { label: string; ask: (prompt: string, purpose?: string, job?: string) => Promise<string> } | null
   /** The morning card changed (the island shows it). */
   onCard?: (c: MorningCard | null) => void
+  /** What you did (Settings › Sources), for the evening's Your activity job and the morning card. */
+  activity?: () => { on: boolean; all: () => Activity[]; dropDays: (days: string[]) => void; today: () => string[] } | null
   /** One of the loop's jobs ran. */
   onJob?: (label: string, ok: boolean, note: string) => void
   /** The model for search by meaning, when it's on and ready; and how it's doing. */
@@ -183,6 +188,7 @@ export class Brain {
       onChange: () => this.changedSoon(),
       onRan: (label, ok, note) => this.d.onJob?.(label, ok, note),
       messages: () => ({ on: this.d.config().whatsapp || this.d.config().mail, all: () => this.messages().all(), dropDays: (d) => this.messages().dropDays(d) }),
+      activity: () => this.d.activity?.() ?? null,
       now: this.d.now,
     })
     this.loop.start()
@@ -326,6 +332,27 @@ export class Brain {
   quickSearch(q: string, n = 5): { path: string; title: string; sub: string }[] {
     if (!this.index || !this.running()) return []
     return this.index.search(q, { limit: n }).map((h) => ({ path: h.path, title: h.title, sub: h.snippet.replace(/\s+/g, ' ').slice(0, 90) || h.path }))
+  }
+
+  /** Notes that fit a question (keyword search), for answers with sources; never the restricted folder. */
+  recall(q: string, n = 10): Hit[] {
+    if (!this.index || !this.running()) return []
+    return this.index.search(q, { limit: n + 4 }).filter((h) => !h.path.startsWith(RESTRICTED) && !h.path.startsWith(`${SYSTEM}/`)).slice(0, n)
+  }
+
+  /** Notes written or changed between two times (for the timeline): not sources, not the brain's own files. */
+  notesBetween(from: number, to: number): { path: string; title: string; at: number }[] {
+    if (!this.index || !this.running()) return []
+    return this.index
+      .entries()
+      .filter((e) => e.mtime >= from && e.mtime < to && !e.path.startsWith(RESTRICTED) && !e.path.startsWith(`${SYSTEM}/`) && !e.path.startsWith(`${SOURCES}/`))
+      .map((e) => ({ path: e.path, title: e.path.split('/').pop()!.replace(/\.md$/, '').replace(/[-_]/g, ' '), at: e.mtime }))
+      .slice(0, 200)
+  }
+
+  /** Messages waiting to be filed (WhatsApp and mail you turned on), for the timeline and answers. */
+  keptMessages(): CapturedMessage[] {
+    return this.running() ? this.messages().all() : []
   }
 
   /** The brief for the island's own assistant ('' when the brain is off). */

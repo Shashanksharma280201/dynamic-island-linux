@@ -7,7 +7,7 @@ export const OS = {
   CHANGED: 'os:changed', // main -> island: something Island OS shows changed (a topic)
 } as const
 
-export type OsRoutes = Record<OsCall, (...args: any[]) => unknown>
+export type OsRoutes = Partial<Record<OsCall, (...args: any[]) => unknown>>
 
 /**
  * One handler for every Island OS call: only from the island's or Settings'

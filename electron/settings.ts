@@ -132,6 +132,8 @@ type Deps = {
 /** Settings window + the IPC it uses. */
 export class SettingsController {
   private win: BrowserWindow | null = null
+  /** Each state is numbered, so Settings never shows an older one after a newer (pushes can arrive out of order). */
+  private seq = 0
 
   constructor(private d: Deps) {}
 
@@ -143,6 +145,7 @@ export class SettingsController {
   state(): SettingsState {
     const { config, mail, whatsapp, whatsappCapable } = this.d
     return {
+      seq: ++this.seq,
       notifications: config.notifications,
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),

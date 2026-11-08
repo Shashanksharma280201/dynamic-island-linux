@@ -61,6 +61,15 @@ export const ClaudeAppIcon = () => {
 }
 
 /** Sessions: a terminal prompt on dark slate, with Claude's orange cursor. */
+/** Today: a sun over a short timeline. */
+export const TodayAppIcon = () => (
+  <Tile from="#ffcc00" to="#ff9500">
+    <circle cx="14" cy="11" r="3.6" fill="#fff" />
+    <path d="M14 4.6v1.6M8.6 7l1.1 1.1M19.4 7l-1.1 1.1M6.8 11.6h1.6M19.6 11.6h1.6" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M8 18.5h12M8 21.5h8" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+  </Tile>
+)
+
 export const SessionsAppIcon = () => (
   <Tile from="#3a3a3c" to="#1c1c1e">
     <path d="m8 10 4 4-4 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />

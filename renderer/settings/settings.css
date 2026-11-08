@@ -1176,3 +1176,27 @@ button.small {
 .model-job {
   justify-content: space-between;
 }
+
+/* Sources */
+.source-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.source-status {
+  margin-top: 3px;
+}
+.source-row.failed .source-status {
+  color: #ff453a;
+}
+.source-calendar input,
+.source-skip input {
+  width: 240px;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}

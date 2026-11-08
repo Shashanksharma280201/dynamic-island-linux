@@ -19,6 +19,7 @@ import { YouSection } from './YouSection'
 import { WallpaperSection } from './WallpaperSection'
 import { SIDE_ICONS } from './SideIcons'
 import { ModelSection } from './ModelSection'
+import { SourcesSection } from './SourcesSection'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -307,6 +308,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
   [
     { id: 'you', label: 'You', when: (s) => s.brain.exists },
     { id: 'brain', label: 'Second brain' },
+    { id: 'sources', label: 'Sources' },
     { id: 'buddy', label: 'Buddy' },
     { id: 'wallpaper', label: 'Wallpaper' },
   ],
@@ -338,6 +340,11 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
 /** The rows a search can light up inside a section. */
 const ROWS = '.toggle-row, .row, .privacy-row, .package-row, .service-row, .brain-tool, .brain-item, .wall-block, .wall-now, .me-editor, .character-grid, .wardrobe-row, .slider-row, .range-row'
 
+/** The newer of two states: a push can arrive after a later one, and must not undo it. Pure. */
+export function newer(prev: SettingsState | null, next: SettingsState): SettingsState {
+  return !prev || !(next.seq < prev.seq) ? next : prev
+}
+
 export function Settings() {
   const [s, setS] = useState<SettingsState | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -362,12 +369,12 @@ export function Settings() {
     const load = (n: number) =>
       window.settings
         .get()
-        .then((v) => live && setS(v))
+        .then((v) => live && setS((prev) => newer(prev, v)))
         .catch((e) =>
           n > 0 ? setTimeout(() => live && load(n - 1), 700) : live && setLoadError(String(e?.message ?? e)),
         )
     load(10)
-    const off = window.settings.onChange(setS)
+    const off = window.settings.onChange((v) => setS((prev) => newer(prev, v)))
     return () => {
       live = false
       off()
@@ -444,6 +451,7 @@ export function Settings() {
 
       <YouSection s={s} />
       <BrainSection s={s} />
+      <SourcesSection s={s} />
       <WallpaperSection s={s} />
       <PrivacySection s={s} />
       <BuddySection s={s} />

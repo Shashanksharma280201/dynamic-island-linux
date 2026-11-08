@@ -318,6 +318,8 @@ export type MailAccountView = {
 export type InboxUnread = { chats: number | null; mail: number | null }
 
 export type SettingsState = {
+  /** Newer states have larger numbers (Settings keeps the newest it has seen). */
+  seq: number
   notifications: boolean
   autostart: boolean
   hookInstalled: boolean

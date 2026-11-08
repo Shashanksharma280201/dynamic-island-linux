@@ -19,11 +19,13 @@ import {
   NotesAppIcon,
   SettingsAppIcon,
   SpotifyAppIcon,
+  TodayAppIcon,
   WhatsAppIcon,
 } from './AppIcons'
 
 const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'controls', label: 'Controls', icon: <ControlsAppIcon /> },
+  { id: 'today', label: 'Today', icon: <TodayAppIcon /> },
   { id: 'alerts', label: 'Notifications', icon: <NotificationsAppIcon /> },
   { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
   { id: 'sessions', label: 'Sessions', icon: <SessionsAppIcon /> },

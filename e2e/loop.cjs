@@ -76,7 +76,7 @@ const today = () => {
     await settings.evaluate(() => window.settings.setAiKey('anthropic', 'sk-ant-test-123'))
     const made = await settings.evaluate((v) => window.settings.brain.create(v), VAULT)
     check('a brain is made', made === null && fs.existsSync(path.join(VAULT, '_system')), String(made))
-    check('Settings lists the loop’s jobs, none run yet', !!(await until(async () => (await settings.$$('#brain .loop-job')).length === 6 && (await settings.$$('#brain .loop-dot.none')).length === 6)))
+    check('Settings lists the loop’s jobs, none run yet', !!(await until(async () => (await settings.$$('#brain .loop-job')).length === 7 && (await settings.$$('#brain .loop-dot.none')).length === 7)))
 
     // An inbox note about a person.
     fs.writeFileSync(path.join(VAULT, '01-inbox', `${today()}-asha.md`), `---\ntype: person\ndate: ${today()}\n---\n# Asha Rao\n\nRuns Globex.\n`)

@@ -1,3 +1,4 @@
+import { SOURCE_INFO, activityFact, activityNote, activityPath, type Activity, type SourceId } from '@shared/intake'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { DECISIONS, INBOX, LEDGERS, PROJECTS, SOURCES, dateOf, formatNote, noteTitle, parseNote } from '@shared/brain'
@@ -40,6 +41,8 @@ export type LoopDeps = {
   onChange: () => void
   /** Messages waiting to be kept (WhatsApp and mail you turned on), and whether any source is on. */
   messages?: () => { on: boolean; all: () => CapturedMessage[]; dropDays: (days: string[]) => void }
+  /** What you did (Settings › Sources), waiting to be kept, and today's calendar for the morning card. */
+  activity?: () => { on: boolean; all: () => Activity[]; dropDays: (days: string[]) => void; today: () => string[] } | null
   /** A job ran (for the evening digest). */
   onRan?: (label: string, ok: boolean, note: string) => void
   now?: () => number
@@ -313,6 +316,25 @@ export class Loop {
       return t ? `${messagesFact([...t.values()].flat())}.` : 'Kept the days it hadn’t yet.'
     },
 
+    activity: async (v) => {
+      const a = this.d.activity?.()
+      if (!a?.on) return 'Off: turn on a source in Settings › Sources.'
+      const all = a.all()
+      if (!all.length) return 'Nothing to keep yet.'
+      const today = dateOf(this.now())
+      const days = new Map<string, Map<SourceId, Activity[]>>()
+      for (const x of all) {
+        const d = dateOf(x.at)
+        const m = days.get(d) ?? new Map<SourceId, Activity[]>()
+        m.set(x.source, [...(m.get(x.source) ?? []), x])
+        days.set(d, m)
+      }
+      for (const [date, sources] of days) for (const [source, list] of sources) v.write(activityPath(source, date), activityNote(source, date, list), `${SOURCE_INFO[source].label.toLowerCase()} on ${date}`)
+      a.dropDays([...days.keys()].filter((d) => d < today))
+      const t = days.get(today)
+      return t ? `Today: ${activityFact([...t.values()].flat())}.` : 'Kept the days it hadn’t yet.'
+    },
+
     triage: async (v) => {
       const notes: InboxNote[] = v
         .list(INBOX)
@@ -377,6 +399,7 @@ export class Loop {
       const weeklies = v.list(`${SIGNALS}/weekly`).sort((a, b) => b.mtime - a.mtime)
       const decisions = v.list(DECISIONS).sort((a, b) => b.mtime - a.mtime).slice(0, 5).map((f) => f.path)
       const projects = this.projects(v).map((p) => p.name)
+      const cal = this.d.activity?.()?.today() ?? []
       const prompt = [
         'You are the user’s chief of staff. Pick the one thing they should do today and say why, in their own terms. If it is a message to someone, write the draft for them to send.',
         'Answer in exactly this shape:\nOne: <the one thing, one line>\nWhy: <one or two sentences>\nTo: <who and how, e.g. "Priya, by mail"; or none>\nDraft: <the draft, or nothing>',
@@ -387,6 +410,7 @@ export class Loop {
         weeklies[0] ? `This week:\n${parseNote(v.read(weeklies[0].path) ?? '').body.trim()}` : '',
         `Recent decisions: ${decisions.join(', ') || 'none'}`,
         `Projects: ${projects.join(', ') || 'none'}`,
+        cal.length ? `Today’s calendar:\n${cal.join('\n')}` : '',
       ]
         .filter(Boolean)
         .join('\n\n')

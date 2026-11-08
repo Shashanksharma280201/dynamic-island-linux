@@ -151,8 +151,12 @@ import { EVENING, MORNING } from './morningChannels'
 import { Digest } from './digest'
 import { Engine, type Cloud } from './engine'
 import { wireOs, type OsRoutes } from './osCalls'
+import { Intake } from './os/intake'
+import { SOURCE_IDS, eventLine, parseSourcesConfig, type SourceId, type SourcesView } from '../shared/intake'
+import { dateOf, SOURCES as SOURCES_DIR } from '../shared/brain'
 import { ENGINE_FEATURES, parseEngineConfig } from '../shared/engine'
-import type { EngineView } from '../shared/os'
+import type { EngineView, OsAnswer, TodayView } from '../shared/os'
+import { byHour, citedPrompt, fromActivity, messageEntries, pickSources, plainAnswer, readCites, timeRange, type Candidate, type TimelineEntry } from '../shared/memory'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
@@ -694,6 +698,52 @@ async function main() {
       },
     }
   }
+  // Island OS's intake: what you do, read by each source you turn on (Settings › Sources).
+  const intake = new Intake({
+    config: () => config.sources,
+    file: join(app.getPath('userData'), 'os-intake.json'),
+    home: homedir(),
+    frontWindow: process.platform === 'linux' && !!process.env.DISPLAY ? () => frontWindow() : undefined,
+    idleSeconds: () => (process.env.DI_IDLE_NEVER ? 0 : powerMonitor.getSystemIdleTime()),
+    privateWords: () => config.buddy.private,
+    onChange: () => settings?.changed(),
+  })
+  intake.start()
+  const todayEvents = () => {
+    const d0 = new Date()
+    d0.setHours(0, 0, 0, 0)
+    return intake.calendar(d0.getTime(), d0.getTime() + 86_400_000)
+  }
+  const sourcesView = (): SourcesView => ({
+    list: intake.status(),
+    calendar: config.sources.calendar,
+    skip: config.sources.skip,
+    filing: config.brain.on,
+    kept: { whatsapp: config.brain.whatsapp, mail: config.brain.mail, phone: config.brain.phone },
+    screenable: process.platform === 'linux' && !!process.env.DISPLAY,
+  })
+  Object.assign(osRoutes, {
+    'sources.view': () => sourcesView(),
+    'sources.set': async (patch: Record<string, unknown>) => {
+      const before = config.sources
+      const on = patch.on && typeof patch.on === 'object' ? { ...before.on, ...(patch.on as object) } : before.on
+      config.sources = parseSourcesConfig({ ...before, ...patch, on })
+      saveConfig(config)
+      for (const id of SOURCE_IDS) {
+        // Off: what it kept goes. On (or a new calendar): a first look now.
+        if (before.on[id] && !config.sources.on[id]) intake.clear(id)
+        else if (config.sources.on[id] && (!before.on[id] || (id === 'calendar' && before.calendar !== config.sources.calendar))) void intake.check(id)
+      }
+      settings?.changed()
+      return sourcesView()
+    },
+    'sources.check': async (id: string) => {
+      if (!(SOURCE_IDS as string[]).includes(id)) throw new Error('There’s no such source.')
+      if (id === 'screen') await intake.sampleScreen()
+      else await intake.check(id as SourceId)
+      return sourcesView()
+    },
+  } satisfies Partial<OsRoutes>)
   // Notes are written without an AI when there's none (or it's paused).
   const brainWriter = () => answerer('brain', 'You write short, plain notes for the user’s second brain.', SESSION_SUMMARY)
   const brain = new Brain({
@@ -713,6 +763,7 @@ async function main() {
     onChange: () => settings?.changed(),
     ownFolders: [writerDir],
     onCard: (c) => send(win, MORNING.CARD, c),
+    activity: () => ({ on: intake.anyOn(), all: () => intake.all(), dropDays: (d) => intake.dropDays(d), today: () => todayEvents().map(eventLine) }),
     // Each job's result waits for the evening digest.
     onJob: (label, ok, note) => announcerRef?.event({ key: `job:${label}`, kind: 'job', priority: 'low', line: ok ? `${label}: ${note}` : `${label} didn’t run. ${note.replace(/^Failed:\s*/, '')}` }),
     embed: embedder,
@@ -722,6 +773,61 @@ async function main() {
       void embedModel.ensure().then(() => brain.readForMeaning()).catch(() => {})
     },
   })
+  // ---- Island OS memory: the day by hour, and answers that say where each fact came from ----
+  const DAY_MS = 86_400_000
+  const dayStart = (t = Date.now()) => {
+    const d = new Date(t)
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  }
+  const timelineBetween = (from: number, to: number): TimelineEntry[] => [
+    ...intake.between(from, to).map(fromActivity),
+    ...messageEntries(brain.keptMessages().filter((m) => m.at >= from && m.at < to)),
+    ...brain.notesBetween(from, to).map((n) => ({ at: n.at, source: 'note', title: n.title, path: n.path })),
+  ]
+  const todayView = (): TodayView => {
+    const now = Date.now()
+    const from = dayStart(now)
+    return {
+      date: dateOf(now),
+      timeline: byHour(timelineBetween(from, now + 1)),
+      upcoming: intake
+        .calendar(now, from + 2 * DAY_MS)
+        .slice(0, 6)
+        .map((e) => ({ start: e.start, title: e.title, where: e.where, allDay: e.allDay })),
+      local: engine.status().found,
+      any: intake.anyOn() || config.brain.on,
+    }
+  }
+  const sourceKind = (path: string) => (path.startsWith(`${SOURCES_DIR}/`) ? path.split('/')[1] : 'note')
+  Object.assign(osRoutes, {
+    'today.view': () => todayView(),
+    'today.ask': async (q: string, o?: { prefer?: unknown; consent?: unknown }): Promise<OsAnswer> => {
+      const question = q.trim().slice(0, 500)
+      if (!question) return { ok: false, error: 'Ask something about your days.' }
+      const now = Date.now()
+      const range = timeRange(question, now) ?? { from: now - 14 * DAY_MS, to: now + 1 }
+      const cands: Candidate[] = [
+        ...brain.recall(question, 12).map((h) => ({ title: h.title, kind: sourceKind(h.path), text: h.snippet, path: h.path, at: h.date ? Date.parse(h.date) || undefined : undefined, score: 1 })),
+        ...timelineBetween(range.from, range.to).map((e) => ({ title: e.title, kind: e.source, text: [e.detail, e.project].filter(Boolean).join(' · '), at: e.at, url: e.url, path: e.path })),
+        ...intake.calendar(range.from, range.to).map((e) => ({ title: e.start > now ? `Upcoming: ${e.title}` : e.title, kind: 'calendar', text: eventLine(e), at: e.start })),
+      ]
+      const sources = pickSources(cands, question, now)
+      if (!sources.length) return { ok: false, error: 'Nothing in your sources matches that yet. Turn on more in Settings › Sources.' }
+      const cited = (text: string) => readCites(text, sources)
+      // No model at all: the sources themselves, listed.
+      if (!engine.available()) {
+        const r = cited(plainAnswer(question, sources, now))
+        return { ok: true, text: r.text, cites: r.cites, meta: { where: 'local', label: 'No model: your sources, listed', model: '', ms: 0, usage: null, cost: 0 } }
+      }
+      const p = citedPrompt(question, sources, now)
+      const prefer = o?.prefer === 'local' || o?.prefer === 'cloud' ? o.prefer : undefined
+      const r = await engine.ask({ feature: 'ask', system: p.system, prompt: p.prompt, purpose: 'your question and the notes and activity it found', interactive: true, prefer, consent: o?.consent === true })
+      if (!r.ok) return r
+      const c = cited(r.text)
+      return { ok: true, text: c.text, meta: r.meta, cites: c.cites }
+    },
+  } satisfies Partial<OsRoutes>)
   // The loop's jobs catch up when the computer wakes or you unlock it.
   powerMonitor.on('resume', () => void brain.jobs()?.tick())
   powerMonitor.on('unlock-screen', () => void brain.jobs()?.tick())
@@ -1570,7 +1676,7 @@ async function main() {
   }
 
   settings = new SettingsController({
-    os: () => ({ engine: engineView() }),
+    os: () => ({ engine: engineView(), sources: sourcesView() }),
     brain: () => brain.view(),
     wallpaper: () => wallpapers.view(),
     theme: () => ({ pref: config.theme, dark: theme.isDark(), island: config.islandTheme, accent: config.accent }),

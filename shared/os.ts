@@ -4,6 +4,8 @@
  * arguments checked before it runs).
  */
 import type { AnswerMeta, EngineConfig, LocalModel } from './engine'
+import type { SourcesView } from './intake'
+import type { TimelineHour } from './memory'
 
 export type EngineView = {
   cfg: EngineConfig
@@ -18,7 +20,18 @@ export type EngineView = {
 }
 
 /** Everything Island OS shows in Settings. */
-export type OsView = { engine: EngineView }
+export type OsView = { engine: EngineView; sources: SourcesView }
+
+/** The Today panel: the day by hour, what's next on the calendar, and whether answers can stay here. */
+export type TodayView = {
+  date: string
+  timeline: TimelineHour[]
+  upcoming: { start: number; title: string; where?: string; allDay: boolean }[]
+  /** A model on this computer answers questions. */
+  local: boolean
+  /** Some source is on (or the brain), so the day has something in it. */
+  any: boolean
+}
 
 /** An answer as the island shows it, or why there isn't one. */
 export type OsAnswer = { ok: true; text: string; meta: AnswerMeta; cites?: OsCite[] } | { ok: false; needsConsent: string } | { ok: false; error: string }
@@ -31,6 +44,11 @@ export const OS_CALLS = {
   'engine.view': [],
   'engine.set': ['o'],
   'engine.detect': [],
+  'sources.view': [],
+  'sources.set': ['o'],
+  'sources.check': ['s'],
+  'today.view': [],
+  'today.ask': ['s', 'o?'],
 } as const satisfies Record<string, readonly string[]>
 
 export type OsCall = keyof typeof OS_CALLS

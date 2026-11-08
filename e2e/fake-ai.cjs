@@ -42,6 +42,11 @@ function startFakeAi() {
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
     // The brain's loop: the daily signal and the morning card.
     if (result === null && /exactly five lines/.test(prompt)) return { text: '- Shipped: the loop\n- Decided: rules first for filing\n- Promised: the deck for Asha\n- Number: 1 note\n- Next: send the deck' }
+    // Island OS: a question about your days, answered from numbered sources (and one number that isn't there).
+    if (result === null && /\nSources:\n\[1\]/.test(prompt)) {
+      const src = [...prompt.matchAll(/^\[(\d+)\] (.+?) \(/gm)].slice(0, 2)
+      return { text: `You did ${src.map(([, n, t]) => `“${t}” [${n}]`).join(' and ')}. Also something else [9].` }
+    }
     // Notifications, summed up.
     if (result === null && /my notifications to sum up/.test(prompt)) return { text: 'Alice wants lunch at 1, and the design team posted new mockups on Slack. Mail has the quarterly report.' }
     if (result === null && /chief of staff/.test(prompt)) return { text: 'One: Send Asha the deck\nWhy: You promised it on Friday.\nTo: Asha, by mail\nDraft: Hi Asha, here is the deck we talked about.' }

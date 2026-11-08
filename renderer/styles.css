@@ -6147,3 +6147,206 @@ button .spinner-orb,
 .cv-seen {
   margin-top: 8px;
 }
+
+/* ---------------------------------------------------------------------------
+   Today: the one thing, "what did I do?" with sources, the day by hour
+   --------------------------------------------------------------------------- */
+.card.panel.hub.today {
+  height: clamp(420px, calc(100vh - 200px), 620px);
+}
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.today-where {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  color: var(--label-2);
+  box-shadow: inset 0 0 0 1px var(--fill-2);
+}
+.today-where.local {
+  color: var(--green-text);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 45%, transparent);
+}
+.today-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.today-one {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  background: var(--well-2);
+  box-shadow: inset 0 0 0 0.5px var(--fill-2);
+}
+.today-one-text {
+  font-size: 13.5px;
+  line-height: 1.4;
+}
+.today-one-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.today-ask {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 38px;
+  border-radius: 13px;
+  background: var(--well-2);
+  box-shadow: inset 0 0 0 0.5px var(--fill-2);
+}
+.today-ask:focus-within {
+  box-shadow: inset 0 0 0 1.5px var(--blue);
+}
+.today-ask svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--blue);
+  stroke-width: 2;
+  stroke-linecap: round;
+  flex: none;
+}
+.today-ask input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: none;
+  color: var(--label);
+  font: inherit;
+  font-size: 13px;
+}
+.today-busy {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--fill-2);
+  border-top-color: var(--blue);
+  animation: spin 0.8s linear infinite;
+}
+.today-answer {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--well-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.today-answer.error {
+  color: var(--label-2);
+}
+.cite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  margin: 0 1px;
+  border-radius: 5px;
+  background: var(--fill-2);
+  color: var(--label);
+  font-size: 9.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+.today-cites {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 8px 0 0;
+  border-top: 0.5px solid var(--fill-2);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.today-cites li {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 7px;
+  align-items: center;
+  color: var(--label-2);
+  font-size: 11.5px;
+}
+.today-cite-kind {
+  font-size: 10.5px;
+  opacity: 0.8;
+}
+.today-empty {
+  color: var(--label-2);
+  font-size: 12.5px;
+  padding: 6px 4px;
+}
+.today-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.today-entry {
+  display: grid;
+  grid-template-columns: 40px 18px 1fr;
+  gap: 7px;
+  align-items: center;
+  padding: 6px 4px;
+  border-top: 0.5px solid var(--fill-2);
+  font-size: 12.5px;
+}
+.today-entry:first-child {
+  border-top: 0;
+}
+.today-entry time,
+.today-next-row time {
+  font-size: 11px;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.today-entry em,
+.today-next-row em {
+  font-style: normal;
+  color: var(--label-2);
+}
+.today-glyph {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: var(--label-2);
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.today-more button {
+  font-size: 11.5px;
+  color: var(--blue);
+  padding: 2px 4px 6px;
+}
+.today-next {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--well-2);
+}
+.today-next-row {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 6px;
+  font-size: 12.5px;
+}

@@ -20,7 +20,7 @@ test('when jobs come round, and missed ones', () => {
   expect(nextDue(sunday, at(10, 9))).toBe(at(15, 21, 30))
   expect(isDue(daily, at(7, 21, 5), at(8, 22))).toBe(true) // slept through it: catch up
   expect(isDue(daily, at(8, 21, 5), at(8, 22))).toBe(false)
-  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'messages', 'triage', 'daily', 'weekly', 'morning'])
+  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'messages', 'activity', 'triage', 'daily', 'weekly', 'morning'])
 })
 
 test('the evening filing: where each inbox note goes', () => {
@@ -124,4 +124,44 @@ test('Loop: runs what’s due, says how it went, and files only when you apply',
   expect(broken.view().jobs.find((j) => j.id === 'commits')).toMatchObject({ ok: false, note: 'Failed: Couldn’t read robot-arm (no git)' })
   await broken.run('daily')
   expect(broken.view().jobs.find((j) => j.id === 'daily')?.note).toMatch(/without an AI|Nothing happened/)
+})
+
+test('Loop: your activity is kept as one note per source and day, and the morning card sees the calendar', async () => {
+  const { v } = vaultWith()
+  const now = at(8, 21)
+  let dropped: string[] = []
+  const prompts: string[] = []
+  const acts = [
+    { at: at(7, 10), source: 'shell' as const, kind: 'command', title: 'npm test', project: 'island' },
+    { at: at(8, 9), source: 'github' as const, kind: 'pr', title: 'Merged #42 The engine', project: 'me/island', url: 'https://github.com/me/island/pull/42' },
+    { at: at(8, 10), source: 'shell' as const, kind: 'command', title: 'make' },
+  ]
+  const loop = new Loop({
+    vault: () => v,
+    writer: () => ({
+      ask: async (prompt) => {
+        prompts.push(prompt)
+        return 'One: Prepare the standup\nWhy: It is at 09:30.\nTo: none\nDraft:'
+      },
+    }),
+    git: async () => '',
+    brief: () => '',
+    onCard: () => {},
+    onChange: () => {},
+    activity: () => ({ on: true, all: () => acts, dropDays: (d) => (dropped = d), today: () => ['09:30 Standup (Room 2)'] }),
+    now: () => now,
+  })
+  await loop.run('activity')
+  expect(loop.view().jobs.find((j) => j.id === 'activity')).toMatchObject({ ok: true, note: 'Today: 1 on GitHub, 1 command.' })
+  expect(v.read('09-sources/shell/2026-11-07.md')).toContain('npm test')
+  expect(v.read('09-sources/shell/2026-11-08.md')).toContain('- 10:00 make')
+  expect(v.read('09-sources/github/2026-11-08.md')).toContain('Merged #42 The engine (https://github.com/me/island/pull/42)')
+  // Yesterday is complete: its waiting copy goes; today's stays until tonight's run.
+  expect(dropped).toEqual(['2026-11-07'])
+  await loop.run('morning')
+  expect(prompts.at(-1)).toContain('Today’s calendar:\n09:30 Standup (Room 2)')
+  // Off: it says so.
+  const off = new Loop({ vault: () => v, writer: () => null, git: async () => '', brief: () => '', onCard: () => {}, onChange: () => {}, activity: () => ({ on: false, all: () => [], dropDays: () => {}, today: () => [] }), now: () => now })
+  await off.run('activity')
+  expect(off.view().jobs.find((j) => j.id === 'activity')?.note).toMatch(/Off: turn on a source/)
 })
