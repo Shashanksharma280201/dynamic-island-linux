@@ -2,7 +2,7 @@ import { execFile, spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
-import { callPaths, callNoteText, callPrompt, callTranscriptText, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
+import { callPaths, callNoteText, callPrompt, callTranscriptText, ffmpegHint, listedAudioDevices, pickAudioDevices, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
 import type { OsAnswer } from '@shared/os'
 
 export type CallsDeps = {
@@ -16,7 +16,9 @@ export type CallsDeps = {
   writeNote: (path: string, text: string, why: string) => boolean
   /** The recorder: ffmpeg (or, in tests, a stand-in that writes the file and waits). */
   ffmpeg: () => string | null
-  pactl?: () => string | null
+  /** What to record: the microphone, and the speakers when there's a way (see audioInputs). */
+  inputs?: (ffmpeg: string) => Promise<{ mic: string | null; monitor: string | null }>
+  platform?: string
   /** The recording started or stopped (for the island's red dot). */
   onRecording: (c: CallNote | null) => void
   onChange?: () => void
@@ -32,13 +34,30 @@ const defaultMonitor = (pactl: string): Promise<string | null> =>
   )
 
 /**
+ * What to record here. Linux: PulseAudio's default input, and the default
+ * output's monitor (the speakers). A Mac: the default input, and a loopback
+ * device (BlackHole) if you have one. Windows: the first microphone, and
+ * Stereo Mix if it's turned on.
+ */
+export async function audioInputs(platform: string, ffmpeg: string, pactl: string | null): Promise<{ mic: string | null; monitor: string | null }> {
+  if (platform !== 'darwin' && platform !== 'win32') return { mic: 'default', monitor: pactl ? await defaultMonitor(pactl) : null }
+  const listed = await new Promise<string>((resolve) =>
+    execFile(ffmpeg, ['-hide_banner', '-list_devices', 'true', '-f', platform === 'darwin' ? 'avfoundation' : 'dshow', '-i', platform === 'darwin' ? '' : 'dummy'], { timeout: 10_000 }, (_e, out, err) =>
+      resolve(`${String(out || '')}\n${String(err || '')}`),
+    ),
+  )
+  const picked = pickAudioDevices(listedAudioDevices(listed))
+  return { mic: platform === 'darwin' ? 'default' : picked.mic, monitor: picked.monitor }
+}
+
+/**
  * Call notes: record (microphone and speakers), stop, make it out here,
  * delete the audio, sum it up (the model on this computer first; the cloud
  * only with your yes), and keep it in the brain when you say so.
  */
 export class Calls {
   private list: CallNote[] = []
-  private rec: { proc: ChildProcess; wav: string; id: string } | null = null
+  private rec: { proc: ChildProcess; wav: string; id: string; platform: string } | null = null
 
   constructor(private d: CallsDeps) {
     try {
@@ -85,19 +104,20 @@ export class Calls {
 
   async start(): Promise<CallNote> {
     if (this.rec) return this.recording()!
+    const platform = this.d.platform ?? process.platform
     const ffmpeg = this.d.ffmpeg()
-    if (!ffmpeg) throw new Error('Recording a call needs ffmpeg: sudo apt install ffmpeg')
+    if (!ffmpeg) throw new Error(`Recording a call needs ffmpeg: ${ffmpegHint(platform)}`)
+    const { mic, monitor } = this.d.inputs ? await this.d.inputs(ffmpeg) : { mic: null, monitor: null }
+    if (platform === 'win32' && !mic) throw new Error('No microphone was found. Is one connected (Settings › System › Sound)?')
     mkdirSync(this.d.dir, { recursive: true })
     const id = randomBytes(4).toString('hex')
     const wav = join(this.d.dir, `${id}.wav`)
-    const pactl = this.d.pactl?.()
-    const monitor = pactl ? await defaultMonitor(pactl) : null
-    const proc = spawn(ffmpeg, recorderArgs({ monitor, out: wav }), { stdio: ['ignore', 'ignore', 'pipe'] })
+    const proc = spawn(ffmpeg, recorderArgs({ platform, mic, monitor, out: wav }), { stdio: [platform === 'win32' ? 'pipe' : 'ignore', 'ignore', 'pipe'] })
     let err = ''
     proc.stderr?.on('data', (b) => (err = (err + String(b)).slice(-2000)))
     const c: CallNote = { id, started: this.now(), state: 'recording' }
     this.list = [c, ...this.list].slice(0, 30)
-    this.rec = { proc, wav, id }
+    this.rec = { proc, wav, id, platform }
     proc.on('exit', (code) => {
       // It stopped by itself (an error, or the length limit): carry on as if you'd pressed Stop.
       if (this.rec?.proc === proc) {
@@ -117,7 +137,7 @@ export class Calls {
     const c = this.list.find((x) => x.id === r.id)!
     c.ended = this.now()
     this.d.onRecording(null)
-    // ffmpeg finishes the file on SIGINT.
+    // ffmpeg finishes the file on SIGINT (on Windows, on "q").
     await new Promise<void>((resolve) => {
       if (r.proc.exitCode !== null || r.proc.signalCode) return resolve()
       const t = setTimeout(() => {
@@ -128,7 +148,8 @@ export class Calls {
         clearTimeout(t)
         resolve()
       })
-      r.proc.kill('SIGINT')
+      if (r.platform === 'win32' && r.proc.stdin?.writable) r.proc.stdin.end('q')
+      else r.proc.kill('SIGINT')
     })
     void this.process(c, r.wav)
     return c

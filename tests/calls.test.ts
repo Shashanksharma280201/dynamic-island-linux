@@ -1,11 +1,13 @@
-import { mkdtempSync, writeFileSync, existsSync, rmSync, chmodSync } from 'node:fs'
+import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { callLine, callNoteText, callPaths, callPrompt, callTranscriptText, elapsed, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
+import { callLine, callNoteText, callPaths, callPrompt, callTranscriptText, elapsed, ffmpegHint, fixWavSizes, listedAudioDevices, pickAudioDevices, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
 import { briefLines } from '@shared/memory'
 import { systemCommand } from '@shared/command'
 import { bargeStep } from '../renderer/island/voice/bargein'
-import { Calls } from '../electron/os/calls'
+import { audioInputs, Calls } from '../electron/os/calls'
+
+const posix = process.platform !== 'win32'
 
 const at = (d: number, h: number, m = 0) => new Date(2026, 10, d, h, m).getTime()
 
@@ -14,6 +16,41 @@ describe('call notes', () => {
     const a = recorderArgs({ monitor: 'alsa_output.pci.monitor', out: '/tmp/c.wav', minutes: 60 })
     expect(a.join(' ')).toBe('-nostdin -hide_banner -loglevel error -y -f pulse -i default -f pulse -i alsa_output.pci.monitor -filter_complex amix=inputs=2:duration=longest:normalize=0 -t 3600 -ac 1 -ar 16000 -c:a pcm_s16le /tmp/c.wav')
     expect(recorderArgs({ monitor: null, out: '/x.wav' })).not.toContain('-filter_complex')
+  })
+  it('on a Mac, the default input (and a loopback); on Windows, named devices, stopped with q', () => {
+    expect(recorderArgs({ platform: 'darwin', monitor: null, out: '/x.wav' }).slice(0, 9).join(' ')).toBe('-nostdin -hide_banner -loglevel error -y -f avfoundation -i :default')
+    expect(recorderArgs({ platform: 'darwin', mic: 'default', monitor: 'BlackHole 2ch', out: '/x.wav' }).join(' ')).toContain('-f avfoundation -i :default -f avfoundation -i :BlackHole 2ch -filter_complex amix')
+    const w = recorderArgs({ platform: 'win32', mic: 'Microphone (Realtek(R) Audio)', monitor: 'Stereo Mix (Realtek(R) Audio)', out: 'C:\\x.wav' })
+    expect(w).not.toContain('-nostdin')
+    expect(w.slice(0, 12)).toEqual(['-hide_banner', '-loglevel', 'error', '-y', '-f', 'dshow', '-i', 'audio=Microphone (Realtek(R) Audio)', '-f', 'dshow', '-i', 'audio=Stereo Mix (Realtek(R) Audio)'])
+    expect([ffmpegHint('darwin'), ffmpegHint('win32'), ffmpegHint('linux')]).toEqual(['brew install ffmpeg', 'winget install ffmpeg', 'sudo apt install ffmpeg'])
+  })
+  it('reads ffmpeg’s device lists and picks a microphone and a loopback', () => {
+    const mac = `[AVFoundation indev @ 0x7f8] AVFoundation video devices:\n[AVFoundation indev @ 0x7f8] [0] FaceTime HD Camera\n[AVFoundation indev @ 0x7f8] [1] Capture screen 0\n[AVFoundation indev @ 0x7f8] AVFoundation audio devices:\n[AVFoundation indev @ 0x7f8] [0] ZoomAudioDevice\n[AVFoundation indev @ 0x7f8] [1] MacBook Pro Microphone\n[AVFoundation indev @ 0x7f8] [2] BlackHole 2ch\n: Input/output error`
+    expect(listedAudioDevices(mac)).toEqual(['ZoomAudioDevice', 'MacBook Pro Microphone', 'BlackHole 2ch'])
+    expect(pickAudioDevices(listedAudioDevices(mac))).toEqual({ mic: 'MacBook Pro Microphone', monitor: 'BlackHole 2ch' })
+    const win = `[dshow @ 000001] "Integrated Camera" (video)\r\n[dshow @ 000001]   Alternative name "@device_pnp_\\\\?\\usb"\r\n[dshow @ 000001] "Stereo Mix (Realtek(R) Audio)" (audio)\r\n[dshow @ 000001]   Alternative name "@device_cm_{33D9A762}\\wave_{A}"\r\n[dshow @ 000001] "Microphone Array (Realtek(R) Audio)" (audio)\r\n[dshow @ 000001] "OBS Virtual Camera" (none)\r\ndummy: Immediate exit requested`
+    expect(pickAudioDevices(listedAudioDevices(win))).toEqual({ mic: 'Microphone Array (Realtek(R) Audio)', monitor: 'Stereo Mix (Realtek(R) Audio)' })
+    const old = `[dshow @ 0x1] DirectShow video devices (some may be both video and audio devices)\n[dshow @ 0x1]  "HD Webcam"\n[dshow @ 0x1]     Alternative name "@device_pnp_x"\n[dshow @ 0x1] DirectShow audio devices\n[dshow @ 0x1]  "Headset Microphone (Jabra)"\n[dshow @ 0x1]     Alternative name "@device_cm_y"`
+    expect(listedAudioDevices(old)).toEqual(['Headset Microphone (Jabra)'])
+    expect(pickAudioDevices(listedAudioDevices(old))).toEqual({ mic: 'Headset Microphone (Jabra)', monitor: null })
+    expect(pickAudioDevices([])).toEqual({ mic: null, monitor: null })
+  })
+  it('a WAV stopped hard still says how long it is', () => {
+    const header = Buffer.alloc(44)
+    header.write('RIFF', 0, 'ascii')
+    header.write('WAVEfmt ', 8, 'ascii')
+    header.writeUInt32LE(16, 16)
+    header.write('data', 36, 'ascii')
+    const b = Buffer.concat([header, Buffer.alloc(3200)])
+    fixWavSizes(b)
+    expect([b.readUInt32LE(4), b.readUInt32LE(40)]).toEqual([b.length - 8, 3200])
+    // A finished one stays as it was.
+    const ok = Buffer.concat([header, Buffer.alloc(100)])
+    ok.writeUInt32LE(100, 40)
+    ok.writeUInt32LE(136, 4)
+    expect(fixWavSizes(Buffer.from(ok)).equals(ok)).toBe(true)
+    expect(fixWavSizes(Buffer.from('not a wav')).toString()).toBe('not a wav')
   })
   it('times', () => {
     expect(elapsed(65_000)).toBe('1:05')
@@ -92,7 +129,7 @@ describe('the command bar', () => {
   })
 })
 
-describe('the recorder', () => {
+describe.skipIf(!posix)('the recorder', () => {
   let dir: string
   beforeEach(() => (dir = mkdtempSync(join(tmpdir(), 'calls-'))))
   afterEach(() => rmSync(dir, { recursive: true, force: true }))
@@ -174,9 +211,43 @@ describe('the recorder', () => {
     const none = make({ ffmpeg: () => null }).c
     await expect(none.start()).rejects.toThrow(/needs ffmpeg/)
     // Stopped before anything was written: it says so.
-    const quick = make({ ffmpeg: () => '/bin/true' }).c
+    const gone = join(dir, 'gone.sh')
+    writeFileSync(gone, '#!/bin/sh\nexit 1\n', { mode: 0o755 })
+    const quick = make({ ffmpeg: () => gone }).c
     await quick.start()
     await settle(quick, 'failed')
-    expect(quick.view()[0].error).toMatch(/Nothing was recorded/)
+    expect(quick.view()[0].error).toMatch(/Nothing was recorded|stopped/)
+  })
+
+  it('on Windows it asks for a microphone and stops ffmpeg with q', async () => {
+    const rec = join(dir, 'win.sh')
+    // Ignores Ctrl+C, as ffmpeg does on Windows (there's no such signal there): only q stops it.
+    writeFileSync(rec, `#!/bin/sh\ntrap '' INT\nfor last; do :; done\nprintf 'RIFF....WAVEfmt data' > "$last"\nhead -c 32000 /dev/zero >> "$last"\nread q\necho "$q" > "${dir}/said"\nexit 0\n`, { mode: 0o755 })
+    const args: string[][] = []
+    const none = make({ platform: 'win32', ffmpeg: () => rec, inputs: async () => ({ mic: null, monitor: null }) }).c
+    await expect(none.start()).rejects.toThrow(/No microphone/)
+    const { c } = make({ platform: 'win32', ffmpeg: () => rec, inputs: async (f) => (args.push([f]), { mic: 'Microphone (USB)', monitor: null }) })
+    await c.start()
+    expect(args).toEqual([[rec]])
+    await new Promise((r) => setTimeout(r, 200))
+    const t0 = Date.now()
+    await c.stop()
+    expect(Date.now() - t0).toBeLessThan(3000)
+    expect(readFileSync(join(dir, 'said'), 'utf8').trim()).toBe('q')
+    await settle(c, 'done')
+    expect(c.view()[0].state).toBe('done')
+  })
+
+  it('finds what to record: PulseAudio’s monitor; ffmpeg’s devices elsewhere', async () => {
+    const pactl = join(dir, 'pactl')
+    writeFileSync(pactl, '#!/bin/sh\n[ "$1" = get-default-sink ] && echo alsa_output.pci-0000.analog-stereo\n', { mode: 0o755 })
+    expect(await audioInputs('linux', 'ffmpeg', pactl)).toEqual({ mic: 'default', monitor: 'alsa_output.pci-0000.analog-stereo.monitor' })
+    expect(await audioInputs('linux', 'ffmpeg', null)).toEqual({ mic: 'default', monitor: null })
+    const ff = join(dir, 'ffmpeg')
+    writeFileSync(ff, `#!/bin/sh\necho "$*" > "${dir}/asked"\necho '[dshow @ 01] "Microphone (USB)" (audio)' >&2\necho '[dshow @ 01] "Stereo Mix (Realtek)" (audio)' >&2\nexit 1\n`, { mode: 0o755 })
+    expect(await audioInputs('win32', ff, null)).toEqual({ mic: 'Microphone (USB)', monitor: 'Stereo Mix (Realtek)' })
+    expect(readFileSync(join(dir, 'asked'), 'utf8').trim()).toBe('-hide_banner -list_devices true -f dshow -i dummy')
+    // A Mac records its default input; the list is only for a loopback.
+    expect(await audioInputs('darwin', ff, null)).toEqual({ mic: 'default', monitor: 'Stereo Mix (Realtek)' })
   })
 })

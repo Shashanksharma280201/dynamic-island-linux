@@ -58,6 +58,8 @@ describe('monitors from your words', () => {
     expect(judgeCi(m, [{ status: 'completed', conclusion: 'failure', headBranch: 'main', displayTitle: 'Today panel', updatedAt: '2026-11-08T11:00:00Z' }], since)).toBe('CI on me/island main failed: Today panel.')
     expect(judgeCi({ target: 'me/x' }, [{ status: 'completed', conclusion: 'success', updatedAt: '2026-11-08T11:00:00Z' }], since)).toBe('CI on me/x passed.')
     expect(judgeCi(m, { error: 'x' }, since)).toBeNull()
+    // GitHub shortens long titles with an ellipsis: no full stop after it.
+    expect(judgeCi(m, [{ status: 'completed', conclusion: 'success', headBranch: 'main', displayTitle: 'CI installs espeak-ng; the voice e2e skips talking over it without a \u2026', updatedAt: '2026-11-08T11:00:00Z' }], since)).toBe('CI on me/island main passed: CI installs espeak-ng; the voice e2e skips talking over it without a \u2026')
   })
   it('pages: their words, not their clocks', () => {
     const a = pageText('<html><script>var t=1</script><p>Price: $10</p><span>Updated 10:42</span></html>')
@@ -223,22 +225,22 @@ describe('The Agency on this computer', () => {
     expect(make().view().count).toBe(2)
   })
 
-  it('starts in Claude (installed, with a draft) or a terminal (a launcher)', async () => {
+  it('starts in Claude (installed, with a draft) or a terminal (Claude Code with its instructions)', async () => {
     const opened: string[][] = []
     const a = make({ openTerminal: (_cwd, argv) => (opened.push(argv), true) })
     await a.download()
     expect(a.start('engineering/engineering-frontend-developer', 'claude')).toEqual({ draft: 'Use the engineering-frontend-developer agent (Frontend Developer) to ' })
     expect(a.view().installed).toContain('engineering-frontend-developer')
     a.start('game-development/godot/godot-shader-developer', 'terminal')
-    const script = readFileSync(opened[0][0], 'utf8')
-    expect(script).toContain("exec '/usr/bin/claude' --append-system-prompt \"$(cat '")
-    expect(readFileSync(opened[0][0].replace(/\.sh$/, '.md'), 'utf8')).toBe('You write shaders.')
+    expect(opened[0].slice(0, 2)).toEqual(['/usr/bin/claude', '--append-system-prompt-file'])
+    expect(readFileSync(opened[0][2], 'utf8')).toMatch(/^<!-- Godot Shader Developer, from The Agency.*-->\n\nYou write shaders\.$/)
     const none = make({ claudeBinary: () => null })
     await none.download()
     expect(() => none.start('engineering/engineering-frontend-developer', 'terminal')).toThrow(/Claude Code isn’t installed/)
   })
 
-  it('never reads a link in the catalog (it could point anywhere)', async () => {
+  // (Making a link on Windows needs an administrator.)
+  it.skipIf(process.platform === 'win32')('never reads a link in the catalog (it could point anywhere)', async () => {
     const a = make()
     const src = join(dir, 'src')
     writeFileSync(join(dir, 'secret.md'), '---\nname: Secret\ndescription: should never be read\n---\nkey\n')

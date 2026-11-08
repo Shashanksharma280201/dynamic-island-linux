@@ -143,7 +143,8 @@ describe('searching', () => {
   })
 })
 
-describe('the desktop', () => {
+// Linux desktops' settings (file: addresses of Linux paths).
+describe.skipIf(process.platform === 'win32')('the desktop', () => {
   test('which desktop, and its commands', () => {
     expect(desktopOf({ XDG_CURRENT_DESKTOP: 'ubuntu:GNOME' })).toBe('gnome')
     expect(desktopOf({ XDG_CURRENT_DESKTOP: 'X-Cinnamon' })).toBe('cinnamon')

@@ -13,9 +13,9 @@ export const SOURCE_IDS: SourceId[] = ['github', 'shell', 'calendar', 'screen', 
 
 export const SOURCE_INFO: Record<SourceId, { label: string; what: string }> = {
   github: { label: 'GitHub', what: 'Your pull requests, reviews, issues and releases, through the gh command (read only), every hour.' },
-  shell: { label: 'Terminal', what: 'The commands you ran (bash, zsh or fish history). Passwords, tokens and keys are taken out first; anything with a word below is left out.' },
+  shell: { label: 'Terminal', what: 'The commands you ran (bash, zsh, fish or PowerShell history). Passwords, tokens and keys are taken out first; anything with a word below is left out.' },
   calendar: { label: 'Calendar', what: 'Your events from a .ics file or address (Google Calendar’s secret address works). They feed the morning card.' },
-  screen: { label: 'Screen time', what: 'Which app was in front, per hour. Never screenshots; windows with a private word (Settings › Buddy) are left out.' },
+  screen: { label: 'Screen time', what: 'Which app was in front, per hour. Never screenshots; windows with a private word (Settings › Buddy) are left out. On a Mac only the app’s name is seen, never a window’s title.' },
   codex: { label: 'Codex', what: 'Your Codex CLI sessions: the project and what you asked.' },
   gemini: { label: 'Gemini', what: 'Your Gemini CLI sessions: the project and what you asked.' },
 }
@@ -137,7 +137,7 @@ export function keepCommand(cmd: string, skip: string[]): boolean {
 
 // ------------------------------------------------------------ shell ----
 
-export type ShellKind = 'bash' | 'zsh' | 'fish'
+export type ShellKind = 'bash' | 'zsh' | 'fish' | 'powershell'
 
 /**
  * New history lines as commands with their times: zsh's extended history
@@ -147,7 +147,17 @@ export type ShellKind = 'bash' | 'zsh' | 'fish'
  */
 export function parseHistory(text: string, kind: ShellKind, now: number): { at: number; cmd: string }[] {
   const out: { at: number; cmd: string }[] = []
-  const lines = text.split('\n')
+  const lines = text.replace(/\r/g, '').split('\n')
+  if (kind === 'powershell') {
+    // PSReadLine: one command a line, a backtick at the end carries on; no times.
+    for (let i = 0; i < lines.length; i++) {
+      let cmd = lines[i]
+      if (!cmd.trim()) continue
+      while (cmd.endsWith('`') && i + 1 < lines.length) cmd = `${cmd.slice(0, -1)}\n${lines[++i]}`
+      out.push({ at: now, cmd })
+    }
+    return out
+  }
   if (kind === 'fish') {
     let cur: { at: number; cmd: string } | null = null
     for (const l of lines) {
@@ -436,11 +446,25 @@ export function appName(comm: string, title = ''): string {
   const known: Record<string, string> = {
     code: 'VS Code', 'code-oss': 'VS Code', cursor: 'Cursor', chrome: 'Chrome', 'google-chrome': 'Chrome', chromium: 'Chromium', 'chromium-browser': 'Chromium', firefox: 'Firefox', 'firefox-esr': 'Firefox',
     'gnome-terminal-': 'Terminal', 'gnome-terminal-server': 'Terminal', kgx: 'Terminal', ptyxis: 'Terminal', alacritty: 'Alacritty', kitty: 'kitty', wezterm: 'WezTerm', 'wezterm-gui': 'WezTerm',
+    windowsterminal: 'Terminal', powershell: 'PowerShell', pwsh: 'PowerShell', cmd: 'Command Prompt', explorer: 'File Explorer', msedge: 'Edge', 'ms-teams': 'Teams', teams: 'Teams', outlook: 'Outlook', olk: 'Outlook', winword: 'Word', excel: 'Excel', powerpnt: 'PowerPoint', notepad: 'Notepad',
     nautilus: 'Files', slack: 'Slack', discord: 'Discord', spotify: 'Spotify', obsidian: 'Obsidian', thunderbird: 'Thunderbird', zoom: 'Zoom', soffice: 'LibreOffice', 'soffice.bin': 'LibreOffice', evince: 'Document Viewer', telegram: 'Telegram', 'telegram-desktop': 'Telegram',
   }
   if (known[c]) return known[c]
   if (c === 'electron' && title) return title.split(' - ').pop()!.slice(0, 40)
   return c ? c[0].toUpperCase() + c.slice(1, 40) : 'Unknown'
+}
+
+/** An app's own name (a Mac's: "Safari", "Code"), tidied where it's known by another. Pure. */
+export function displayApp(name: string): string {
+  const n = name.trim().slice(0, 40)
+  const known: Record<string, string> = { code: 'VS Code', 'google chrome': 'Chrome', 'microsoft edge': 'Edge', 'microsoft teams': 'Teams', 'microsoft outlook': 'Outlook', 'microsoft word': 'Word', 'microsoft excel': 'Excel', 'microsoft powerpoint': 'PowerPoint', finder: 'Finder', iterm2: 'iTerm' }
+  return known[n.toLowerCase()] ?? (n || 'Unknown')
+}
+
+/** The app's name in what `lsappinfo info -only name` prints (a Mac). Pure. */
+export function parseLsappinfoName(out: string): string | null {
+  const m = /"(?:LSDisplayName|name|CFBundleName)"\s*=\s*"([^"]+)"/.exec(out)
+  return m ? m[1] : null
 }
 
 /** Is this window private (a word you said never to keep)? Pure. */

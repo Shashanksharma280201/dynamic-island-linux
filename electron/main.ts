@@ -153,8 +153,10 @@ import { Engine, type Cloud } from './engine'
 import { OS, wireOs, type OsRoutes } from './osCalls'
 import { Agents } from './os/agents'
 import { Agency } from './os/agency'
-import { Calls } from './os/calls'
-import { callLine } from '../shared/calls'
+import { audioInputs, Calls } from './os/calls'
+import { findTool } from './os/tools'
+import { macFrontApp, WinFrontApp } from './os/frontApp'
+import { callLine, fixWavSizes } from '../shared/calls'
 import { inQuietHours } from '../shared/jarvis'
 import { monitorLine, researchLine } from '../shared/agents'
 import type { JobId } from '../shared/loop'
@@ -706,11 +708,15 @@ async function main() {
     }
   }
   // Island OS's intake: what you do, read by each source you turn on (Settings › Sources).
+  // The window in front, for screen time: X11 on Linux, Launch Services on a Mac, a small PowerShell on Windows.
+  const winFront = process.platform === 'win32' ? new WinFrontApp() : null
+  if (winFront) app.on('before-quit', () => winFront.stop())
+  const frontApp = process.platform === 'darwin' ? macFrontApp : winFront ? () => winFront.read() : process.platform === 'linux' && !!process.env.DISPLAY ? () => frontWindow() : undefined
   const intake = new Intake({
     config: () => config.sources,
     file: join(app.getPath('userData'), 'os-intake.json'),
     home: homedir(),
-    frontWindow: process.platform === 'linux' && !!process.env.DISPLAY ? () => frontWindow() : undefined,
+    frontWindow: frontApp,
     idleSeconds: () => (process.env.DI_IDLE_NEVER ? 0 : powerMonitor.getSystemIdleTime()),
     privateWords: () => config.buddy.private,
     onChange: () => settings?.changed(),
@@ -727,7 +733,7 @@ async function main() {
     skip: config.sources.skip,
     filing: config.brain.on,
     kept: { whatsapp: config.brain.whatsapp, mail: config.brain.mail, phone: config.brain.phone },
-    screenable: process.platform === 'linux' && !!process.env.DISPLAY,
+    screenable: !!frontApp,
   })
   Object.assign(osRoutes, {
     'sources.view': () => sourcesView(),
@@ -956,7 +962,7 @@ async function main() {
         else reject(new Error(r.error))
       })
       // Tests: a stand-in for Whisper (the island still decodes the real audio first).
-      send(win, 'os:transcribe', { id, data: readFileSync(wav), fake: process.env.DI_STT_FAKE || undefined })
+      send(win, 'os:transcribe', { id, data: fixWavSizes(readFileSync(wav)), fake: process.env.DI_STT_FAKE || undefined })
     })
   ipcMain.handle('os:transcribed', (e, id, r) => {
     if (e.sender !== win.webContents || typeof id !== 'string') return
@@ -976,8 +982,9 @@ async function main() {
       v.write(p, text, why)
       return true
     },
-    ffmpeg: () => process.env.DI_CALL_RECORDER || findExecutable('ffmpeg', ['/usr/bin', '/usr/local/bin']),
-    pactl: () => (process.env.DI_CALL_RECORDER ? null : findExecutable('pactl', ['/usr/bin', '/usr/local/bin'])),
+    ffmpeg: () => process.env.DI_CALL_RECORDER || findTool('ffmpeg'),
+    // The stand-in recorder (tests) records what it's given.
+    inputs: async (ffmpeg) => (process.env.DI_CALL_RECORDER ? { mic: null, monitor: null } : audioInputs(process.platform, ffmpeg, findTool('pactl'))),
     onRecording: (c) => (c ? store.upsert({ kind: 'call', id: 'call', priority: 4, call: { started: c.started } }) : store.remove('call')),
     onChange: () => osChanged('calls'),
   })

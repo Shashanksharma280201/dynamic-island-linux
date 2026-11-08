@@ -83,7 +83,9 @@ export function judgeCi(m: Pick<Monitor, 'target' | 'ref'>, runs: unknown, since
   if (!r || r.status !== 'completed') return null
   if (r.updatedAt && Date.parse(r.updatedAt) < since) return null
   const ok = r.conclusion === 'success'
-  return `CI on ${m.target}${m.ref ? ` ${m.ref}` : ''} ${ok ? 'passed' : r.conclusion === 'cancelled' ? 'was cancelled' : 'failed'}${r.displayTitle ? `: ${r.displayTitle}` : ''}.`
+  const title = r.displayTitle ? `: ${r.displayTitle}` : ''
+  // GitHub ends a long title with "…"; no full stop after it.
+  return `CI on ${m.target}${m.ref ? ` ${m.ref}` : ''} ${ok ? 'passed' : r.conclusion === 'cancelled' ? 'was cancelled' : 'failed'}${title}${/[.…!?]$/.test(title) ? '' : '.'}`
 }
 
 /** A page's text, without its markup and what changes on every load (times, tokens). Pure. */

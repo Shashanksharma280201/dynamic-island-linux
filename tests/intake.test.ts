@@ -8,6 +8,7 @@ import {
   appName,
   cleanActivity,
   commandProject,
+  displayApp,
   eventLine,
   icsDate,
   keepCommand,
@@ -16,6 +17,7 @@ import {
   parseGhEvents,
   parseHistory,
   parseIcs,
+  parseLsappinfoName,
   parseSourcesConfig,
   privateWindow,
   redact,
@@ -87,6 +89,14 @@ describe('shell history', () => {
       { at: 1_700_000_000_000, cmd: 'cargo build' },
       { at: 1_700_000_100_000, cmd: 'echo a\nb' },
     ])
+  })
+  it('reads PowerShell’s, with Windows line ends and backtick lines', () => {
+    expect(parseHistory('git status\r\nGet-ChildItem `\r\n  -Recurse\r\n\r\nnpm test\r\n', 'powershell', now)).toEqual([
+      { at: now, cmd: 'git status' },
+      { at: now, cmd: 'Get-ChildItem \n  -Recurse' },
+      { at: now, cmd: 'npm test' },
+    ])
+    expect(parseHistory('ls\r\ngit push\r\n', 'bash', now).map((c) => c.cmd)).toEqual(['ls', 'git push'])
   })
   it('knows the project from a cd', () => {
     expect(commandProject('cd ~/code/dynamic-island-linux && npm test')).toBe('dynamic-island-linux')
@@ -224,6 +234,12 @@ describe('screen time', () => {
     expect(appName('gnome-terminal-')).toBe('Terminal')
     expect(appName('electron', 'notes - Obsidian')).toBe('Obsidian')
     expect(appName('blender')).toBe('Blender')
+    // Windows' process names
+    expect(['WindowsTerminal', 'msedge', 'WINWORD', 'explorer', 'Code.exe'].map((c) => appName(c))).toEqual(['Terminal', 'Edge', 'Word', 'File Explorer', 'VS Code'])
+    // A Mac's own app names
+    expect(['Safari', 'Code', 'Google Chrome', 'Microsoft Outlook', ' '].map(displayApp)).toEqual(['Safari', 'VS Code', 'Chrome', 'Outlook', 'Unknown'])
+    expect(parseLsappinfoName('"LSDisplayName"="Google Chrome"\n')).toBe('Google Chrome')
+    expect(parseLsappinfoName('')).toBeNull()
   })
   it('private windows', () => {
     expect(privateWindow('Bitwarden \u2014 vault', ['Bitwarden'])).toBe(true)
@@ -338,6 +354,18 @@ describe('the intake', () => {
     await i.sampleScreen()
     const hours = Object.values((i as unknown as { s: { screen: Record<string, Record<string, number>> } }).s.screen)
     expect(hours.flatMap((h) => Object.values(h)).reduce((a, b) => a + b, 0)).toBe(1)
+  })
+
+  it('screen time on a Mac (the app’s name) and on Windows (the process name)', async () => {
+    let w: { title: string; name?: string; comm?: string } = { title: '', name: 'Code' }
+    const i = make({ frontWindow: async () => w, privateWords: () => ['Bitwarden'] })
+    await i.sampleScreen()
+    w = { title: 'Inbox - Outlook', comm: 'OUTLOOK' }
+    await i.sampleScreen()
+    w = { title: 'Bitwarden', comm: 'Bitwarden' }
+    await i.sampleScreen()
+    const apps = Object.values((i as unknown as { s: { screen: Record<string, Record<string, number>> } }).s.screen).flatMap((h) => Object.keys(h))
+    expect(apps.sort()).toEqual(['Outlook', 'VS Code'])
   })
 
   it('turning one off forgets it; filed days go; it all survives a restart', async () => {

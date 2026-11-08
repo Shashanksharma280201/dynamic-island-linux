@@ -1,5 +1,7 @@
 import { execFile, spawn } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import type { ToolId, ToolLink } from '@shared/brain'
 
@@ -279,8 +281,64 @@ function run(bin: string, args: string[]): Promise<{ ok: boolean; out: string; e
   )
 }
 
-/** Open a terminal in `cwd` running `argv` (gnome-terminal and the usual others). */
-export function openTerminal(cwd: string, argv: string[], find: (name: string) => string | null): boolean {
+/** One argument for a POSIX shell. Pure. */
+export const shQuote = (s: string): string => `'${s.replace(/'/g, `'\\''`)}'`
+
+/** One argument on a Windows command line (the rules programs read it back with). Pure. */
+export function winQuote(a: string): string {
+  if (a && !/[\s"]/.test(a)) return a
+  let out = '"'
+  let slashes = 0
+  for (const ch of a) {
+    if (ch === '\\') {
+      slashes++
+      continue
+    }
+    out += ch === '"' ? `${'\\'.repeat(slashes * 2 + 1)}"` : `${'\\'.repeat(slashes)}${ch}`
+    slashes = 0
+  }
+  return `${out}${'\\'.repeat(slashes * 2)}"`
+}
+
+/** A PowerShell string in single quotes (it takes curly quotes as quotes too). Pure. */
+const psQuote = (s: string): string => `'${s.replace(/['\u2018\u2019\u201a\u201b]/g, '$&$&')}'`
+
+/** What a Mac's Terminal opens: a .command file that goes to `cwd` and runs `argv`. Pure. */
+export function macLauncher(cwd: string, argv: string[]): string {
+  return `#!/bin/sh\ncd ${shQuote(cwd)} || exit 1\nexec ${argv.map(shQuote).join(' ')}\n`
+}
+
+/**
+ * What a new PowerShell window runs on Windows: go to `cwd` and run `argv`.
+ * The command line is built here, so a long prompt with quotes arrives whole.
+ * Pure.
+ */
+export function winLauncher(cwd: string, argv: string[]): string {
+  const [bin, ...args] = argv
+  return `Set-Location -LiteralPath ${psQuote(cwd)}\nStart-Process -FilePath ${psQuote(bin)}${args.length ? ` -ArgumentList ${psQuote(args.map(winQuote).join(' '))}` : ''} -NoNewWindow -Wait\n`
+}
+
+/**
+ * Open a terminal in `cwd` running `argv`: Terminal on a Mac, a PowerShell
+ * window on Windows, gnome-terminal and the usual others on Linux.
+ */
+export function openTerminal(cwd: string, argv: string[], find: (name: string) => string | null, platform: string = process.platform): boolean {
+  if (platform === 'darwin' || platform === 'win32') {
+    try {
+      const file = join(tmpdir(), `dynamic-island-run-${randomBytes(4).toString('hex')}.${platform === 'darwin' ? 'command' : 'ps1'}`)
+      if (platform === 'darwin') {
+        writeFileSync(file, macLauncher(cwd, argv), { mode: 0o755 })
+        spawn('open', ['-a', 'Terminal', file], { detached: true, stdio: 'ignore' }).unref()
+      } else {
+        writeFileSync(file, '\ufeff' + winLauncher(cwd, argv)) // BOM: Windows PowerShell reads it as UTF-8
+        // Detached on Windows: a console window of its own.
+        spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', file], { cwd, detached: true, stdio: 'ignore' }).unref()
+      }
+      return true
+    } catch {
+      return false
+    }
+  }
   const tries: [string, (bin: string) => string[]][] = [
     ['gnome-terminal', () => [`--working-directory=${cwd}`, '--', ...argv]],
     ['kgx', () => [`--working-directory=${cwd}`, '-e', ...argv]],

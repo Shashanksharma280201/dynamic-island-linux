@@ -29,13 +29,93 @@ export type CallNote = {
 export const MAX_CALL_MINUTES = 180
 
 /**
- * ffmpeg's arguments: the microphone, and the speakers' monitor when there
- * is one, mixed to 16 kHz mono (what Whisper expects). Pure.
+ * ffmpeg's arguments: the microphone, and the speakers when there's a way
+ * to hear them, mixed to 16 kHz mono (what Whisper expects). On Linux the
+ * microphone is PulseAudio's default input and the speakers are the default
+ * output's monitor; on a Mac the default input (avfoundation), on Windows a
+ * named device (dshow), and the speakers only through a loopback device
+ * (BlackHole, Stereo Mix). Pure.
  */
-export function recorderArgs(o: { monitor: string | null; out: string; minutes?: number }): string[] {
-  const inputs = ['-f', 'pulse', '-i', 'default', ...(o.monitor ? ['-f', 'pulse', '-i', o.monitor] : [])]
+export function recorderArgs(o: { monitor: string | null; out: string; minutes?: number; platform?: string; mic?: string | null }): string[] {
+  const input = (dev: string): string[] =>
+    o.platform === 'darwin' ? ['-f', 'avfoundation', '-i', `:${dev}`] : o.platform === 'win32' ? ['-f', 'dshow', '-i', `audio=${dev}`] : ['-f', 'pulse', '-i', dev]
+  const inputs = [...input(o.mic || 'default'), ...(o.monitor ? input(o.monitor) : [])]
   const mix = o.monitor ? ['-filter_complex', 'amix=inputs=2:duration=longest:normalize=0'] : []
-  return ['-nostdin', '-hide_banner', '-loglevel', 'error', '-y', ...inputs, ...mix, '-t', String((o.minutes ?? MAX_CALL_MINUTES) * 60), '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', o.out]
+  // On Windows it's stopped with "q" on its input (there's no gentle signal there).
+  return [...(o.platform === 'win32' ? [] : ['-nostdin']), '-hide_banner', '-loglevel', 'error', '-y', ...inputs, ...mix, '-t', String((o.minutes ?? MAX_CALL_MINUTES) * 60), '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', o.out]
+}
+
+/** Devices that play back what the speakers play (to hear the other side of a call). */
+const LOOPBACK = /stereo mix|what u hear|wave out mix|loopback|blackhole|soundflower|cable output|vb-audio/i
+/** Devices that aren't a microphone (a meeting app's own, a screen recorder's). */
+const NOT_A_MIC = /zoomaudiodevice|microsoft teams audio|teams audio|ms-teams|screen ?capture|obs virtual/i
+
+/**
+ * The audio devices in ffmpeg's list (`-list_devices true`, avfoundation on
+ * a Mac or dshow on Windows; old and new list styles), in order. Pure.
+ */
+export function listedAudioDevices(stderr: string): string[] {
+  const out: string[] = []
+  let audio = false
+  for (const raw of stderr.replace(/\r/g, '').split('\n')) {
+    const l = raw.replace(/^\[[^\]]*\]\s?/, '')
+    // ("DirectShow video devices (some may be both video and audio devices)" is the video list.)
+    if (/video devices/i.test(l)) {
+      audio = false
+      continue
+    }
+    if (/audio devices/i.test(l)) {
+      audio = true
+      continue
+    }
+    if (/^\s*Alternative name/i.test(l)) continue
+    // dshow (new): "Name" (audio)
+    const tagged = /^\s*"(.+)"\s+\(((?:audio|video|none)[^)]*)\)\s*$/.exec(l)
+    if (tagged) {
+      if (/audio/.test(tagged[2])) out.push(tagged[1])
+      continue
+    }
+    if (!audio) continue
+    // avfoundation: [0] Name; dshow (old): "Name"
+    const m = /^\s*\[(\d+)\]\s+(.+?)\s*$/.exec(l) ?? /^\s*"(.+)"\s*$/.exec(l)
+    if (m) out.push(m[2] ?? m[1])
+  }
+  return [...new Set(out)]
+}
+
+/** Which devices to record: the first that's a microphone, and a loopback if there is one. Pure. */
+export function pickAudioDevices(names: string[]): { mic: string | null; monitor: string | null } {
+  return {
+    mic: names.find((n) => !LOOPBACK.test(n) && !NOT_A_MIC.test(n)) ?? null,
+    monitor: names.find((n) => LOOPBACK.test(n)) ?? null,
+  }
+}
+
+/**
+ * A WAV whose recorder was stopped hard still says it's empty (the sizes
+ * are written last). The sizes from the file's real length, so the audio
+ * decodes. Returns the same buffer, fixed in place. Pure apart from that.
+ */
+export function fixWavSizes(b: Buffer): Buffer {
+  if (b.length < 44 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WAVE') return b
+  let at = 12
+  while (at + 8 <= b.length) {
+    const id = b.toString('ascii', at, at + 4)
+    const size = b.readUInt32LE(at + 4)
+    if (id === 'data') {
+      const real = b.length - at - 8
+      if (size === 0 || size === 0xffffffff || size > real) b.writeUInt32LE(real, at + 4)
+      b.writeUInt32LE(b.length - 8, 4)
+      return b
+    }
+    at += 8 + size + (size % 2)
+  }
+  return b
+}
+
+/** How to get ffmpeg on this system. Pure. */
+export function ffmpegHint(platform: string): string {
+  return platform === 'darwin' ? 'brew install ffmpeg' : platform === 'win32' ? 'winget install ffmpeg' : 'sudo apt install ffmpeg'
 }
 
 /** "mm:ss" or "h:mm:ss" since the call started. Pure. */

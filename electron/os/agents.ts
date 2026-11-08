@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { randomBytes } from 'node:crypto'
@@ -17,6 +16,7 @@ import {
 } from '@shared/agents'
 import { citedPrompt, pickSources, readCites, type Candidate } from '@shared/memory'
 import type { OsAnswer } from '@shared/os'
+import { runGh } from './tools'
 
 export type AgentsDeps = {
   file: string
@@ -40,14 +40,6 @@ export type AgentsDeps = {
 }
 
 type State = { monitors: Monitor[]; research: ResearchJob[] }
-
-const runGh = (args: string[]): Promise<string> =>
-  new Promise((resolve, reject) =>
-    execFile(process.env.DI_GH || 'gh', args, { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }, (e, out, err) => {
-      if (e) reject(new Error((e as NodeJS.ErrnoException).code === 'ENOENT' ? 'Install the GitHub CLI (gh), then run “gh auth login”.' : String(err || e.message).trim().split('\n')[0]))
-      else resolve(out)
-    }),
-  )
 
 /**
  * Island OS's agents: monitors that watch for something and tell you once,

@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { chmodSync, cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   AGENCY_CREDIT,
@@ -218,16 +218,12 @@ export class Agency {
     }
     const claude = this.d.claudeBinary()
     if (!claude) throw new Error('Claude Code isn’t installed here, so there’s nothing to run it in.')
-    // A small launcher: Claude Code with the agent's instructions added to its own.
+    // Claude Code with the agent's instructions added to its own (from a file: no shell to quote them for).
     const runDir = join(this.d.dir, 'run')
     mkdirSync(runDir, { recursive: true })
     const prompt = join(runDir, `${a.slug}.md`)
-    writeFileSync(prompt, a.body)
-    const script = join(runDir, `${a.slug}.sh`)
-    const q = (s: string) => `'${s.replace(/'/g, `'\\''`)}'`
-    writeFileSync(script, `#!/bin/sh\n# ${a.name}, from ${AGENCY_CREDIT}\nexec ${q(claude)} --append-system-prompt "$(cat ${q(prompt)})"\n`)
-    chmodSync(script, 0o755)
-    const opened = this.d.openTerminal(this.d.home, [script])
+    writeFileSync(prompt, `<!-- ${a.name}, from ${AGENCY_CREDIT} -->\n\n${a.body}`)
+    const opened = this.d.openTerminal(this.d.home, [claude, '--append-system-prompt-file', prompt])
     if (!opened) throw new Error('No terminal app was found to open it in.')
     return { opened }
   }

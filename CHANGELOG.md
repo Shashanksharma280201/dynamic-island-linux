@@ -26,6 +26,10 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Voice**: call notes made out on this computer (audio deleted), the
   morning brief out loud, and talking over the buddy to stop it.
 - **A more modern look** for the island, Settings and the phone app.
+- **On a Mac and Windows too**: call notes (the default input on a Mac,
+  plus BlackHole when you have it; a microphone and Stereo Mix on Windows),
+  screen time (app names on a Mac; Windows sees titles too), PowerShell
+  history, and `gh` and ffmpeg found where Homebrew and winget put them.
 
 **What was kept quiet, and the rest of Ubuntu**
 

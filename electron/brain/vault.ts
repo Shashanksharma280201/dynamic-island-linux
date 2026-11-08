@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, renameSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, sep } from 'node:path'
 import { FOLDERS, LEDGERS, ME_FILES, RESTRICTED, SYSTEM, dateOf, isRestricted } from '@shared/brain'
 import { AGENTS_MD, GITIGNORE, INDEX_MD, LOG_MD, PREDICTIONS_MD, PROMISES_MD, RESTRICTED_README, VAULT_CLAUDE_MD, meTemplate } from './templates'
 
@@ -231,6 +231,7 @@ export class Vault {
 /** A path under the vault as a vault path (forward slashes), or null when outside. Pure. */
 export function vaultRelative(root: string, abs: string): string | null {
   const r = relative(root, abs)
-  if (!r || r.startsWith('..') || r.startsWith('/')) return null
+  // (On Windows another drive is an absolute path, not a relative one.)
+  if (!r || r.startsWith('..') || isAbsolute(r)) return null
   return r.split(sep).join('/')
 }

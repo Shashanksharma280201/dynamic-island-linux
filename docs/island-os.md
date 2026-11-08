@@ -38,10 +38,10 @@ answers and cost are at the bottom of the page.
 
 | Source | What it keeps | How |
 | --- | --- | --- |
-| GitHub | Your pull requests, reviews, issues, pushes and releases | Through your own `gh` login (read only), hourly. Install the [GitHub CLI](https://cli.github.com) and run `gh auth login` |
-| Terminal | The commands you ran | bash, zsh and fish history, from when you turned it on. Passwords, tokens and keys are taken out first; trivial commands (`ls`, `cd`), commands started with a space, and anything with a word you list are left out |
+| GitHub | Your pull requests, reviews, issues, pushes and releases | Through your own `gh` login (read only), hourly. Install the [GitHub CLI](https://cli.github.com) and run `gh auth login` (found in Homebrew's and winget's folders too) |
+| Terminal | The commands you ran | bash, zsh, fish and PowerShell history, from when you turned it on. Passwords, tokens and keys are taken out first; trivial commands (`ls`, `cd`), commands started with a space, and anything with a word you list are left out |
 | Calendar | Your events | A `.ics` file, or an https address (Google Calendar: Settings → your calendar → Secret address in iCal format) |
-| Screen time | Which app was in front, per hour | Never screenshots; not while you're away; never windows with a private word (Settings → Buddy) |
+| Screen time | Which app was in front, per hour | Never screenshots; not while you're away; never windows with a private word (Settings → Buddy). Linux (X11) and Windows see the window's title for that; a Mac sees only the app's name (titles would need Screen Recording), so there it keeps app names and minutes only |
 | Codex, Gemini | Your Codex CLI and Gemini CLI sessions: the project and what you asked | `~/.codex/sessions` and `~/.gemini/tmp` |
 | Mail, WhatsApp | One note a day | The same switches as Settings → Second brain |
 
@@ -96,7 +96,8 @@ instructions, then:
 
 - **Start in Claude**: it's added to Claude Code and the Claude tab opens
   with a draft (“Use the frontend-developer agent to …”) for you to finish.
-- **In a terminal**: Claude Code starts with the agent's instructions.
+- **In a terminal**: Claude Code starts with the agent's instructions
+  (Terminal on a Mac, a PowerShell window on Windows).
 - **Install for Claude Code**: it's copied to `~/.claude/agents/`, so every
   Claude Code session can use it. It never writes over an agent of yours,
   and **Remove** only removes what it installed.
@@ -111,8 +112,18 @@ The command bar (Ctrl+Alt+K) finds the agents too.
   with Whisper and deletes the audio (whether or not that worked), then sums
   it up with to-dos. **Add to brain** keeps the notes in the inbox (to-dos as
   boxes) and the transcript as a source. It needs ffmpeg
-  (`sudo apt install ffmpeg`); if the island quits while recording, the audio
-  is deleted.
+  (`sudo apt install ffmpeg`, `brew install ffmpeg`, `winget install ffmpeg`);
+  if the island quits while recording, the audio is deleted.
+  - **Linux** records the default input and the default output's monitor
+    (what the speakers play), through PulseAudio or PipeWire.
+  - **A Mac** records the default input. To hear the other side too, install
+    [BlackHole](https://github.com/ExistentialAudio/BlackHole) and send your
+    output to it (a Multi-Output Device in Audio MIDI Setup); the island
+    adds it when it's there.
+  - **Windows** records the first microphone, and **Stereo Mix** when it's
+    turned on (Sound settings → More sound settings → Recording).
+  - With headphones and no way to hear the speakers, only your side is
+    recorded.
 - **The morning brief, out loud**: **Say it** in Today, or turn on **Say the
   morning brief out loud** in Settings → Buddy for once a morning when you're
   first at the computer (never in quiet hours).

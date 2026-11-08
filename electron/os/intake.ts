@@ -1,4 +1,3 @@
-import { execFile } from 'node:child_process'
 import { existsSync, mkdirSync, openSync, readFileSync, readSync, closeSync, readdirSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { dateOf } from '@shared/brain'
@@ -8,6 +7,7 @@ import {
   SOURCE_INFO,
   addScreenSample,
   appName,
+  displayApp,
   cleanActivity,
   commandProject,
   keepCommand,
@@ -27,6 +27,8 @@ import {
   type SourceStatus,
   type SourcesConfig,
 } from '@shared/intake'
+import type { FrontApp } from './frontApp'
+import { runGh } from './tools'
 
 export type IntakeDeps = {
   config: () => SourcesConfig
@@ -35,7 +37,8 @@ export type IntakeDeps = {
   /** Runs gh (or the stand-in); resolves its output. */
   gh?: (args: string[]) => Promise<string>
   /** The window in front (X11), or null. */
-  frontWindow?: () => Promise<{ title: string; pid: number } | null>
+  /** The window in front: its title, and its app (a name, a process name or a pid). */
+  frontWindow?: () => Promise<FrontApp | null>
   /** Seconds since the last key or pointer move. */
   idleSeconds?: () => number
   /** Window titles with these words are private (Settings › Buddy). */
@@ -59,16 +62,6 @@ type State = {
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
-
-const runGh = (args: string[]): Promise<string> =>
-  new Promise((resolve, reject) =>
-    execFile(process.env.DI_GH || 'gh', args, { timeout: 30_000, maxBuffer: 8 * 1024 * 1024 }, (e, out, err) => {
-      if (e) {
-        const code = (e as NodeJS.ErrnoException).code
-        reject(new Error(code === 'ENOENT' ? 'Install the GitHub CLI (gh), then run “gh auth login”.' : /auth login|not logged/i.test(String(err)) ? 'Run “gh auth login” first.' : String(err || e.message).trim().split('\n')[0]))
-      } else resolve(out)
-    }),
-  )
 
 /**
  * What you did, collected on this computer: each source you turned on in
@@ -259,6 +252,8 @@ export class Intake {
       { path: process.env.DI_HISTFILE || join(h, '.bash_history'), kind: 'bash' as const },
       { path: join(zdot, '.zsh_history'), kind: 'zsh' as const },
       { path: join(h, '.local/share/fish/fish_history'), kind: 'fish' as const },
+      // PowerShell's own history (PSReadLine), on Windows and where pwsh is installed.
+      { path: process.platform === 'win32' && process.env.APPDATA ? join(process.env.APPDATA, 'Microsoft', 'Windows', 'PowerShell', 'PSReadLine', 'ConsoleHost_history.txt') : join(h, '.local/share/powershell/PSReadLine/ConsoleHost_history.txt'), kind: 'powershell' as const },
     ].filter((f) => existsSync(f.path))
   }
 
@@ -377,13 +372,14 @@ export class Intake {
     const w = await this.d.frontWindow().catch(() => null)
     if (!w) return
     if (privateWindow(w.title, [...(this.d.privateWords?.() ?? []), ...this.d.config().skip])) return
-    let comm = ''
-    try {
-      comm = readFileSync(`/proc/${w.pid}/comm`, 'utf8').trim()
-    } catch {
-      // not on Linux, or gone
-    }
-    this.s.screen = addScreenSample(this.s.screen, this.now(), appName(comm, w.title), 1)
+    let comm = w.comm ?? ''
+    if (!w.name && !comm && w.pid)
+      try {
+        comm = readFileSync(`/proc/${w.pid}/comm`, 'utf8').trim()
+      } catch {
+        // gone
+      }
+    this.s.screen = addScreenSample(this.s.screen, this.now(), w.name ? displayApp(w.name) : appName(comm, w.title), 1)
     this.s.last.screen = this.now()
     this.saveSoon()
   }
