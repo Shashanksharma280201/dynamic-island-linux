@@ -26,6 +26,8 @@ const assume = env.objectForKey('DI_DRAG_ASSUME_DOWN')
 const assumeFile = assume.isNil() ? '' : assume.js
 const fm = $.NSFileManager.defaultManager
 const held = () => (assumeFile ? fm.fileExistsAtPath(assumeFile) : ($.NSEvent.pressedMouseButtons & 1) !== 0)
+// DI_DRAG_DEBUG (tests): say each change of state, with the pasteboard's count.
+const debug = !env.objectForKey('DI_DRAG_DEBUG').isNil()
 const OPTION = 1 << 19
 
 /** The file paths on the drag pasteboard ([] for text, links and the like). */
@@ -51,13 +53,16 @@ while (true) {
     down = true
     base = pb.changeCount
     state = 'watching'
+    if (debug) say({ debug: 'down', count: base })
   } else if (!b && down) {
+    if (debug) say({ debug: 'up', state: state, count: pb.changeCount })
     down = false
     if (state === 'dragging') say({ end: true })
     state = 'idle'
   }
   if (state === 'watching' && pb.changeCount !== base) {
     const f = files()
+    if (debug) say({ debug: 'changed', count: pb.changeCount, files: f.length })
     if (f.length) {
       state = 'dragging'
       say({ start: f })
@@ -126,6 +131,7 @@ export function darwinDragSource(e: DragEvents): DragSource {
         child.stderr.on('data', (d) => console.error('[island] drag helper:', String(d).trim().slice(0, 300)))
         setTimeout(() => done(false, 'no-helper'), 8000)
         createInterface({ input: child.stdout }).on('line', (line) => {
+          if (process.env.DI_DRAG_DEBUG && !line.includes('"held"')) console.log(`[island] drag helper: ${line.slice(0, 300)}`)
           const m = dragLine(line)
           if (!m) return
           if ('ready' in m) {
@@ -136,6 +142,7 @@ export function darwinDragSource(e: DragEvents): DragSource {
           if ('start' in m) {
             // A result dragged out of the island itself: leave it be.
             ours = e.ownDrag()
+            if (process.env.DI_DRAG_DEBUG) console.log(`[island] drag started (${m.start.length} files${ours ? ', the island’s own' : ''})`)
             if (ours) return
             dragging = true
             return e.onStart(m.start)

@@ -61,7 +61,7 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
     executablePath: ELECTRON,
     args: [ROOT],
     cwd: ROOT,
-    env: { ...process.env, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'), DI_SOFFICE: '', DI_DRAG_ASSUME_DOWN: HELD },
+    env: { ...process.env, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'), DI_SOFFICE: '', DI_DRAG_ASSUME_DOWN: HELD, DI_DRAG_DEBUG: '1' },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
