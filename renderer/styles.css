@@ -6766,3 +6766,212 @@ button .spinner-orb,
   color: var(--label-2);
   white-space: pre-wrap;
 }
+
+/* ===========================================================================
+   The modern look: deeper surfaces with a faint accent glow, soft raised
+   tiles instead of sunken wells, larger radii, buttons with depth, a lit
+   rail selection, one focus ring, and smoother motion. Tokens first, then
+   the parts that use them. (Later rules win over the older ones above.)
+   =========================================================================== */
+:root,
+.stay-dark,
+.music,
+.wa-viewer {
+  --tile: rgba(255, 255, 255, 0.045);
+  --tile-hover: rgba(255, 255, 255, 0.08);
+  --tile-border: rgba(255, 255, 255, 0.075);
+  --glow: color-mix(in srgb, var(--blue) 42%, transparent);
+  --ring: 0 0 0 1px var(--blue), 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent);
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+:root {
+  --radius-card: 28px;
+  --radius-module: 20px;
+  --radius-tile: 14px;
+  /* A touch deeper, so colour and type stand out. */
+  --material: rgba(20, 20, 24, 0.9);
+  --material-top: rgba(48, 48, 56, 0.9);
+}
+:root[data-theme='light'] {
+  --tile: rgba(255, 255, 255, 0.74);
+  --tile-hover: rgba(255, 255, 255, 0.98);
+  --tile-border: rgba(0, 0, 0, 0.065);
+  --glow: color-mix(in srgb, var(--blue) 30%, transparent);
+}
+
+/* Surfaces: the accent glows in faintly from the top corner; a softer, deeper shadow. */
+.island {
+  background:
+    radial-gradient(140% 90% at 0% 0%, color-mix(in srgb, var(--blue) 9%, transparent), transparent 55%),
+    linear-gradient(180deg, var(--material-top) 0%, var(--material) 38%),
+    var(--material);
+}
+.island-outer > .island {
+  box-shadow:
+    0 26px 60px -16px rgba(0, 0, 0, 0.55),
+    0 10px 24px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 0.5px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme='light'] .island-outer > .island {
+  box-shadow:
+    0 24px 54px -18px rgba(20, 20, 40, 0.3),
+    0 8px 20px -12px rgba(20, 20, 40, 0.2),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+
+/* Type: tighter, bolder titles; numbers that line up. */
+.nc-title {
+  font-size: 18px;
+  letter-spacing: -0.022em;
+}
+.headline {
+  letter-spacing: -0.02em;
+}
+.time,
+.caption time {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Buttons: tiles you can press; the main one has depth and a little glow. */
+.pill {
+  padding: 7px 15px;
+  transition:
+    transform 0.16s var(--ease),
+    filter 0.16s var(--ease),
+    background 0.16s var(--ease),
+    box-shadow 0.16s var(--ease);
+}
+.pill:where(:not(.primary, .danger, .always, .allow, .deny)) {
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+}
+.pill:where(:not(.primary, .danger, .always, .allow, .deny)):hover:not(:disabled) {
+  background: var(--tile-hover);
+  filter: none;
+}
+.pill.primary {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 80%, #fff) 0%, var(--blue) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 6px 16px -6px var(--glow);
+}
+.pill.primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 10px 22px -8px var(--glow);
+}
+.pill:active:not(:disabled) {
+  transform: scale(0.97);
+}
+.nc-dnd,
+.nc-clear,
+.today-record {
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  transition: background 0.16s var(--ease);
+}
+.nc-dnd:hover,
+.nc-clear:hover:not(:disabled),
+.today-record:hover {
+  background: var(--tile-hover);
+}
+
+/* Tiles: Control Center modules and the panels' cards and rows. */
+.module {
+  background: var(--tile);
+  border-color: var(--tile-border);
+  box-shadow: inset 0 1px 0 rgba(var(--ink), 0.04);
+}
+.nc-summary,
+.today-one,
+.today-call,
+.today-answer,
+.today-next,
+.agent-row,
+.agency-row,
+.agents-agency,
+.agency-body {
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  border-radius: var(--radius-tile);
+  transition: background 0.16s var(--ease), transform 0.16s var(--ease);
+}
+.agency-row:hover,
+.agents-agency:hover {
+  background: var(--tile-hover);
+}
+.agency-row:active,
+.agents-agency:active {
+  transform: scale(0.99);
+}
+.today-entry {
+  border-radius: 10px;
+  transition: background 0.16s var(--ease);
+}
+.today-entry:hover {
+  background: var(--tile);
+}
+
+/* Fields: one look, one focus ring. */
+.today-ask,
+.agents-input input,
+.agency-search {
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  transition: box-shadow 0.16s var(--ease);
+}
+.today-ask:focus-within,
+.agents-input input:focus,
+.agency-search:focus {
+  box-shadow: var(--ring);
+}
+button:focus-visible,
+[role='tab']:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* The rail: the open section is lit in the accent. */
+.rail-pill {
+  background: color-mix(in srgb, var(--blue) 20%, rgba(var(--ink), 0.08));
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--blue) 45%, transparent),
+    0 0 18px -4px var(--glow);
+}
+.app-icon {
+  transition: transform 0.18s var(--ease);
+}
+
+/* Small things: chips, kickers and the answer chip. */
+.today-kicker,
+.agents-kicker {
+  letter-spacing: 0.1em;
+}
+.answer-chip,
+.agent-state,
+.today-where {
+  backdrop-filter: saturate(1.4);
+}
+.cite {
+  background: color-mix(in srgb, var(--blue) 22%, var(--fill-2));
+}
+
+/* Thin scrollbars wherever something scrolls. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(var(--ink), 0.22) transparent;
+}
+::selection {
+  background: color-mix(in srgb, var(--blue) 35%, transparent);
+}
+/* The day's list: no rules between rows; a soft tile under the pointer. */
+.today-entry,
+.today-entry:first-child {
+  border-top: 0;
+  padding: 6px 6px;
+}
+.today-timeline {
+  gap: 1px;
+}

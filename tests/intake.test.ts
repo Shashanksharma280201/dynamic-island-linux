@@ -226,7 +226,7 @@ describe('screen time', () => {
     expect(appName('blender')).toBe('Blender')
   })
   it('private windows', () => {
-    expect(privateWindow('Bitwarden — vault', ['Bitwarden'])).toBe(true)
+    expect(privateWindow('Bitwarden \u2014 vault', ['Bitwarden'])).toBe(true)
     expect(privateWindow('Inbox - Mail', ['Bitwarden'])).toBe(false)
   })
 })

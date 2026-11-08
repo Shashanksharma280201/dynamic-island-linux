@@ -6,6 +6,27 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island OS: your computer as one AI**
+
+- **This computer first**: when Ollama is running, answers are made here
+  (free, nothing leaves); the cloud answers only after your yes, or always,
+  or never (Settings → Model). Every answer says where it ran, how long it
+  took and what it cost, with **Ask cloud** beside it.
+- **Sources**: GitHub (through `gh`, read only), your terminal's history
+  (secrets taken out), a calendar, screen time (app names, never pictures)
+  and Codex and Gemini sessions, each off until you turn it on, kept as one
+  note per day in the brain.
+- **Today**: the one thing, your day by hour, what's next, and “what did I
+  do last week?” answered with numbered sources.
+- **Agents**: research over your brain, monitors (“tell me when PR #43 is
+  reviewed”), and the roster that keeps people, promises and projects up to
+  date.
+- **The Agency**: hundreds of specialist agents, downloaded when you ask, to
+  start in Claude or a terminal or install into Claude Code.
+- **Voice**: call notes made out on this computer (audio deleted), the
+  morning brief out loud, and talking over the buddy to stop it.
+- **A more modern look** for the island, Settings and the phone app.
+
 **What was kept quiet, and the rest of Ubuntu**
 
 - **An evening digest**: once a day (18:00 at first) the island shows what

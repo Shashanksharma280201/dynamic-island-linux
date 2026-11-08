@@ -1,5 +1,5 @@
 import { execFile, spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { callPaths, callNoteText, callPrompt, callTranscriptText, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
@@ -47,6 +47,28 @@ export class Calls {
     } catch {
       // first run
     }
+    // Audio left by a crash is never kept.
+    try {
+      for (const f of readdirSync(d.dir)) if (f.endsWith('.wav')) unlinkSync(join(d.dir, f))
+    } catch {
+      // no folder yet
+    }
+  }
+
+  /** The island is quitting: stop the recorder and delete what it recorded. */
+  abort(): void {
+    const r = this.rec
+    if (!r) return
+    this.rec = null
+    r.proc.kill('SIGKILL')
+    try {
+      unlinkSync(r.wav)
+    } catch {
+      // not written yet
+    }
+    const c = this.list.find((x) => x.id === r.id)
+    if (c) Object.assign(c, { state: 'failed', ended: this.now(), error: 'The island quit while it was recording; the audio was deleted.' })
+    this.save()
   }
 
   private now(): number {

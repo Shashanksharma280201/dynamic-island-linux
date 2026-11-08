@@ -981,6 +981,7 @@ async function main() {
     onRecording: (c) => (c ? store.upsert({ kind: 'call', id: 'call', priority: 4, call: { started: c.started } }) : store.remove('call')),
     onChange: () => osChanged('calls'),
   })
+  app.on('before-quit', () => calls.abort())
   const callsView = (): CallsView => ({ list: calls.view().map((c) => ({ ...c, line: callLine(c, Date.now()) })), recording: !!calls.recording() })
   // The morning brief, out loud (the buddy's voice).
   const sayBrief = async (): Promise<boolean> => {

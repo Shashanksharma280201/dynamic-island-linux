@@ -150,6 +150,19 @@ describe('the recorder', () => {
     expect(c.view()[0]).toMatchObject({ state: 'done', where: 'none', todos: ['I’ll send the notes.'] })
   })
 
+  it('quitting while it records stops the recorder and deletes the audio; a crash’s audio goes too', async () => {
+    const { c } = make()
+    const started = await c.start()
+    await new Promise((r) => setTimeout(r, 200))
+    c.abort()
+    expect(c.recording()).toBeNull()
+    expect(existsSync(join(dir, 'audio', `${started.id}.wav`))).toBe(false)
+    expect(c.view()[0]).toMatchObject({ state: 'failed', error: 'The island quit while it was recording; the audio was deleted.' })
+    writeFileSync(join(dir, 'audio', 'left.wav'), 'x')
+    make()
+    expect(existsSync(join(dir, 'audio', 'left.wav'))).toBe(false)
+  })
+
   it('says what went wrong, and still deletes the audio', async () => {
     const { c } = make({ transcribe: async () => Promise.reject(new Error('No speech model yet.')) })
     await c.start()

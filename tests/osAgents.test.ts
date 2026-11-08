@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import {
@@ -150,11 +150,11 @@ describe('research', () => {
 })
 
 describe('The Agency catalog', () => {
-  const file = `---\nname: Frontend Developer\ndescription: "Builds fast, accessible web UIs — React, Vue."\ncolor: cyan\nemoji: 🖥️\nvibe: Ships pixels that load fast.\n---\n\n# Frontend Developer\n\nYou are a frontend developer.\n`
+  const file = `---\nname: Frontend Developer\ndescription: "Builds fast, accessible web UIs \u2014 React, Vue."\ncolor: cyan\nemoji: 🖥️\nvibe: Ships pixels that load fast.\n---\n\n# Frontend Developer\n\nYou are a frontend developer.\n`
   it('reads an agent file', () => {
     const a = parseAgent(file, 'engineering/engineering-frontend-developer.md')!
     expect(a).toMatchObject({ id: 'engineering/engineering-frontend-developer', slug: 'engineering-frontend-developer', name: 'Frontend Developer', division: 'engineering', color: 'cyan', vibe: 'Ships pixels that load fast.' })
-    expect(a.description).toBe('Builds fast, accessible web UIs — React, Vue.')
+    expect(a.description).toBe('Builds fast, accessible web UIs \u2014 React, Vue.')
     expect(a.body).toMatch(/^# Frontend Developer/)
     expect(parseAgent('# no frontmatter', 'x/y.md')).toBeNull()
     expect(parseAgent('---\nname: X\n---\nbody', 'x/y.md')).toBeNull() // no description
@@ -236,6 +236,16 @@ describe('The Agency on this computer', () => {
     const none = make({ claudeBinary: () => null })
     await none.download()
     expect(() => none.start('engineering/engineering-frontend-developer', 'terminal')).toThrow(/Claude Code isn’t installed/)
+  })
+
+  it('never reads a link in the catalog (it could point anywhere)', async () => {
+    const a = make()
+    const src = join(dir, 'src')
+    writeFileSync(join(dir, 'secret.md'), '---\nname: Secret\ndescription: should never be read\n---\nkey\n')
+    symlinkSync(join(dir, 'secret.md'), join(src, 'engineering', 'engineering-secret.md'))
+    await a.download()
+    expect(a.search('secret')).toEqual([])
+    expect(a.view().count).toBe(2)
   })
 
   it('says when it can’t download', async () => {

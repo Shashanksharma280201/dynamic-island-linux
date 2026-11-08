@@ -134,7 +134,8 @@ export class Agency {
         if (f.isDirectory()) {
           if (depth === 0 && NOT_DIVISIONS.has(f.name)) continue
           if (depth < 2) walk(join(dir, f.name), r, depth + 1)
-        } else if (depth > 0 && f.name.endsWith('.md') && !/^readme/i.test(f.name)) {
+        } else if (depth > 0 && f.isFile() && f.name.endsWith('.md') && !/^readme/i.test(f.name)) {
+          // Regular files only: a link in a downloaded catalog could point anywhere on this computer.
           const a = parseAgent(readFileSync(join(dir, f.name), 'utf8'), r)
           if (!a || seen.has(a.slug)) continue
           seen.add(a.slug)

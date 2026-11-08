@@ -1200,3 +1200,153 @@ button.small {
   padding: 7px 10px;
   font: inherit;
 }
+
+/* ===========================================================================
+   The modern look: larger, softer groups; bolder pane titles; a sidebar
+   whose selection glows in the accent; buttons with depth; one focus ring;
+   smoother motion. (Later rules win over the older ones above.)
+   =========================================================================== */
+:root {
+  --bg: #f4f5f8;
+  --side: #eceef2;
+  --radius-group: 14px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --glow: color-mix(in srgb, var(--blue) 32%, transparent);
+  --ring: 0 0 0 1px var(--blue), 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent);
+  --group-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px -10px rgba(20, 20, 40, 0.14);
+}
+:root[data-theme='dark'] {
+  --bg: #161619;
+  --side: #1f1f23;
+  --group: rgba(255, 255, 255, 0.045);
+  --glow: color-mix(in srgb, var(--blue) 42%, transparent);
+  --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #161619;
+    --side: #1f1f23;
+    --group: rgba(255, 255, 255, 0.045);
+    --glow: color-mix(in srgb, var(--blue) 42%, transparent);
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* The pane: a bigger title, rounder groups. */
+section > h2 {
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  margin: 4px 0 16px 2px;
+}
+section > h2 + * {
+  border-top-left-radius: var(--radius-group);
+  border-top-right-radius: var(--radius-group);
+}
+section > :last-child {
+  border-bottom-left-radius: var(--radius-group);
+  border-bottom-right-radius: var(--radius-group);
+}
+section > :not(h2) {
+  padding: 13px 16px;
+}
+section > :not(h2):not(:last-child)::after {
+  left: 16px;
+  right: 16px;
+}
+.toggle-row {
+  transition: background 0.16s var(--ease);
+}
+
+/* The sidebar: a softer selection that glows in the accent. */
+.side {
+  border-right: 0;
+  box-shadow: inset -0.5px 0 0 var(--separator);
+}
+.side-search input[type='search'] {
+  border-radius: 10px;
+  padding: 7px 10px 7px 30px;
+}
+button.side-item {
+  border-radius: 9px;
+  padding: 6px 9px;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+button.side-item.on {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 82%, #fff) 0%, var(--blue) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 6px 14px -8px var(--glow);
+}
+
+/* Buttons: depth for the main one, tiles for the rest. */
+button {
+  transition:
+    filter 0.16s var(--ease),
+    transform 0.16s var(--ease),
+    box-shadow 0.16s var(--ease),
+    background 0.16s var(--ease);
+}
+button:not([class]) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 82%, #fff) 0%, var(--blue) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 6px 14px -8px var(--glow);
+}
+button:not([class]):hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+button.secondary {
+  box-shadow: inset 0 0 0 0.5px var(--separator);
+}
+.segmented {
+  border-radius: 10px;
+}
+.segmented button {
+  border-radius: 8px;
+  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.segmented button.on {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 4px 10px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Fields: rounder, and one focus ring everywhere. */
+input:not([type='checkbox']),
+select,
+textarea {
+  border-radius: 10px;
+  transition: box-shadow 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+input:not([type='checkbox']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: var(--ring);
+}
+button:focus-visible,
+input.switch:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+input.switch {
+  transition: background 0.2s var(--ease);
+}
+input.switch::after {
+  transition: transform 0.2s var(--ease), left 0.2s var(--ease);
+}
+
+/* Thin scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent;
+}
+::selection {
+  background: color-mix(in srgb, var(--blue) 30%, transparent);
+}
+/* A row's own button keeps to one line. */
+.toggle-row > button,
+.toggle-row > span > button {
+  flex: none;
+  white-space: nowrap;
+}
