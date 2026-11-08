@@ -2,6 +2,9 @@ import { helloUrls, mergeUrls, neighbours, routeName, routeOf } from '../mobile/
 import { linkMode, linkReadout, linkStatus } from '../mobile/src/linkStatus'
 import { DARK, LIGHT, paletteFor } from '../mobile/src/ui/palette'
 import { cleanPrefs } from '../mobile/src/prefsShape'
+import { answerLine, clock, money } from '../mobile/src/words'
+import { metaText, moneyText } from '@shared/engine'
+import { clockTime } from '@shared/format'
 import { GAUGE_SCALE, P, VIEW, backParts, capsuleParts, frontParts, needleAngle, needlePath } from '../mobile/src/iso/linkGeometry'
 
 
@@ -102,5 +105,16 @@ describe('light and dark', () => {
     expect(cleanPrefs({ background: false, computerNotes: true, theme: 'light' })).toEqual({ background: false, computerNotes: true, theme: 'light' })
     expect(cleanPrefs({ theme: 'purple' }).theme).toBe('system')
     expect(cleanPrefs(null)).toEqual({ background: true, computerNotes: false, theme: 'system' })
+  })
+})
+
+describe('the app says times and costs as the island does', () => {
+  test('its own copies match the island’s', () => {
+    for (const usd of [null, 0, 0.00001, 0.004, 0.012, 0.31, 2]) expect(money(usd)).toBe(moneyText(usd))
+    for (const at of [0, Date.UTC(2026, 10, 8, 9, 5), Date.UTC(2026, 10, 8, 23, 59)]) expect(clock(at)).toBe(clockTime(at))
+    const meta = { where: 'local' as const, label: 'llama3.2', model: 'llama3.2', ms: 1420, usage: null, cost: 0 }
+    expect(answerLine(meta)).toBe(metaText(meta))
+    const cloud = { ...meta, where: 'cloud' as const, label: 'Claude', ms: 300, cost: 0.004 }
+    expect(answerLine(cloud)).toBe(metaText(cloud))
   })
 })
