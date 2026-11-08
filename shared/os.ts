@@ -9,6 +9,7 @@ import type { TimelineHour } from './memory'
 import type { Monitor, ResearchJob } from './agents'
 import type { AgencyAgent, AgencyView } from './agency'
 import type { CallNote } from './calls'
+import type { SkillsView } from './skills'
 
 export type EngineView = {
   cfg: EngineConfig
@@ -46,7 +47,12 @@ export type AgentsView = {
   brain: boolean
   week: { local: number; cloud: number; cost: number; unknown: number }
   agency: AgencyView
+  /** Agent Skills (Anthropic's), downloaded when you ask. */
+  skills: SkillsView
 }
+
+/** The resting island: notes waiting to be filed, and what's next on today's calendar. */
+export type RestingView = { toFile: number; next: { title: string; at: number } | null }
 
 /** Call notes: the latest calls, and whether one is being recorded. */
 export type CallsView = { list: (CallNote & { line: string })[]; recording: boolean }
@@ -92,6 +98,14 @@ export const OS_CALLS = {
   'agency.start': ['s', 's'],
   'agency.install': ['s'],
   'agency.uninstall': ['s'],
+  'skills.view': [],
+  'skills.get': [],
+  'skills.search': ['s'],
+  'skills.skill': ['s'],
+  'skills.install': ['s'],
+  'skills.uninstall': ['s'],
+  'skills.start': ['s'],
+  'status.view': [],
 } as const satisfies Record<string, readonly string[]>
 
 export type OsCall = keyof typeof OS_CALLS

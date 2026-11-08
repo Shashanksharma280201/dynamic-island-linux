@@ -32,7 +32,7 @@ export type AgencyDeps = {
   onChange?: () => void
 }
 
-const untar = (file: string, into: string): Promise<void> =>
+export const untar = (file: string, into: string): Promise<void> =>
   new Promise((resolve, reject) =>
     execFile('tar', ['-xzf', file, '-C', into, '--strip-components=1', '--no-same-owner'], { timeout: 120_000 }, (e, _o, err) => (e ? reject(new Error(String(err || e.message).trim().split('\n')[0] || 'Couldn’t unpack it.')) : resolve())),
   )

@@ -23,6 +23,12 @@ or install it with one command (see the [README](https://github.com/shashankshar
   date.
 - **The Agency**: hundreds of specialist agents, downloaded when you ask, to
   start in Claude or a terminal or install into Claude Code.
+- **Agent Skills**: Anthropic's skills for Claude Code (documents, design,
+  testing web apps and more), downloaded when you ask and installed a whole
+  folder at a time, each credited with its own licence.
+- **The resting island** counts the notes waiting to be filed, and on hover
+  says the time, that count and what's next today.
+- **Today and Agents on your phone**, in the Island Drop app under More.
 - **Voice**: call notes made out on this computer (audio deleted), the
   morning brief out loud, and talking over the buddy to stop it.
 - **A more modern look** for the island, Settings and the phone app.

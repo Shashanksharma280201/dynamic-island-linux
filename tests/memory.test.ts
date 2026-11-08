@@ -1,4 +1,4 @@
-import { byHour, citedPrompt, fit, messageEntries, pickSources, plainAnswer, readCites, terms, timeRange, type Candidate } from '@shared/memory'
+import { byHour, citedPrompt, fit, messageEntries, pickSources, plainAnswer, readCites, restingLine, terms, timeRange, type Candidate } from '@shared/memory'
 
 // Sunday 8 November 2026, 15:00 local time.
 const now = new Date(2026, 10, 8, 15, 0).getTime()
@@ -92,5 +92,15 @@ describe('sources for an answer', () => {
     const picked = pickSources(cands, 'island last week', at(10, 12))
     expect(plainAnswer('island last week', picked, at(10, 12))).toBe('From last week: Re: island demo [1]; Merged #42 The engine [2]; Search by meaning [3].')
     expect(plainAnswer('x', [], now)).toMatch(/Nothing/)
+  })
+})
+
+describe('the resting island', () => {
+  it('the time, notes to file and what’s next; nothing when there’s nothing to say', () => {
+    const now = new Date(2026, 10, 8, 10, 42).getTime()
+    expect(restingLine({ toFile: 2, next: { title: 'Standup', at: new Date(2026, 10, 8, 11, 0).getTime() } }, now)).toBe('10:42 \u00b7 2 to file \u00b7 Standup at 11:00')
+    expect(restingLine({ toFile: 1, next: null }, now)).toBe('10:42 \u00b7 1 to file')
+    expect(restingLine({ toFile: 0, next: null }, now)).toBe('')
+    expect(restingLine(null, now)).toBe('')
   })
 })

@@ -7,6 +7,8 @@ import type { Activity } from '@shared/types'
 import { moodFor, type CharacterMood } from '@shared/character'
 import { Character, useCharacter } from '../character/Character'
 import { formatTime, partOfDay } from '@shared/format'
+import type { RestingView } from '@shared/os'
+import { restingLine } from '@shared/memory'
 import { runStatus } from './ClaudeActivity'
 import { sessionMood, turnTime } from './SessionActivity'
 import { currentStep, sessionStatus } from '@shared/sessions'
@@ -14,8 +16,8 @@ import { capsulePeek } from '@shared/connected'
 import { elapsed } from '@shared/calls'
 
 /** What a peek says about the island's state, in two short lines. Pure. */
-export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number }): { title: string; sub: string; mood: CharacterMood } {
-  if (!a) return { title: `Ask ${o.name} anything`, sub: o.canDrop ? 'Click to open · drop files here' : 'Click to open', mood: 'listening' }
+export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number; resting?: RestingView | null }): { title: string; sub: string; mood: CharacterMood } {
+  if (!a) return { title: `Ask ${o.name} anything`, sub: restingLine(o.resting, o.now) || (o.canDrop ? 'Click to open · drop files here' : 'Click to open'), mood: 'listening' }
   if (a.kind === 'media') return { title: a.media.title || 'Playing', sub: a.media.artist || 'Now playing', mood: a.media.playing ? 'dancing' : 'idle' }
   if (a.kind === 'claude') {
     const r = a.run
@@ -38,7 +40,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
  * Hover peek: the capsule widens toward the screen with one line about what's
  * going on. Keep hovering and the full card opens; click to open it now.
  */
-export function Peek({ activity, canDrop }: { activity: Activity | null; canDrop: boolean }) {
+export function Peek({ activity, canDrop, resting }: { activity: Activity | null; canDrop: boolean; resting?: RestingView | null }) {
   const { name } = useCharacter()
   const [now, setNow] = useState(Date.now)
   const ticking = activity?.kind === 'claude' || activity?.kind === 'session' || activity?.kind === 'call'
@@ -47,7 +49,7 @@ export function Peek({ activity, canDrop }: { activity: Activity | null; canDrop
     const t = setInterval(() => setNow(Date.now()), 1000)
     return () => clearInterval(t)
   }, [ticking])
-  const l = peekLines(activity, { name, canDrop, now })
+  const l = peekLines(activity, { name, canDrop, now, resting })
   return (
     <div className="peek">
       <div className="peek-text">

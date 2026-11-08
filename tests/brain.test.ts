@@ -82,6 +82,9 @@ describe('the brain’s pure pieces', () => {
     expect(within('/a/b', '/a')).toBe(true)
     expect(within('/ab', '/a')).toBe(false)
     expect(within('/a', '')).toBe(false)
+    // Windows paths: backslashes, either slash, and a drive letter in either case.
+    expect(within('C:\\Users\\me\\Brain\\01-inbox', 'c:/Users/me/Brain/')).toBe(true)
+    expect(within('C:\\Users\\me\\Brainy', 'C:\\Users\\me\\Brain')).toBe(false)
   })
 })
 

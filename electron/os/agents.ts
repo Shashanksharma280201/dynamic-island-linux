@@ -165,7 +165,7 @@ export class Agents {
         return hit ? `“${m.target}” came up${hit.from ? ` (${hit.from})` : ''}: ${hit.text.slice(0, 120)}` : null
       }
       case 'file': {
-        const p = m.target.replace(/^~(?=\/)/, this.d.home)
+        const p = m.target.replace(/^~(?=[\\/])/, this.d.home)
         if (!existsSync(p)) return null
         const st = `${statSync(p).size}:${Math.round(statSync(p).mtimeMs)}`
         if (m.seen === undefined) {

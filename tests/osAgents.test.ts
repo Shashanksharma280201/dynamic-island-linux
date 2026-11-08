@@ -32,6 +32,8 @@ describe('monitors from your words', () => {
     expect(parseMonitor('tell me when pull request 12 in acme/web gets approved')).toMatchObject({ kind: 'pr-review', target: 'acme/web', ref: '12' })
     expect(parseMonitor('tell me when CI on me/island main finishes')).toMatchObject({ kind: 'ci', target: 'me/island', ref: 'main' })
     expect(parseMonitor('tell me when the build on me/island fails')).toMatchObject({ kind: 'ci', target: 'me/island' })
+    expect(parseMonitor('tell me when C:\\Users\\me\\Downloads\\report.pdf appears')).toMatchObject({ kind: 'file', target: 'C:\\Users\\me\\Downloads\\report.pdf' })
+    expect(parseMonitor('tell me when ~\\Downloads\\x.zip appears')).toMatchObject({ kind: 'file', target: '~\\Downloads\\x.zip' })
     expect(parseMonitor('Tell me when https://example.com/pricing changes.')).toMatchObject({ kind: 'url', target: 'https://example.com/pricing' })
     expect(parseMonitor('tell me when anyone mentions Acme')).toMatchObject({ kind: 'mention', target: 'Acme' })
     expect(parseMonitor('tell me when ~/Downloads/report.pdf appears')).toMatchObject({ kind: 'file', target: '~/Downloads/report.pdf' })

@@ -5,6 +5,7 @@
  */
 import type { Activity } from './intake'
 import type { OsCite } from './os'
+import { clockTime } from './format'
 
 export type TimelineEntry = {
   at: number
@@ -213,4 +214,10 @@ export function plainAnswer(q: string, sources: (Candidate & { n: number })[], n
     .slice(0, 5)
     .map((s) => `${s.title} [${s.n}]`)
     .join('; ')}.`
+}
+
+/** At rest: the time, notes to file, and what's next ("10:42 · 2 to file · Standup at 11:00"); '' when there's nothing to say. Pure. */
+export function restingLine(r: { toFile: number; next: { title: string; at: number } | null } | null | undefined, now: number): string {
+  if (!r || (!r.toFile && !r.next)) return ''
+  return [clockTime(now), r.toFile ? `${r.toFile} to file` : '', r.next ? `${r.next.title} at ${clockTime(r.next.at)}` : ''].filter(Boolean).join(' · ')
 }

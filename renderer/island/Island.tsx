@@ -8,7 +8,7 @@ import { spring, pop, contentIn, contentOut, morphSpring, sizeRank } from '../an
 import { sound } from '../sound'
 import { useHoverIntent } from './useHoverIntent'
 import { Hello, Peek } from './states/Peek'
-import { IdlePill } from './states/IdlePill'
+import { IdlePill, useResting } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
 import { JobCard } from './states/JobCard'
 import { ApprovalCard } from './states/ApprovalCard'
@@ -328,6 +328,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
+  // What the resting island says: asked again each time it comes to rest.
+  const resting = useResting(p.mode === 'idle' && !showPanel)
   const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
@@ -592,11 +594,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (
-              <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} />
+              <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} resting={resting} />
             ) : hello && p.mode === 'idle' ? (
               <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
-              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} />
+              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} toFile={resting?.toFile ?? 0} />
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (

@@ -190,7 +190,8 @@ type Arg = 's' | 'n' | 'b' | 'o' | 'S' | 's?' | 'o?'
 /**
  * What the phone may call: the same functions the island's window uses
  * (Claude, trading, notifications, chats, mail, notes, music, system
- * controls, CRM, documents, services), and the arguments each takes.
+ * controls, CRM, documents, services, Today and Agents), and the
+ * arguments each takes.
  */
 export const PHONE_CALLS = {
   'claude.state': [],
@@ -244,6 +245,14 @@ export const PHONE_CALLS = {
   'docs.toPhone': ['s'],
   'services.view': [],
   'services.refresh': ['s'],
+  // Island OS: Today (your day, and questions about your days) and Agents.
+  'today.view': [],
+  'today.ask': ['s', 'o?'],
+  'agents.view': [],
+  'agents.monitor': ['s'],
+  'agents.unmonitor': ['s'],
+  'agents.research': ['s'],
+  'agents.run': ['s'],
 } as const satisfies Record<string, readonly Arg[]>
 
 export type PhoneCall = keyof typeof PHONE_CALLS

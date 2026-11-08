@@ -54,7 +54,7 @@ it from the code instead, see [Install](docs/install.md).
 
 - **Now Playing**: album art and a waveform on the capsule, with play, pause, skip and seek for Spotify, YouTube and any media player.
 - **Messages and mail**: WhatsApp messages and new mail pop up as cards, and you reply right there.
-- **Island OS: your computer as one AI**: a model on this computer answers first (Ollama), the cloud only with your yes, and every answer says where it ran and what it cost. **Today** shows your day by hour from the sources you turn on (GitHub, your terminal, calendar, screen time, Codex and Gemini, mail and chats) and answers “what did I do last week?” with sources. **Agents** research your notes, watch for things (“tell me when PR #43 is reviewed”) and keep your people, promises and projects up to date. **Call notes** are made out on this computer, the audio deleted. And [The Agency](https://github.com/msitarzewski/agency-agents)'s specialist agents start in Claude with one click.
+- **Island OS: your computer as one AI**: a model on this computer answers first (Ollama), the cloud only with your yes, and every answer says where it ran and what it cost. **Today** shows your day by hour from the sources you turn on (GitHub, your terminal, calendar, screen time, Codex and Gemini, mail and chats) and answers “what did I do last week?” with sources. **Agents** research your notes, watch for things (“tell me when PR #43 is reviewed”) and keep your people, promises and projects up to date. **Call notes** are made out on this computer, the audio deleted. And [The Agency](https://github.com/msitarzewski/agency-agents)'s specialist agents start in Claude with one click, and Anthropic's [Agent Skills](https://github.com/anthropics/skills) install into Claude Code. Today and Agents are on the phone app too. [The guide](docs/island-os.md).
 - **A second brain**: one memory for you and every AI you use, as plain notes on your computer. Claude Code, Codex and Gemini CLI know who you are, every session gets a five-line note, and your projects get pages. [How it works](docs/brain.md).
 - **Ubuntu, the island's way**: a command bar (Ctrl+Alt+K) for apps, files, notes, sums and system changes, and Ubuntu in the island's look in one click (and back). [How it works](docs/desktop.md).
 - **A buddy for your screen**: press Ctrl+Alt+B and ask “where do I change this?”; it answers out loud and points at the spot, step by step. [How it works](docs/buddy.md).
@@ -70,6 +70,13 @@ it from the code instead, see [Install](docs/install.md).
 
 Everything is optional and works without accounts. Your settings, notes,
 documents and CRM stay on your computer. See [all features](docs/features.md).
+
+<p align="center">
+  <img src="docs/media/island-os-today.png" width="32%" alt="Today: your day by hour from your sources, what's next, and a question answered on this computer with numbered sources">
+  <img src="docs/media/island-os-agents.png" width="32%" alt="Agents: research over your notes, monitors that tell you once, and the jobs that tend your brain">
+  <img src="docs/media/island-os-skills.png" width="32%" alt="Agent Skills: Anthropic's pdf skill installed into Claude Code, with its licence">
+</p>
+<p align="center"><sub>Island OS: Today, Agents and Agent Skills (made-up data, from <code>scripts/video/island-os-shots.cjs</code>)</sub></p>
 
 ## Get started
 
@@ -120,8 +127,9 @@ the Inter typeface (SIL Open Font License), [thinking-orbs](https://libraries.de
 by Jakub Antalik (MIT), the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy)
 by Ryan (MIT; `mobile/src/iso/`), and the libraries in `package.json` (MIT,
 Apache-2.0 and BSD). [The Agency](https://github.com/msitarzewski/agency-agents)
-by AgentLand Contributors (MIT) isn't bundled: the island downloads it when you
-ask, and credits it where its agents appear.
+by AgentLand Contributors (MIT) and Anthropic's [Agent Skills](https://github.com/anthropics/skills)
+(each skill under its own licence, many Apache-2.0) aren't bundled: the island
+downloads them when you ask, and credits them where they appear.
 
 Dynamic Island is an independent project, not made by or affiliated with
 Apple. "Dynamic Island" names the iPhone feature that inspired it.

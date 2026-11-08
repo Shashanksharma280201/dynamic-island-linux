@@ -5,7 +5,10 @@
 // and writes a note with sources; a roster job runs from the panel; and The
 // Agency (a small stand-in catalog) is downloaded on request, browsed by
 // division, searched, installed into Claude Code and removed, and started
-// in Claude with a draft. Needs an X server and a session bus.
+// in Claude with a draft; Agent Skills (a stand-in catalog laid out like
+// Anthropic's) the same way, a whole skill folder at a time, with its
+// licence; and the resting island counts the notes waiting to be filed.
+// Needs an X server and a session bus.
 const { _electron } = require('playwright-core')
 const { execFileSync } = require('child_process')
 const path = require('path')
@@ -21,6 +24,7 @@ const CLAUDE_DIR = path.join(TMP, 'claude-config')
 const HOME = process.env.HOME && process.env.HOME !== os.userInfo().homedir ? process.env.HOME : path.join(TMP, 'home')
 const VAULT = path.join(HOME, 'Brain')
 const CATALOG = path.join(TMP, 'agency-catalog')
+const SKILLS = path.join(TMP, 'skills-catalog')
 const APPROVED = path.join(TMP, 'pr-43-approved')
 const ELECTRON = path.join(ROOT, 'node_modules/electron/dist/electron')
 const SCALE = Number(process.env.E2E_SCALE) || 1
@@ -58,19 +62,33 @@ for (const [p, body] of Object.entries(files)) {
   fs.mkdirSync(path.dirname(path.join(CATALOG, p)), { recursive: true })
   fs.writeFileSync(path.join(CATALOG, p), body)
 }
+// And for Agent Skills (the real ones are github.com/anthropics/skills).
+const skillFiles = {
+  'skills/pdf/SKILL.md': '---\nname: pdf\ndescription: |-\n  Read, fill and merge PDF files.\n  Use it for forms.\nlicense: Complete terms in LICENSE.txt\n---\n\n# PDF\n\nUse pypdf to read and fill forms.\n',
+  'skills/pdf/LICENSE.txt': '\n                                 Apache License\n                           Version 2.0, January 2004\n',
+  'skills/pdf/scripts/fill.py': 'print("fill")\n',
+  'skills/webapp-testing/SKILL.md': '---\nname: webapp-testing\ndescription: Test web apps with Playwright.\n---\n\nStart the server first.\n',
+  'template/SKILL.md': '---\nname: template-skill\ndescription: A template.\n---\n',
+  'README.md': '# Skills\n',
+}
+for (const [p, body] of Object.entries(skillFiles)) {
+  fs.mkdirSync(path.dirname(path.join(SKILLS, p)), { recursive: true })
+  fs.writeFileSync(path.join(SKILLS, p), body)
+}
 
 ;(async () => {
   const ai = await startFakeAi()
   const hist = path.join(HOME, '.zsh_history')
   fs.writeFileSync(hist, '')
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ sources: { on: { shell: true, github: true } } }))
+  // (No evening digest: after 18:00 its card would stand in for the resting island.)
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ sources: { on: { shell: true, github: true } }, buddy: { digest: false } }))
   const gh = path.join(__dirname, 'fake-gh.cjs')
   fs.chmodSync(gh, 0o755)
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox', ...(SCALE !== 1 ? [`--force-device-scale-factor=${SCALE}`] : [])],
     cwd: ROOT,
-    env: { ...process.env, HOME, DYNAMIC_ISLAND_SOCK: SOCK, CLAUDE_CONFIG_DIR: CLAUDE_DIR, DI_USER_DATA: USER_DATA, DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GH: gh, FAKE_GH_APPROVED: APPROVED, DI_OLLAMA_URL: ai.base, DI_AI_BASE_URL: ai.base, DI_CLAUDE_BIN: '/nonexistent', DI_EGRESS_COUNT_LOCAL: '1', DI_AGENCY_URL: CATALOG },
+    env: { ...process.env, HOME, DYNAMIC_ISLAND_SOCK: SOCK, CLAUDE_CONFIG_DIR: CLAUDE_DIR, DI_USER_DATA: USER_DATA, DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GH: gh, FAKE_GH_APPROVED: APPROVED, DI_OLLAMA_URL: ai.base, DI_AI_BASE_URL: ai.base, DI_CLAUDE_BIN: '/nonexistent', DI_EGRESS_COUNT_LOCAL: '1', DI_AGENCY_URL: CATALOG, DI_SKILLS_URL: SKILLS },
   })
   const page = await app.firstWindow()
   const shot = (p, name) => p.screenshot({ path: path.join(OUT, `${name}.png`) }).catch(() => {})
@@ -156,6 +174,38 @@ for (const [p, body] of Object.entries(files)) {
     await page.click('.agency-actions button:has-text("Start in Claude")')
     check('Start in Claude opens the Claude tab with a draft', !!(await until(async () => (await page.$eval('.claude-field textarea', (e) => e.value).catch(() => '')).startsWith('Use the engineering-frontend-developer agent (Frontend Developer) to '))))
     check('with the agent installed for it', fs.existsSync(path.join(CLAUDE_DIR, 'agents', 'engineering-frontend-developer.md')))
+
+    // ---- Agent Skills ----
+    await page.click('.rail-btn[aria-label="Agents"]')
+    await page.click('.agents-agency.skills')
+    check('Agent Skills are downloaded only when you ask', await seen(page, '.agency-get button:has-text("Get Agent Skills")'))
+    await page.click('.agency-get button')
+    check('then lists the skills (not the template)', !!(await until(async () => (await page.$$('.agency-row[data-skill]')).length === 2, 10000)))
+    check('and credits Anthropic', await seen(page, '.agency-credit:has-text("Agent Skills, by Anthropic")'))
+    await page.fill('.agency-search', 'forms')
+    check('search finds a skill by what it does', !!(await until(async () => (await page.$$eval('.agency-row[data-skill]', (e) => e.map((x) => x.getAttribute('data-skill')))).join() === 'pdf')))
+    await page.click('.agency-row[data-skill="pdf"]')
+    check('a skill opens with its licence and files', (await seen(page, '.agency-hero:has-text("Apache 2.0 · 3 files")')) && (await seen(page, '.agency-body:has-text("Use pypdf")')))
+    await shot(page, '04-skill')
+    await page.click('.agency-actions button:has-text("Install for Claude Code")')
+    const skillDir = path.join(CLAUDE_DIR, 'skills', 'pdf')
+    check('Install copies the whole skill into Claude Code', !!(await until(() => fs.existsSync(path.join(skillDir, 'scripts', 'fill.py')))) && /^---\nname: pdf\n/.test(fs.readFileSync(path.join(skillDir, 'SKILL.md'), 'utf8')))
+    check('marked as the island’s, with its licence', /"licence": "Apache 2.0"/.test(fs.readFileSync(path.join(skillDir, '.from-dynamic-island.json'), 'utf8')))
+    check('and says so', await seen(page, '.agency-actions button:has-text("Remove from Claude Code")'))
+    await page.click('.agency-actions button:has-text("Remove from Claude Code")')
+    check('Remove takes it out again', !!(await until(() => !fs.existsSync(skillDir))))
+    await page.click('.agency-actions button:has-text("Use in Claude")')
+    check('Use in Claude opens the Claude tab with a draft', !!(await until(async () => (await page.$eval('.claude-field textarea', (e) => e.value).catch(() => '')).startsWith('Use the pdf skill to '))))
+
+    // ---- The resting island: what waits to be filed ----
+    for (const n of ['a', 'b']) fs.writeFileSync(path.join(VAULT, '01-inbox', `2026-11-08-note-${n}.md`), `---\ntype: note\n---\n\nNote ${n}\n`)
+    const toFile = await until(async () => (await os_('status.view')).toFile >= 2 && (await os_('status.view')).toFile)
+    check('the island knows how many notes wait to be filed', !!toFile, String(toFile))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    // (An agents change, like a monitor's check, refreshes it at once; otherwise every minute.)
+    await os_('agents.check')
+    check('a small count sits on the resting island', !!(await until(async () => (await page.$eval('.capsule.idle .file-badge', (e) => e.textContent).catch(() => '')) === String(toFile), 10000)))
+    await shot(page, '05-resting')
   } catch (e) {
     check('no errors', false, e.stack)
   } finally {

@@ -47,6 +47,9 @@ function startFakeAi() {
     // Island OS research: a plan, then a summary of the findings.
     if (result === null && /^Question: /.test(prompt) && /\n\nFindings:\n/.test(prompt)) return { text: 'You ran the tests [1] and merged the engine [2].' }
     if (result === null && /^Question: /.test(prompt) && !/\nSources:\n/.test(prompt)) return { text: '1. When did I run npm test?\n2. Which pull request did I merge?' }
+    // A script's own answer first (s.answer(prompt) returns text, or null to carry on).
+    const own = result === null && s.answer ? s.answer(prompt) : null
+    if (own) return { text: own }
     // Island OS: a question about your days, answered from numbered sources (and one number that isn't there).
     if (result === null && /\nSources:\n\[1\]/.test(prompt)) {
       const src = [...prompt.matchAll(/^\[(\d+)\] (.+?) \(/gm)].slice(0, 2)
