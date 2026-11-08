@@ -369,7 +369,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - Local search.
   - The You and Brain pages in Settings.
 - **Done when:** a new `claude` session in any terminal, in any repo, knows who you are and what you are working on, and finishing it leaves a five-line note in the inbox.
-- **Status:** built ([the guide](../brain.md)). Search by meaning (the local embedding model) followed.
+- **Status:** built ([the guide](../brain.md)), with WhatsApp, mail and notes from the phone as sources you turn on. Search by meaning (the local embedding model) followed.
 
 ### Phase 2: The new look
 
@@ -408,7 +408,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
 
 - **You get:** the capabilities in section D.
 - **Done when:** you can run a normal day by voice for the things you choose, with nothing done without your yes.
-- **Status:** built ([beyond questions](../buddy.md#beyond-questions)): hand-off to the assistant with status, cancel and steer; yes and no for approvals; simple commands; speaking up within limits; point, then approve clicks and typing; memory you approve; routines; honest job status; the wake word (off by default). Not yet: the phone as a microphone, and an evening digest of what was kept quiet.
+- **Status:** built ([beyond questions](../buddy.md#beyond-questions)): hand-off to the assistant with status, cancel and steer; yes and no for approvals; simple commands; speaking up within limits; point, then approve clicks and typing; memory you approve; routines; honest job status; the wake word (off by default); the phone as a microphone (hold to talk in Island Drop); an evening digest of what was kept quiet, with quiet hours you set.
 
 ### Phase 6: Ubuntu as an AI OS
 
@@ -418,7 +418,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - System tools.
   - The Wayland extension, when you move to 26.04.
 - **Done when:** the desktop looks like one product, and the island and buddy work the same on Wayland.
-- **Status:** the X11 parts are built ([the guide](../desktop.md)): Ubuntu in the island's look and back, the command bar, system tools that ask first. Not yet: the login screen and boot splash (they need your password), extensions such as Blur my Shell, notification summaries, and the Wayland extension, which waits for a move past 22.04.
+- **Status:** the X11 parts are built ([the guide](../desktop.md)): Ubuntu in the island's look and back, Blur my Shell and Just Perfection, the login screen and boot splash (with your password), the command bar, system tools that ask first, and notification summaries. Not yet: the Wayland extension, which waits for a move past 22.04.
 
 ## Risks and how the plan handles them
 

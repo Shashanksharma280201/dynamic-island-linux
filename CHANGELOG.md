@@ -6,6 +6,26 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**What was kept quiet, and the rest of Ubuntu**
+
+- **An evening digest**: once a day (18:00 at first) the island shows what
+  the buddy didn't say out loud and what wasn't urgent, with the
+  notifications you didn't get to, by app. **Quiet hours** are yours to set
+  (Settings → Buddy). [The guide](docs/buddy.md#beyond-questions).
+- **Notification summaries**: one line when Do Not Disturb ends; the stack
+  names the apps waiting; a busy app says who it's from; **Sum up** puts the
+  whole list in a few sentences with your AI.
+- **Talk to the buddy from your phone**: hold to talk in Island Drop, and
+  the buddy answers out loud on the computer.
+- **The brain keeps WhatsApp, mail and notes from your phone**, each off
+  until you turn it on; what people wrote is kept as data, never
+  instructions. [The guide](docs/brain.md#what-it-captures).
+- **Blur my Shell and Just Perfection** in Settings → Desktop, from
+  extensions.gnome.org, turned on with the look and undone with it.
+- **The login screen and boot splash** in the island's look (with your
+  password): the accent, light or dark, and the island's orb while Ubuntu
+  starts. [How it works](docs/desktop.md).
+
 **Ubuntu, the island's way**
 
 - **Settings → Desktop → Make Ubuntu match the island**: light or dark and
