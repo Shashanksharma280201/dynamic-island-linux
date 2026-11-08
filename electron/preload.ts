@@ -149,6 +149,7 @@ const api = {
   buddy: {
     ask: (text: string) => ipcRenderer.invoke(BUDDY.ASK, text),
     cmd: (c: 'next' | 'back' | 'stop' | 'repeat') => ipcRenderer.invoke(BUDDY.CMD, c),
+    answer: (yes: boolean) => ipcRenderer.invoke(BUDDY.ANSWER, yes),
     get: (): Promise<BuddyView> => ipcRenderer.invoke(BUDDY.GET),
     onState: (cb: (v: BuddyView) => void) => on(BUDDY.STATE, cb),
     onKey: (cb: () => void) => on(BUDDY.KEY, cb),
@@ -405,6 +406,8 @@ const settings = {
     set: (patch: Partial<BuddyConfig>) => ipcRenderer.invoke(BUDDY.SET, patch),
     getVoice: (): Promise<string | null> => ipcRenderer.invoke(BUDDY.VOICE_GET),
     tryVoice: () => ipcRenderer.invoke(BUDDY.VOICE_TRY),
+    setRoutine: (r: unknown): Promise<string | null> => ipcRenderer.invoke(BUDDY.ROUTINE_SET, r),
+    removeRoutine: (id: string) => ipcRenderer.invoke(BUDDY.ROUTINE_DEL, id),
   },
   clearPrivacy: () => ipcRenderer.invoke(SETTINGS.CLEAR_PRIVACY),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),

@@ -206,7 +206,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // Dictate anywhere (its shortcut): typed into the app you're in.
   const dictation = useDictation(claude)
   // The buddy: ask about your screen (its shortcut), it answers out loud and points.
-  const buddy = useBuddy(claude)
+  const buddy = useBuddy(claude, character.name)
   // The morning card: the one thing for today, from the brain's loop.
   const morning = useMorning()
   // Search by meaning: the brain's notes as vectors, made here.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { SettingsState } from '@shared/types'
 import { VOICES, type BuddyConfig } from '@shared/buddy'
+import { ROUTINE_EXAMPLES, type Routine } from '@shared/jarvis'
 import { shortcutLabel } from '@shared/shortcuts'
 import { Segmented, Toggle, useAction } from './Settings'
 
@@ -126,12 +127,94 @@ export function BuddySection({ s }: { s: SettingsState }) {
         on={c.save}
         onChange={(v) => set({ save: v })}
       />
+      <Toggle
+        label={`Listen for “hey ${b.name}”`}
+        hint={`Say “hey ${b.name}” and ask, without the key. Your speech is turned into text on this computer and nothing leaves it until it hears its name; it listens only while it’s idle. Off by default: it keeps the microphone open and uses some CPU.`}
+        on={c.wake}
+        onChange={(v) => set({ wake: v })}
+      />
+      <Toggle
+        label="Say what’s urgent out loud"
+        hint="A Claude Code session waiting on you, a permission prompt (say yes or no), or work it handed off that finished. Never between 22:00 and 8:00, never the same thing twice in three days, a few an hour at most."
+        on={c.alerts}
+        onChange={(v) => set({ alerts: v })}
+      />
       <div className="row">
         <button className="secondary" disabled={busy} onClick={() => run(() => window.settings.buddy.tryVoice())}>
           Hear it
         </button>
       </div>
+      <RoutinesBlock routines={b.routines} run={run} />
       {error && <div className="error">{error}</div>}
     </section>
+  )
+}
+
+const DAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
+const hhmm = (h: number, m: number) => `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+
+/** Routines: standing orders the assistant runs at their time; anything that sends or changes still asks. */
+function RoutinesBlock({ routines, run }: { routines: Routine[]; run: <T>(f: () => Promise<T>) => Promise<T | undefined> }) {
+  const [name, setName] = useState('')
+  const [time, setTime] = useState('18:30')
+  const [day, setDay] = useState('')
+  const [ask, setAsk] = useState('')
+  const add = (r: unknown) =>
+    run(async () => {
+      const e = await window.settings.buddy.setRoutine(r)
+      if (e) throw new Error(e)
+    })
+  return (
+    <div className="routines">
+      <div>Routines</div>
+      <div className="hint">Standing orders: at their time (or as soon as the computer wakes) the assistant does what you wrote. Anything that sends or changes something still asks you first.</div>
+      {routines.map((r) => (
+        <div key={r.id} className="routine">
+          <input type="checkbox" className="switch small" checked={r.on} aria-label={`${r.name} on`} onChange={(e) => add({ ...r, on: e.target.checked })} />
+          <div className="routine-main">
+            <div>
+              {r.name} <span className="hint">· {r.when.weekday !== undefined ? `${DAYS[r.when.weekday]} ` : 'Every day '}at {hhmm(r.when.hour, r.when.minute)}</span>
+            </div>
+            <div className="hint routine-ask">{r.ask}</div>
+          </div>
+          <button className="link" onClick={() => run(() => window.settings.buddy.removeRoutine(r.id))}>
+            Remove
+          </button>
+        </div>
+      ))}
+      {routines.length === 0 && (
+        <div className="row">
+          {ROUTINE_EXAMPLES.map((x) => (
+            <button key={x.name} className="secondary" onClick={() => add({ ...x, on: true })}>
+              Add “{x.name}”
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="routine-new">
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" aria-label="Routine name" />
+        <input type="time" value={time} onChange={(e) => setTime(e.target.value)} aria-label="Time" />
+        <select value={day} onChange={(e) => setDay(e.target.value)} aria-label="Days">
+          <option value="">Every day</option>
+          {DAYS.map((d, i) => (
+            <option key={d} value={i}>
+              {d}
+            </option>
+          ))}
+        </select>
+        <input className="grow" value={ask} onChange={(e) => setAsk(e.target.value)} placeholder="What to do: “Wrap up my day in three lines…”" aria-label="What the routine asks" />
+        <button
+          disabled={!name.trim() || !ask.trim()}
+          onClick={async () => {
+            const [h, m] = time.split(':').map(Number)
+            await add({ name, ask, on: true, when: { hour: h, minute: m, ...(day === '' ? {} : { weekday: Number(day) }) } })
+            setName('')
+            setAsk('')
+          }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
   )
 }

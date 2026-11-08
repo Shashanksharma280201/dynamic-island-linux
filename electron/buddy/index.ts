@@ -1,5 +1,6 @@
 import type { Display } from 'electron'
-import { IDLE_BUDDY, buddyPrompt, parseReply, quickCommand, walkthrough, type BuddyConfig, type BuddyPoint, type BuddyView, type Shot } from '@shared/buddy'
+import { IDLE_BUDDY, buddyPrompt, mapPoint, parseReply, quickCommand, steerLike, walkthrough, type BuddyConfig, type BuddyOffer, type BuddyPoint, type BuddyView, type Shot } from '@shared/buddy'
+import { approvalWord, interruptKind, parseActions } from '@shared/jarvis'
 import { egress } from '../privacy'
 
 export type BuddyDeps = {
@@ -28,6 +29,14 @@ export type BuddyDeps = {
   stopSpeaking: () => void
   onChange: (v: BuddyView) => void
   now?: () => number
+  /** The island's assistant: hand it work, ask how it's going, stop it; and what's running now. */
+  assistant?: { busy: () => boolean; status: () => string; ask: (task: string) => void; stop: () => void; work: () => string }
+  /** A permission prompt waiting (Claude Code or the assistant), to answer by voice. */
+  approvals?: { pending: () => string | null; answer: (a: 'allow' | 'deny' | 'always') => boolean }
+  /** Keep a fact about you in the brain's 00-me, after your yes. */
+  remember?: (fact: string) => void
+  /** Click (screen points) or type for you, after your yes. */
+  act?: { click: (x: number, y: number) => Promise<void>; type: (text: string) => Promise<void> }
 }
 
 const plain = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
@@ -45,18 +54,52 @@ export class Buddy {
   constructor(private d: BuddyDeps) {}
 
   view(): BuddyView {
-    return this.v
+    return { ...this.v, wake: this.d.config().on && this.d.config().wake }
   }
 
   private set(v: Partial<BuddyView>): void {
     this.v = { ...this.v, ...v }
-    this.d.onChange(this.v)
+    this.d.onChange(this.view())
+  }
+
+  /** The settings changed (the wake word, on or off): tell the island. */
+  refresh(): void {
+    this.d.onChange(this.view())
+  }
+
+  /** Say something urgent (the announcer decided it should be said). */
+  announce(line: string): void {
+    if (this.v.phase !== 'idle') return
+    void this.sayShort('', line)
   }
 
   /** You asked something. Words like "next" or "stop" steer what's going on instead. */
   async ask(text: string): Promise<void> {
     const t = text.trim().slice(0, 2000)
     if (!t) return
+    // Yes or no: for its own offer first, then a permission prompt that's waiting.
+    const yes = approvalWord(t)
+    if (yes && this.v.offer) return this.answer(yes !== 'deny')
+    if (yes && this.d.approvals?.pending()) {
+      const what = this.d.approvals.pending()
+      if (this.d.approvals.answer(yes)) return this.sayShort(t, yes === 'deny' ? 'Okay, not that.' : `Allowed${what ? `: ${what}` : ''}.`)
+    }
+    // While work it handed off is running: how's it going, stop, or a change of plan.
+    if (this.v.task && !this.v.task.done && this.d.assistant?.busy()) {
+      const k = interruptKind(t)
+      if (k === 'status') return this.sayShort(t, this.d.assistant.status())
+      if (k === 'cancel') {
+        this.d.assistant.stop()
+        this.set({ task: { ...this.v.task, status: 'Stopped', done: true } })
+        return this.sayShort(t, 'Stopped it.')
+      }
+      if (steerLike(t)) {
+        this.d.assistant.stop()
+        this.d.assistant.ask(`Change of plan for what you were doing (${this.v.task.text}): ${t}`)
+        this.set({ task: { text: this.v.task.text, status: 'Changing course…', done: false } })
+        return this.sayShort(t, 'Okay, changing course.')
+      }
+    }
     const cmd = quickCommand(t)
     const busy = this.v.phase === 'speaking' || this.v.phase === 'pointing'
     if (cmd && (busy || ((cmd === 'repeat' || cmd === 'stop') && this.v.reply))) return this.command(cmd)
@@ -83,13 +126,28 @@ export class Buddy {
       }
       if (run !== this.run) return
       const notes = await this.d.notes(t).catch(() => '')
-      const system = buddyPrompt({ name: this.d.name(), tone: cfg.tone, brief: this.d.brief(), notes, canSee: !!shot, shot })
+      const canAct = !!(this.d.assistant || this.d.remember || this.d.act)
+      const system = buddyPrompt({ name: this.d.name(), tone: cfg.tone, brief: this.d.brief(), notes, canSee: !!shot, shot, canAct, work: this.d.assistant?.work() })
       const answer = await this.d.model({ system, prompt: t, image: jpeg })
       if (run !== this.run) return
-      const { speech, points } = parseReply(answer, shot)
-      if (!speech && !points.length) throw new Error('It didn’t answer. Try asking another way?')
-      this.set({ phase: 'speaking', reply: speech, points, step: 0, looked: !!shot, blanked, caption: '' })
-      if (points.length) this.point(0)
+      const parsed = parseReply(answer, shot)
+      const { speech, actions } = parseActions(parsed.speech)
+      const points = parsed.points
+      if (!speech && !points.length && !actions.length) throw new Error('It didn’t answer. Try asking another way?')
+      // Real work goes to the assistant; the rest waits for your yes.
+      let task: BuddyView['task'] = null
+      let offer: BuddyOffer | null = null
+      for (const a of actions) {
+        if (a.t === 'do' && this.d.assistant && !task) {
+          this.d.assistant.ask(a.task)
+          task = { text: a.task, status: 'Starting…', done: false }
+        } else if (!offer && a.t === 'remember' && this.d.remember) offer = { kind: 'remember', text: a.fact }
+        else if (!offer && a.t === 'type' && this.d.act) offer = { kind: 'type', text: a.text }
+        else if (!offer && a.t === 'click' && this.d.act && shot) offer = { kind: 'click', text: a.label || 'there', ...mapPoint(a.x, a.y, shot) }
+      }
+      this.set({ phase: 'speaking', reply: speech, points, step: 0, looked: !!shot, blanked, caption: '', task, offer })
+      if (offer?.kind === 'click') this.d.pointer.show({ x: offer.x, y: offer.y, label: `Click ${offer.text}?` }, this.d.from())
+      else if (points.length) this.point(0)
       if (cfg.save) {
         try {
           this.d.save(t, speech)
@@ -106,6 +164,39 @@ export class Buddy {
       this.d.pointer.hide()
       this.set({ ...IDLE_BUDDY, heard: t, error: plain(e) })
     }
+  }
+
+  /** Your yes or no to what it offered (keep a fact, click, type). */
+  async answer(yes: boolean): Promise<void> {
+    const o = this.v.offer
+    if (!o) return
+    this.set({ offer: null })
+    if (o.kind === 'click') this.d.pointer.hide()
+    if (!yes) return this.sayShort('', 'Okay.')
+    try {
+      if (o.kind === 'remember') this.d.remember?.(o.text)
+      else if (o.kind === 'click') await this.d.act?.click(o.x, o.y)
+      else await this.d.act?.type(o.text)
+      await this.sayShort('', o.kind === 'remember' ? 'Kept.' : 'Done.')
+    } catch (e) {
+      this.set({ error: plain(e) })
+    }
+  }
+
+  /** The work it handed off moved on (or finished, with the answer's first line). */
+  taskUpdate(status: string, done: boolean, summary = ''): void {
+    if (!this.v.task || this.v.task.done) return
+    this.set({ task: { ...this.v.task, status, done } })
+    if (done && summary && this.v.phase === 'idle') void this.sayShort('', summary)
+  }
+
+  /** A short spoken line on the island (an answer to yes, no or how's it going). */
+  private async sayShort(heard: string, line: string): Promise<void> {
+    this.d.stopSpeaking()
+    const run = ++this.run
+    this.set({ phase: 'speaking', heard: heard || this.v.heard, caption: line, reply: line, points: [], step: 0, error: null })
+    await this.d.speak(line).catch(() => {})
+    if (run === this.run) this.done(run)
   }
 
   /** Next or back in a walkthrough, stop talking, or say it again. */
@@ -149,8 +240,8 @@ export class Buddy {
   private done(run: number): void {
     const n = this.v.points.length
     this.set({ phase: n ? 'pointing' : 'speaking', caption: '' })
-    // A walkthrough waits for "next"; one spot stays a little; an answer rests soon.
-    this.restIn(n > 1 ? 120_000 : n ? 8000 : 5000, run)
+    // A walkthrough waits for "next", an offer for your answer; one spot stays a little; an answer rests soon.
+    this.restIn(n > 1 ? 120_000 : this.v.offer ? 60_000 : n ? 8000 : 5000, run)
   }
 
   private point(i: number): void {
@@ -172,10 +263,13 @@ export class Buddy {
     this.restTimer = setTimeout(() => {
       if (run !== this.run) return
       this.d.pointer.hide()
-      this.set({ ...IDLE_BUDDY })
+      // Work still running stays on the island; an unanswered offer goes.
+      const task = this.v.task && !this.v.task.done ? this.v.task : null
+      this.set({ ...IDLE_BUDDY, task })
     }, ms)
     this.restTimer.unref?.()
   }
+
 
   /** Stop talking and pointing. */
   private quiet(): void {

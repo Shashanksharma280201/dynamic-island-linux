@@ -567,6 +567,21 @@ export class Brain {
     return parseNote(this.vault()?.read(`00-me/${file}`) ?? '').body
   }
 
+  /**
+   * Keep a fact about you that you said yes to (from the buddy): a dated line
+   * in 00-me/preferences.md, which the brief every AI loads is built from.
+   */
+  rememberFact(fact: string, by: string): string | null {
+    const vault = this.vault()
+    if (!vault || !this.running()) return 'Turn on the second brain to keep facts about you.'
+    const line = fact.replace(/\s+/g, ' ').trim().slice(0, 300)
+    if (!line) return 'Nothing to keep.'
+    vault.append('00-me/preferences.md', `- ${dateOf(this.now())}: ${line} (kept from ${by}, with your yes)`, `kept: ${line.slice(0, 60)}`)
+    vault.log(`Kept about you: ${line}`)
+    this.writeBrief()
+    return null
+  }
+
   meSave(file: string, text: string): string | null {
     const vault = this.vault()
     if (!vault) return 'Make the brain first.'

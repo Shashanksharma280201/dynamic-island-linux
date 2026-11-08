@@ -54,7 +54,8 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     islandTheme: 'match',
     accent: 'blue',
     privacy: { paused: false },
-    buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true },
+    buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true, wake: false, alerts: true },
+    routines: [],
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
   }
   expect(mergeConfig(null)).toEqual(d)

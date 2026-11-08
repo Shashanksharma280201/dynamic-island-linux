@@ -185,3 +185,58 @@ test('Buddy: paused or off, it neither looks nor asks', async () => {
   await broken.b.ask('hi')
   expect(broken.b.view().error).toBe('Add your API key')
 })
+
+test('Buddy: yes and no answer a waiting permission prompt by voice', async () => {
+  const answered: string[] = []
+  const { b, said, asked } = makeBuddy('x', { approvals: { pending: () => 'Run npm test', answer: (a) => (answered.push(a), true) } })
+  await b.ask('yes')
+  expect(answered).toEqual(['allow'])
+  expect(said.at(-1)).toBe('Allowed: Run npm test.')
+  await b.ask('no')
+  expect(answered).toEqual(['allow', 'deny'])
+  expect(asked).toHaveLength(0) // never went to the model
+  b.stop()
+})
+
+test('Buddy: hands real work to the assistant, says how it’s going, stops or steers it', async () => {
+  const runs: string[] = []
+  let busy = false
+  const assistant = { busy: () => busy, status: () => 'Running npm test. 2 minutes in.', ask: (t: string) => (runs.push(t), (busy = true)), stop: () => (runs.push('(stop)'), (busy = false)), work: () => 'Claude Code: idle' }
+  const { b, said, asked } = makeBuddy('On it. [DO: add a test for the cart total]', { assistant })
+  await b.ask('add a test for the cart total')
+  expect(runs).toEqual(['add a test for the cart total'])
+  expect(asked[0].system).toMatch(/\[DO: the task, in full\]/)
+  expect(asked[0].system).toMatch(/Claude Code: idle/)
+  expect(b.view().task).toEqual({ text: 'add a test for the cart total', status: 'Starting…', done: false })
+  await b.ask('how far is it?')
+  expect(said.at(-1)).toBe('Running npm test. 2 minutes in.')
+  await b.ask('actually use vitest not jest')
+  expect(runs.slice(-2)).toEqual(['(stop)', 'Change of plan for what you were doing (add a test for the cart total): actually use vitest not jest'])
+  await b.ask('stop it')
+  expect(runs.at(-1)).toBe('(stop)')
+  expect(b.view().task?.done).toBe(true)
+  b.stop()
+})
+
+test('Buddy: offers to keep a fact or click, and does it only on your yes', async () => {
+  const kept: string[] = []
+  const clicks: number[][] = []
+  const act = { click: async (x: number, y: number) => void clicks.push([x, y]), type: async () => {} }
+  const r = makeBuddy('Noted. [REMEMBER: prefers pnpm over npm]', { remember: (f) => kept.push(f), act })
+  await r.b.ask('I always use pnpm')
+  expect(r.b.view().offer).toEqual({ kind: 'remember', text: 'prefers pnpm over npm' })
+  await r.b.ask('no')
+  expect(kept).toEqual([])
+  await r.b.ask('I always use pnpm')
+  await r.b.answer(true)
+  expect(kept).toEqual(['prefers pnpm over npm'])
+  const c = makeBuddy('Clicking Save. [CLICK:640,360:Save]', { act })
+  await c.b.ask('click save for me')
+  expect(c.b.view().offer).toEqual({ kind: 'click', text: 'Save', x: 3200, y: 720 })
+  expect(c.shown.at(-1)).toBe('Click Save?')
+  expect(clicks).toEqual([])
+  await c.b.ask('yes')
+  expect(clicks).toEqual([[3200, 720]])
+  r.b.stop()
+  c.b.stop()
+})

@@ -114,6 +114,9 @@ type Deps = {
   setBuddy: (patch: Partial<BuddyConfig>) => void
   buddyVoice: () => Promise<void>
   buddyTry: () => Promise<void>
+  /** Routines: add or change one (why not, or null), or remove one. */
+  routineSet: (raw: unknown) => string | null
+  routineDel: (id: string) => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -495,6 +498,15 @@ export class SettingsController {
       }
     })
     ipcMain.handle(BUDDY.VOICE_TRY, () => this.d.buddyTry())
+    ipcMain.handle(BUDDY.ROUTINE_SET, (_e, raw) => {
+      const e = this.d.routineSet(raw)
+      this.changed()
+      return e
+    })
+    ipcMain.handle(BUDDY.ROUTINE_DEL, (_e, id) => {
+      if (typeof id === 'string') this.d.routineDel(id)
+      this.changed()
+    })
     ipcMain.handle(SETTINGS.SET_PAUSED, (_e, on) => {
       this.d.setPaused(on === true)
       this.changed()

@@ -6,6 +6,22 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**The Jarvis layer: the buddy in front of the real work**
+
+- **Hands real work to the assistant** and follows it: “how far is it?”,
+  “stop”, “actually, use vitest” steer it; it says when it's done.
+- **Say yes or no** to a permission prompt from Claude Code or the
+  assistant.
+- **Offers, then acts on your yes**: keep a fact about you (into your
+  brain's `00-me`), click something it can see (pointed at first), or
+  type for you.
+- **Speaks up, sparingly**: a session waiting on you, a permission prompt,
+  finished work; never in quiet hours, never twice in three days.
+- **Routines** (Settings → Buddy): standing orders the assistant runs at
+  their time, still asking before it sends or changes anything.
+- **“Hey <name>”**, off by default, heard on this computer.
+  [The guide](docs/buddy.md#beyond-questions).
+
 **Search by meaning**
 
 - Settings → Second brain → **Search by meaning**: a small model on this

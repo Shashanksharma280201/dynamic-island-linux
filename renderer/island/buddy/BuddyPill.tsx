@@ -3,7 +3,7 @@ import type { Buddy } from './useBuddy'
 
 /** Is there anything of the buddy's to show on the island? */
 export function buddyShown(b: Buddy): boolean {
-  return b.listen !== 'idle' || b.view.phase !== 'idle' || !!b.view.error || !!b.micError
+  return b.listen !== 'idle' || b.view.phase !== 'idle' || !!b.view.error || !!b.micError || !!b.view.offer || (!!b.view.task && !b.view.task.done)
 }
 
 /** The buddy on the island: listening, thinking, its captions, and the steps of a walkthrough. */
@@ -71,6 +71,27 @@ export function BuddyPill({ b, name }: { b: Buddy; name: string }) {
           <button className="pill primary small" onClick={() => b.cmd('next')}>
             {v.step + 1 < steps ? 'Next' : 'Done'}
           </button>
+        </div>
+      )}
+      {v.offer && !error && (
+        <div className="buddy-offer">
+          <div className="buddy-offer-text">
+            {v.offer.kind === 'remember' ? `Keep this about you? “${v.offer.text}”` : v.offer.kind === 'click' ? `Click ${v.offer.text} for you?` : `Type “${v.offer.text.slice(0, 80)}” for you?`}
+          </div>
+          <div className="buddy-actions">
+            <button className="pill small" onClick={() => b.answer(false)}>
+              {v.offer.kind === 'remember' ? 'Not this' : 'Don’t'}
+            </button>
+            <button className="pill primary small" onClick={() => b.answer(true)}>
+              {v.offer.kind === 'remember' ? 'Keep' : 'Allow'}
+            </button>
+          </div>
+        </div>
+      )}
+      {v.task && !error && (
+        <div className={`buddy-task${v.task.done ? ' done' : ''}`}>
+          <span className="buddy-task-dot" aria-hidden="true" />
+          <span>{v.task.done ? 'Done' : 'Working on it'}: {v.task.status}</span>
         </div>
       )}
       {v.blanked > 0 && v.phase !== 'thinking' && !error && (

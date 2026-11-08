@@ -1,3 +1,4 @@
+import { parseRoutine, type Routine } from '../shared/jarvis'
 import { parseBuddyConfig, type BuddyConfig } from '../shared/buddy'
 import { ACCENTS } from '../shared/theme'
 import { app } from 'electron'
@@ -84,6 +85,8 @@ export type Config = {
   privacy: { paused: boolean }
   /** The buddy (Settings › Buddy). */
   buddy: BuddyConfig
+  /** Routines: standing orders the assistant runs at their time (Settings › Buddy). */
+  routines: Routine[]
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -157,6 +160,7 @@ const DEFAULTS: Config = {
   accent: 'blue',
   privacy: { paused: false },
   buddy: parseBuddyConfig(null),
+  routines: [],
 }
 
 function server(raw: any): ServerConfig | null {
@@ -200,6 +204,7 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.accent === 'string' && ACCENTS.some((a) => a.id === r.accent)) c.accent = r.accent
   c.privacy = { paused: r.privacy?.paused === true }
   c.buddy = parseBuddyConfig(r.buddy)
+  c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

@@ -3,6 +3,7 @@ import type { ClaudeView } from '@shared/claude'
 import { IDLE_BUDDY, type BuddyView } from '@shared/buddy'
 import { Recorder } from '../voice/recorder'
 import { NOISE, transcribe, warmUp } from '../voice/useVoice'
+import { wakeMatch } from '@shared/jarvis'
 
 export type BuddyListen = 'idle' | 'preparing' | 'listening' | 'transcribing'
 
@@ -15,6 +16,8 @@ export type Buddy = {
   /** The shortcut: listen, or send what you said, or stop it talking. */
   key: () => void
   cmd: (c: 'next' | 'back' | 'stop' | 'repeat') => void
+  /** Yes or no to what it offered. */
+  answer: (yes: boolean) => void
   dismiss: () => void
 }
 
@@ -74,7 +77,7 @@ const plain = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error
  * talking), sends what you said, and plays its natural voice. What it says
  * and where it points come from the main process.
  */
-export function useBuddy(claude: ClaudeView | null): Buddy {
+export function useBuddy(claude: ClaudeView | null, name = 'Buddy'): Buddy {
   const [view, setView] = useState<BuddyView>(IDLE_BUDDY)
   const [listen, setListen] = useState<BuddyListen>('idle')
   const [level, setLevel] = useState(0)
@@ -173,6 +176,42 @@ export function useBuddy(claude: ClaudeView | null): Buddy {
 
   useEffect(() => () => rec.current?.cancel(), [])
 
+  // The wake word: while it's idle, listen for "hey <name>" (speech stays on this computer).
+  const nameRef = useRef(name)
+  nameRef.current = name
+  const wakeRec = useRef<Recorder | null>(null)
+  const idle = listen === 'idle' && view.phase === 'idle' && !view.offer
+  useEffect(() => {
+    if (!view.wake || !idle || !claudeRef.current?.stt.ready) return
+    let stopped = false
+    const round = () => {
+      if (stopped) return
+      const model = claudeRef.current?.stt.model
+      if (!model) return
+      const r = new Recorder({
+        level: () => {},
+        done: async (audio) => {
+          wakeRec.current = null
+          if (stopped) return
+          const text = audio ? (await transcribe(model, audio).catch(() => '')).trim() : ''
+          const rest = text && !NOISE.test(text) ? wakeMatch(text, nameRef.current) : null
+          if (rest === null) return void setTimeout(round, 250)
+          if (rest) void window.island.buddy.ask(rest)
+          else void start()
+        },
+      })
+      wakeRec.current = r
+      r.start().catch(() => setTimeout(round, 5000))
+    }
+    warmUp(claudeRef.current.stt.model)
+    round()
+    return () => {
+      stopped = true
+      wakeRec.current?.cancel()
+      wakeRec.current = null
+    }
+  }, [view.wake, idle, start]) // eslint-disable-line react-hooks/exhaustive-deps
+
   return {
     view,
     listen,
@@ -180,6 +219,7 @@ export function useBuddy(claude: ClaudeView | null): Buddy {
     micError,
     key,
     cmd: (c) => void window.island.buddy.cmd(c),
+    answer: (yes) => void window.island.buddy.answer(yes),
     dismiss: () => {
       setMicError(null)
       if (viewRef.current.error) void window.island.buddy.cmd('stop')

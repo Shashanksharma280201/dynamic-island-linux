@@ -127,6 +127,10 @@ import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
 import { islandLook } from '../shared/theme'
 import { parseBuddyConfig } from '../shared/buddy'
+import { Announcer } from './announcer'
+import { Routines } from './routines'
+import { clickAt } from './buddy/click'
+import { ALERT_DEFAULTS, statusLine } from '../shared/jarvis'
 import { Buddy } from './buddy'
 import { Pointer } from './buddy/pointer'
 import { captureScreen } from './buddy/screen'
@@ -264,6 +268,8 @@ async function main() {
     (name) => wallpapers.mediaFile(name),
   )
   let claudeUi: ClaudeController | null = null
+  // Set once the buddy is up (events before then aren't spoken).
+  let announcerRef: Announcer | null = null
   let display: Display = placeIslandWindow(win, config.dock.side, config.display)
   // The side actually shown: config.dock.side, or a preview while dragging.
   let shownSide: Side = config.dock.side
@@ -428,6 +434,7 @@ async function main() {
   const claude = new ClaudeServer(SOCK)
   claude.onRequest((req) => {
     store.upsert({ kind: 'approval', id: req.id, priority: 10, request: req })
+    announcerRef?.event({ key: `approval:${req.id}`, kind: 'approval', priority: 'high', line: `${req.ask ? req.ask.title : `Claude Code wants to use ${req.toolName}`}. Say yes or no.` })
   })
   // Hook gave up (timeout, Claude cancelled): drop the stale card.
   // The hook went away: Claude stopped asking (quietly drop the card), or it
@@ -485,7 +492,10 @@ async function main() {
       if (now?.phase !== 'done') return
       transient.show({ kind: 'session', id: `session-done-${x.id}`, priority: 4, session: now }, 15_000)
     },
-    onWaiting: (x) => store.upsert({ kind: 'session', id: `session-wait-${x.id}`, priority: 7, session: x }),
+    onWaiting: (x) => {
+      store.upsert({ kind: 'session', id: `session-wait-${x.id}`, priority: 7, session: x })
+      announcerRef?.event({ key: `wait:${x.id}:${x.turnStartedAt ?? x.startedAt}`, kind: 'session-waiting', priority: 'high', line: `Claude Code in ${x.project} is waiting for you.` })
+    },
   })
   claude.onEvent((e) => sessions.event(e))
   sessions.start()
@@ -767,7 +777,77 @@ async function main() {
     speak: speakSentence,
     stopSpeaking,
     onChange: (v) => send(win, BUDDY.STATE, v),
+    // The Jarvis layer: real work goes to the assistant, yes and no answer
+    // its permission prompts, and clicking, typing or keeping a fact about
+    // you only ever happen after your yes.
+    assistant: {
+      busy: () => {
+        const r = claudeUi?.engine().state().run
+        return !!r && !['done', 'error', 'stopped'].includes(r.phase)
+      },
+      status: () => {
+        const r = claudeUi?.engine().state().run
+        return statusLine(r ? { phase: r.phase, tool: r.tool ? `${r.tool.name} ${r.tool.detail}`.trim() : undefined, steps: r.steps } : null, r?.startedAt ?? Date.now(), Date.now())
+      },
+      ask: (task) => claudeUi!.engine().ask(task),
+      stop: () => claudeUi?.engine().stop(),
+      work: () => {
+        const r = claudeUi?.engine().state().run
+        const lines = r && !['done', 'error', 'stopped'].includes(r.phase) ? [`The island’s assistant: working on “${r.prompt.slice(0, 80)}”`] : []
+        for (const x of sessions.list().filter((s) => s.phase === 'working' || s.phase === 'waiting').slice(0, 6))
+          lines.push(`Claude Code in ${x.project}: ${x.phase === 'waiting' ? 'waiting for the user' : 'working'}${x.prompt ? ` on “${x.prompt.slice(0, 60)}”` : ''}`)
+        return lines.join('\n')
+      },
+    },
+    approvals: {
+      pending: () => {
+        const r = frontApproval(store.list())
+        if (!r || isQuestion(r)) return null
+        return (r.ask ? r.ask.title : `${r.toolName} ${r.inputSummary}`).slice(0, 80)
+      },
+      answer: (a) => {
+        const r = frontApproval(store.list())
+        if (!r || isQuestion(r)) return false
+        const always = a === 'always' && canAlways(r)
+        decide({ id: r.id, decision: a === 'deny' ? 'deny' : 'allow', ...(always ? { always: true } : {}) })
+        return true
+      },
+    },
+    remember: (fact) => {
+      const e = brain.rememberFact(fact, config.character.name || 'the buddy')
+      if (e) throw new Error(e)
+    },
+    act: {
+      // Screen points to the X server's pixels.
+      click: (x, y) => {
+        const k = screen.getDisplayNearestPoint({ x, y }).scaleFactor || 1
+        return clickAt(x * k, y * k)
+      },
+      type: async (text) => {
+        if (!(await pasteIntoFocusedApp(text))) throw new Error('It couldn’t type there: the text is on your clipboard.')
+      },
+    },
   })
+  ipcMain.handle(BUDDY.ANSWER, (e, yes) => {
+    if (e.sender !== win.webContents) return
+    void buddy.answer(yes === true)
+  })
+  // Speaking up, sparingly: a session waiting on you, work it handed off that finished.
+  const announcer = new Announcer({ config: () => ({ ...ALERT_DEFAULTS, speak: config.buddy.on && config.buddy.alerts }), say: (l) => buddy.announce(l) })
+  // Routines: standing orders, run by the assistant at their time.
+  const routines = new Routines({
+    routines: () => config.routines,
+    save: (r) => {
+      config.routines = r
+      saveConfig(config)
+      settings?.changed()
+    },
+    ask: (p) => claudeUi!.engine().ask(p),
+    started: (r) => console.error(`[island] routine: ${r.name}`),
+  })
+  routines.start()
+  announcerRef = announcer
+  powerMonitor.on('resume', () => routines.tick())
   ipcMain.handle(BUDDY.ASK, (e, text) => {
     if (e.sender !== win.webContents || typeof text !== 'string') return
     void buddy.ask(text)
@@ -794,12 +874,14 @@ async function main() {
     systemVoice: systemVoice.available()?.split('/').pop() ?? null,
     name: config.character.name || 'Buddy',
     key: config.keys.buddy,
+    routines: config.routines,
   })
 
   const alertsSeen = new Set<string>()
   // What the agent is doing, on the island: a live card, then the answer.
   const agentChanged = (run?: ClaudeRun) => {
     claudeUi?.push()
+    if (run) buddy.taskUpdate(statusLine({ phase: run.phase, tool: run.tool ? `${run.tool.name} ${run.tool.detail}`.trim() : undefined, steps: run.steps }, run.startedAt, Date.now()), false)
     if (run && (run.phase === 'starting' || run.phase === 'thinking' || run.phase === 'tool' || run.phase === 'writing')) {
       if (transient.has('claude-done')) transient.dismiss('claude-done')
       store.upsert({ kind: 'claude', id: 'claude-run', priority: 2, run })
@@ -807,6 +889,13 @@ async function main() {
   }
   const agentFinished = (run: ClaudeRun) => {
     store.remove('claude-run')
+    // Work the buddy handed off: done (or not), said out loud if it's a good time.
+    if (buddy.view().task && !buddy.view().task!.done) {
+      const first = (run.reply || '').split(/(?<=[.!?])\s/)[0].slice(0, 160)
+      const line = run.phase === 'done' ? `Done. ${first}` : run.phase === 'error' ? `It stopped: ${run.error ?? 'something went wrong'}.` : 'Stopped.'
+      buddy.taskUpdate(run.phase === 'done' ? 'Done' : run.phase === 'error' ? 'Failed' : 'Stopped', true)
+      announcer.event({ key: `task:${run.id}`, kind: 'task-done', priority: 'high', line })
+    }
     if (run.phase === 'done')
       recap.turn({ at: Date.now(), session: run.sessionId ?? run.id, agent: config.ai.provider, project: run.cwd.split(/[\\/]/).filter(Boolean).pop() ?? '', ms: Date.now() - run.startedAt, files: 0, added: 0, removed: 0, commands: 0 })
     // A card with the answer, which closes by itself (hover keeps it).
@@ -1258,10 +1347,13 @@ async function main() {
       saveConfig(config)
       applyBuddyKey()
       if (!config.buddy.on) buddy.stop()
+      buddy.refresh()
       // A new natural voice is a small download of its own.
       if (patch.voiceId && config.buddy.voice === 'natural' && !kokoro.ready(config.buddy.voiceId) && kokoro.ready('af_heart')) void kokoro.ensure(config.buddy.voiceId).catch(() => {})
     },
     buddyVoice: () => kokoro.ensure(config.buddy.voiceId),
+    routineSet: (raw) => routines.upsert(raw),
+    routineDel: (id) => routines.remove(id),
     buddyTry: () => speakSentence(`Hi, I’m ${config.character.name || 'your buddy'}. Ask me about anything on your screen.`),
     setPaused: (on) => {
       // While paused, services check every minute whether they may look again.
@@ -1932,6 +2024,7 @@ async function main() {
     theme.stop()
     buddy.stop()
     pointer.destroy()
+    routines.stop()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()

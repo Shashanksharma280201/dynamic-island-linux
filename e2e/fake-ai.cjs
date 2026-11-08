@@ -45,6 +45,9 @@ function startFakeAi() {
     const pic = Array.isArray(last?.content) && last.content.some((b) => b.type === 'image' || b.type === 'image_url')
     if (pic && result === null) {
       s.lastImage = last.content.find((b) => b.type === 'image')?.source?.data ?? last.content.find((b) => b.type === 'image_url')?.image_url?.url ?? ''
+      if (/please fix/i.test(prompt)) return { text: 'On it: I’ve asked the assistant. [DO: fix the failing cart test] [POINT:none]' }
+      if (/i always use pnpm/i.test(prompt)) return { text: 'Noted. [REMEMBER: prefers pnpm over npm] [POINT:none]' }
+      if (/click the red/i.test(prompt)) return { text: 'I can click it for you. [CLICK:300,350:Red window]' }
       if (/walk me through|how do i/i.test(prompt)) return { text: 'First open the menu at the top. Then choose Settings. [POINT:400,40:Menu] [POINT:520,300:Settings]' }
       if (/where/i.test(prompt)) return { text: 'It’s the gear at the top right. [POINT:1800,30:Settings gear]' }
       return { text: 'I can see your screen. [POINT:none]' }

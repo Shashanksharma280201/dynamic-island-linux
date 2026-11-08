@@ -19,6 +19,31 @@ It uses the AI you picked in Settings → AI. Claude (with an API key, or
 Claude Code) points most accurately; any model that reads images works.
 Its name and look are your character's (Settings → Character).
 
+## Beyond questions
+
+- **It hands real work to the assistant.** “Fix the failing test”, “reply to
+  Priya that I'll be late”: the island's assistant (Claude Code or your AI)
+  does it, and the island shows how it's going. Ask “how far is it?” for
+  the step it's on, say “stop” to cancel, or “actually, use vitest” to
+  change course. When it's done, it says so.
+- **Yes and no.** When Claude Code or the assistant asks permission, say
+  “yes”, “no” or “always”, as if you'd pressed the buttons.
+- **It offers, you decide.** It can offer to keep something you told it
+  (“prefers pnpm over npm”, kept in your brain's `00-me/preferences.md`),
+  to click something it can see (the arrow shows where first), or to type
+  for you. Nothing happens until you press Keep or Allow, or say yes.
+- **It speaks up, sparingly.** A Claude Code session waiting on you, a
+  permission prompt, or work it handed off that finished, said out loud:
+  never between 22:00 and 8:00, never twice in three days, a few an hour
+  at most, and not a kind you keep dismissing.
+- **Routines.** Standing orders in Settings → Buddy (“at 18:30, wrap up my
+  day in three lines”): the assistant runs them at their time, or as soon
+  as the computer wakes. Anything that sends or changes something still
+  asks.
+- **“Hey <name>”**, off by default: say its name and ask, without the key.
+  Speech is turned into text on this computer, it listens only while it's
+  idle, and nothing leaves until it hears its name.
+
 ## What it sends, and what it doesn't
 
 - A screenshot of the screen you're on goes with each question, taken when

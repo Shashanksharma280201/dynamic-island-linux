@@ -5300,6 +5300,43 @@ button .spinner-orb,
   gap: 6px;
   margin-top: 8px;
 }
+.buddy-offer {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(var(--ink), 0.06);
+}
+.buddy-offer-text {
+  font-weight: 500;
+  line-height: 1.35;
+}
+.buddy-offer .buddy-actions {
+  margin-top: 6px;
+}
+.buddy-task {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--label-2);
+}
+.buddy-task-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--orange);
+  animation: buddy-pulse 1.4s ease-in-out infinite;
+}
+.buddy-task.done .buddy-task-dot {
+  background: var(--green);
+  animation: none;
+}
+@keyframes buddy-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
 .buddy-note {
   margin-top: 6px;
   font-size: 11px;
