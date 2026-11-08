@@ -1,4 +1,5 @@
 import { parseDesktopConfig, type DesktopConfig } from '../shared/desktop'
+import { parseEngineConfig, type EngineConfig } from '../shared/engine'
 import { parseRoutine, type Routine } from '../shared/jarvis'
 import { parseBuddyConfig, type BuddyConfig } from '../shared/buddy'
 import { ACCENTS } from '../shared/theme'
@@ -90,6 +91,8 @@ export type Config = {
   routines: Routine[]
   /** Ubuntu in the island's look, and the command bar (Settings › Desktop). */
   desktop: DesktopConfig
+  /** Island OS's engine: a model on this computer first, the cloud with your yes (Settings › Model). */
+  engine: EngineConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -165,6 +168,7 @@ const DEFAULTS: Config = {
   buddy: parseBuddyConfig(null),
   routines: [],
   desktop: parseDesktopConfig(null),
+  engine: parseEngineConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -209,6 +213,7 @@ export function mergeConfig(raw: unknown): Config {
   c.privacy = { paused: r.privacy?.paused === true }
   c.buddy = parseBuddyConfig(r.buddy)
   c.desktop = parseDesktopConfig(r.desktop)
+  c.engine = parseEngineConfig(r.engine)
   c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }

@@ -53,7 +53,7 @@ export type BrainDeps = {
   /** The command Claude Code runs for the brain's hook, for a vault. */
   hookCommand: (vault: string) => string
   /** The AI that writes session notes (your island AI, or Claude Code), or null. */
-  writer: () => { label: string; ask: (prompt: string, purpose?: string) => Promise<string> } | null
+  writer: () => { label: string; ask: (prompt: string, purpose?: string, job?: string) => Promise<string> } | null
   /** The morning card changed (the island shows it). */
   onCard?: (c: MorningCard | null) => void
   /** One of the loop's jobs ran. */

@@ -34,9 +34,12 @@ export type TurnRequest = {
   purpose?: string
   /** Pictures sent with the prompt (a screenshot for the buddy), base64. */
   images?: { mediaType: 'image/jpeg' | 'image/png'; data: string }[]
+  /** Ask an OpenAI-compatible service for token counts (not every one accepts it). */
+  wantUsage?: boolean
 }
 
-export type TurnResult = { text: string; steps: number }
+/** Tokens in and out, across every step (null when the service didn't say). */
+export type TurnResult = { text: string; steps: number; usage?: { input: number; output: number } | null }
 
 /** Stop a runaway tool loop. */
 export const MAX_STEPS = 12
@@ -87,6 +90,7 @@ async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
   const tools: Anthropic.Beta.BetaTool[] = r.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema }))
   const fallback = supportsFallback(r.model)
   let steps = 0
+  const usage = { input: 0, output: 0 }
   for (let i = 0; i <= MAX_STEPS; i++) {
     r.events.onMessageStart()
     const stream = client.beta.messages.stream(
@@ -104,6 +108,8 @@ async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
     )
     stream.on('text', (d) => r.events.onText(d))
     const msg = await stream.finalMessage()
+    usage.input += msg.usage?.input_tokens ?? 0
+    usage.output += msg.usage?.output_tokens ?? 0
     if (msg.stop_reason === 'refusal') throw new AgentError('The model declined to answer this one.')
     const content = echoContent(msg.content)
     const text = content.flatMap((b) => (b.type === 'text' ? [b.text] : [])).join('').trim()
@@ -114,7 +120,7 @@ async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
     const calls = content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === 'tool_use')
     if (msg.stop_reason !== 'tool_use' || !calls.length) {
       if (msg.stop_reason === 'max_tokens' && calls.length) throw new AgentError('The answer was too long and got cut off.')
-      return { text, steps }
+      return { text, steps, usage }
     }
     if (i === MAX_STEPS) break
     messages.push({ role: 'assistant', content })
@@ -172,11 +178,15 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
     function: { name: t.name, description: t.description, parameters: t.input_schema },
   }))
   let steps = 0
+  let usage: { input: number; output: number } | null = r.wantUsage ? { input: 0, output: 0 } : null
   for (let i = 0; i <= MAX_STEPS; i++) {
     r.events.onMessageStart()
     let stream
     try {
-      stream = await client.chat.completions.create({ model: r.model, messages, stream: true, ...(tools ? { tools } : {}) }, { signal: r.signal })
+      stream = await client.chat.completions.create(
+        { model: r.model, messages, stream: true, ...(tools ? { tools } : {}), ...(usage ? { stream_options: { include_usage: true } } : {}) },
+        { signal: r.signal },
+      )
     } catch (e) {
       if (tools && rejectsTools(e)) {
         tools = undefined // this model can't use tools: answer without them
@@ -188,7 +198,14 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
     let text = ''
     let calls: Call[] = []
     let finish: string | null = null
+    let counted = false
     for await (const chunk of stream) {
+      const u = (chunk as { usage?: { prompt_tokens?: number; completion_tokens?: number } | null }).usage
+      if (usage && u) {
+        usage.input += u.prompt_tokens ?? 0
+        usage.output += u.completion_tokens ?? 0
+        counted = true
+      }
       const ch = chunk.choices?.[0]
       if (!ch) continue
       const d = ch.delta as any
@@ -199,10 +216,12 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
       calls = mergeToolCallDeltas(calls, d?.tool_calls)
       if (ch.finish_reason) finish = ch.finish_reason
     }
+    // A service that didn't send counts: say so, rather than a made-up zero.
+    if (usage && !counted) usage = null
     calls = calls.filter((c) => c.name)
     if (!calls.length) {
       if (finish === 'length' && !text) throw new AgentError('The answer was too long and got cut off.')
-      return { text: text.trim(), steps }
+      return { text: text.trim(), steps, usage }
     }
     if (i === MAX_STEPS) break
     calls = calls.map((c, n) => ({ ...c, id: c.id || `call_${i}_${n}` }))

@@ -49,6 +49,14 @@ export const SIDE_ICONS: Record<string, ReactNode> = {
       <path d="M20 17l.7 1.8 1.8.7-1.8.7L20 22l-.7-1.8-1.8-.7 1.8-.7z" fill={W} />
     </Tile>
   ),
+  model: (
+    <Tile from="#34c759" to="#248a3d">
+      {/* A chip: the model on this computer. */}
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" fill="none" stroke={W} strokeWidth="1.8" />
+      <rect x="12" y="12" width="4" height="4" rx="0.8" fill={W} />
+      <path d="M11 6v2.5M14 6v2.5M17 6v2.5M11 19.5V22M14 19.5V22M17 19.5V22M6 11h2.5M6 14h2.5M6 17h2.5M19.5 11H22M19.5 14H22M19.5 17H22" stroke={W} strokeWidth="1.4" strokeLinecap="round" />
+    </Tile>
+  ),
   packages: (
     <Tile from="#c79a6b" to="#8e6a43">
       <path d="M14 6.5l7 3.5v8L14 21.5 7 18v-8z" fill={W} />

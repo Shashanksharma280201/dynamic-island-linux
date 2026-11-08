@@ -18,6 +18,7 @@ import { BrainSection } from './BrainSection'
 import { YouSection } from './YouSection'
 import { WallpaperSection } from './WallpaperSection'
 import { SIDE_ICONS } from './SideIcons'
+import { ModelSection } from './ModelSection'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -312,6 +313,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
   [
     { id: 'character', label: 'Character' },
     { id: 'ai', label: 'AI' },
+    { id: 'model', label: 'Model' },
     { id: 'packages', label: 'Packages' },
   ],
   [
@@ -448,6 +450,7 @@ export function Settings() {
       <DesktopSection s={s} />
       <CharacterSection s={s} />
       <AiSection s={s} />
+      <ModelSection s={s} />
       <PackagesSection s={s} />
 
       <section id="general">

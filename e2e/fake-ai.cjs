@@ -13,12 +13,15 @@
 // adds a contact; "delete <name>" deletes them (asks first).
 // The model "no-tools" rejects requests that include tools (like some local
 // models); the key "bad-key" is rejected.
+// Ollama too: GET /api/tags lists s.ollamaModels (none when s.ollama is
+// false) and /v1/chat/completions answers like /chat/completions; both chat
+// paths send token counts when asked (stream_options.include_usage).
 const http = require('http')
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function startFakeAi() {
-  const s = { log: [] }
+  const s = { log: [], ollama: true, ollamaModels: [{ name: 'llama3.2:3b', details: { parameter_size: '3.2B' } }, { name: 'qwen3:14b', details: { parameter_size: '14.8B' } }] }
   const lastUser = (messages) => {
     const users = messages.filter((m) => m.role === 'user')
     const m = users[users.length - 1]
@@ -113,6 +116,12 @@ function startFakeAi() {
         res.writeHead(401, { 'content-type': 'application/json' })
         return res.end(JSON.stringify(anth ? { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } } : { error: { message: 'Incorrect API key provided', type: 'invalid_request_error' } }))
       }
+      // ---- Ollama's model list ----
+      if (req.method === 'GET' && path === '/api/tags') {
+        if (!s.ollama) return res.writeHead(404).end()
+        res.writeHead(200, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ models: s.ollamaModels }))
+      }
       // ---- model lists ----
       if (req.method === 'GET' && path === '/v1/models') {
         const data = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-haiku-4-5'].map((id) => ({ id, type: 'model', display_name: id, created_at: '2026-01-01T00:00:00Z' }))
@@ -151,7 +160,7 @@ function startFakeAi() {
         return res.end()
       }
       // ---- OpenAI-compatible chat ----
-      if (req.method === 'POST' && path === '/chat/completions') {
+      if (req.method === 'POST' && (path === '/chat/completions' || (path === '/v1/chat/completions' && s.ollama))) {
         if (body.model === 'no-tools' && body.tools) {
           res.writeHead(400, { 'content-type': 'application/json' })
           return res.end(JSON.stringify({ error: { message: 'registry.ollama.ai/library/no-tools does not support tools', type: 'invalid_request_error' } }))
@@ -176,6 +185,7 @@ function startFakeAi() {
           chunk({ tool_calls: [{ index: 0, function: { arguments: args.slice(5) } }] })
         }
         chunk({}, p.tool ? 'tool_calls' : 'stop')
+        if (body.stream_options?.include_usage) res.write(`data: ${JSON.stringify({ id: 'c1', object: 'chat.completion.chunk', created: 0, model: body.model, choices: [], usage: { prompt_tokens: 1200, completion_tokens: 80, total_tokens: 1280 } })}\n\n`)
         res.write('data: [DONE]\n\n')
         return res.end()
       }

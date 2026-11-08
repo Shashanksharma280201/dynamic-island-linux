@@ -1,3 +1,4 @@
+import type { OsView } from '@shared/os'
 import type { DesktopView } from '@shared/desktop'
 import { BUDDY } from './buddyChannels'
 import type { BuddyConfig, BuddySettingsView } from '@shared/buddy'
@@ -120,6 +121,7 @@ type Deps = {
   routineDel: (id: string) => void
   /** Settings › Desktop. */
   desktop: () => DesktopView
+  os: () => OsView
   desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => Promise<void>
   desktopGetExtension: (id: string) => Promise<void>
   desktopSystem: (what: 'apply' | 'undo') => Promise<void>
@@ -132,6 +134,11 @@ export class SettingsController {
   private win: BrowserWindow | null = null
 
   constructor(private d: Deps) {}
+
+  /** Is this Settings' own page? */
+  owns(wc: Electron.WebContents): boolean {
+    return !!this.win && !this.win.isDestroyed() && this.win.webContents === wc
+  }
 
   state(): SettingsState {
     const { config, mail, whatsapp, whatsappCapable } = this.d
@@ -149,6 +156,7 @@ export class SettingsController {
       privacy: egress.view(),
       buddy: this.d.buddy(),
       desktop: this.d.desktop(),
+      os: this.d.os(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,

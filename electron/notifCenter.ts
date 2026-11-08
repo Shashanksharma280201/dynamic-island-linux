@@ -12,6 +12,7 @@ import {
   type CenterView,
 } from '@shared/notifCenter'
 import { NOTIFS } from './notifChannels'
+import type { OsAnswer } from '@shared/os'
 
 export { NOTIFS }
 
@@ -121,8 +122,8 @@ export type CenterActions = {
   /** Dismiss the island's notification and message cards too. */
   clearCards: () => void
   setDnd: (on: boolean) => void
-  /** The list in a few sentences, by the AI in Settings › AI. */
-  sumUp: () => Promise<{ text: string } | { error: string }>
+  /** The list in a few sentences: the model on this computer first, the cloud with your yes. */
+  sumUp: (o: { prefer?: 'local' | 'cloud'; consent?: boolean }) => Promise<OsAnswer>
 }
 
 export function wireNotificationCenter(center: NotificationCenter, a: CenterActions): void {
@@ -139,5 +140,8 @@ export function wireNotificationCenter(center: NotificationCenter, a: CenterActi
   ipcMain.handle(NOTIFS.UNDO, () => center.undo())
   ipcMain.handle(NOTIFS.SEEN, () => center.markSeen())
   ipcMain.handle(NOTIFS.SET_DND, (_e, on) => a.setDnd(on === true))
-  ipcMain.handle(NOTIFS.SUM_UP, () => a.sumUp())
+  ipcMain.handle(NOTIFS.SUM_UP, (_e, o) => {
+    const prefer = o?.prefer === 'local' || o?.prefer === 'cloud' ? o.prefer : undefined
+    return a.sumUp({ prefer, consent: o?.consent === true })
+  })
 }

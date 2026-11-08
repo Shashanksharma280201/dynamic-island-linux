@@ -1,3 +1,4 @@
+import type { OsView } from './os'
 import type { DesktopView } from './desktop'
 import type { BuddySettingsView } from './buddy'
 import type { PrivacyView } from './privacy'
@@ -383,6 +384,8 @@ export type SettingsState = {
   buddy: BuddySettingsView
   /** Settings › Desktop. */
   desktop: DesktopView
+  /** Island OS: the engine (and, later, sources, memory and agents). */
+  os: OsView
 }
 
 export type ClaudeSettings = {

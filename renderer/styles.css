@@ -4263,6 +4263,59 @@ button.crm-menu-item:hover {
 .nc-summary-text {
   flex: 1;
 }
+/* Where an answer ran, how long it took and what it cost; Ask cloud beside it. */
+.answer-chip-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+.answer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 7px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.answer-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--blue);
+}
+.answer-chip.local .answer-dot {
+  background: var(--green);
+}
+.answer-cloud {
+  border: 0;
+  background: none;
+  padding: 2px 4px;
+  color: var(--blue);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.answer-cloud:hover {
+  text-decoration: underline;
+}
+/* The cloud needs your yes. */
+.cloud-consent {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cloud-consent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+}
 .nc-group-sum {
   color: var(--label-2);
   font-size: 11.5px;

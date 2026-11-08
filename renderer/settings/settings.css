@@ -1141,3 +1141,38 @@ button.small {
 .desktop-system > .row button {
   white-space: nowrap;
 }
+
+/* Model */
+.model-local .hint {
+  max-width: 460px;
+}
+.model-local.found > div > div:first-child::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #30d158;
+  vertical-align: 1px;
+}
+.model-job select,
+.model-pick select {
+  min-width: 150px;
+}
+.model-address input {
+  width: 220px;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+.model-learned,
+.model-week {
+  margin: 8px 2px 0;
+}
+.model-job {
+  justify-content: space-between;
+}

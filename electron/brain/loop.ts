@@ -32,7 +32,7 @@ const DAY = 86_400_000
 export type LoopDeps = {
   vault: () => Vault | null
   /** The AI that writes the brain's notes (null: write them plainly). */
-  writer: () => { ask: (prompt: string, purpose?: string) => Promise<string> } | null
+  writer: () => { ask: (prompt: string, purpose?: string, job?: string) => Promise<string> } | null
   git: (root: string, args: string[]) => Promise<string>
   brief: () => string
   /** The morning card changed (show it, or put it away). */
@@ -279,7 +279,8 @@ export class Loop {
 
   private ask(prompt: string, purpose: string): Promise<string> | null {
     const w = this.d.writer()
-    return w ? w.ask(prompt, purpose) : null
+    // The job that's running asks: Settings › Model can send each job to its own model.
+    return w ? w.ask(prompt, purpose, this.running ?? undefined) : null
   }
 
   private jobs: Record<JobId, (v: Vault) => Promise<string>> = {

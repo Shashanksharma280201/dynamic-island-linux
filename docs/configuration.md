@@ -20,6 +20,7 @@ Environment variables (set them before starting the app):
 | `DI_STT_MODEL` | Use this Whisper model id instead of the one picked in Settings |
 | `DI_DOCS_OUT` | Folder where the Documents package saves new files (default `~/Documents/Dynamic Island`) |
 | `DI_SOFFICE` | LibreOffice command for conversions (found automatically; empty to not use it) |
+| `DI_OLLAMA_URL` | Ollama's address for Settings → Model, instead of the one saved there (the tests use a stand-in) |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
 plain Markdown files in `~/.config/dynamic-island-linux/notes/` (one `.md`

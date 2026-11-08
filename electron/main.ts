@@ -149,6 +149,10 @@ import { ModelFiles } from './modelFiles'
 import { EMBED } from './embedChannels'
 import { EVENING, MORNING } from './morningChannels'
 import { Digest } from './digest'
+import { Engine, type Cloud } from './engine'
+import { wireOs, type OsRoutes } from './osCalls'
+import { ENGINE_FEATURES, parseEngineConfig } from '../shared/engine'
+import type { EngineView } from '../shared/os'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
@@ -346,16 +350,18 @@ async function main() {
   wireNotificationCenter(center, {
     clearCards,
     setDnd,
-    sumUp: async () => {
+    sumUp: async (o) => {
       const list = center.view().entries
-      if (!list.length) return { error: 'There’s nothing to sum up.' }
-      const a = answerer('notifications', 'You sum up the user’s notifications briefly and plainly.', 'your notifications, to sum them up')
-      if (!a) return { error: egress.blocked() ?? 'Pick an AI in Settings › AI to sum them up.' }
-      try {
-        return { text: (await a.ask(sumUpPrompt(list))).trim() }
-      } catch (e) {
-        return { error: (e as Error).message || 'It couldn’t sum them up.' }
-      }
+      if (!list.length) return { ok: false, error: 'There’s nothing to sum up.' }
+      return engine.ask({
+        feature: 'notifications',
+        system: 'You sum up the user’s notifications briefly and plainly.',
+        prompt: sumUpPrompt(list),
+        purpose: 'your notifications, to sum them up',
+        interactive: true,
+        prefer: o.prefer,
+        consent: o.consent,
+      })
     },
   })
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
@@ -593,7 +599,8 @@ async function main() {
   const embedder = () => (process.env.DI_EMBED_FAKE ? async (texts: string[]) => texts.map(hashEmbed) : embedModel.ready() ? islandEmbed : null)
   const SESSION_SUMMARY = 'a Claude Code session’s summary, to write its five-line note'
   /** One plain answer from the AI in Settings › AI (or Claude Code's Haiku), for a feature; null when there's none or it's paused. */
-  const answerer = (feature: string, system: string, fallbackPurpose: string) => {
+  /** The AI in Settings › AI, as the engine's cloud (null when there's none, or everything is paused). */
+  const cloudAi = (): Cloud | null => {
     // Paused (Settings › Privacy): nothing goes out.
     if (egress.blocked()) return null
     const ai = config.ai
@@ -602,35 +609,90 @@ async function main() {
       const stored = ai.keys[ai.provider]
       const model = modelFor(ai)
       return {
-        label: `${provider.label} (${model})`,
-        ask: (prompt: string, purpose = fallbackPurpose) =>
+        label: `${provider.label.replace(/ \(.*\)$/, '')} (${model})`,
+        model,
+        ask: (o) =>
           runTurn({
             kind: provider.kind as 'anthropic' | 'openai-compatible',
             model,
             apiKey: stored ? decryptSecret(stored) : '',
             baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
-            system,
+            system: o.system,
             history: [],
-            prompt,
+            prompt: o.prompt,
             tools: [],
-            feature,
-            purpose,
+            feature: o.feature,
+            purpose: o.purpose,
+            // Token counts, where the service gives them (for the cost).
+            wantUsage: ['openai', 'deepseek', 'openrouter'].includes(ai.provider),
             signal: AbortSignal.timeout(120_000),
             events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
-          }).then((r) => r.text),
+          }).then((r) => ({ text: r.text, usage: r.usage ?? null })),
       }
     }
     const bin = findClaude()
     return bin
       ? {
           label: 'Claude Code (Haiku)',
-          ask: (prompt: string, purpose = fallbackPurpose) => {
-            egress.note(feature, 'Anthropic, through Claude Code', purpose)
+          model: 'claude-code',
+          ask: async (o) => {
+            egress.note(o.feature, 'Anthropic, through Claude Code', o.purpose)
             // The brain's prompts say everything already; the others start with what they're for.
-            return claudeOnce(bin, feature === 'brain' ? prompt : `${system}\n\n${prompt}`, writerDir)
+            return { text: await claudeOnce(bin, o.feature === 'brain' ? o.prompt : `${o.system}\n\n${o.prompt}`, writerDir), usage: null }
           },
         }
       : null
+  }
+  // Island OS's engine: a model on this computer first (Ollama), the cloud with your yes.
+  const engine = new Engine({
+    config: () => (process.env.DI_OLLAMA_URL ? { ...config.engine, localUrl: process.env.DI_OLLAMA_URL } : config.engine),
+    cloud: cloudAi,
+    file: join(app.getPath('userData'), 'engine-traces.json'),
+    onChange: () => settings?.changed(),
+  })
+  void engine.detect()
+  const engineView = (): EngineView => {
+    const st = engine.status()
+    const cloud = config.engine.cloud === 'never' ? null : cloudAi()
+    return {
+      cfg: config.engine,
+      local: { found: st.found, url: st.url, models: st.models, daily: st.daily, research: st.research, error: st.error },
+      cloud: cloud?.label ?? null,
+      label: engine.label(),
+      week: engine.week(),
+      learned: ENGINE_FEATURES.filter((f) => engine.learnedFor(f.id) === 'cloud').map((f) => ({ feature: f.id, label: f.label })),
+    }
+  }
+  // Island OS's calls, from the island and Settings (each checked in shared/os.ts).
+  const osRoutes: OsRoutes = {
+    'engine.view': () => engineView(),
+    'engine.set': async (patch: Record<string, unknown>) => {
+      const jobs = patch.jobs && typeof patch.jobs === 'object' ? { ...config.engine.jobs, ...(patch.jobs as object) } : config.engine.jobs
+      const before = config.engine.localUrl
+      config.engine = parseEngineConfig({ ...config.engine, ...patch, jobs })
+      saveConfig(config)
+      if (config.engine.localUrl !== before) await engine.detect(true)
+      settings?.changed()
+      return engineView()
+    },
+    'engine.detect': async () => {
+      await engine.detect(true)
+      settings?.changed()
+      return engineView()
+    },
+  }
+  wireOs(() => osRoutes, (wc) => wc === win.webContents || !!settings?.owns(wc))
+  /** One plain answer for a background job or feature, from the engine; null when nothing can answer. */
+  const answerer = (feature: string, system: string, fallbackPurpose: string) => {
+    if (!engine.available()) return null
+    return {
+      label: engine.label(),
+      ask: async (prompt: string, purpose = fallbackPurpose, job?: string) => {
+        const r = await engine.ask({ feature: job ?? feature, system, prompt, purpose })
+        if (!r.ok) throw new Error('error' in r ? r.error : `${r.needsConsent} wasn’t allowed`)
+        return r.text
+      },
+    }
   }
   // Notes are written without an AI when there's none (or it's paused).
   const brainWriter = () => answerer('brain', 'You write short, plain notes for the user’s second brain.', SESSION_SUMMARY)
@@ -1508,6 +1570,7 @@ async function main() {
   }
 
   settings = new SettingsController({
+    os: () => ({ engine: engineView() }),
     brain: () => brain.view(),
     wallpaper: () => wallpapers.view(),
     theme: () => ({ pref: config.theme, dark: theme.isDark(), island: config.islandTheme, accent: config.accent }),

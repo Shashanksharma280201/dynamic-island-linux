@@ -4,6 +4,7 @@ import { EMBED } from './embedChannels'
 import { EVENING, MORNING } from './morningChannels'
 import type { JobId, MorningCard } from '../shared/loop'
 import type { EveningCard } from '../shared/digest'
+import type { OsAnswer, OsCall } from '../shared/os'
 import { BUDDY } from './buddyChannels'
 import type { BuddyConfig, BuddyView } from '../shared/buddy'
 import type { PointerCmd } from '../shared/pointer'
@@ -87,7 +88,11 @@ function on<T>(channel: string, cb: (v: T) => void): () => void {
   return () => ipcRenderer.removeListener(channel, fn)
 }
 
+/** Island OS: one checked call for the island and Settings (see shared/os.ts for the names). */
+const os = <T = unknown>(fn: OsCall, ...args: unknown[]): Promise<T> => ipcRenderer.invoke('os:call', fn, args)
+
 const api = {
+  os,
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),
@@ -252,8 +257,8 @@ const api = {
     undo: (): Promise<void> => ipcRenderer.invoke(NOTIFS.UNDO),
     seen: (): Promise<void> => ipcRenderer.invoke(NOTIFS.SEEN),
     setDnd: (on: boolean): Promise<void> => ipcRenderer.invoke(NOTIFS.SET_DND, on),
-    /** The list in a few sentences, by the AI. */
-    sumUp: (): Promise<{ text: string } | { error: string }> => ipcRenderer.invoke(NOTIFS.SUM_UP),
+    /** The list in a few sentences: the model on this computer first, the cloud with your yes. */
+    sumUp: (o?: { prefer?: 'local' | 'cloud'; consent?: boolean }): Promise<OsAnswer> => ipcRenderer.invoke(NOTIFS.SUM_UP, o ?? {}),
     onChanged: (cb: (v: CenterView) => void) => on(NOTIFS.CHANGED, cb),
   },
   spotify: {
@@ -357,6 +362,7 @@ type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
 
 /** Used by the settings window only. */
 const settings = {
+  os,
   /** The desktop background (Settings → Wallpaper). */
   wallpaper: {
     search: (query: string, kind: 'image' | 'video'): Promise<{ items: WallItem[]; errors: string[] }> => ipcRenderer.invoke(WALLPAPER.SEARCH, query, kind),
