@@ -4,7 +4,7 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
-## Unreleased
+## 0.5.0 (2026-11-08)
 
 **Island OS: your computer as one AI**
 

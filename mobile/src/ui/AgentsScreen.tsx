@@ -1,9 +1,9 @@
 import { Text, View } from 'react-native'
 import type { AgentsView } from '../../../shared/os'
-import { moneyText } from '../../../shared/engine'
 import type { DropLink } from '../link'
 import { ago, Btn, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
+import { money } from '../words'
 
 /**
  * Agents, on the phone: what's watching for you ("tell me when…"), research
@@ -69,7 +69,7 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
           )}
 
           <Text style={st.week}>
-            This week: {v.week.local} local · {v.week.cloud} cloud · {moneyText(v.week.cost)}
+            This week: {v.week.local} local · {v.week.cloud} cloud · {money(v.week.cost)}
           </Text>
         </>
       )}
