@@ -1,3 +1,5 @@
+import { MORNING } from './morningChannels'
+import type { JobId, MorningCard } from '../shared/loop'
 import { BUDDY } from './buddyChannels'
 import type { BuddyConfig, BuddyView } from '../shared/buddy'
 import type { PointerCmd } from '../shared/pointer'
@@ -152,6 +154,12 @@ const api = {
     /** Kokoro speaks here: say these phonemes, then report back. */
     onSpeak: (cb: (s: { id: number; phonemes?: string; voice?: string; speed?: number; stop?: boolean }) => void) => on(BUDDY.SPEAK, cb),
     spoken: (r: { id: number; ok: boolean; error?: string }) => ipcRenderer.send(BUDDY.SPOKEN, r),
+  },
+  /** The morning card: the one thing for today. */
+  morning: {
+    get: (): Promise<MorningCard | null> => ipcRenderer.invoke(MORNING.GET),
+    onCard: (cb: (c: MorningCard | null) => void) => on(MORNING.CARD, cb),
+    act: (a: 'send' | 'edit' | 'hold' | 'done') => ipcRenderer.invoke(MORNING.ACT, a),
   },
   /** The buddy's pointer over the whole screen (its own window). */
   pointer: {
@@ -350,6 +358,9 @@ const settings = {
     meGet: (file: string): Promise<string> => ipcRenderer.invoke(BRAIN.ME_GET, file),
     meSave: (file: string, text: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.ME_SAVE, file, text),
     brief: (): Promise<string> => ipcRenderer.invoke(BRAIN.BRIEF),
+    runJob: (id: JobId) => ipcRenderer.invoke(BRAIN.JOB_RUN, id),
+    jobOn: (id: JobId, on: boolean) => ipcRenderer.invoke(BRAIN.JOB_ON, id, on),
+    filing: (what: 'apply' | 'undo' | 'dismiss'): Promise<number> => ipcRenderer.invoke(BRAIN.FILING, what),
   },
   get: (): Promise<SettingsState> => ipcRenderer.invoke(SETTINGS.GET),
   onChange: (cb: (s: SettingsState) => void) => on(SETTINGS.CHANGED, cb),

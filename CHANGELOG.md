@@ -6,6 +6,23 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**The loop: your brain keeps itself up to date**
+
+- Five jobs, listed in Settings → Second brain with how each last went:
+  **your commits** (each evening, kept as a source), **the evening filing**
+  (where each inbox note should go; nothing moves until you press Apply,
+  and Undo puts it back), the **daily signal** (five lines on your day),
+  the **weekly signal** (patterns with counts, on Sundays) and the
+  **morning card**.
+- **The morning card**: the one thing for today, why, and a draft if it's a
+  message, waiting on the island. **Send** hands the draft to the assistant
+  (which still asks before sending, on the island and your phone),
+  **Edit** opens it in the Claude tab, **Hold** brings it back in three
+  hours.
+- A job the computer slept through runs when it wakes. A job that didn't
+  run says so, and one that failed says why; nothing shows as fine that
+  isn't. Each can be turned off or run now. [How it works](docs/brain.md#the-loop).
+
 **The buddy: ask about your screen, out loud**
 
 - Press **Ctrl+Alt+B** and ask: “where do I change the wallpaper?”, “walk me

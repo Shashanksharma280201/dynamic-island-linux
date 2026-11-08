@@ -1,3 +1,4 @@
+import { LoopBlock } from './LoopBlock'
 import { useState } from 'react'
 import type { SettingsState } from '@shared/types'
 import type { InboxItem, ToolLink } from '@shared/brain'
@@ -127,6 +128,8 @@ export function BrainSection({ s }: { s: SettingsState }) {
       </div>
 
       <Inbox items={b.inbox} run={run} />
+
+      <LoopBlock b={b} />
 
       {b.log.length > 0 && (
         <div className="brain-log">

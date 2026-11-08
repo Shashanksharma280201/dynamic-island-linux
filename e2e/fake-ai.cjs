@@ -37,6 +37,9 @@ function startFakeAi() {
   const plan = (body) => {
     const result = toolResult(body)
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
+    // The brain's loop: the daily signal and the morning card.
+    if (result === null && /exactly five lines/.test(prompt)) return { text: '- Shipped: the loop\n- Decided: rules first for filing\n- Promised: the deck for Asha\n- Number: 1 note\n- Next: send the deck' }
+    if (result === null && /chief of staff/.test(prompt)) return { text: 'One: Send Asha the deck\nWhy: You promised it on Friday.\nTo: Asha, by mail\nDraft: Hi Asha, here is the deck we talked about.' }
     // The buddy: a question with a screenshot.
     const last = body.messages[body.messages.length - 1]
     const pic = Array.isArray(last?.content) && last.content.some((b) => b.type === 'image' || b.type === 'image_url')
@@ -126,7 +129,7 @@ function startFakeAi() {
         if (p.delay) await sleep(p.delay)
         if (p.text) {
           ev('content_block_start', { index: i, content_block: { type: 'text', text: '' } })
-          for (const part of p.text.match(/.{1,8}/g)) {
+          for (const part of p.text.match(/[\s\S]{1,8}/g)) {
             ev('content_block_delta', { index: i, delta: { type: 'text_delta', text: part } })
             await sleep(20)
           }
@@ -155,7 +158,7 @@ function startFakeAi() {
         chunk({ role: 'assistant', content: '' })
         if (p.delay) await sleep(p.delay)
         if (p.text) {
-          for (const part of p.text.match(/.{1,8}/g)) {
+          for (const part of p.text.match(/[\s\S]{1,8}/g)) {
             chunk({ content: part })
             await sleep(20)
           }

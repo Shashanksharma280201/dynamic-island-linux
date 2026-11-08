@@ -41,6 +41,7 @@ import { useDictation } from './voice/useDictation'
 import { DictationPill } from './voice/DictationPill'
 import { useBuddy } from './buddy/useBuddy'
 import { BuddyPill, buddyShown } from './buddy/BuddyPill'
+import { MorningCard, useMorning } from './states/MorningCard'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
 
@@ -205,6 +206,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const dictation = useDictation(claude)
   // The buddy: ask about your screen (its shortcut), it answers out loud and points.
   const buddy = useBuddy(claude)
+  // The morning card: the one thing for today, from the brain's loop.
+  const morning = useMorning()
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {
@@ -661,6 +664,22 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             >
               Undo
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {morning.card && !showPanel && !buddyShown(buddy) && (
+          <motion.div
+            key="morning"
+            className="island morning-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MorningCard card={morning.card} act={morning.act} />
           </motion.div>
         )}
       </AnimatePresence>

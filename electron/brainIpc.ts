@@ -1,3 +1,4 @@
+import { JOBS, type JobId } from '@shared/loop'
 import { BrowserWindow, dialog, ipcMain, type IpcMainInvokeEvent } from 'electron'
 import { homedir } from 'node:os'
 import type { ToolId } from '@shared/brain'
@@ -34,4 +35,21 @@ export function wireBrain(brain: Brain): void {
   ipcMain.handle(BRAIN.ME_GET, (_e, file) => brain.meGet(text(file)))
   ipcMain.handle(BRAIN.ME_SAVE, (_e, file, body) => (typeof body === 'string' ? brain.meSave(text(file), body) : 'Nothing to save.'))
   ipcMain.handle(BRAIN.BRIEF, () => brain.brief())
+  const job = (id: unknown): JobId | null => (JOBS.some((j) => j.id === id) ? (id as JobId) : null)
+  ipcMain.handle(BRAIN.JOB_RUN, async (_e, id) => {
+    const j = job(id)
+    if (j) await brain.jobs()?.run(j)
+  })
+  ipcMain.handle(BRAIN.JOB_ON, (_e, id, on) => {
+    const j = job(id)
+    if (j) brain.jobs()?.setOn(j, on === true)
+  })
+  ipcMain.handle(BRAIN.FILING, (_e, what) => {
+    const loop = brain.jobs()
+    if (!loop) return 0
+    if (what === 'apply') return loop.applyFiling()
+    if (what === 'undo') return loop.undoFiling()
+    if (what === 'dismiss') loop.dismissFiling()
+    return 0
+  })
 }

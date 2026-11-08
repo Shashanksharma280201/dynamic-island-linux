@@ -1,3 +1,4 @@
+import type { LoopView } from './loop'
 /**
  * The second brain: a folder of plain Markdown you own (the Living Brain
  * layout), shared by every AI you use. Pure pieces used by the island, its
@@ -101,6 +102,8 @@ export type BrainView = {
   busy: string | null
   /** Obsidian is installed. */
   obsidian: boolean
+  /** The loop's jobs, the evening filing and the morning card (when on). */
+  loop: LoopView | null
 }
 
 export type InboxItem = {

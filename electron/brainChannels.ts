@@ -16,4 +16,7 @@ export const BRAIN = {
   ME_GET: 'brain:me-get', // (file) -> text
   ME_SAVE: 'brain:me-save', // (file, text) -> error | null
   BRIEF: 'brain:brief', // -> the brief's text
+  JOB_RUN: 'brain:job-run', // (job id): run one of the loop's jobs now
+  JOB_ON: 'brain:job-on', // (job id, on)
+  FILING: 'brain:filing', // ('apply' | 'undo' | 'dismiss') -> how many moved
 } as const

@@ -1,3 +1,6 @@
+import { Loop } from './loop'
+import { runGit } from './mine'
+import type { MorningCard } from '@shared/loop'
 import { existsSync, mkdirSync, readFileSync, watch, writeFileSync, type FSWatcher } from 'node:fs'
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
@@ -45,7 +48,9 @@ export type BrainDeps = {
   /** The command Claude Code runs for the brain's hook, for a vault. */
   hookCommand: (vault: string) => string
   /** The AI that writes session notes (your island AI, or Claude Code), or null. */
-  writer: () => { label: string; ask: (prompt: string) => Promise<string> } | null
+  writer: () => { label: string; ask: (prompt: string, purpose?: string) => Promise<string> } | null
+  /** The morning card changed (the island shows it). */
+  onCard?: (c: MorningCard | null) => void
   findExecutable: (name: string) => string | null
   openPath: (path: string) => void
   openUrl: (url: string) => void
@@ -67,6 +72,7 @@ export class Brain {
   private vaultObj: Vault | null = null
   private index: BrainIndex | null = null
   private capture: SessionCapture | null = null
+  private loop: Loop | null = null
   private mcp: IslandMcp | null = null
   private watchers: FSWatcher[] = []
   private timers: NodeJS.Timeout[] = []
@@ -153,7 +159,23 @@ export class Brain {
     // The search index lets go of its memory when no one has searched for a while.
     every(5 * 60_000, () => this.index?.releaseIfIdle(10 * 60_000))
     void this.capture.processQueue().then((f) => f.length && this.changedSoon())
+    // The loop: commits, the evening filing, the signals and the morning card.
+    this.loop = new Loop({
+      vault: () => this.vaultObj,
+      writer: () => (this.d.config().distil === 'ai' ? this.d.writer() : null),
+      git: runGit,
+      brief: () => this.brief(),
+      onCard: (c) => this.d.onCard?.(c),
+      onChange: () => this.changedSoon(),
+      now: this.d.now,
+    })
+    this.loop.start()
     this.d.onChange()
+  }
+
+  /** The loop, when the brain is on. */
+  jobs(): Loop | null {
+    return this.loop
   }
 
   stop(): void {
@@ -163,6 +185,8 @@ export class Brain {
     this.soon.clear()
     this.mcp?.stop()
     this.mcp = null
+    this.loop?.stop()
+    this.loop = null
     this.capture = null
     this.index = null
     void this.vaultObj?.flush()
@@ -300,6 +324,7 @@ export class Brain {
       log: [],
       busy: this.busy,
       obsidian: !!this.obsidian(),
+      loop: this.loop?.view() ?? null,
     }
     if (!vault) return view
     view.notes = vault.list().length

@@ -87,6 +87,25 @@ one) and need a key, which the island keeps in its own folder.
 - **The inbox**: **Keep** files a note where it suggests (a kept project takes
   its waiting session notes with it); **Archive** moves it to `05-archives/`.
 
+## The loop
+
+Jobs that keep the brain up to date without you, listed in Settings → Second
+brain with how each last went:
+
+| Job | When | What it does |
+|---|---|---|
+| Your commits | Every evening, 20:45 | Today's commits in your projects' repos (the folders on their pages), kept in `09-sources/git/` |
+| Evening filing | 21:00 | Where each inbox note should go: people to `07-world-model/people`, notes about a project to its folder, ideas and facts to `06-brain` shelves, questions to the buddy to `04-resources/asked`. **Nothing moves until you press Apply**, and Undo puts them back |
+| Daily signal | 21:15 | Five lines on your day (shipped, decided, promised, the number, next) in `06-brain/signals/daily/` |
+| Weekly signal | Sundays, 21:30 | Three to five patterns in your week, each with a count, in `06-brain/signals/weekly/` |
+| Morning card | 06:30 | The one thing for today, why, and a draft if it's a message. It waits on the island: **Send** hands the draft to the assistant (which still asks before sending), **Edit** opens it in the Claude tab, **Hold** brings it back in three hours |
+
+A job the computer slept through runs as soon as it wakes. Each says how it
+went; one that didn't run says "Not run yet", and one that failed says why.
+The signals and the card are written by the AI that writes your session
+notes, or plainly (counts, your oldest open promise) without one. Turn any
+job off, or run it now, in Settings.
+
 ## Privacy
 
 The brain is plain files on your computer and the island never uploads it.
@@ -99,6 +118,5 @@ your other notes.
 
 ## Coming next
 
-The [plan](research/island-brain-and-buddy.md#the-roadmap): the island and
-Settings redesign, the buddy that talks and points, the daily triage and
-weekly signals with a morning card, and search by meaning with a local model.
+The [plan](research/island-brain-and-buddy.md#the-roadmap): search by
+meaning with a local model, the Jarvis layer, and Ubuntu as an AI OS.

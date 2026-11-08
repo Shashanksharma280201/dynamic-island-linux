@@ -1,5 +1,5 @@
 import { egress } from './privacy'
-import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
+import { app, clipboard, dialog, ipcMain, nativeImage, powerMonitor, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -132,6 +132,7 @@ import { Pointer } from './buddy/pointer'
 import { captureScreen } from './buddy/screen'
 import { KOKORO_MB, KokoroFiles, SystemVoice, readingMs, testVoice } from './buddy/speech'
 import { espeakProgram, phonemize } from './buddy/phonemes'
+import { MORNING } from './morningChannels'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
@@ -509,6 +510,7 @@ async function main() {
   // Session notes are written by your island AI, or by Claude Code (Haiku)
   // when that is the island's AI; without either they are plain.
   const writerDir = join(app.getPath('userData'), 'brain-writer')
+  const SESSION_SUMMARY = 'a Claude Code session’s summary, to write its five-line note'
   const brainWriter = () => {
     // Paused (Settings › Privacy): notes are written without an AI.
     if (egress.blocked()) return null
@@ -519,7 +521,7 @@ async function main() {
       const model = modelFor(ai)
       return {
         label: `${provider.label} (${model})`,
-        ask: (prompt: string) =>
+        ask: (prompt: string, purpose = SESSION_SUMMARY) =>
           runTurn({
             kind: provider.kind as 'anthropic' | 'openai-compatible',
             model,
@@ -530,7 +532,7 @@ async function main() {
             prompt,
             tools: [],
             feature: 'brain',
-            purpose: 'a Claude Code session’s summary, to write its five-line note',
+            purpose,
             signal: AbortSignal.timeout(120_000),
             events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
           }).then((r) => r.text),
@@ -540,8 +542,8 @@ async function main() {
     return bin
       ? {
           label: 'Claude Code (Haiku)',
-          ask: (prompt: string) => {
-            egress.note('brain', 'Anthropic, through Claude Code', 'a Claude Code session’s summary, to write its five-line note')
+          ask: (prompt: string, purpose = SESSION_SUMMARY) => {
+            egress.note('brain', 'Anthropic, through Claude Code', purpose)
             return claudeOnce(bin, prompt, writerDir)
           },
         }
@@ -563,6 +565,32 @@ async function main() {
     openUrl: (u) => void shell.openExternal(u),
     onChange: () => settings?.changed(),
     ownFolders: [writerDir],
+    onCard: (c) => send(win, MORNING.CARD, c),
+  })
+  // The loop's jobs catch up when the computer wakes or you unlock it.
+  powerMonitor.on('resume', () => void brain.jobs()?.tick())
+  powerMonitor.on('unlock-screen', () => void brain.jobs()?.tick())
+  // The morning card on the island: send, edit, hold, done.
+  ipcMain.handle(MORNING.GET, () => brain.jobs()?.card() ?? null)
+  ipcMain.handle(MORNING.ACT, (e, a) => {
+    if (e.sender !== win.webContents) return
+    const loop = brain.jobs()
+    const card = loop?.card()
+    if (!loop || !card) return
+    if (a === 'hold') return void loop.act('hold')
+    if (a === 'done') return void loop.act('done')
+    const ask = card.to ? `Send this to ${card.to}:\n\n${card.draft}` : card.draft
+    if (a === 'edit') return send(win, CLAUDE.OPEN, { draft: ask })
+    if (a === 'send') {
+      loop.act('done')
+      // The assistant sends it, and still asks first (on the island and your phone).
+      try {
+        claudeUi!.engine().ask(ask)
+        send(win, CLAUDE.OPEN, {})
+      } catch {
+        send(win, CLAUDE.OPEN, { draft: ask })
+      }
+    }
   })
 
   // ---- the buddy: ask about your screen, it answers out loud and points (Settings › Buddy) ----
