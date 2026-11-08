@@ -41,7 +41,7 @@ describe('what the phone may call', () => {
 
   test('every call goes somewhere: the window’s own channels, or a few of main’s', () => {
     const own = Object.keys(PHONE_CALLS).filter((k) => !(k in INVOKED))
-    expect(own.sort()).toEqual(['docs.toPhone', 'system.cmd', 'system.read'])
+    expect(own.sort()).toEqual(['brain.capture', 'docs.toPhone', 'system.cmd', 'system.read'])
     expect(new Set(Object.values(PUSHED))).toEqual(new Set(PHONE_TOPICS))
   })
 })

@@ -4,6 +4,8 @@ import type { WaIncoming } from './providers/whatsapp'
 import type { IncomingMail } from './providers/mail'
 
 /** How a message source answers and marks conversations as read. */
+import type { CapturedMessage } from '@shared/brainMessages'
+
 export type MessageBackend = {
   reply(threadId: string, text: string): Promise<void>
   markRead(threadId: string): Promise<void>
@@ -39,6 +41,8 @@ export class MessageHub {
     private transient: TransientCards,
     private record: (m: MessageArrival) => void = () => {},
     private quiet: () => boolean = () => false,
+    /** The second brain keeps the day's chats and mail (when you turned that on). */
+    private capture: (m: CapturedMessage) => void = () => {},
   ) {
     transient.onDismiss((id) => this.cards.delete(id))
   }
@@ -67,6 +71,7 @@ export class MessageHub {
       thread: w.chatId,
       at: w.time,
     })
+    this.capture({ at: w.time, source: 'whatsapp', thread: w.chatId, chat: sender, from: w.sender, text: w.text })
     if (this.quiet()) return
     const prev = this.cards.get(id)
     const line: ChatLine = { text: w.text, time: w.time, author: w.isGroup ? w.sender : undefined }
@@ -93,6 +98,7 @@ export class MessageHub {
       thread: threadId,
       at: m.date || Date.now(),
     })
+    this.capture({ at: m.date || Date.now(), source: 'mail', thread: threadId, chat: m.subject || '(no subject)', from: m.from.name || m.from.address, text: m.snippet || m.subject || '' })
     if (this.quiet()) return
     this.show(messageId('mail', threadId), {
       source: 'mail',
@@ -119,6 +125,7 @@ export class MessageHub {
     this.transient.hold(id, true)
     try {
       await backend.reply(cur.threadId, text)
+      this.capture({ at: Date.now(), source: cur.source, thread: cur.threadId, chat: cur.source === 'mail' ? cur.title || '(no subject)' : cur.sender, from: 'You', text, out: true })
       this.update(id, {
         status: { kind: 'sent' },
         lines: withLine(cur.lines, { text, time: Date.now(), author: 'You' }),

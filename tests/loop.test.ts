@@ -20,7 +20,7 @@ test('when jobs come round, and missed ones', () => {
   expect(nextDue(sunday, at(10, 9))).toBe(at(15, 21, 30))
   expect(isDue(daily, at(7, 21, 5), at(8, 22))).toBe(true) // slept through it: catch up
   expect(isDue(daily, at(8, 21, 5), at(8, 22))).toBe(false)
-  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'triage', 'daily', 'weekly', 'morning'])
+  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'messages', 'triage', 'daily', 'weekly', 'morning'])
 })
 
 test('the evening filing: where each inbox note goes', () => {

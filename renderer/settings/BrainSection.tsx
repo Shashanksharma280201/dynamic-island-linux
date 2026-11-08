@@ -1,5 +1,5 @@
 import { LoopBlock } from './LoopBlock'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { SettingsState } from '@shared/types'
 import type { InboxItem, ToolLink } from '@shared/brain'
 import { Segmented, Toggle, useAction } from './Settings'
@@ -133,6 +133,7 @@ export function BrainSection({ s }: { s: SettingsState }) {
           </div>
         ))}
       </div>
+      <SourcesBlock b={b} run={run} />
       <div className="toggle-row">
         <div>
           <div>Find my projects</div>
@@ -249,5 +250,58 @@ function Inbox({ items, run }: { items: InboxItem[]; run: ReturnType<typeof useA
         </div>
       ))}
     </div>
+  )
+}
+
+/** What it keeps besides your sessions: WhatsApp, mail, and notes from your phone; each off until you turn it on. */
+function SourcesBlock({ b, run }: { b: SettingsState['brain']; run: <T>(f: () => Promise<T>) => Promise<T | undefined> }) {
+  const src = b.sources
+  const [words, setWords] = useState(src.skipChats.join(', '))
+  useEffect(() => setWords(src.skipChats.join(', ')), [src.skipChats.join('|')]) // eslint-disable-line react-hooks/exhaustive-deps
+  const waiting = src.waiting ? ` ${src.waiting} waiting for tonight.` : ''
+  return (
+    <>
+      <div className="brain-subhead brain-sources">
+        <div>What it keeps</div>
+        <div className="hint">Each is off until you turn it on. What people wrote is kept as data: an AI that reads it looks things up in it, and never follows it.</div>
+      </div>
+      <Toggle
+        label="Your WhatsApp chats"
+        hint={`Each day’s chats (yours included, when you reply from the island), one note a day in 09-sources/whatsapp at 20:50.${src.whatsapp ? waiting : ''}`}
+        on={src.whatsapp}
+        disabled={!b.on}
+        onChange={(v) => run(() => window.settings.brain.set({ whatsapp: v }))}
+      />
+      <Toggle
+        label="Your mail"
+        hint={`Who wrote, the subject and the first lines of each new mail, one note a day in 09-sources/mail.${src.mail ? waiting : ''}`}
+        on={src.mail}
+        disabled={!b.on}
+        onChange={(v) => run(() => window.settings.brain.set({ mail: v }))}
+      />
+      <Toggle
+        label="Notes from your phone"
+        hint="Island Drop’s Notes get a To my brain button: the note lands in your inbox, to keep or file like any other."
+        on={src.phone}
+        disabled={!b.on}
+        onChange={(v) => run(() => window.settings.brain.set({ phone: v }))}
+      />
+      {(src.whatsapp || src.mail) && (
+        <div className="toggle-row">
+          <div>
+            <div>Never keep chats with</div>
+            <div className="hint">Names, groups or addresses, separated by commas (any part matches).</div>
+            <input
+              className="buddy-words"
+              value={words}
+              placeholder="Family, bank, doctor@…"
+              aria-label="Never keep chats with"
+              onChange={(e) => setWords(e.target.value)}
+              onBlur={() => run(() => window.settings.brain.set({ skipChats: words.split(',').map((w) => w.trim()).filter(Boolean) }))}
+            />
+          </div>
+        </div>
+      )}
+    </>
   )
 }

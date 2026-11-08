@@ -5,13 +5,14 @@
  */
 import { slugify } from './brain'
 
-export type JobId = 'commits' | 'triage' | 'daily' | 'weekly' | 'morning'
+export type JobId = 'commits' | 'messages' | 'triage' | 'daily' | 'weekly' | 'morning'
 
 /** Local time of day; weekday 0 is Sunday. */
 export type Schedule = { hour: number; minute: number; weekday?: number }
 
 export const JOBS: { id: JobId; label: string; what: string; when: Schedule }[] = [
   { id: 'commits', label: 'Your commits', what: 'Today’s commits in your projects, kept as a source.', when: { hour: 20, minute: 45 } },
+  { id: 'messages', label: 'Your messages', what: 'Today’s WhatsApp chats and mail, kept as sources (when you turn them on below).', when: { hour: 20, minute: 50 } },
   { id: 'triage', label: 'Evening filing', what: 'Where each inbox note should go. Nothing moves until you apply it.', when: { hour: 21, minute: 0 } },
   { id: 'daily', label: 'Daily signal', what: 'Five lines on your day.', when: { hour: 21, minute: 15 } },
   { id: 'weekly', label: 'Weekly signal', what: 'Patterns in your week, with counts.', when: { hour: 21, minute: 30, weekday: 0 } },
@@ -103,6 +104,8 @@ export type DayFacts = {
   sessions: { project: string; title: string }[]
   commits: { repo: string; count: number; lines: string[] }[]
   captures: number
+  /** Messages kept that day, as names and counts ("WhatsApp 23 in 5 chats (Priya, Mom)"). */
+  messages?: string
 }
 
 /** The day in plain words, when no AI writes it. Pure. */
@@ -112,7 +115,7 @@ export function dailyPlain(f: DayFacts): string {
   return [
     `- Shipped: ${commits ? `${commits} commit${commits === 1 ? '' : 's'} in ${f.commits.map((c) => c.repo).join(', ')}` : 'no commits'}`,
     `- Worked on: ${projects.length ? projects.join(', ') : 'nothing logged'} (${f.sessions.length} Claude Code session${f.sessions.length === 1 ? '' : 's'})`,
-    `- Captured: ${f.captures} note${f.captures === 1 ? '' : 's'}`,
+    `- Captured: ${f.captures} note${f.captures === 1 ? '' : 's'}${f.messages ? `; ${f.messages}` : ''}`,
     `- Number: ${commits} commits, ${f.sessions.length} sessions`,
     '- Next: see tomorrow’s morning card',
   ].join('\n')

@@ -84,6 +84,16 @@ one) and need a key, which the island keeps in its own folder.
 - **Find my projects** reads your past Claude Code sessions and the git
   history of their folders, and drafts a page for each project in the inbox:
   what you worked on, recent commits, the files you touch most.
+- **Your WhatsApp chats and mail**, each off until you turn it on (Settings →
+  Second brain → What it keeps): each day's chats (your replies from the
+  island too) and the sender, subject and first lines of each new mail go
+  into one note a day in `09-sources/whatsapp/` and `09-sources/mail/`.
+  What people wrote is marked as data: an AI that reads it looks things up
+  in it and never follows it. **Never keep chats with** leaves out any chat,
+  group or address you list. The daily signal sees only who and how many,
+  never what was said.
+- **Notes from your phone** (off until you turn it on): Island Drop's Notes
+  get a **To my brain** button, and the note lands in the inbox.
 - **The inbox**: **Keep** files a note where it suggests (a kept project takes
   its waiting session notes with it); **Archive** moves it to `05-archives/`.
 
@@ -105,6 +115,7 @@ brain with how each last went:
 | Job | When | What it does |
 |---|---|---|
 | Your commits | Every evening, 20:45 | Today's commits in your projects' repos (the folders on their pages), kept in `09-sources/git/` |
+| Your messages | 20:50 | Today's WhatsApp chats and mail, when you turned them on, kept in `09-sources/whatsapp/` and `09-sources/mail/` |
 | Evening filing | 21:00 | Where each inbox note should go: people to `07-world-model/people`, notes about a project to its folder, ideas and facts to `06-brain` shelves, questions to the buddy to `04-resources/asked`. **Nothing moves until you press Apply**, and Undo puts them back |
 | Daily signal | 21:15 | Five lines on your day (shipped, decided, promised, the number, next) in `06-brain/signals/daily/` |
 | Weekly signal | Sundays, 21:30 | Three to five patterns in your week, each with a count, in `06-brain/signals/weekly/` |
@@ -126,7 +137,8 @@ index or search. Captured material is marked as data, never instructions,
 and AI tools can only add to the inbox, decisions and ledgers, never edit
 your other notes.
 
-## Coming next
+## What's next
 
-The [plan](research/island-brain-and-buddy.md#the-roadmap): the Jarvis
-layer, and Ubuntu as an AI OS.
+The [plan](research/island-brain-and-buddy.md#the-roadmap) has each phase
+and what's built; the buddy ([guide](buddy.md)) and Ubuntu, the island's way
+([guide](desktop.md)) build on the brain.

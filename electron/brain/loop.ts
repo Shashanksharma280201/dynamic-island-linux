@@ -21,6 +21,7 @@ import {
   type Move,
 } from '@shared/loop'
 import type { Vault } from './vault'
+import { byDay, messagesFact, messagesPath, messagesNote, type CapturedMessage } from '@shared/brainMessages'
 
 const STATE = '_system/jobs/state.json'
 const TRIAGE = '_system/jobs/triage.json'
@@ -37,6 +38,8 @@ export type LoopDeps = {
   /** The morning card changed (show it, or put it away). */
   onCard: (c: MorningCard | null) => void
   onChange: () => void
+  /** Messages waiting to be kept (WhatsApp and mail you turned on), and whether any source is on. */
+  messages?: () => { on: boolean; all: () => CapturedMessage[]; dropDays: (days: string[]) => void }
   /** A job ran (for the evening digest). */
   onRan?: (label: string, ok: boolean, note: string) => void
   now?: () => number
@@ -270,7 +273,8 @@ export class Loop {
   private factsOn(v: Vault, date: string, commits?: DayFacts['commits']): Promise<DayFacts> {
     const start = new Date(`${date}T00:00:00`).getTime()
     const captures = v.list(INBOX).filter((f) => f.mtime >= start && f.mtime < start + DAY).length
-    return (commits ? Promise.resolve(commits) : this.commitsOn(v, date)).then((c) => ({ date, sessions: this.sessionsOn(v, date), commits: c, captures }))
+    const msgs = (this.d.messages?.().all() ?? []).filter((m) => dateOf(m.at) === date)
+    return (commits ? Promise.resolve(commits) : this.commitsOn(v, date)).then((c) => ({ date, sessions: this.sessionsOn(v, date), commits: c, captures, messages: messagesFact(msgs) || undefined }))
   }
 
   private ask(prompt: string, purpose: string): Promise<string> | null {
@@ -291,6 +295,21 @@ export class Loop {
       v.write(`${SOURCES}/git/${date}.md`, formatNote({ type: 'commits', date, source: 'git' }, `# Commits on ${date}\n\n${body}\n`), `commits on ${date}`)
       const n = commits.reduce((k, c) => k + c.count, 0)
       return `${n} commit${n === 1 ? '' : 's'} in ${commits.length} project${commits.length === 1 ? '' : 's'}.${unread}`
+    },
+
+    messages: async (v) => {
+      const m = this.d.messages?.()
+      if (!m?.on) return 'Off: turn on WhatsApp or mail under What it keeps.'
+      const all = m.all()
+      if (!all.length) return 'No messages to keep.'
+      const today = dateOf(this.now())
+      const days = byDay(all)
+      for (const [date, sources] of days)
+        for (const [source, list] of sources) v.write(messagesPath(source, date), messagesNote(source, date, list), `${source === 'whatsapp' ? 'WhatsApp' : 'mail'} on ${date}`)
+      // Days before today are complete: their notes stay, the waiting copies go.
+      m.dropDays([...days.keys()].filter((d) => d < today))
+      const t = days.get(today)
+      return t ? `${messagesFact([...t.values()].flat())}.` : 'Kept the days it hadn’t yet.'
     },
 
     triage: async (v) => {
@@ -314,13 +333,14 @@ export class Loop {
     daily: async (v) => {
       const date = dateOf(this.now())
       const facts = await this.factsOn(v, date)
-      if (!facts.sessions.length && !facts.commits.length && !facts.captures) return 'Nothing happened in the brain today.'
+      if (!facts.sessions.length && !facts.commits.length && !facts.captures && !facts.messages) return 'Nothing happened in the brain today.'
       const prompt = [
         'Write the user’s day as exactly five lines, each starting with "- ": Shipped, Decided, Promised, Number, Next. Plain words, no fluff; use only these facts.',
         `Date: ${date}`,
         `Claude Code sessions: ${facts.sessions.map((s) => `${s.project}: ${s.title}`).join('; ') || 'none'}`,
         `Commits: ${facts.commits.map((c) => `${c.repo}: ${c.lines.slice(0, 12).join(' | ')}`).join('; ') || 'none'}`,
         `Notes captured: ${facts.captures}`,
+        `Messages (who, and how many; not what was said): ${facts.messages || 'none'}`,
       ].join('\n')
       const asked = this.ask(prompt, 'today’s session titles and commit messages, for the daily signal')
       const lines = asked ? (await asked.catch(() => '')).trim() : ''

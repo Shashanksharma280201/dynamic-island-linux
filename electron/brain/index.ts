@@ -23,6 +23,7 @@ import {
   type ToolId,
   dateOf,
   sourceName,
+  cleanWords,
 } from '@shared/brain'
 import { IslandMcp } from '../agent/mcpServer'
 import type { AgentTool } from '../agent/tools'
@@ -33,6 +34,8 @@ import { mineHistory } from './mine'
 import { INTERVIEW_PROMPT } from './templates'
 import { brainTools, forMcp } from './tools'
 import { Vault } from './vault'
+import { MessageLog } from './messages'
+import { cleanMessage, phoneNote, skipped, type CapturedMessage } from '@shared/brainMessages'
 import { Wiring, openTerminal } from './wire'
 
 export type BrainDeps = {
@@ -82,6 +85,7 @@ export class Brain {
   private index: BrainIndex | null = null
   private capture: SessionCapture | null = null
   private loop: Loop | null = null
+  private msgLog: MessageLog | null = null
   private meaningIdx: MeaningIndex | null = null
   private mcp: IslandMcp | null = null
   private watchers: FSWatcher[] = []
@@ -178,6 +182,7 @@ export class Brain {
       onCard: (c) => this.d.onCard?.(c),
       onChange: () => this.changedSoon(),
       onRan: (label, ok, note) => this.d.onJob?.(label, ok, note),
+      messages: () => ({ on: this.d.config().whatsapp || this.d.config().mail, all: () => this.messages().all(), dropDays: (d) => this.messages().dropDays(d) }),
       now: this.d.now,
     })
     this.loop.start()
@@ -370,6 +375,8 @@ export class Brain {
       busy: this.busy,
       obsidian: !!this.obsidian(),
       loop: this.loop?.view() ?? null,
+      // Waiting: arrived since the loop last kept them (today's stay until the day is over, but they're kept already).
+      sources: { whatsapp: cfg.whatsapp, mail: cfg.mail, phone: cfg.phone, skipChats: cfg.skipChats, waiting: this.messagesWaiting() },
       meaning: {
         on: this.d.config().meaning,
         notes: this.meaningIdx?.size() ?? 0,
@@ -432,8 +439,13 @@ export class Brain {
     this.d.onChange()
   }
 
-  setOptions(patch: Partial<Pick<BrainConfig, 'captureSessions' | 'distil' | 'skip' | 'meaning'>>): void {
+  setOptions(patch: Partial<Pick<BrainConfig, 'captureSessions' | 'distil' | 'skip' | 'meaning' | 'whatsapp' | 'mail' | 'phone' | 'skipChats'>>): void {
     const next: Partial<BrainConfig> = {}
+    for (const k of ['whatsapp', 'mail', 'phone'] as const) if (typeof patch[k] === 'boolean') next[k] = patch[k]
+    if (Array.isArray(patch.skipChats)) next.skipChats = cleanWords(patch.skipChats)
+    // Turned off: what was waiting to be kept goes too.
+    if (next.whatsapp === false) this.messages().clear('whatsapp')
+    if (next.mail === false) this.messages().clear('mail')
     if (typeof patch.captureSessions === 'boolean') next.captureSessions = patch.captureSessions
     if (patch.distil === 'ai' || patch.distil === 'plain') next.distil = patch.distil
     if (Array.isArray(patch.skip)) next.skip = [...new Set(patch.skip.filter((s) => typeof s === 'string' && s.startsWith('/')))].slice(0, 50)
@@ -442,6 +454,42 @@ export class Brain {
     // On: the model downloads (once), then the notes are read.
     if (next.meaning) this.d.onMeaning?.()
     this.d.onChange()
+  }
+
+  private messagesWaiting(): number {
+    const last = this.loop?.view().jobs.find((j) => j.id === 'messages')?.lastRun ?? 0
+    return this.messages().all().filter((m) => m.at > last).length
+  }
+
+  private messages(): MessageLog {
+    return (this.msgLog ??= new MessageLog(join(this.d.userData, 'brain-messages.json')))
+  }
+
+  /** A WhatsApp message or mail arrived (or you replied): kept for today's note, if you turned that on. */
+  captureMessage(m: CapturedMessage): void {
+    const cfg = this.d.config()
+    if (!cfg.on || !cfg[m.source] || skipped(m, cfg.skipChats)) return
+    const clean = cleanMessage(m)
+    if (!clean) return
+    this.messages().add(clean)
+    // Settings says how many are waiting.
+    this.changedSoon()
+  }
+
+  /** A note sent from your phone: into the inbox. An error to show, or null. */
+  capturePhone(text: string): string | null {
+    const cfg = this.d.config()
+    const vault = this.vault()
+    if (!cfg.on || !vault || !this.running()) return 'Turn on your second brain first (Settings › Second brain on your computer).'
+    if (!cfg.phone) return 'Turn on “Notes from your phone” in Settings › Second brain on your computer.'
+    const n = phoneNote(text, Date.now())
+    if (!n) return 'There’s nothing in the note.'
+    let path = n.path
+    for (let i = 2; vault.has(path); i++) path = n.path.replace(/\.md$/, `-${i}.md`)
+    vault.write(path, n.text, 'a note from your phone')
+    vault.log(`From your phone: ${n.title}`)
+    this.changedSoon()
+    return null
   }
 
   async connect(id: ToolId, on: boolean): Promise<string | null> {

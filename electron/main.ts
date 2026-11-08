@@ -1260,6 +1260,7 @@ async function main() {
     transient,
     (m) => center.add({ id: m.id, at: m.at, source: m.source, app: m.app, icon: m.icon, title: m.title, body: m.body, thread: m.thread }),
     () => config.dnd,
+    (m) => brain.captureMessage(m),
   )
   let inbox: ReturnType<typeof wireInbox> | null = null
   const mail = new MailManager(
@@ -1783,6 +1784,12 @@ async function main() {
       const cmd = parseSysCmd(c)
       if (!cmd) throw new Error('Unknown control')
       commands.push(cmd)
+      return true
+    },
+    // A note from the phone, into the second brain's inbox.
+    'brain.capture': (text: string) => {
+      const problem = brain.capturePhone(text)
+      if (problem) throw new Error(problem)
       return true
     },
     // A file in Documents, sent to the phone that asked (the glow and all).

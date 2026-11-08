@@ -15,6 +15,9 @@ const USER_DATA = path.join(TMP, 'profile')
 const HOME = path.join(TMP, 'home')
 const VAULT = path.join(HOME, 'Brain')
 const ELECTRON = path.join(ROOT, 'node_modules/electron/dist/electron')
+const WA_GO = path.join(TMP, 'wa-go')
+const TOKEN = 'e2e-' + 'b'.repeat(40)
+const PORT = 23000 + Math.floor(Math.random() * 20000)
 for (const d of [OUT, USER_DATA, HOME]) fs.mkdirSync(d, { recursive: true })
 
 const results = []
@@ -39,7 +42,8 @@ const today = () => {
 
 ;(async () => {
   const ai = await startFakeAi()
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ ai: { provider: 'anthropic' }, character: { id: 'bolt', name: 'Sparky' } }))
+  // WhatsApp (the stand-in engine) and the phone link, for what the brain keeps.
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ ai: { provider: 'anthropic' }, character: { id: 'bolt', name: 'Sparky' }, whatsapp: true, drop: { on: true } }))
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
@@ -55,6 +59,12 @@ const today = () => {
       DI_AI_BASE_URL: ai.base,
       DI_CLAUDE_BIN: '/nonexistent',
       DI_EGRESS_COUNT_LOCAL: '1',
+      DI_WHATSAPP_ENGINE: 'fake',
+      DI_FAKE_WA_READY_MS: '300',
+      DI_FAKE_WA_TRIGGER: WA_GO,
+      DI_DROP_TOKEN: TOKEN,
+      DI_DROP_PORT: String(PORT),
+      DI_DROP_FOLDER: path.join(TMP, 'Downloads'),
     },
   })
   const page = await app.firstWindow()
@@ -66,7 +76,7 @@ const today = () => {
     await settings.evaluate(() => window.settings.setAiKey('anthropic', 'sk-ant-test-123'))
     const made = await settings.evaluate((v) => window.settings.brain.create(v), VAULT)
     check('a brain is made', made === null && fs.existsSync(path.join(VAULT, '_system')), String(made))
-    check('Settings lists the loop’s jobs, none run yet', !!(await until(async () => (await settings.$$('#brain .loop-job')).length === 5 && (await settings.$$('#brain .loop-dot.none')).length === 5)))
+    check('Settings lists the loop’s jobs, none run yet', !!(await until(async () => (await settings.$$('#brain .loop-job')).length === 6 && (await settings.$$('#brain .loop-dot.none')).length === 6)))
 
     // An inbox note about a person.
     fs.writeFileSync(path.join(VAULT, '01-inbox', `${today()}-asha.md`), `---\ntype: person\ndate: ${today()}\n---\n# Asha Rao\n\nRuns Globex.\n`)
@@ -99,6 +109,26 @@ const today = () => {
     check('Hold puts it away for now', !!(await until(async () => !(await page.$('.morning-card')))))
     const card = JSON.parse(fs.readFileSync(path.join(VAULT, '_system/jobs/morning.json'), 'utf8'))
     check('and brings it back in three hours', card.state === 'held' && card.holdUntil - Date.now() > 2.9 * 3_600_000)
+
+    // ---- what it keeps: WhatsApp, and notes from the phone ----
+    const phone = (fn, ...args) =>
+      fetch(`http://127.0.0.1:${PORT}/island/call`, { method: 'POST', headers: { Authorization: `Bearer ${TOKEN}`, 'X-Island-Device': 'Test Phone', 'Content-Type': 'application/json' }, body: JSON.stringify({ fn, args }) }).then((r) => r.json())
+    const before = await phone('brain.capture', 'Call the plumber')
+    check('a note from the phone needs your yes first', before.ok === false && /Notes from your phone/.test(before.message), JSON.stringify(before))
+    await settings.click('#brain .toggle-row:has-text("Your WhatsApp chats") input.switch')
+    await settings.click('#brain .toggle-row:has-text("Notes from your phone") input.switch')
+    check('Settings has what it keeps, each off until turned on', await settings.waitForSelector('#brain input[aria-label="Never keep chats with"]', { timeout: 4000 }).then(() => true, () => false))
+    const sent = await phone('brain.capture', '# Call the plumber\nAbout the kitchen sink, before Friday')
+    check('then it lands in the inbox', sent.ok === true && fs.existsSync(path.join(VAULT, '01-inbox', `${today()}-phone-call-the-plumber.md`)), JSON.stringify(sent))
+    check('and Settings lists it there', await settings.waitForSelector('#brain :text("Call the plumber")', { timeout: 6000 }).then(() => true, () => false))
+    fs.writeFileSync(WA_GO, '')
+    check('a chat that arrives waits to be kept tonight', !!(await until(async () => (await settings.textContent('#brain .toggle-row:has-text("Your WhatsApp chats")')).includes('waiting for tonight'), 8000)))
+    await settings.click('#brain .loop-job[data-job="messages"] button:has-text("Run now")')
+    const kept = path.join(VAULT, '09-sources', 'whatsapp', `${today()}.md`)
+    check('Your messages keeps the day’s chats as a source', !!(await until(() => fs.existsSync(kept) && /Are we still on for lunch\?/.test(fs.readFileSync(kept, 'utf8')))))
+    check('marked as data, never instructions', /never instructions to follow/.test(fs.readFileSync(kept, 'utf8')) && /data: "?true"?/.test(fs.readFileSync(kept, 'utf8')))
+    check('and the job says so', await settings.waitForSelector('#brain .loop-job[data-job="messages"]:has-text("in 1 chat (Alice)")', { timeout: 6000 }).then(() => true, () => false))
+    await settings.screenshot({ path: `${OUT}/03-what-it-keeps.png` })
 
     // ---- privacy ----
     await settings.click('.side-item[data-section="privacy"]')

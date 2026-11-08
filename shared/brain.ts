@@ -57,15 +57,22 @@ export type BrainConfig = {
   meaning: boolean
   /** When the brain was made (ms): sessions before it are mined, not filed one by one. */
   since: number
+  /** Keep today's WhatsApp chats and mail as sources (off until you turn them on). */
+  whatsapp: boolean
+  mail: boolean
+  /** Notes you send from Island Drop on your phone land in the inbox. */
+  phone: boolean
+  /** Chats and senders never captured (names or addresses, any part). */
+  skipChats: string[]
 }
 
 export const BRAIN_PORT = 47823
 
-export const BRAIN_DEFAULTS: BrainConfig = { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: BRAIN_PORT, since: 0, meaning: false }
+export const BRAIN_DEFAULTS: BrainConfig = { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: BRAIN_PORT, since: 0, meaning: false, whatsapp: false, mail: false, phone: false, skipChats: [] }
 
 /** Validate the brain section of the config. Pure. */
 export function parseBrainConfig(raw: any): BrainConfig {
-  const c: BrainConfig = { ...BRAIN_DEFAULTS, skip: [] }
+  const c: BrainConfig = { ...BRAIN_DEFAULTS, skip: [], skipChats: [] }
   if (!raw || typeof raw !== 'object') return c
   if (typeof raw.on === 'boolean') c.on = raw.on
   if (typeof raw.vault === 'string' && (raw.vault === '' || raw.vault.startsWith('/'))) c.vault = raw.vault
@@ -76,7 +83,14 @@ export function parseBrainConfig(raw: any): BrainConfig {
   const port = Number(raw.port)
   if (Number.isInteger(port) && port >= 1024 && port <= 65535) c.port = port
   if (Number.isFinite(raw.since) && raw.since > 0) c.since = Math.floor(raw.since)
+  for (const k of ['whatsapp', 'mail', 'phone'] as const) if (typeof raw[k] === 'boolean') c[k] = raw[k]
+  if (Array.isArray(raw.skipChats)) c.skipChats = cleanWords(raw.skipChats)
   return c
+}
+
+/** Names or addresses, trimmed, without repeats. Pure. */
+export function cleanWords(list: unknown[]): string[] {
+  return [...new Set(list.filter((w): w is string => typeof w === 'string').map((w) => w.trim().slice(0, 80)).filter(Boolean))].slice(0, 50)
 }
 
 /** What Settings shows about the brain. */
@@ -110,6 +124,8 @@ export type BrainView = {
   loop: LoopView | null
   /** Search by meaning: the model, and how many notes it has read. */
   meaning: MeaningView
+  /** Messages and phone notes it keeps (each off until you turn it on), and how many are waiting to be filed. */
+  sources: { whatsapp: boolean; mail: boolean; phone: boolean; skipChats: string[]; waiting: number }
 }
 
 export type InboxItem = {
