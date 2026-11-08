@@ -427,6 +427,8 @@ const settings = {
   desktop: {
     set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
     getExtension: (id: string) => ipcRenderer.invoke(SETTINGS.DESKTOP_GET_EXT, id),
+    /** The login screen and boot splash (Ubuntu asks for your password). */
+    system: (what: 'apply' | 'undo') => ipcRenderer.invoke(SETTINGS.DESKTOP_SYSTEM, what),
     apply: () => ipcRenderer.invoke(SETTINGS.DESKTOP_APPLY),
     undo: () => ipcRenderer.invoke(SETTINGS.DESKTOP_UNDO),
   },

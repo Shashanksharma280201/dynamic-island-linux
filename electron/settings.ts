@@ -122,6 +122,7 @@ type Deps = {
   desktop: () => DesktopView
   desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => Promise<void>
   desktopGetExtension: (id: string) => Promise<void>
+  desktopSystem: (what: 'apply' | 'undo') => Promise<void>
   desktopApply: () => Promise<void>
   desktopUndo: () => Promise<void>
 }
@@ -523,6 +524,10 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.DESKTOP_GET_EXT, async (_e, id) => {
       if (typeof id === 'string') await this.d.desktopGetExtension(id)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_SYSTEM, async (_e, what) => {
+      if (what === 'apply' || what === 'undo') await this.d.desktopSystem(what)
       this.changed()
     })
     ipcMain.handle(SETTINGS.DESKTOP_APPLY, async () => {

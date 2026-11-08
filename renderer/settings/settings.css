@@ -1132,3 +1132,12 @@ button.small {
 .desktop-last {
   margin-top: 4px;
 }
+
+/* Settings › Desktop: the login screen and boot splash's two buttons, side by side. */
+.desktop-system > .row {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.desktop-system > .row button {
+  white-space: nowrap;
+}

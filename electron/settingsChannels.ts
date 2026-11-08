@@ -53,6 +53,7 @@ export const SETTINGS = {
   SET_PAUSED: 'settings:set-paused', // boolean: Settings › Privacy
   DESKTOP_SET: 'settings:desktop-set', // { dock?, buttonsLeft?, commandBar?, blur?, hideClock? }
   DESKTOP_GET_EXT: 'settings:desktop-get-ext', // (extension id): from extensions.gnome.org
+  DESKTOP_SYSTEM: 'settings:desktop-system', // ('apply' | 'undo'): the login screen and boot splash (asks for your password)
   DESKTOP_APPLY: 'settings:desktop-apply',
   DESKTOP_UNDO: 'settings:desktop-undo',
   CLEAR_PRIVACY: 'settings:clear-privacy',

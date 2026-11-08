@@ -6,6 +6,7 @@
 const { _electron } = require('playwright-core')
 const path = require('path')
 const http = require('http')
+const { makeFakeSystem } = require('./fake-system-tools.cjs')
 const fs = require('fs')
 const os = require('os')
 const ROOT = path.resolve(__dirname, '..')
@@ -57,6 +58,8 @@ const SHELL = path.join(TMP, 'gnome-shell')
 fs.writeFileSync(SHELL, '#!/bin/sh\necho "GNOME Shell 42.9"\n', { mode: 0o755 })
 const GX = path.join(TMP, 'gnome-extensions')
 fs.writeFileSync(GX, `#!/bin/sh\n[ "$1" = install ] || exit 1\nd="${HOME}/.local/share/gnome-shell/extensions/$(basename "$3" .zip)"\nmkdir -p "$d/schemas" && echo '{}' > "$d/metadata.json"\n`, { mode: 0o755 })
+// The login screen and boot splash: pkexec and the system's tools, stood in for.
+const SYS = makeFakeSystem(path.join(TMP, 'system'))
 // An app to open.
 fs.writeFileSync(path.join(HOME, '.local/share/applications/island-test.desktop'), `[Desktop Entry]\nType=Application\nName=Island Test App\nComment=Opens for the test\nExec=sh -c "touch ${LAUNCHED}"\n`)
 
@@ -94,7 +97,7 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_HOME: HOME, DYNAMIC_ISLAND_SOCK: path.join(TMP, 's.sock'), DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GSETTINGS: GS, DI_EXT_BASE_URL: `http://127.0.0.1:${ego.address().port}`, DI_GNOME_SHELL: SHELL, DI_GNOME_EXTENSIONS: GX, DI_EGRESS_COUNT_LOCAL: '1' },
+    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_HOME: HOME, DYNAMIC_ISLAND_SOCK: path.join(TMP, 's.sock'), DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GSETTINGS: GS, DI_EXT_BASE_URL: `http://127.0.0.1:${ego.address().port}`, DI_GNOME_SHELL: SHELL, DI_GNOME_EXTENSIONS: GX, DI_EGRESS_COUNT_LOCAL: '1', DI_PKEXEC: SYS.pkexec, ...SYS.env },
   })
   const page = await app.firstWindow()
   try {
@@ -133,6 +136,19 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     check('Undo puts back exactly what was there (extensions too)', !!(await until(() => JSON.stringify(store()) === JSON.stringify(BEFORE))), JSON.stringify(store()).slice(0, 400))
     const privacy = fs.readFileSync(path.join(USER_DATA, 'privacy-log.json'), 'utf8')
     check('the downloads are in the Privacy log', /"feature":"desktop"/.test(privacy))
+
+    // ---- the login screen and boot splash (they ask for your password) ----
+    await settings.click('#desktop .desktop-system button:has-text("Apply…")')
+    check('the login screen and boot splash: Apply', await settings.waitForSelector('#desktop .desktop-system-note:has-text("Done: the login screen in Yaru-purple")', { timeout: 15000 }).then(() => true, () => false))
+    check('through pkexec, once for each', SYS.calls().filter((c) => c.startsWith('pkexec /bin/sh ')).length === 2, SYS.calls().join(' | '))
+    const keyfile = path.join(SYS.root, 'etc/dconf/db/gdm.d/90-dynamic-island')
+    check('the login screen in the accent, light', fs.existsSync(keyfile) && /color-scheme='default'/.test(fs.readFileSync(keyfile, 'utf8')) && /gtk-theme='Yaru-purple'/.test(fs.readFileSync(keyfile, 'utf8')))
+    check('and its shell theme', SYS.value('gdm-theme.gresource') === '/usr/share/gnome-shell/theme/Yaru-purple/gnome-shell-theme.gresource')
+    check('the boot splash with the island’s orb', SYS.value('default.plymouth') === '/usr/share/plymouth/themes/island/island.plymouth' && fs.existsSync(path.join(SYS.root, 'usr/share/plymouth/themes/island/orb.png')) && SYS.calls().includes('update-initramfs -u'))
+    await settings.screenshot({ path: `${OUT}/03-system.png` })
+    await settings.click('#desktop .desktop-system button:has-text("Undo")')
+    check('Undo puts both back', await settings.waitForSelector('#desktop .desktop-system-note:has-text("Put back")', { timeout: 15000 }).then(() => true, () => false))
+    check('exactly as they were', !fs.existsSync(keyfile) && SYS.value('gdm-theme.gresource') === '/usr/share/gnome-shell/theme/Yaru/gnome-shell-theme.gresource' && SYS.value('default.plymouth') === '/usr/share/plymouth/themes/bgrt/bgrt.plymouth')
 
     // ---- the command bar ----
     await page.evaluate(() => window.island.command.open())

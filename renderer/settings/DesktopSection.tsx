@@ -69,6 +69,32 @@ export function DesktopSection({ s }: { s: SettingsState }) {
           </div>
         )
       })}
+      <div className="toggle-row desktop-system">
+        <div>
+          <div>The login screen and boot splash</div>
+          <div className="hint">
+            {d.system.busy === 'apply'
+              ? 'Ubuntu asks for your password; then the boot image is rebuilt, which takes a minute…'
+              : d.system.busy === 'undo'
+                ? 'Putting them back (Ubuntu asks for your password)…'
+                : d.system.applied
+                  ? 'In the island’s look: the login screen in its accent, light or dark, and the island’s orb while Ubuntu starts. They don’t follow later changes on their own (each needs your password): Apply again.'
+                  : 'The login screen in the island’s accent, light or dark, and a boot splash with the island’s orb. These belong to the system, so Ubuntu asks for your password once; Undo puts back what was there.'}
+          </div>
+          {d.system.note && <div className="hint desktop-system-note">{d.system.note}</div>}
+          {d.system.error && <div className="hint warn desktop-system-error">{d.system.error}</div>}
+        </div>
+        <span className="row">
+          {d.system.applied && (
+            <button className="secondary" disabled={!!d.system.busy || !d.supported} onClick={() => run(() => window.settings.desktop.system('undo'))}>
+              Undo
+            </button>
+          )}
+          <button disabled={!!d.system.busy || !d.supported} onClick={() => run(() => window.settings.desktop.system('apply'))}>
+            {d.system.applied ? 'Apply again' : 'Apply…'}
+          </button>
+        </span>
+      </div>
       <Toggle
         label={`Command bar (${key})`}
         hint="Open apps, files you had open, notes and settings, work out sums, change the system (“dark mode”, “volume 40”), or ask, from anywhere. Change the key in Keyboard shortcuts."

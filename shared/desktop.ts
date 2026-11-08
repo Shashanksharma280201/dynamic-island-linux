@@ -14,9 +14,11 @@ export type DesktopConfig = {
   blur: boolean
   /** Just Perfection hides the top bar's clock (the island has the top centre). */
   hideClock: boolean
+  /** The login screen and boot splash are in the island's look (they needed your password), and what to put back. */
+  system: { applied: boolean; gdmPrevious: string; splashPrevious: string }
 }
 
-export const DESKTOP_DEFAULTS: DesktopConfig = { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false }
+export const DESKTOP_DEFAULTS: DesktopConfig = { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false, system: { applied: false, gdmPrevious: '', splashPrevious: '' } }
 
 export function parseDesktopConfig(raw: any): DesktopConfig {
   const r = raw && typeof raw === 'object' ? raw : {}
@@ -31,7 +33,16 @@ export function parseDesktopConfig(raw: any): DesktopConfig {
     commandBar: typeof r.commandBar === 'boolean' ? r.commandBar : DESKTOP_DEFAULTS.commandBar,
     blur: typeof r.blur === 'boolean' ? r.blur : DESKTOP_DEFAULTS.blur,
     hideClock: r.hideClock === true,
+    system: parseSystem(r.system),
   }
+}
+
+const SYSTEM_PATH = /^\/usr\/share\/(gnome-shell|plymouth)\/[A-Za-z0-9/._-]+$/
+
+function parseSystem(raw: any): DesktopConfig['system'] {
+  const r = raw && typeof raw === 'object' ? raw : {}
+  const path = (v: unknown) => (typeof v === 'string' && SYSTEM_PATH.test(v) && !v.includes('..') ? v : '')
+  return { applied: r.applied === true, gdmPrevious: path(r.gdmPrevious), splashPrevious: path(r.splashPrevious) }
 }
 
 export type DesktopView = {
@@ -48,6 +59,8 @@ export type DesktopView = {
   extensions: ExtensionView[]
   blur: boolean
   hideClock: boolean
+  /** The login screen and boot splash: done or not, working on it, what happened. */
+  system: { applied: boolean; busy: 'apply' | 'undo' | null; note: string | null; error: string | null }
 }
 
 export type ExtensionId = 'blur' | 'perfection'

@@ -126,12 +126,13 @@ import { LiveWallpaper } from './wallpaper/live'
 import { DesktopBackground } from './wallpaper/desktop'
 import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
-import { islandLook } from '../shared/theme'
+import { accentOf, islandLook } from '../shared/theme'
 import { parseBuddyConfig } from '../shared/buddy'
 import { CommandBar, homeDir } from './commandBar'
 import { COMMAND } from './commandChannels'
 import { DesktopLook, lookSettings } from './desktopLook'
 import { ExtensionInstaller, extensionSchemaDirs, findExtension } from './gnomeExtensions'
+import { SystemLook, yaruTheme } from './systemLook'
 import { EXTENSIONS, extensionKey, type ExtensionId } from '../shared/desktop'
 import type { SystemContext } from './packages/systemTools'
 import { Announcer } from './announcer'
@@ -1134,6 +1135,9 @@ async function main() {
   // Extensions that finish the look, from extensions.gnome.org (tests: a stand-in site and gnome-extensions).
   const extInstaller = new ExtensionInstaller({ egress, base: process.env.DI_EXT_BASE_URL, gnomeExtensions: process.env.DI_GNOME_EXTENSIONS, gnomeShell: process.env.DI_GNOME_SHELL })
   const extState = new Map<ExtensionId, { busy: boolean; error: string | null; justInstalled: boolean }>()
+  // The login screen and boot splash: through pkexec (tests: a stand-in).
+  const systemLook = new SystemLook()
+  let systemState: { busy: 'apply' | 'undo' | null; note: string | null; error: string | null } = { busy: null, note: null, error: null }
   let looking: Promise<void> | null = null
   const followLook = () => {
     if (!config.desktop.applied || looking) return
@@ -1534,7 +1538,42 @@ async function main() {
       blur: config.desktop.blur,
       hideClock: config.desktop.hideClock,
       extensions: EXTENSIONS.map((e) => ({ id: e.id, name: e.name, what: e.what, installed: !!findExtension(e.uuid, homeDir()), busy: false, error: null, justInstalled: false, ...extState.get(e.id) })),
+      system: { applied: config.desktop.system.applied, ...systemState },
     }),
+    desktopSystem: async (what) => {
+      if (systemState.busy) return
+      systemState = { busy: what, note: null, error: null }
+      settings?.changed()
+      const sys = config.desktop.system
+      const save = (s: typeof sys) => {
+        config.desktop = { ...config.desktop, system: s }
+        saveConfig(config)
+      }
+      if (what === 'apply') {
+        const dark = theme.isDark()
+        const login = await systemLook.loginScreen(config.accent, dark)
+        if (!login.ok) return void (systemState = { busy: null, note: null, error: login.error })
+        // Applied again (another accent): what to put back stays the very first.
+        const gdmPrevious = sys.applied ? sys.gdmPrevious : login.previous
+        save({ ...sys, applied: true, gdmPrevious })
+        const splash = await systemLook.bootSplash(accentOf(config.accent).dark)
+        if (!splash.ok) return void (systemState = { busy: null, note: 'The login screen is done.', error: splash.error })
+        save({ applied: true, gdmPrevious, splashPrevious: sys.applied && sys.splashPrevious ? sys.splashPrevious : splash.previous })
+        const name = yaruTheme(config.accent, dark)
+        systemState = {
+          busy: null,
+          error: null,
+          note: `Done: the login screen in ${name}${login.shellTheme ? '' : ' (this Ubuntu has no login screen theme in that accent, so only the light or dark and the apps’ colours change there)'}, and the island’s orb while Ubuntu starts. You’ll see them when you next start the computer.`,
+        }
+        return
+      }
+      const a = await systemLook.loginScreenUndo(sys.gdmPrevious)
+      if (!a.ok) return void (systemState = { busy: null, note: null, error: a.error })
+      const b = await systemLook.bootSplashUndo(sys.splashPrevious)
+      if (!b.ok) return void (systemState = { busy: null, note: 'The login screen is back as it was.', error: b.error })
+      save({ applied: false, gdmPrevious: '', splashPrevious: '' })
+      systemState = { busy: null, error: null, note: 'Put back: the login screen and the boot splash are as they were.' }
+    },
     desktopGetExtension: async (id) => {
       const e = EXTENSIONS.find((x) => x.id === id)
       if (!e) return

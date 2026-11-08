@@ -31,6 +31,18 @@ Settings → Desktop → **Make Ubuntu match the island**, then **Apply**:
   Xorg, Alt+F2 then `r` restarts GNOME at once). The download is listed in
   Settings → Privacy, and **Pause AI and the web** stops it.
 
+- **The login screen and boot splash**, with your password (Settings →
+  Desktop → **Apply…**; Ubuntu asks once): the login screen in the
+  island's accent, light or dark (GDM's own settings in
+  `/etc/dconf/db/gdm.d/90-dynamic-island`, and Yaru's login theme in that
+  accent where Ubuntu has one), and a boot splash with the island's orb,
+  breathing while Ubuntu starts (a Plymouth theme in
+  `/usr/share/plymouth/themes/island`; the boot image is rebuilt, which
+  takes a minute). They don't follow later changes on their own, since each
+  needs your password: **Apply again**. **Undo** puts back the login theme
+  and the splash that were there. One small script does it, through
+  `pkexec`, and it refuses anything but these.
+
 Everything else is plain `gsettings`, so nothing needs your password, and
 **Undo** puts back exactly what was there before (kept when you applied),
 the list of extensions GNOME runs included. Settings says what it changed,
