@@ -90,7 +90,6 @@ const PANEL_CLOSE_MS = 1500
 export function Island({ activities: real }: { activities: Activity[] }) {
   const character = useCharacter()
   const center = useNotifications()
-  const resting = useResting()
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
@@ -329,6 +328,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
+  // What the resting island says: asked again each time it comes to rest.
+  const resting = useResting(p.mode === 'idle' && !showPanel)
   const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])

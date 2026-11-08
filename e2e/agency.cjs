@@ -80,7 +80,8 @@ for (const [p, body] of Object.entries(skillFiles)) {
   const ai = await startFakeAi()
   const hist = path.join(HOME, '.zsh_history')
   fs.writeFileSync(hist, '')
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ sources: { on: { shell: true, github: true } } }))
+  // (No evening digest: after 18:00 its card would stand in for the resting island.)
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ sources: { on: { shell: true, github: true } }, buddy: { digest: false } }))
   const gh = path.join(__dirname, 'fake-gh.cjs')
   fs.chmodSync(gh, 0o755)
   const app = await _electron.launch({

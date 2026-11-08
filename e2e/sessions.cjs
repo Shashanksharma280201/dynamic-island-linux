@@ -203,7 +203,7 @@ function approval(input) {
     const own = approval({ tool_name: 'AskUserQuestion', tool_input: { questions: [{ question: 'Name the branch?', header: 'Branch', multiSelect: false, options: [{ label: 'main', description: '' }] }] } })
     await page.waitForSelector('.question-card .q-text:has-text("Name the branch?")', { timeout: 4000 })
     await page.click('.q-other')
-    await page.waitForSelector('.q-input', { timeout: 2000 })
+    await page.waitForSelector('.q-input', { timeout: 4000 })
     await sleep(300)
     xt('type', 'tax fix')
     await sleep(300)

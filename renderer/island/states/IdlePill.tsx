@@ -4,11 +4,11 @@ import type { RestingView } from '@shared/os'
 import { Character, useCharacter } from '../character/Character'
 import { MoonIcon } from '../icons'
 
-/** What the resting island knows: notes to file and what's next, every minute. */
-export function useResting(): RestingView | null {
+/** What the resting island knows: notes to file and what's next, every minute while it rests (and as it comes to rest). */
+export function useResting(atRest: boolean): RestingView | null {
   const [v, setV] = useState<RestingView | null>(null)
   useEffect(() => {
-    if (!window.island.os) return
+    if (!atRest || !window.island.os) return
     const load = () =>
       window.island
         .os<RestingView>('status.view')
@@ -22,7 +22,7 @@ export function useResting(): RestingView | null {
       clearInterval(t)
       off?.()
     }
-  }, [])
+  }, [atRest])
   return v
 }
 

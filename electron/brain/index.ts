@@ -353,12 +353,19 @@ export class Brain {
   /** Notes written or changed between two times (for the timeline): not sources, not the brain's own files. */
   notesBetween(from: number, to: number): { path: string; title: string; at: number }[] {
     if (!this.index || !this.running()) return []
+    const vault = this.vault()
     return this.index
       .entries()
       // Your notes: not the brain's own files (its root guides, 00-me, the ledgers), not sources.
       .filter((e) => e.mtime >= from && e.mtime < to && e.path.includes('/') && !/^(08-restricted|_system|09-sources|00-me|07-world-model\/ledgers)\//.test(e.path))
-      .map((e) => ({ path: e.path, title: e.path.split('/').pop()!.replace(/\.md$/, '').replace(/[-_]/g, ' '), at: e.mtime }))
       .slice(0, 200)
+      // Its own title (the first "# " heading), else its file's name without the date.
+      .map((e) => {
+        // (The note itself: the index keeps its text tidied for search.)
+        const h = /^#\s+(.+)$/m.exec((vault?.read(e.path) ?? '').slice(0, 4000))
+        const base = e.path.split('/').pop()!.replace(/\.md$/, '').replace(/^\d{4}-\d{2}-\d{2}-?/, '').replace(/[-_]/g, ' ')
+        return { path: e.path, title: (h ? h[1].trim() : base || e.path).slice(0, 200), at: e.mtime }
+      })
   }
 
   /** Messages waiting to be filed (WhatsApp and mail you turned on), for the timeline and answers. */

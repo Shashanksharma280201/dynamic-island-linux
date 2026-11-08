@@ -67,6 +67,13 @@ it from the code instead, see [Install](docs/install.md).
 Everything is optional and works without accounts. Your settings, notes,
 documents and CRM stay on your computer. See [all features](docs/features.md).
 
+<p align="center">
+  <img src="docs/media/island-os-today.png" width="32%" alt="Today: your day by hour from your sources, what's next, and a question answered on this computer with numbered sources">
+  <img src="docs/media/island-os-agents.png" width="32%" alt="Agents: research over your notes, monitors that tell you once, and the jobs that tend your brain">
+  <img src="docs/media/island-os-skills.png" width="32%" alt="Agent Skills: Anthropic's pdf skill installed into Claude Code, with its licence">
+</p>
+<p align="center"><sub>Island OS: Today, Agents and Agent Skills (made-up data, from <code>scripts/video/island-os-shots.cjs</code>)</sub></p>
+
 ## Get started
 
 Once installed, the island sits on the right edge of your screen. Drag it

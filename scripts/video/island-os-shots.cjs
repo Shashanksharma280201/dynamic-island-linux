@@ -4,7 +4,7 @@
 // github.com/anthropics/skills) when it's given. Run it under an X server:
 //
 //   npm run build
-//   SKILLS_DIR=~/src/skills xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- node scripts/video/island-os-shots.cjs [out folder]
+//   SKILLS_DIR=~/src/skills xvfb-run -a -s "-screen 0 3840x2160x24" dbus-run-session -- node scripts/video/island-os-shots.cjs [out folder]
 //
 // It writes island-os-today.png, island-os-agents.png and island-os-skills.png
 // (at twice the size, for sharp screens) to the folder (docs/media by default).
@@ -93,7 +93,9 @@ const ics = (t) => {
   const os_ = (fn, ...args) => page.evaluate(({ fn, args }) => window.island.os(fn, ...args), { fn, args })
   // The panel and its rail, with room for the shadow.
   const shot = async (name) => {
-    await sleep(500)
+    // The pointer out of the way (no tooltips).
+    await page.mouse.move(2, 2)
+    await sleep(600)
     const box = await page.evaluate(() => {
       const r = [document.querySelector('.hub'), document.querySelector('.rail')].filter(Boolean).map((e) => e.getBoundingClientRect())
       const x = Math.min(...r.map((b) => b.left))
@@ -149,7 +151,7 @@ const ics = (t) => {
       await page.waitForSelector('.agency-hero', { timeout: 8000 }).catch(() => {})
       await page.click('.agency-actions button:has-text("Install for Claude Code")').catch(() => {})
       await page.waitForSelector('.agency-actions button:has-text("Remove from Claude Code")', { timeout: 8000 }).catch(() => {})
-      await page.click('.agency-back')
+      // One skill, installed: its licence, what it holds, and where it's from.
       await shot('island-os-skills')
     }
   } catch (e) {

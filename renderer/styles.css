@@ -6657,6 +6657,15 @@ button .spinner-orb,
 .agents-input input,
 .agency-search {
   box-sizing: border-box;
+  /* A long list below never squeezes the search box. */
+  flex: none;
+}
+/* Agent Skills: its own colours, next to The Agency's. */
+.agents-agency.skills .agents-agency-glyph {
+  background: linear-gradient(135deg, #64d2ff, #0a84ff 55%, #5e5ce6);
+}
+.skills-view .agency-emoji {
+  color: var(--blue);
 }
 
 /* ---------------------------------------------------------------------------
