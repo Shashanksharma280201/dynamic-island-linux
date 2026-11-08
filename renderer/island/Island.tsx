@@ -92,6 +92,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
+  const [overIsland, setOverIsland] = useState(false)
   // It stays while the pointer is on the island (you may be reaching for Undo).
   useEffect(() => {
     if (cleared === null || hover) return
@@ -298,7 +299,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
 
   // Hover intent: a short rest peeks, a longer one opens the full card.
   // No peek while the Undo note is up: the island growing would move it from under the pointer.
-  const stage = useHoverIntent(hover && !panel && !dropping && cleared === null)
+  // Only resting on the island itself peeks, not on the cards beside it (the tour, the morning
+  // card…): peeking changes the island's height, which slides those cards out from under a
+  // still pointer, and the peek would fold and open again and again.
+  const stage = useHoverIntent(hover && overIsland && !panel && !dropping && cleared === null)
   const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
@@ -519,7 +523,15 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
           border-radius for it, so the corners stay round while it grows. */}
-      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }} onScroll={unscroll}>
+      <motion.div
+        className="island"
+        layout
+        transition={reduce ? { duration: 0.16 } : shell}
+        style={{ borderRadius: 26 }}
+        onScroll={unscroll}
+        onMouseEnter={() => setOverIsland(true)}
+        onMouseLeave={() => setOverIsland(false)}
+      >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}

@@ -189,6 +189,21 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await page.click('.tour-next')
     await page.click('.tour-next')
     check('the last step says Done', await seen(page, '.tour-next:has-text("Done")'))
+    // Resting on the tour bar mustn't make the island peek: that moved the bar away and back, again and again.
+    const ys = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const out = []
+          const t0 = performance.now()
+          const step = () => {
+            out.push(Math.round(document.querySelector('.tour-next')?.getBoundingClientRect().y ?? -1))
+            if (performance.now() - t0 < 1800) requestAnimationFrame(step)
+            else resolve(out)
+          }
+          requestAnimationFrame(step)
+        }),
+    )
+    check('resting on the tour bar keeps the island still', new Set(ys.slice(Math.floor(ys.length / 3))).size === 1, JSON.stringify([...new Set(ys)].slice(0, 8)))
     await page.click('.tour-next')
     check('and the island is yours again', (await gone(page, '.tour-bar')) && (await seen(page, '.capsule.idle')))
 
