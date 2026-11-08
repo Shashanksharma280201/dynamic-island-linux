@@ -12,13 +12,27 @@ import { Page } from './kit'
 import { MusicScreen } from './MusicScreen'
 import { NotesScreen } from './NotesScreen'
 import { ServicesScreen } from './ServicesScreen'
+import { TodayScreen } from './TodayScreen'
+import { AgentsScreen } from './AgentsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { themed, useTheme } from './theme'
 import { TradingScreen } from './TradingScreen'
 
-export type MoreId = 'trading' | 'notes' | 'music' | 'controls' | 'crm' | 'docs' | 'services' | 'settings'
+export type MoreId = 'today' | 'agents' | 'trading' | 'notes' | 'music' | 'controls' | 'crm' | 'docs' | 'services' | 'settings'
 
 const APPS: { id: MoreId; name: string; color: string; icon: (c: string) => React.ReactNode }[] = [
+  {
+    id: 'today',
+    name: 'Today',
+    color: '#ff9f0a',
+    icon: (c) => (
+      <>
+        <Rect x={4} y={5} width={16} height={15} rx={3} stroke={c} strokeWidth={2} fill="none" />
+        <Path d="M4 10h16M9 3v4M15 3v4M8 14h3" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" />
+      </>
+    ),
+  },
+  { id: 'agents', name: 'Agents', color: '#5e5ce6', icon: (c) => <Path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" stroke={c} strokeWidth={1.7} fill="none" strokeLinejoin="round" /> },
   { id: 'trading', name: 'Trading', color: '#30d158', icon: (c) => <Path d="M4 17l5-5 4 4 7-8M15 8h5v5" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" /> },
   { id: 'notes', name: 'Notes', color: '#ffd60a', icon: (c) => <Path d="M6 4h9l4 4v12H6zM9 12h7M9 16h5" stroke={c} strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" /> },
   { id: 'music', name: 'Music', color: '#ff375f', icon: (c) => <Path d="M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 9 18zm10-2a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 19 16z" stroke={c} strokeWidth={1.9} fill="none" strokeLinejoin="round" /> },
@@ -73,7 +87,7 @@ const APPS: { id: MoreId; name: string; color: string; icon: (c: string) => Reac
 
 type Props = { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; open: MoreId | null; setOpen: (id: MoreId | null) => void }
 
-/** The rest of the island: trading, notes, music, the Control Center, the CRM, documents, services, and this app's settings. */
+/** The rest of the island: Today, Agents, trading, notes, music, the Control Center, the CRM, documents, services, and this app's settings. */
 export function MoreScreen(p: Props) {
   const C = useTheme()
   const st = useSt()
@@ -122,6 +136,8 @@ export function MoreScreen(p: Props) {
       </Page>
       {open && (
         <Animated.View key={open} entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
+          {open === 'today' && <TodayScreen link={link} top={top} onBack={back} />}
+          {open === 'agents' && <AgentsScreen link={link} top={top} onBack={back} />}
           {open === 'trading' && <TradingScreen link={link} live={live} top={top} onBack={back} />}
           {open === 'notes' && <NotesScreen link={link} top={top} onBack={back} />}
           {open === 'music' && <MusicScreen link={link} live={live} top={top} onBack={back} />}

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { AgencyAgent, AgencyView } from '@shared/agency'
 import type { AgencyDetail, AgentsView as Agents } from '@shared/os'
+import type { SkillDetail, SkillMeta, SkillsView } from '@shared/skills'
 import { agentName, type AgentSession } from '@shared/sessions'
 import { moneyText } from '@shared/engine'
 
@@ -37,6 +38,7 @@ function useAgents(): [Agents | null, () => void] {
 export function AgentsView({ sessions, onTyping }: { sessions: AgentSession[]; onTyping: (on: boolean) => void }) {
   const [v, reload] = useAgents()
   const [agency, setAgency] = useState(false)
+  const [skills, setSkills] = useState(false)
   const [watch, setWatch] = useState('')
   const [ask, setAsk] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +52,7 @@ export function AgentsView({ sessions, onTyping }: { sessions: AgentSession[]; o
     reload()
   }
   if (agency && v) return <AgencyBrowser view={v.agency} onBack={() => setAgency(false)} onTyping={onTyping} reload={reload} />
+  if (skills && v) return <SkillsBrowser view={v.skills} onBack={() => setSkills(false)} onTyping={onTyping} reload={reload} />
   const live = sessions.filter((s) => s.phase === 'working' || s.phase === 'waiting')
   const running = live.length + (v?.monitors.filter((m) => m.state === 'watching').length ?? 0) + (v?.research.filter((j) => !['done', 'failed', 'consent'].includes(j.state)).length ?? 0)
   return (
@@ -169,10 +172,142 @@ export function AgentsView({ sessions, onTyping }: { sessions: AgentSession[]; o
         </span>
       </button>
 
+      <button className="agents-agency skills" onClick={() => setSkills(true)}>
+        <span className="agents-agency-glyph" aria-hidden="true">
+          ◆
+        </span>
+        <span className="agent-main">
+          <span className="agent-name">Agent Skills</span>
+          <span className="agent-sub">{v?.skills.have ? `${v.skills.count} skills for Claude Code${v.skills.installed.length ? ` · ${v.skills.installed.length} installed` : ''}` : 'Anthropic’s skills for Claude Code, downloaded when you want them'}</span>
+        </span>
+        <span className="agents-chev" aria-hidden="true">
+          ›
+        </span>
+      </button>
+
       {v && (
         <div className="agents-week">
           This week: {v.week.local} local · {v.week.cloud} cloud · {moneyText(v.week.cost)}
         </div>
+      )}
+    </div>
+  )
+}
+
+/** Agent Skills: search, open one, read its licence, install it into Claude Code (or start it in Claude). */
+function SkillsBrowser({ view, onBack, onTyping, reload }: { view: SkillsView; onBack: () => void; onTyping: (on: boolean) => void; reload: () => void }) {
+  const [q, setQ] = useState('')
+  const [list, setList] = useState<SkillMeta[]>([])
+  const [open, setOpen] = useState<SkillDetail | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const seq = useRef(0)
+  useEffect(() => {
+    if (!view.have) return
+    const n = ++seq.current
+    void window.island.os<SkillMeta[]>('skills.search', q).then((l) => n === seq.current && setList(l))
+  }, [q, view.have, view.count])
+  const refresh = (name: string) => void window.island.os<SkillDetail | null>('skills.skill', name).then((d) => d && setOpen(d))
+  const act = async (f: () => Promise<unknown>, done?: string, name?: string) => {
+    setBusy(true)
+    setNote(null)
+    try {
+      await f()
+      if (done) setNote(done)
+    } catch (e) {
+      setNote(String((e as Error).message).replace(/^Error invoking remote method '[^']+': (Error: )?/, ''))
+    }
+    setBusy(false)
+    if (name) refresh(name)
+    reload()
+  }
+  const back = (
+    <button className="agency-back" onClick={open ? () => (setOpen(null), setNote(null)) : onBack} aria-label="Back">
+      ‹ {open ? 'Agent Skills' : 'Agents'}
+    </button>
+  )
+  if (open) {
+    return (
+      <div className="agents agency skills-view">
+        {back}
+        <div className="agency-hero">
+          <span className="agency-emoji">◆</span>
+          <div>
+            <div className="agency-name">{open.name}</div>
+            <div className="agency-vibe">
+              {open.licence} · {open.files} {open.files === 1 ? 'file' : 'files'}
+            </div>
+          </div>
+        </div>
+        <div className="agency-desc">{open.description}</div>
+        <div className="agency-actions">
+          {!open.theirs && (
+            <button className="pill primary small" disabled={busy} onClick={() => void act(() => window.island.os('skills.start', open.name), 'Opened in Claude: finish the sentence and send.', open.name)}>
+              Use in Claude
+            </button>
+          )}
+          {open.installed ? (
+            <button className="pill small" disabled={busy} onClick={() => void act(() => window.island.os('skills.uninstall', open.name), 'Removed from Claude Code.', open.name)}>
+              Remove from Claude Code
+            </button>
+          ) : open.theirs ? (
+            <span className="agency-note">You have a skill called {open.name} already; it’s left as it is.</span>
+          ) : (
+            <button className="pill small" disabled={busy} onClick={() => void act(() => window.island.os('skills.install', open.name), `Installed: Claude Code can use ${open.name} now.`, open.name)}>
+              Install for Claude Code
+            </button>
+          )}
+        </div>
+        {note && <div className="agency-note">{note}</div>}
+        <pre className="agency-body">{open.body}</pre>
+        <a className="agency-credit" href={`${view.url}/tree/main/${open.dir}`} target="_blank" rel="noreferrer">
+          {open.name}: {open.licence}, from {view.credit}
+        </a>
+      </div>
+    )
+  }
+  return (
+    <div className="agents agency skills-view">
+      {back}
+      <div className="nc-head">
+        <div className="nc-title">Agent Skills</div>
+        {view.have && (
+          <button className="nc-clear" disabled={!!view.busy} onClick={() => void act(() => window.island.os('skills.get'), 'Up to date.')}>
+            {view.busy ? 'Updating…' : 'Update'}
+          </button>
+        )}
+      </div>
+      {!view.have ? (
+        <div className="agency-get">
+          <p>Anthropic’s skills for Claude Code: documents (Word, Excel, PowerPoint, PDF), design, testing web apps, building MCP servers and more. Each one is a folder Claude Code loads when it helps, under its own licence. The island downloads them from GitHub only when you ask.</p>
+          <button className="pill primary" disabled={!!view.busy} onClick={() => void act(() => window.island.os('skills.get'))}>
+            {view.busy ? 'Downloading…' : 'Get Agent Skills'}
+          </button>
+          {view.error && <div className="agents-error">{view.error}</div>}
+        </div>
+      ) : (
+        <>
+          <input className="agency-search" value={q} placeholder={`Search ${view.count} skills`} aria-label="Search Agent Skills" onChange={(e) => setQ(e.target.value)} onFocus={() => onTyping(true)} onBlur={() => onTyping(false)} />
+          <div className="agency-list">
+            {list.map((s) => (
+              <button key={s.name} className="agency-row" data-skill={s.name} onClick={() => refresh(s.name)}>
+                <span className="agency-emoji small">◆</span>
+                <span className="agent-main">
+                  <span className="agent-name ellipsis">
+                    {s.name}
+                    {view.installed.includes(s.name) && <span className="agency-tick"> · in Claude Code</span>}
+                  </span>
+                  <span className="agent-sub ellipsis">{s.description}</span>
+                </span>
+              </button>
+            ))}
+            {!list.length && <div className="today-empty">No skills match.</div>}
+          </div>
+          {view.error && <div className="agents-error">{view.error}</div>}
+          <a className="agency-credit" href={view.url} target="_blank" rel="noreferrer">
+            {view.credit}
+          </a>
+        </>
       )}
     </div>
   )

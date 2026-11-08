@@ -23,6 +23,7 @@ Environment variables (set them before starting the app):
 | `DI_GH` | The `gh` command for Settings → Sources → GitHub (the tests use a stand-in) |
 | `DI_HISTFILE` | Your bash history file, when it isn't `~/.bash_history` |
 | `DI_AGENCY_URL` | Where The Agency is downloaded from (a .tar.gz address or a folder; the tests use a stand-in) |
+| `DI_SKILLS_URL` | Where Agent Skills are downloaded from (a .tar.gz address or a folder; the tests use a stand-in) |
 | `DI_CALL_RECORDER` | The recorder for call notes instead of ffmpeg (the tests use a stand-in that writes a WAV and waits) |
 | `DI_OLLAMA_URL` | Ollama's address for Settings → Model, instead of the one saved there (the tests use a stand-in) |
 

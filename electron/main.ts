@@ -153,10 +153,11 @@ import { Engine, type Cloud } from './engine'
 import { OS, wireOs, type OsRoutes } from './osCalls'
 import { Agents } from './os/agents'
 import { Agency } from './os/agency'
-import { audioInputs, Calls } from './os/calls'
+import { Skills } from './os/skills'
+import { audioInputs, Calls, fixWavSizes } from './os/calls'
 import { findTool } from './os/tools'
 import { macFrontApp, WinFrontApp } from './os/frontApp'
-import { callLine, fixWavSizes } from '../shared/calls'
+import { callLine } from '../shared/calls'
 import { inQuietHours } from '../shared/jarvis'
 import { monitorLine, researchLine } from '../shared/agents'
 import type { JobId } from '../shared/loop'
@@ -164,7 +165,7 @@ import { Intake } from './os/intake'
 import { SOURCE_IDS, eventLine, parseSourcesConfig, type SourceId, type SourcesView } from '../shared/intake'
 import { dateOf, SOURCES as SOURCES_DIR } from '../shared/brain'
 import { ENGINE_FEATURES, parseEngineConfig } from '../shared/engine'
-import type { AgentsView, CallsView, EngineView, OsAnswer, TodayView } from '../shared/os'
+import type { AgentsView, CallsView, EngineView, OsAnswer, RestingView, TodayView } from '../shared/os'
 import { briefLines, byHour, citedPrompt, fromActivity, messageEntries, pickSources, plainAnswer, readCites, timeRange, type Candidate, type TimelineEntry } from '../shared/memory'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
@@ -892,6 +893,20 @@ async function main() {
     home: homedir(),
     onChange: () => osChanged('agents'),
   })
+  // Agent Skills (Anthropic's), into Claude Code's skills folder.
+  const skills = new Skills({
+    dir: join(app.getPath('userData'), 'skills'),
+    claudeSkills: () => join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'skills'),
+    onChange: () => osChanged('agents'),
+  })
+  // The resting island: notes to file, and what's next today.
+  const restingView = (): RestingView => {
+    const now = Date.now()
+    const next = todayEvents()
+      .filter((e) => !e.allDay && e.start > now)
+      .sort((a, b) => a.start - b.start)[0]
+    return { toFile: brain.toFile(), next: next ? { title: next.title.slice(0, 80), at: next.start } : null }
+  }
   const ROSTER = ['people', 'triage', 'projects'] as const
   const agentsView = (): AgentsView => {
     const now = Date.now()
@@ -906,6 +921,7 @@ async function main() {
       brain: config.brain.on && !!brain.vault(),
       week: engine.week(),
       agency: agency.view(),
+      skills: skills.view(),
     }
   }
   Object.assign(osRoutes, {
@@ -955,6 +971,24 @@ async function main() {
       agency.uninstall(slug)
       return agency.view()
     },
+    'skills.view': () => skills.view(),
+    'skills.get': () => skills.download(),
+    'skills.search': (q: string) => skills.search(q),
+    'skills.skill': (name: string) => skills.skill(name),
+    'skills.install': (name: string) => {
+      skills.install(name)
+      return skills.view()
+    },
+    'skills.uninstall': (name: string) => {
+      skills.uninstall(name)
+      return skills.view()
+    },
+    'skills.start': (name: string) => {
+      const r = skills.start(name)
+      send(win, CLAUDE.OPEN, { draft: r.draft })
+      return r
+    },
+    'status.view': () => restingView(),
   } satisfies Partial<OsRoutes>)
   // ---- Island OS voice: call notes (made out here, audio deleted) ----
   const transcribing = new Map<string, (r: { text: string } | { error: string }) => void>()
@@ -2288,6 +2322,17 @@ async function main() {
       if (problem) throw new Error(problem)
       return true
     },
+    // Island OS on the phone: the same calls the island's Today and Agents panels make.
+    ...Object.fromEntries(
+      (['today.view', 'today.ask', 'agents.view', 'agents.monitor', 'agents.unmonitor', 'agents.research', 'agents.run'] as const).map((fn) => [
+        fn,
+        (...a: unknown[]) => {
+          const f = osRoutes[fn] as ((...x: unknown[]) => unknown) | undefined
+          if (!f) throw new Error('The island is still starting.')
+          return f(...a)
+        },
+      ]),
+    ),
     // A file in Documents, sent to the phone that asked (the glow and all).
     'docs.toPhone': async (id: string) => {
       const view = (await invokeKept(DOCS.VIEW)) as DocsView

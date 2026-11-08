@@ -312,7 +312,12 @@ export function projectPaths(name: string): { dir: string; page: string; session
 
 /** Is `child` the same folder as `parent` or inside it? Pure. */
 export function within(child: string, parent: string): boolean {
-  const c = child.replace(/\/+$/, '')
-  const p = parent.replace(/\/+$/, '')
+  // Windows paths too: backslashes, and a drive letter in either case.
+  const norm = (s: string) => {
+    const t = s.replace(/\\/g, '/').replace(/\/+$/, '')
+    return /^[a-z]:(\/|$)/i.test(t) ? t.toLowerCase() : t
+  }
+  const c = norm(child)
+  const p = norm(parent)
   return !!p && (c === p || c.startsWith(p + '/'))
 }

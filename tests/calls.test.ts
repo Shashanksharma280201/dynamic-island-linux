@@ -1,11 +1,11 @@
 import { mkdtempSync, writeFileSync, existsSync, readFileSync, rmSync, chmodSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { callLine, callNoteText, callPaths, callPrompt, callTranscriptText, elapsed, ffmpegHint, fixWavSizes, listedAudioDevices, pickAudioDevices, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
+import { callLine, callNoteText, callPaths, callPrompt, callTranscriptText, elapsed, ffmpegHint, listedAudioDevices, pickAudioDevices, plainCallNotes, readCallNotes, recorderArgs, type CallNote } from '@shared/calls'
 import { briefLines } from '@shared/memory'
 import { systemCommand } from '@shared/command'
 import { bargeStep } from '../renderer/island/voice/bargein'
-import { audioInputs, Calls } from '../electron/os/calls'
+import { audioInputs, Calls, fixWavSizes } from '../electron/os/calls'
 
 const posix = process.platform !== 'win32'
 

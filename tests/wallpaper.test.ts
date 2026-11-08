@@ -1,6 +1,7 @@
 import { mkdtempSync, readFileSync, existsSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   animationItem,
   creditLine,
@@ -239,7 +240,8 @@ describe('the wallpapers service', () => {
     expect('item' in r && r.item.id).toBe('openverse:ov1')
     const file = join(t.dir, 'walls', fileNameFor(parseOpenverse(OPENVERSE)[0], 'jpg'))
     expect(existsSync(file)).toBe(true)
-    expect(t.set).toEqual([`file://${file}`])
+    // (A file address: file:///C:/… on Windows.)
+    expect(t.set).toEqual([pathToFileURL(file).href])
     expect(JSON.parse(t.config().original)['picture-uri']).toBe('file:///orig.png')
     expect(t.config().current?.file).toBe(file)
     expect(JSON.parse(readFileSync(join(t.dir, 'history.json'), 'utf8'))[0].id).toBe('openverse:ov1')

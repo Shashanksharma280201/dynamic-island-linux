@@ -83,7 +83,8 @@ The second panel on the rail:
   `07-world-model/ledgers/promises.md` with who and when), **Inbox** (the
   evening filing) and **Projects** (what moved this week, what's gone quiet),
   with **Run now**.
-- **The Agency** (below), and the week's answers and cost.
+- **The Agency** and **Agent Skills** (below), and the week's answers and
+  cost.
 
 ## The Agency
 
@@ -103,6 +104,39 @@ instructions, then:
   and **Remove** only removes what it installed.
 
 The command bar (Ctrl+Alt+K) finds the agents too.
+
+## Agent Skills
+
+[Agent Skills](https://github.com/anthropics/skills) are Anthropic's skills
+for Claude Code: folders of instructions, scripts and references that Claude
+Code loads when they help (Word, Excel, PowerPoint and PDF documents,
+design, testing web apps, building MCP servers and more). In **Agents →
+Agent Skills**, **Get Agent Skills** downloads them from GitHub (only then;
+**Update** gets the latest). Search, open one to read it, its licence and
+how many files it has, then:
+
+- **Install for Claude Code**: the whole folder is copied to
+  `~/.claude/skills/<name>/`, so every Claude Code session can use it. Each
+  skill keeps its own licence (many are Apache 2.0; read each one's
+  LICENSE.txt). It never writes over a skill of yours, and **Remove** only
+  removes what it installed (it marks its own with a small
+  `.from-dynamic-island.json`).
+- **Use in Claude**: it's installed, and the Claude tab opens with a draft
+  (“Use the pdf skill to …”) for you to finish.
+
+## The resting island
+
+When nothing's going on, the island still says a little: a small count on
+the character when notes wait in the brain's inbox to be filed, and on hover
+the time, that count and what's next on today's calendar (“10:42 · 2 to
+file · Standup at 11:00”).
+
+## On your phone
+
+The Island Drop app has **Today** and **Agents** under **More**, running on
+the computer: ask about your days (with the same numbered sources and the
+same yes before the cloud), your day by hour and what's next; and add or stop
+a “tell me when…”, start research, and run the jobs that tend the brain.
 
 ## Voice
 

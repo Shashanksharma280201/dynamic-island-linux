@@ -118,7 +118,12 @@ process.stdin.on('end', () => {
   if (!VAULT || !fs.existsSync(path.join(VAULT, '_system'))) return quit()
   const event = h.hook_event_name
   const cwd = typeof h.cwd === 'string' && h.cwd ? h.cwd : process.cwd()
-  const inVault = cwd === VAULT || cwd.startsWith(VAULT.replace(/\/+$/, '') + '/')
+  // Windows paths too: backslashes, and a drive letter in either case.
+  const norm = (s) => {
+    const t = s.replace(/\\/g, '/').replace(/\/+$/, '')
+    return /^[a-z]:(\/|$)/i.test(t) ? t.toLowerCase() : t
+  }
+  const inVault = norm(cwd) === norm(VAULT) || norm(cwd).startsWith(norm(VAULT) + '/')
   if (event === 'SessionEnd') {
     if (inVault || typeof h.transcript_path !== 'string' || typeof h.session_id !== 'string') return quit()
     const id = h.session_id.replace(/[^\w-]/g, '').slice(0, 80)
