@@ -178,6 +178,7 @@ export type SystemAction =
   | { t: 'mute' }
   | { t: 'lock' }
   | { t: 'wallpaper'; query: string }
+  | { t: 'call'; on: boolean }
 
 /** A system change in plain words ("dark mode", "volume 40", "lock"). Pure. */
 export function systemCommand(text: string): { action: SystemAction; title: string } | null {
@@ -190,6 +191,8 @@ export function systemCommand(text: string): { action: SystemAction; title: stri
   if (vol) return { action: { t: 'volume', value: Math.min(100, Number(vol[1])) }, title: `Volume ${Math.min(100, Number(vol[1]))}%` }
   if (/^(mute|unmute)$/.test(t)) return { action: { t: 'mute' }, title: t === 'mute' ? 'Mute' : 'Unmute' }
   if (/^(lock|lock screen|lock the screen)$/.test(t)) return { action: { t: 'lock' }, title: 'Lock the screen' }
+  if (/^(record|start)( a| the)? (call|meeting)( notes)?$|^call notes$/.test(t)) return { action: { t: 'call', on: true }, title: 'Record a call for its notes' }
+  if (/^stop( recording)?( the)?( call| meeting)?$/.test(t) && t !== 'stop') return { action: { t: 'call', on: false }, title: 'Stop recording the call' }
   const wall = /^(?:wallpaper|background)\s+(.+)$/.exec(t)
   if (wall) return { action: { t: 'wallpaper', query: wall[1] }, title: `Set the wallpaper to “${wall[1]}”` }
   return null

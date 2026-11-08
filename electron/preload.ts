@@ -95,6 +95,9 @@ const api = {
   os,
   /** Something Island OS shows changed ("agents"…): load it again. */
   onOs: (cb: (topic: string) => void) => on<string>('os:changed', cb),
+  /** A recording to make out here (call notes), and the answer back. */
+  onTranscribe: (cb: (h: { id: string; data: Uint8Array; fake?: string }) => void) => on('os:transcribe', cb),
+  transcribed: (id: string, r: { text: string } | { error: string }): Promise<void> => ipcRenderer.invoke('os:transcribed', id, r),
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),

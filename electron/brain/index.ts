@@ -345,7 +345,8 @@ export class Brain {
     if (!this.index || !this.running()) return []
     return this.index
       .entries()
-      .filter((e) => e.mtime >= from && e.mtime < to && !e.path.startsWith(RESTRICTED) && !e.path.startsWith(`${SYSTEM}/`) && !e.path.startsWith(`${SOURCES}/`))
+      // Your notes: not the brain's own files (its root guides, 00-me, the ledgers), not sources.
+      .filter((e) => e.mtime >= from && e.mtime < to && e.path.includes('/') && !/^(08-restricted|_system|09-sources|00-me|07-world-model\/ledgers)\//.test(e.path))
       .map((e) => ({ path: e.path, title: e.path.split('/').pop()!.replace(/\.md$/, '').replace(/[-_]/g, ' '), at: e.mtime }))
       .slice(0, 200)
   }

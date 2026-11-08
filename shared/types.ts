@@ -112,6 +112,8 @@ export type Activity =
   | (Base & { kind: 'job'; job: JobState })
   /** A connected package's status on the capsule (today's P&L…). */
   | (Base & { kind: 'connected'; status: ConnectedCapsule })
+  /** A call being recorded for its notes (Island OS). */
+  | (Base & { kind: 'call'; call: { started: number } })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {

@@ -122,6 +122,18 @@ export function BuddySection({ s }: { s: SettingsState }) {
         />
       </div>
       <Toggle
+        label="Talk over it"
+        hint="Start talking while it speaks and it stops to listen. The microphone takes out its own voice; headphones help with the system voice."
+        on={c.interrupt}
+        onChange={(v) => set({ interrupt: v })}
+      />
+      <Toggle
+        label="Say the morning brief out loud"
+        hint="The one thing for today and what’s on your calendar, once a morning, when you’re first at the computer (never in quiet hours). Today › Say it plays it any time."
+        on={c.speakMorning}
+        onChange={(v) => set({ speakMorning: v })}
+      />
+      <Toggle
         label="Keep a note of each question in your brain"
         hint="What you asked and what it said, in the brain’s inbox (Settings › Second brain), so the next answer knows."
         on={c.save}

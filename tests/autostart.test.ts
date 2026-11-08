@@ -54,7 +54,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     islandTheme: 'match',
     accent: 'blue',
     privacy: { paused: false },
-    buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true, wake: false, alerts: true, quietFrom: 22, quietTo: 8, digest: true, digestAt: 18 },
+    buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true, wake: false, alerts: true, quietFrom: 22, quietTo: 8, digest: true, digestAt: 18, interrupt: true, speakMorning: false },
     routines: [],
     desktop: { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false, system: { applied: false, gdmPrevious: '', splashPrevious: '' } },
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },

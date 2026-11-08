@@ -6635,3 +6635,134 @@ button .spinner-orb,
 .agency-search {
   box-sizing: border-box;
 }
+
+/* ---------------------------------------------------------------------------
+   Call notes: the red dot while recording, and the notes after
+   --------------------------------------------------------------------------- */
+.rec-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff453a;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #ff453a 25%, transparent);
+  animation: rec-breathe 1.6s ease-in-out infinite;
+  flex: none;
+}
+@keyframes rec-breathe {
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, #ff453a 10%, transparent);
+  }
+}
+.call-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.call-time,
+.call-big {
+  font-variant-numeric: tabular-nums;
+  color: var(--label-2);
+}
+.call-big {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--label);
+  letter-spacing: -0.02em;
+  margin: 2px 0;
+}
+.call-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+}
+.detached-glyph.call {
+  display: grid;
+  place-items: center;
+}
+.today-record {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.today-record:not(.on) .rec-dot {
+  animation: none;
+  box-shadow: none;
+}
+.today-record.on {
+  background: color-mix(in srgb, #ff453a 18%, transparent);
+  color: #ff453a;
+}
+.today-call {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  background: var(--well-2);
+  box-shadow: inset 0 0 0 0.5px var(--fill-2);
+}
+.today-call-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.today-call-meta {
+  font-size: 11px;
+  color: var(--label-2);
+  margin-right: auto;
+}
+.today-call-summary {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.today-call-summary.error {
+  color: var(--label-2);
+}
+.today-call-todos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+}
+.today-call-todos li::before {
+  content: '';
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1.5px solid var(--label-2);
+  border-radius: 3px;
+  margin-right: 8px;
+  vertical-align: -1px;
+}
+.today-call-kept {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--green-text);
+  align-self: center;
+}
+.today-call-transcript {
+  max-height: 160px;
+  overflow: auto;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--label-2);
+  white-space: pre-wrap;
+}

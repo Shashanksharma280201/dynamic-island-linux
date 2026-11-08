@@ -61,7 +61,7 @@ export class SystemVoice {
 export function testVoice(file: string): (engine: string, text: string) => Promise<void> {
   return async (engine, text) => {
     appendFileSync(file, `${engine}: ${text}\n`)
-    await new Promise((r) => setTimeout(r, 250))
+    await new Promise((r) => setTimeout(r, Number(process.env.DI_TTS_MS) || 250))
   }
 }
 

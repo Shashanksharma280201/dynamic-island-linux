@@ -1,8 +1,9 @@
+import { BargeIn } from '../voice/bargein'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ClaudeView } from '@shared/claude'
 import { IDLE_BUDDY, type BuddyView } from '@shared/buddy'
 import { Recorder } from '../voice/recorder'
-import { NOISE, transcribe, warmUp } from '../voice/useVoice'
+import { NOISE, transcribe, transcribeLong, warmUp } from '../voice/useVoice'
 import { wakeMatch } from '@shared/jarvis'
 
 export type BuddyListen = 'idle' | 'preparing' | 'listening' | 'transcribing'
@@ -219,6 +220,43 @@ export function useBuddy(claude: ClaudeView | null, name = 'Buddy'): Buddy {
       }
     })
   }, [])
+
+  // Call notes: a recording made out here, in pieces (it's long), on this computer.
+  useEffect(() => {
+    if (!window.island.onTranscribe) return
+    return window.island.onTranscribe(async (h) => {
+      const answer = (r: { text: string } | { error: string }) => void window.island.transcribed(h.id, r)
+      try {
+        const audio = await decodeForWhisper(h.data.buffer.slice(h.data.byteOffset, h.data.byteOffset + h.data.byteLength) as ArrayBuffer)
+        if (audio.length < 16000 * 0.3) return answer({ error: 'The recording was too short to make out.' })
+        // Tests: a stand-in for Whisper, once the audio really decoded.
+        if (h.fake) return answer({ text: h.fake })
+        const c = claudeRef.current
+        if (!c) return answer({ error: 'The island is still starting.' })
+        if (!c.stt.ready) await window.island.claude.ensureSpeechModel()
+        answer({ text: (await transcribeLong((claudeRef.current ?? c).stt.model, audio)).trim() })
+      } catch (e) {
+        answer({ error: plain(e) })
+      }
+    })
+  }, [])
+
+  // Talking over it: while it speaks, start talking and it stops to listen.
+  useEffect(() => {
+    if (view.phase !== 'speaking' || !view.interrupt || listen !== 'idle') return
+    let gone = false
+    const b = new BargeIn(() => {
+      if (gone) return
+      gone = true
+      void window.island.buddy.cmd('stop')
+      void start()
+    })
+    b.start().catch(() => {})
+    return () => {
+      gone = true
+      b.stop()
+    }
+  }, [view.phase, view.interrupt, listen, start])
 
   // The wake word: while it's idle, listen for "hey <name>" (speech stays on this computer).
   const nameRef = useRef(name)

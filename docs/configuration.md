@@ -23,6 +23,7 @@ Environment variables (set them before starting the app):
 | `DI_GH` | The `gh` command for Settings → Sources → GitHub (the tests use a stand-in) |
 | `DI_HISTFILE` | Your bash history file, when it isn't `~/.bash_history` |
 | `DI_AGENCY_URL` | Where The Agency is downloaded from (a .tar.gz address or a folder; the tests use a stand-in) |
+| `DI_CALL_RECORDER` | The recorder for call notes instead of ffmpeg (the tests use a stand-in that writes a WAV and waits) |
 | `DI_OLLAMA_URL` | Ollama's address for Settings → Model, instead of the one saved there (the tests use a stand-in) |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
@@ -48,6 +49,10 @@ is available, Settings warns you that they are only obfuscated.
   taken out before they're kept; screen time keeps app names and minutes,
   never screenshots or private windows. GitHub is read through your own `gh`
   login, read only. Turning a source off forgets what it kept.
+- **Call notes** record only while the red dot is on the island. The audio is
+  made out on this computer and deleted straight after, whether or not that
+  worked; the transcript stays in the island's profile folder until you add it
+  to the brain or forget it.
 - **Settings → Model**: answers start on this computer when Ollama is running;
   a question you ask goes to the cloud only after your yes (or always, or
   never, as you choose). What it learns about where questions go stays in

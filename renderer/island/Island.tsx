@@ -1,3 +1,4 @@
+import { CallCard, CompactCall } from './states/CallActivity'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
@@ -635,6 +636,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               )
             ) : p.primary.kind === 'job' ? (
               <JobCard id={p.primary.id} job={p.primary.job} />
+            ) : p.primary.kind === 'call' ? (
+              p.mode === 'expanded' ? <CallCard started={p.primary.call.started} /> : <CompactCall started={p.primary.call.started} />
             ) : p.primary.kind === 'connected' ? (
               p.mode === 'expanded' ? (
                 <ConnectedStatusCard

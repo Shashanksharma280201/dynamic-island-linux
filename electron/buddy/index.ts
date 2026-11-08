@@ -54,7 +54,7 @@ export class Buddy {
   constructor(private d: BuddyDeps) {}
 
   view(): BuddyView {
-    return { ...this.v, wake: this.d.config().on && this.d.config().wake }
+    return { ...this.v, wake: this.d.config().on && this.d.config().wake, interrupt: this.d.config().on && this.d.config().interrupt }
   }
 
   private set(v: Partial<BuddyView>): void {
@@ -65,6 +65,17 @@ export class Buddy {
   /** The settings changed (the wake word, on or off): tell the island. */
   refresh(): void {
     this.d.onChange(this.view())
+  }
+
+  /** Say these lines, one by one, with captions (the morning brief); only when it isn't busy. */
+  async speakLines(lines: string[]): Promise<boolean> {
+    if (this.v.phase !== 'idle' || !lines.length) return false
+    this.d.stopSpeaking()
+    const run = ++this.run
+    this.set({ phase: 'speaking', heard: '', caption: lines[0], reply: lines.join(' '), points: [], step: 0, error: null })
+    await this.say(lines, run)
+    if (run === this.run) this.done(run)
+    return true
   }
 
   /** Say something urgent (the announcer decided it should be said). */

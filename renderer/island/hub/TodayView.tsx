@@ -3,6 +3,7 @@ import type { MorningCard } from '@shared/loop'
 import type { OsAnswer, OsCite, TodayView as Today } from '@shared/os'
 import type { TimelineEntry } from '@shared/memory'
 import { AnswerChip, CloudConsent } from '../AnswerChip'
+import { CallNotesCard, RecordButton, useCalls } from './CallNotes'
 
 const hm = (t: number) => {
   const d = new Date(t)
@@ -55,6 +56,8 @@ export function TodayView({ onTyping }: { onTyping: (on: boolean) => void }) {
   const [answer, setAnswer] = useState<OsAnswer | null>(null)
   const [busy, setBusy] = useState(false)
   const [all, setAll] = useState(false)
+  const [calls] = useCalls()
+  const [note, setNote] = useState<string | null>(null)
   const input = useRef<HTMLInputElement>(null)
   const load = () =>
     window.island
@@ -85,8 +88,11 @@ export function TodayView({ onTyping }: { onTyping: (on: boolean) => void }) {
     <div className="today">
       <div className="nc-head today-head">
         <div className="nc-title">Today</div>
+        <RecordButton recording={!!calls?.recording} onError={setNote} />
         {v && <span className={`today-where${v.local ? ' local' : ''}`}>{v.local ? 'local' : 'cloud asks first'}</span>}
       </div>
+      {note && <div className="agents-error">{note}</div>}
+      {calls && <CallNotesCard v={calls} />}
       {one && (
         <div className="today-one">
           <div className="today-kicker">The one thing</div>
@@ -104,6 +110,17 @@ export function TodayView({ onTyping }: { onTyping: (on: boolean) => void }) {
             )}
             <button className="pill small" onClick={() => void window.island.morning.act('hold').then(() => setCard(null))}>
               Later
+            </button>
+            <button
+              className="pill small today-say"
+              title="Say the morning brief out loud"
+              onClick={() =>
+                void window.island
+                  .os('today.speak')
+                  .catch((e: Error) => setNote(String(e.message).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')))
+              }
+            >
+              Say it
             </button>
           </div>
         </div>

@@ -42,6 +42,8 @@ function startFakeAi() {
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
     // The brain's loop: the daily signal and the morning card.
     if (result === null && /exactly five lines/.test(prompt)) return { text: '- Shipped: the loop\n- Decided: rules first for filing\n- Promised: the deck for Asha\n- Number: 1 note\n- Next: send the deck' }
+    // Call notes: a summary, then to-dos.
+    if (result === null && /^A \d+-minute call, transcribed:/.test(prompt)) return { text: 'We agreed to ship the island on Friday.\n\nTo-dos:\n- Send the slides tomorrow\n- Book the launch room' }
     // Island OS research: a plan, then a summary of the findings.
     if (result === null && /^Question: /.test(prompt) && /\n\nFindings:\n/.test(prompt)) return { text: 'You ran the tests [1] and merged the engine [2].' }
     if (result === null && /^Question: /.test(prompt) && !/\nSources:\n/.test(prompt)) return { text: '1. When did I run npm test?\n2. Which pull request did I merge?' }

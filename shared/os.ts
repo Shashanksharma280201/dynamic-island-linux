@@ -8,6 +8,7 @@ import type { SourcesView } from './intake'
 import type { TimelineHour } from './memory'
 import type { Monitor, ResearchJob } from './agents'
 import type { AgencyAgent, AgencyView } from './agency'
+import type { CallNote } from './calls'
 
 export type EngineView = {
   cfg: EngineConfig
@@ -47,6 +48,9 @@ export type AgentsView = {
   agency: AgencyView
 }
 
+/** Call notes: the latest calls, and whether one is being recorded. */
+export type CallsView = { list: (CallNote & { line: string })[]; recording: boolean }
+
 /** One of The Agency's agents, opened. */
 export type AgencyDetail = AgencyAgent & { body: string; installed: boolean }
 
@@ -73,6 +77,14 @@ export const OS_CALLS = {
   'agents.research': ['s', 'b?'],
   'agents.forget': ['s'],
   'agents.run': ['s'],
+  'calls.view': [],
+  'calls.start': [],
+  'calls.stop': [],
+  'calls.sum': ['s', 'b?'],
+  'calls.plain': ['s'],
+  'calls.keep': ['s'],
+  'calls.forget': ['s'],
+  'today.speak': [],
   'agency.view': [],
   'agency.get': [],
   'agency.search': ['s', 's?'],

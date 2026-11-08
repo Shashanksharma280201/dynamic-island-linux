@@ -16,6 +16,7 @@ export function DetachedCircle({ activity }: { activity: Activity }) {
         {activity.status.tone === 'up' ? '▲' : activity.status.tone === 'down' ? '▼' : '●'}
       </div>
     )
+  if (activity.kind === 'call') return <div className="detached-glyph call" title="Recording a call"><span className="rec-dot" /></div>
   const glyph = activity.kind === 'media' ? '♪' : activity.kind === 'approval' ? '!' : '•'
   return <div className="detached-glyph">{glyph}</div>
 }

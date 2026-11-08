@@ -191,6 +191,20 @@ export function readCites(text: string, sources: (Candidate & { n: number })[]):
   return { text: clean.replace(/\s+([.,;:])/g, '$1').trim(), cites }
 }
 
+/** The morning brief, to say out loud: the one thing, why, and the day's calendar. Pure. */
+export function briefLines(card: { one: string; why: string } | null, events: { start: number; title: string; allDay: boolean }[], now: number): string[] {
+  const h = new Date(now).getHours()
+  const lines = [h < 12 ? 'Good morning.' : h < 18 ? 'Good afternoon.' : 'Good evening.']
+  if (card?.one) lines.push(`The one thing today: ${card.one.replace(/[.!]+$/, '')}.`)
+  if (card?.why) lines.push(card.why)
+  const timed = events.filter((e) => !e.allDay && e.start >= now).sort((a, b) => a.start - b.start)
+  const at = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' })
+  if (timed.length) lines.push(`You have ${timed.length === 1 ? 'one event' : `${timed.length} events`} still to come${timed.length > 1 ? '; the first is' : ':'} ${timed[0].title} at ${at(timed[0].start)}.`)
+  else if (events.some((e) => e.allDay)) lines.push(`All day: ${events.filter((e) => e.allDay).map((e) => e.title).join(', ')}.`)
+  else lines.push('Nothing else on your calendar.')
+  return lines
+}
+
 /** An answer without a model: the matching sources, listed. Pure. */
 export function plainAnswer(q: string, sources: (Candidate & { n: number })[], now: number): string {
   if (!sources.length) return 'Nothing in your sources matches that yet.'

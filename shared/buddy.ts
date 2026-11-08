@@ -34,6 +34,10 @@ export type BuddyConfig = {
   digest: boolean
   /** Its hour (0 to 23). */
   digestAt: number
+  /** Start talking while it speaks and it stops to listen (the microphone cancels its own voice). */
+  interrupt: boolean
+  /** Say the morning brief out loud when you're first at the computer. */
+  speakMorning: boolean
 }
 
 export const DEFAULT_PRIVATE = ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank']
@@ -66,6 +70,8 @@ export const BUDDY_DEFAULTS: BuddyConfig = {
   quietTo: 8,
   digest: true,
   digestAt: 18,
+  interrupt: true,
+  speakMorning: false,
 }
 
 export function parseBuddyConfig(raw: any): BuddyConfig {
@@ -86,6 +92,8 @@ export function parseBuddyConfig(raw: any): BuddyConfig {
   c.quietTo = hour(r.quietTo) ?? c.quietTo
   if (typeof r.digest === 'boolean') c.digest = r.digest
   c.digestAt = hour(r.digestAt) ?? c.digestAt
+  if (typeof r.interrupt === 'boolean') c.interrupt = r.interrupt
+  if (typeof r.speakMorning === 'boolean') c.speakMorning = r.speakMorning
   return c
 }
 
@@ -224,6 +232,8 @@ export type BuddyView = {
   task: { text: string; status: string; done: boolean } | null
   /** Listening for its name (the wake word is on). */
   wake?: boolean
+  /** You can talk over it: it listens while it speaks. */
+  interrupt?: boolean
 }
 
 export type BuddyOffer = { kind: 'remember'; text: string } | { kind: 'click'; text: string; x: number; y: number } | { kind: 'type'; text: string }

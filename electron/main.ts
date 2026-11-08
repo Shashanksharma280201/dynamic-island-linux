@@ -153,14 +153,17 @@ import { Engine, type Cloud } from './engine'
 import { OS, wireOs, type OsRoutes } from './osCalls'
 import { Agents } from './os/agents'
 import { Agency } from './os/agency'
+import { Calls } from './os/calls'
+import { callLine } from '../shared/calls'
+import { inQuietHours } from '../shared/jarvis'
 import { monitorLine, researchLine } from '../shared/agents'
 import type { JobId } from '../shared/loop'
 import { Intake } from './os/intake'
 import { SOURCE_IDS, eventLine, parseSourcesConfig, type SourceId, type SourcesView } from '../shared/intake'
 import { dateOf, SOURCES as SOURCES_DIR } from '../shared/brain'
 import { ENGINE_FEATURES, parseEngineConfig } from '../shared/engine'
-import type { AgentsView, EngineView, OsAnswer, TodayView } from '../shared/os'
-import { byHour, citedPrompt, fromActivity, messageEntries, pickSources, plainAnswer, readCites, timeRange, type Candidate, type TimelineEntry } from '../shared/memory'
+import type { AgentsView, CallsView, EngineView, OsAnswer, TodayView } from '../shared/os'
+import { briefLines, byHour, citedPrompt, fromActivity, messageEntries, pickSources, plainAnswer, readCites, timeRange, type Candidate, type TimelineEntry } from '../shared/memory'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
@@ -936,6 +939,100 @@ async function main() {
       return agency.view()
     },
   } satisfies Partial<OsRoutes>)
+  // ---- Island OS voice: call notes (made out here, audio deleted) ----
+  const transcribing = new Map<string, (r: { text: string } | { error: string }) => void>()
+  let transcribeSeq = 0
+  const transcribeOnIsland = (wav: string) =>
+    new Promise<string>((resolve, reject) => {
+      const id = `call-${++transcribeSeq}`
+      const timer = setTimeout(() => {
+        transcribing.delete(id)
+        reject(new Error('Making it out took too long.'))
+      }, 60 * 60_000)
+      transcribing.set(id, (r) => {
+        clearTimeout(timer)
+        transcribing.delete(id)
+        if ('text' in r) resolve(r.text)
+        else reject(new Error(r.error))
+      })
+      // Tests: a stand-in for Whisper (the island still decodes the real audio first).
+      send(win, 'os:transcribe', { id, data: readFileSync(wav), fake: process.env.DI_STT_FAKE || undefined })
+    })
+  ipcMain.handle('os:transcribed', (e, id, r) => {
+    if (e.sender !== win.webContents || typeof id !== 'string') return
+    const done = transcribing.get(id)
+    if (!done) return
+    if (r && typeof r.text === 'string') done({ text: r.text.slice(0, 500_000) })
+    else done({ error: typeof r?.error === 'string' ? r.error.slice(0, 300) : 'It couldn’t be made out.' })
+  })
+  const calls = new Calls({
+    file: join(app.getPath('userData'), 'os-calls.json'),
+    dir: join(app.getPath('userData'), 'calls'),
+    transcribe: transcribeOnIsland,
+    ask: (o) => engine.ask(o),
+    writeNote: (p, text, why) => {
+      const v = brain.vault()
+      if (!v) return false
+      v.write(p, text, why)
+      return true
+    },
+    ffmpeg: () => process.env.DI_CALL_RECORDER || findExecutable('ffmpeg', ['/usr/bin', '/usr/local/bin']),
+    pactl: () => (process.env.DI_CALL_RECORDER ? null : findExecutable('pactl', ['/usr/bin', '/usr/local/bin'])),
+    onRecording: (c) => (c ? store.upsert({ kind: 'call', id: 'call', priority: 4, call: { started: c.started } }) : store.remove('call')),
+    onChange: () => osChanged('calls'),
+  })
+  const callsView = (): CallsView => ({ list: calls.view().map((c) => ({ ...c, line: callLine(c, Date.now()) })), recording: !!calls.recording() })
+  // The morning brief, out loud (the buddy's voice).
+  const sayBrief = async (): Promise<boolean> => {
+    const now = Date.now()
+    return buddy.speakLines(briefLines(brain.jobs()?.card() ?? null, todayEvents(), now))
+  }
+  Object.assign(osRoutes, {
+    'calls.view': () => callsView(),
+    'calls.start': async () => {
+      await calls.start()
+      return callsView()
+    },
+    'calls.stop': async () => {
+      await calls.stop()
+      return callsView()
+    },
+    'calls.sum': async (id: string, consent?: boolean) => {
+      await calls.sum(id, consent === true)
+      return callsView()
+    },
+    'calls.plain': (id: string) => {
+      calls.plain(id)
+      return callsView()
+    },
+    'calls.keep': (id: string) => {
+      calls.keep(id)
+      return callsView()
+    },
+    'calls.forget': (id: string) => {
+      calls.forget(id)
+      return callsView()
+    },
+    'today.speak': async () => {
+      if (!config.buddy.on) throw new Error(`Turn on ${config.character.name || 'the buddy'} in Settings › Buddy to hear it.`)
+      if (!(await sayBrief())) throw new Error('It’s talking already; try again in a moment.')
+      return true
+    },
+  } satisfies Partial<OsRoutes>)
+  // Said out loud once a morning, when you're first at the computer (and not in quiet hours).
+  let briefSaid = ''
+  const briefWhenHere = () => {
+    const day = new Date().toDateString()
+    if (!config.buddy.on || !config.buddy.speakMorning || briefSaid === day) return
+    const card = brain.jobs()?.card()
+    if (!card || card.state === 'done') return
+    if (inQuietHours(new Date().getHours(), { speak: true, quietFrom: config.buddy.quietFrom, quietTo: config.buddy.quietTo, perHour: 4 })) return
+    if (powerMonitor.getSystemIdleTime() > 60 || powerMonitor.getSystemIdleState(60) === 'locked') return
+    briefSaid = day
+    void sayBrief()
+  }
+  setInterval(briefWhenHere, 60_000).unref?.()
+  powerMonitor.on('unlock-screen', () => setTimeout(briefWhenHere, 3000))
   // The loop's jobs catch up when the computer wakes or you unlock it.
   powerMonitor.on('resume', () => void brain.jobs()?.tick())
   powerMonitor.on('unlock-screen', () => void brain.jobs()?.tick())
@@ -1375,6 +1472,7 @@ async function main() {
       else if (a.t === 'mute') commands.push({ type: 'mute' })
       else if (a.t === 'lock') lockScreen()
       else if (a.t === 'wallpaper') void wallpapers.setFromQuery(a.query)
+      else if (a.t === 'call') void (a.on ? calls.start() : calls.stop()).catch((e) => osTell('Call notes', (e as Error).message))
     },
     askBuddy: (q) => void buddy.ask(q),
     askClaude: (q) => {
