@@ -16,9 +16,25 @@ Settings → Desktop → **Make Ubuntu match the island**, then **Apply**:
   out of the way when a window needs the room (Ubuntu Dock's own settings).
 - **Window buttons on the left**, if you like (off at first).
 
-Everything is plain `gsettings`, so nothing needs your password, and
-**Undo** puts back exactly what was there before (kept when you applied).
-Settings says what it changed, and what this desktop doesn't have.
+- **GNOME extensions** that finish the look, each from
+  [extensions.gnome.org](https://extensions.gnome.org) (the version for your
+  GNOME, installed with GNOME's own `gnome-extensions`; **Get it** in
+  Settings → Desktop):
+  - [Blur my Shell](https://github.com/aunetx/blur-my-shell): the top bar,
+    the overview and the Dock blur what's behind them, like macOS's glass.
+    On once it's installed.
+  - [Just Perfection](https://gitlab.gnome.org/jrahmatzadeh/just-perfection):
+    hides the top bar's clock, so the island has the top centre to itself.
+    Off until you turn it on.
+
+  A newly installed extension starts after you log out and back in (on
+  Xorg, Alt+F2 then `r` restarts GNOME at once). The download is listed in
+  Settings → Privacy, and **Pause AI and the web** stops it.
+
+Everything else is plain `gsettings`, so nothing needs your password, and
+**Undo** puts back exactly what was there before (kept when you applied),
+the list of extensions GNOME runs included. Settings says what it changed,
+and what this desktop doesn't have.
 
 ## The command bar
 

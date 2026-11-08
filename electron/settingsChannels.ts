@@ -51,7 +51,8 @@ export const SETTINGS = {
   AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
   SET_THEME: 'settings:set-theme', // 'system' | 'light' | 'dark'
   SET_PAUSED: 'settings:set-paused', // boolean: Settings › Privacy
-  DESKTOP_SET: 'settings:desktop-set', // { dock?, buttonsLeft?, commandBar? }
+  DESKTOP_SET: 'settings:desktop-set', // { dock?, buttonsLeft?, commandBar?, blur?, hideClock? }
+  DESKTOP_GET_EXT: 'settings:desktop-get-ext', // (extension id): from extensions.gnome.org
   DESKTOP_APPLY: 'settings:desktop-apply',
   DESKTOP_UNDO: 'settings:desktop-undo',
   CLEAR_PRIVACY: 'settings:clear-privacy',

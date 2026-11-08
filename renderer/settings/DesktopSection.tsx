@@ -37,6 +37,38 @@ export function DesktopSection({ s }: { s: SettingsState }) {
       </div>
       <Toggle label="The Dock at the bottom" hint="Like macOS’s: only as wide as its icons, and out of the way when a window needs the room." on={d.dock} onChange={(v) => run(() => window.settings.desktop.set({ dock: v }))} />
       <Toggle label="Window buttons on the left" hint="Close, minimise and maximise where a Mac has them." on={d.buttonsLeft} onChange={(v) => run(() => window.settings.desktop.set({ buttonsLeft: v }))} />
+      <div className="brain-subhead">
+        <div>GNOME extensions</div>
+        <div className="hint">They finish the look. Each comes from extensions.gnome.org (the version for your GNOME) and is turned on with the rest; Undo turns it off again.</div>
+      </div>
+      {d.extensions.map((e) => {
+        const use = e.id === 'blur' ? d.blur : d.hideClock
+        const status = e.busy
+          ? 'Getting it…'
+          : e.error
+            ? e.error
+            : e.justInstalled
+              ? 'Installed. GNOME starts it after you log out and back in (on Xorg, Alt+F2 then r restarts GNOME now).'
+              : e.installed
+                ? null
+                : 'Not installed.'
+        return (
+          <div key={e.id} className="toggle-row desktop-ext" data-ext={e.id}>
+            <div>
+              <div>{e.name}</div>
+              <div className="hint">{e.what}</div>
+              {status && <div className={`hint${e.error ? ' warn' : ''}`}>{status}</div>}
+            </div>
+            {e.installed || e.justInstalled ? (
+              <input className="switch" type="checkbox" aria-label={`Use ${e.name}`} checked={use} onChange={(ev) => run(() => window.settings.desktop.set(e.id === 'blur' ? { blur: ev.target.checked } : { hideClock: ev.target.checked }))} />
+            ) : (
+              <button className="secondary" disabled={busy || e.busy || !d.supported} onClick={() => run(() => window.settings.desktop.getExtension(e.id))}>
+                Get it
+              </button>
+            )}
+          </div>
+        )
+      })}
       <Toggle
         label={`Command bar (${key})`}
         hint="Open apps, files you had open, notes and settings, work out sums, change the system (“dark mode”, “volume 40”), or ask, from anywhere. Change the key in Keyboard shortcuts."

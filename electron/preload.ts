@@ -422,7 +422,8 @@ const settings = {
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
   setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
   desktop: {
-    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    getExtension: (id: string) => ipcRenderer.invoke(SETTINGS.DESKTOP_GET_EXT, id),
     apply: () => ipcRenderer.invoke(SETTINGS.DESKTOP_APPLY),
     undo: () => ipcRenderer.invoke(SETTINGS.DESKTOP_UNDO),
   },

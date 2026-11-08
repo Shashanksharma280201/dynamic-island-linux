@@ -5,6 +5,7 @@
 // and offers to ask. Needs an X server and a session bus.
 const { _electron } = require('playwright-core')
 const path = require('path')
+const http = require('http')
 const fs = require('fs')
 const os = require('os')
 const ROOT = path.resolve(__dirname, '..')
@@ -28,14 +29,21 @@ const BEFORE = {
   'org.gnome.shell.extensions.dash-to-dock intellihide': 'false',
   'org.gnome.shell.extensions.dash-to-dock dash-max-icon-size': '48',
   'org.gnome.desktop.wm.preferences button-layout': "':minimize,maximize,close'",
+  'org.gnome.shell enabled-extensions': "['ubuntu-dock@ubuntu.com']",
+  'org.gnome.shell disabled-extensions': '@as []',
+  'org.gnome.shell disable-user-extensions': 'false',
+  'org.gnome.shell.extensions.just-perfection clock-menu': 'true',
 }
 fs.writeFileSync(STORE, JSON.stringify(BEFORE))
 const GS = path.join(TMP, 'gsettings')
 fs.writeFileSync(
   GS,
   `#!/usr/bin/env node
-const fs = require('fs'); const f = ${JSON.stringify(STORE)}; const s = JSON.parse(fs.readFileSync(f, 'utf8')); const [cmd, schema, key, ...v] = process.argv.slice(2)
-if (cmd === 'list-schemas') { console.log('org.gnome.desktop.interface\\norg.gnome.desktop.background\\norg.gnome.shell.extensions.dash-to-dock\\norg.gnome.desktop.wm.preferences'); process.exit(0) }
+const fs = require('fs'); const f = ${JSON.stringify(STORE)}; const s = JSON.parse(fs.readFileSync(f, 'utf8')); let a = process.argv.slice(2)
+// An extension's own schemas: only there once it's installed.
+if (a[0] === '--schemadir') { if (!fs.existsSync(a[1])) process.exit(1); a = a.slice(2); if (a[0] === 'list-keys') process.exit(0) }
+const [cmd, schema, key, ...v] = a
+if (cmd === 'list-schemas') { console.log('org.gnome.desktop.interface\\norg.gnome.desktop.background\\norg.gnome.shell.extensions.dash-to-dock\\norg.gnome.desktop.wm.preferences\\norg.gnome.shell'); process.exit(0) }
 if (cmd === 'monitor') { setInterval(() => {}, 1e9); return }
 const id = schema + ' ' + key
 if (cmd === 'get') { if (!(id in s)) process.exit(1); console.log(s[id]); process.exit(0) }
@@ -44,6 +52,11 @@ process.exit(1)
 `,
   { mode: 0o755 },
 )
+// Stand-ins for GNOME Shell 42 and its extension installer (unzipping is GNOME's job; this one just makes the folder).
+const SHELL = path.join(TMP, 'gnome-shell')
+fs.writeFileSync(SHELL, '#!/bin/sh\necho "GNOME Shell 42.9"\n', { mode: 0o755 })
+const GX = path.join(TMP, 'gnome-extensions')
+fs.writeFileSync(GX, `#!/bin/sh\n[ "$1" = install ] || exit 1\nd="${HOME}/.local/share/gnome-shell/extensions/$(basename "$3" .zip)"\nmkdir -p "$d/schemas" && echo '{}' > "$d/metadata.json"\n`, { mode: 0o755 })
 // An app to open.
 fs.writeFileSync(path.join(HOME, '.local/share/applications/island-test.desktop'), `[Desktop Entry]\nType=Application\nName=Island Test App\nComment=Opens for the test\nExec=sh -c "touch ${LAUNCHED}"\n`)
 
@@ -65,12 +78,23 @@ const until = async (f, ms = 8000) => {
 const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
 
 ;(async () => {
+  // A stand-in extensions.gnome.org.
+  const asked = []
+  const ego = http.createServer((req, res) => {
+    asked.push(req.url)
+    if (req.url.startsWith('/extension-info/')) {
+      const uuid = new URL(req.url, 'http://x').searchParams.get('uuid')
+      return void res.writeHead(200, { 'Content-Type': 'application/json' }).end(JSON.stringify({ download_url: `/download-extension/${uuid}.shell-extension.zip?version_tag=1` }))
+    }
+    res.writeHead(200).end('PK')
+  })
+  await new Promise((r) => ego.listen(0, '127.0.0.1', r))
   fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ theme: 'light', character: { id: 'bolt', name: 'Sparky' } }))
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_HOME: HOME, DYNAMIC_ISLAND_SOCK: path.join(TMP, 's.sock'), DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GSETTINGS: GS },
+    env: { ...process.env, DI_USER_DATA: USER_DATA, DI_HOME: HOME, DYNAMIC_ISLAND_SOCK: path.join(TMP, 's.sock'), DI_NO_GREETING: '1', DI_BACKDROP: 'off', DI_GSETTINGS: GS, DI_EXT_BASE_URL: `http://127.0.0.1:${ego.address().port}`, DI_GNOME_SHELL: SHELL, DI_GNOME_EXTENSIONS: GX, DI_EGRESS_COUNT_LOCAL: '1' },
   })
   const page = await app.firstWindow()
   try {
@@ -89,9 +113,26 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     await settings.click('#general .accent-swatch[aria-label="Purple"]')
     check('a new accent follows to Ubuntu', !!(await until(() => store()['org.gnome.desktop.interface gtk-theme'] === "'Yaru-purple'")), store()['org.gnome.desktop.interface gtk-theme'])
     await settings.click('.side-item[data-section="desktop"]')
+
+    // ---- GNOME extensions ----
+    const enabled = () => store()['org.gnome.shell enabled-extensions'] || ''
+    check('Blur my Shell isn’t installed yet: Get it', await settings.waitForSelector('#desktop .desktop-ext[data-ext="blur"]:has-text("Not installed") button:has-text("Get it")', { timeout: 4000 }).then(() => true, () => false))
+    await settings.click('#desktop .desktop-ext[data-ext="blur"] button:has-text("Get it")')
+    check('Get it installs it (the version for this GNOME)', await settings.waitForSelector('#desktop .desktop-ext[data-ext="blur"]:has-text("log out and back in")', { timeout: 8000 }).then(() => true, () => false))
+    check('from extensions.gnome.org', asked[0] === '/extension-info/?uuid=blur-my-shell%40aunetx&shell_version=42', asked[0])
+    check('and, the look being on, it’s turned on too', !!(await until(() => enabled().includes('blur-my-shell@aunetx') && enabled().includes('ubuntu-dock@ubuntu.com'))), enabled())
+    await settings.click('#desktop .desktop-ext[data-ext="perfection"] button:has-text("Get it")')
+    await settings.waitForSelector('#desktop .desktop-ext[data-ext="perfection"] input[aria-label="Use Just Perfection"]', { timeout: 8000 })
+    check('Just Perfection waits until you want the clock hidden', !enabled().includes('just-perfection'))
+    await settings.click('#desktop .desktop-ext[data-ext="perfection"] input[aria-label="Use Just Perfection"]')
+    check('then hides the top bar’s clock', !!(await until(() => store()['org.gnome.shell.extensions.just-perfection clock-menu'] === 'false' && enabled().includes('just-perfection-desktop@just-perfection'))))
+    await settings.click('#desktop .desktop-ext[data-ext="blur"] input[aria-label="Use Blur my Shell"]')
+    check('turning Blur my Shell off turns just it off', !!(await until(() => !enabled().includes('blur-my-shell') && enabled().includes('just-perfection'))), enabled())
     await settings.screenshot({ path: `${OUT}/01-desktop.png` })
     await settings.click('#desktop button:has-text("Undo")')
-    check('Undo puts back exactly what was there', !!(await until(() => JSON.stringify(store()) === JSON.stringify(BEFORE))), JSON.stringify(store()).slice(0, 200))
+    check('Undo puts back exactly what was there (extensions too)', !!(await until(() => JSON.stringify(store()) === JSON.stringify(BEFORE))), JSON.stringify(store()).slice(0, 400))
+    const privacy = fs.readFileSync(path.join(USER_DATA, 'privacy-log.json'), 'utf8')
+    check('the downloads are in the Privacy log', /"feature":"desktop"/.test(privacy))
 
     // ---- the command bar ----
     await page.evaluate(() => window.island.command.open())
@@ -124,6 +165,7 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     check('no errors', false, e.stack)
   } finally {
     await app.close().catch(() => {})
+    ego.close()
     const failed = results.filter((r) => !r.ok)
     console.log(`\n${results.length - failed.length}/${results.length} passed. Screenshots in ${OUT}`)
     process.exit(failed.length ? 1 : 0)

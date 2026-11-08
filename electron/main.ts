@@ -131,6 +131,8 @@ import { parseBuddyConfig } from '../shared/buddy'
 import { CommandBar, homeDir } from './commandBar'
 import { COMMAND } from './commandChannels'
 import { DesktopLook, lookSettings } from './desktopLook'
+import { ExtensionInstaller, extensionSchemaDirs, findExtension } from './gnomeExtensions'
+import { EXTENSIONS, extensionKey, type ExtensionId } from '../shared/desktop'
 import type { SystemContext } from './packages/systemTools'
 import { Announcer } from './announcer'
 import { Routines } from './routines'
@@ -1094,11 +1096,16 @@ async function main() {
   const desktopLook = new DesktopLook()
   let lastLook: { changed: string[]; skipped: string[] } | null = null
   const applyLook = async () => {
-    const res = await desktopLook.apply(lookSettings({ accent: config.accent, dark: theme.isDark(), dock: config.desktop.dock, buttonsLeft: config.desktop.buttonsLeft }), config.desktop.original)
+    const ext = (id: ExtensionId) => findExtension(EXTENSIONS.find((e) => e.id === id)!.uuid, homeDir())
+    const extensions = { blur: config.desktop.blur ? ext('blur') : null, clock: config.desktop.hideClock ? ext('perfection') : null }
+    const res = await desktopLook.apply(lookSettings({ accent: config.accent, dark: theme.isDark(), dock: config.desktop.dock, buttonsLeft: config.desktop.buttonsLeft, extensions }), config.desktop.original)
     config.desktop = { ...config.desktop, applied: true, original: res.original }
     saveConfig(config)
     lastLook = { changed: res.changed, skipped: res.skipped }
   }
+  // Extensions that finish the look, from extensions.gnome.org (tests: a stand-in site and gnome-extensions).
+  const extInstaller = new ExtensionInstaller({ egress, base: process.env.DI_EXT_BASE_URL, gnomeExtensions: process.env.DI_GNOME_EXTENSIONS, gnomeShell: process.env.DI_GNOME_SHELL })
+  const extState = new Map<ExtensionId, { busy: boolean; error: string | null; justInstalled: boolean }>()
   let looking: Promise<void> | null = null
   const followLook = () => {
     if (!config.desktop.applied || looking) return
@@ -1495,21 +1502,35 @@ async function main() {
       commandBar: config.desktop.commandBar,
       commandKey: config.keys.command,
       supported: process.platform === 'linux',
+      blur: config.desktop.blur,
+      hideClock: config.desktop.hideClock,
+      extensions: EXTENSIONS.map((e) => ({ id: e.id, name: e.name, what: e.what, installed: !!findExtension(e.uuid, homeDir()), busy: false, error: null, justInstalled: false, ...extState.get(e.id) })),
     }),
+    desktopGetExtension: async (id) => {
+      const e = EXTENSIONS.find((x) => x.id === id)
+      if (!e) return
+      extState.set(e.id, { busy: true, error: null, justInstalled: false })
+      settings?.changed()
+      const problem = await extInstaller.install(e.uuid)
+      extState.set(e.id, { busy: false, error: problem, justInstalled: !problem })
+      // Applied already: it's turned on too (GNOME starts it when you log in again).
+      if (!problem && config.desktop.applied) await applyLook().catch(() => {})
+    },
     desktopSet: async (p) => {
       config.desktop = { ...config.desktop, ...p }
       saveConfig(config)
       if (p.commandBar !== undefined) applyCommandKey()
-      if ((p.dock !== undefined || p.buttonsLeft !== undefined) && config.desktop.applied) {
-        // Turned off after applying: put that part back as it was.
+      const extChanged = p.blur !== undefined || p.hideClock !== undefined
+      if ((p.dock !== undefined || p.buttonsLeft !== undefined || extChanged) && config.desktop.applied) {
+        // Turned off after applying: put that part back as it was. (The extensions' keys go back together, then what's still wanted is set again.)
         const off: Record<string, string> = {}
         for (const [id, v] of Object.entries(config.desktop.original)) {
           const dockKey = id.startsWith('org.gnome.shell.extensions.dash-to-dock ')
           const buttons = id === 'org.gnome.desktop.wm.preferences button-layout'
-          if ((dockKey && p.dock === false) || (buttons && p.buttonsLeft === false)) off[id] = v
+          if ((dockKey && p.dock === false) || (buttons && p.buttonsLeft === false) || (extChanged && extensionKey(id))) off[id] = v
         }
         if (Object.keys(off).length) {
-          await desktopLook.undo(off)
+          await desktopLook.undo(off, extensionSchemaDirs(homeDir()))
           const keep = { ...config.desktop.original }
           for (const id of Object.keys(off)) delete keep[id]
           config.desktop = { ...config.desktop, original: keep }
@@ -1520,7 +1541,7 @@ async function main() {
     },
     desktopApply: () => applyLook(),
     desktopUndo: async () => {
-      await desktopLook.undo(config.desktop.original)
+      await desktopLook.undo(config.desktop.original, extensionSchemaDirs(homeDir()))
       config.desktop = { ...config.desktop, applied: false, original: {} }
       saveConfig(config)
       lastLook = null

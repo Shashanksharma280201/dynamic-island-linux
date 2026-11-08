@@ -120,7 +120,8 @@ type Deps = {
   routineDel: (id: string) => void
   /** Settings › Desktop. */
   desktop: () => DesktopView
-  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean }) => Promise<void>
+  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => Promise<void>
+  desktopGetExtension: (id: string) => Promise<void>
   desktopApply: () => Promise<void>
   desktopUndo: () => Promise<void>
 }
@@ -515,9 +516,13 @@ export class SettingsController {
       this.changed()
     })
     ipcMain.handle(SETTINGS.DESKTOP_SET, async (_e, p) => {
-      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean } = {}
-      for (const k of ['dock', 'buttonsLeft', 'commandBar'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
+      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean } = {}
+      for (const k of ['dock', 'buttonsLeft', 'commandBar', 'blur', 'hideClock'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
       await this.d.desktopSet(patch)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_GET_EXT, async (_e, id) => {
+      if (typeof id === 'string') await this.d.desktopGetExtension(id)
       this.changed()
     })
     ipcMain.handle(SETTINGS.DESKTOP_APPLY, async () => {
