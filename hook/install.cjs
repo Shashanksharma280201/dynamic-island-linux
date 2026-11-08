@@ -3,6 +3,28 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 
+/**
+ * Write a settings file whole or not at all: next to it, then renamed over it,
+ * so Claude Code (or anything) never reads it half-written. A symlinked file
+ * stays a symlink: the file it points to is the one replaced.
+ */
+function writeWhole(file, text) {
+  let target = file
+  try {
+    target = fs.realpathSync(file)
+  } catch {
+    // doesn't exist yet
+  }
+  const tmp = `${target}.island-${process.pid}.tmp`
+  fs.writeFileSync(tmp, text)
+  try {
+    fs.renameSync(tmp, target)
+  } catch (e) {
+    fs.rmSync(tmp, { force: true })
+    throw e
+  }
+}
+
 const MARK = 'claude-island-hook'
 
 function stripIsland(arr) {
@@ -94,7 +116,7 @@ function main() {
   const hookCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook.cjs'), process.env.DI_NODE_RUNNER)
   const eventsCmd = hookCommand(path.resolve(__dirname, 'claude-island-hook-events.cjs'), process.env.DI_NODE_RUNNER)
   const next = uninstall ? applyUninstall(current) : applyInstall(current, hookCmd, eventsCmd)
-  fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2) + '\n')
+  writeWhole(settingsPath, JSON.stringify(next, null, 2) + '\n')
   console.log(
     uninstall
       ? `Removed the island hook from ${settingsPath}`
