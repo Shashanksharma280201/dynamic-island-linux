@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { Text, View } from 'react-native'
 import type { OsAnswer, TodayView } from '../../../shared/os'
-import { metaText } from '../../../shared/engine'
-import { clockTime } from '../../../shared/format'
 import type { DropLink } from '../link'
 import { Btn, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
 import { themed } from './theme'
+import { answerLine, clock } from '../words'
 
 /** What a timeline entry came from, in a word. */
 const FROM: Record<string, string> = { git: 'Git', github: 'GitHub', shell: 'Terminal', calendar: 'Calendar', screen: 'Screen', codex: 'Codex', gemini: 'Gemini', whatsapp: 'WhatsApp', mail: 'Mail', note: 'Note', session: 'Claude' }
@@ -47,7 +46,7 @@ export function TodayScreen({ link, top, onBack }: { link: DropLink; top: number
               ))}
               {!!answer.meta.model && (
                 <View style={st.metaRow}>
-                  <Text style={st.meta}>{metaText(answer.meta)}</Text>
+                  <Text style={st.meta}>{answerLine(answer.meta)}</Text>
                   {answer.meta.where === 'local' && <Btn small label="Ask cloud" busy={act.busy === 'ask'} onPress={() => void ask(asked, { prefer: 'cloud', consent: true })} />}
                 </View>
               )}
@@ -70,7 +69,7 @@ export function TodayScreen({ link, top, onBack }: { link: DropLink; top: number
         <Card>
           <Kicker>What’s next</Kicker>
           {v.upcoming.slice(0, 5).map((e, i, a) => (
-            <Row key={`${e.start}-${i}`} title={e.title} sub={e.where} right={e.allDay ? 'All day' : clockTime(e.start)} last={i === a.length - 1} />
+            <Row key={`${e.start}-${i}`} title={e.title} sub={e.where} right={e.allDay ? 'All day' : clock(e.start)} last={i === a.length - 1} />
           ))}
         </Card>
       )}
@@ -79,7 +78,7 @@ export function TodayScreen({ link, top, onBack }: { link: DropLink; top: number
         <Card>
           <Kicker>Your day</Kicker>
           {entries.slice(0, 30).map((e, i, a) => (
-            <Row key={`${e.at}-${i}`} title={e.title} sub={[FROM[e.source] ?? e.source, e.project].filter(Boolean).join(' · ')} right={clockTime(e.at)} last={i === a.length - 1} />
+            <Row key={`${e.at}-${i}`} title={e.title} sub={[FROM[e.source] ?? e.source, e.project].filter(Boolean).join(' · ')} right={clock(e.at)} last={i === a.length - 1} />
           ))}
         </Card>
       )}
