@@ -81,7 +81,10 @@ export function useDock() {
     drag.current = null
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
     if (!d.active) return
+    // Only the click that comes with this release is swallowed. None comes when what you
+    // pressed on was swapped out mid-drag, and a flag left set would eat your next real click.
     swallowClick.current = true
+    setTimeout(() => (swallowClick.current = false), 250)
     // At the top the height doesn't apply: keep the edge position for later.
     const y = d.side === 'top' ? dock.y : clamp01((e.clientY - d.grabOffset) / window.innerHeight)
     setDock((cur) => ({ ...cur, side: d.side, y }))

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Orb } from '../../orb/Orb'
-import { clearedText, groupByApp, type CenterEntry, type CenterView } from '@shared/notifCenter'
+import { clearedText, groupByApp, groupSummary, type CenterEntry, type CenterView } from '@shared/notifCenter'
 import { relativeTime } from '@shared/format'
 import { BellIcon, MoonIcon, XIcon } from '../icons'
 import { Avatar, useNow } from './common'
 import { pop } from '../../anim/spring'
+import { AnswerChip, CloudConsent } from '../AnswerChip'
+import type { OsAnswer } from '@shared/os'
 
 /** How many of an app's notifications show before "N more". */
 const PEEK = 2
@@ -22,6 +24,13 @@ export function NotificationsView({ center, onOpen }: { center: CenterView; onOp
   const [undo, setUndo] = useState<number | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [leaving, setLeaving] = useState(false)
+  // Sum up: the list in a few sentences, the model on this computer first, the cloud with your yes.
+  const [sum, setSum] = useState<{ answer?: OsAnswer; busy?: boolean } | null>(null)
+  const sumUp = async (o: { prefer?: 'local' | 'cloud'; consent?: boolean } = {}) => {
+    setSum({ busy: true })
+    const answer = await window.island.notifications.sumUp(o).catch((e: Error): OsAnswer => ({ ok: false, error: e.message }))
+    setSum({ answer })
+  }
 
   // Looking at the list marks what's in it as seen (and anything arriving while it's open).
   useEffect(() => {
@@ -57,10 +66,35 @@ export function NotificationsView({ center, onOpen }: { center: CenterView; onOp
           <MoonIcon size={12} />
           {center.dnd ? 'Do Not Disturb' : 'Focus'}
         </button>
+        {center.entries.length >= 3 && (
+          <button className="nc-clear nc-sum" disabled={leaving || sum?.busy} title="The list in a few sentences: the model on this computer first, the cloud with your yes" onClick={() => void sumUp()}>
+            {sum?.busy ? 'Summing up…' : 'Sum up'}
+          </button>
+        )}
         <button className="nc-clear" disabled={empty || leaving} onClick={() => void clearAll()}>
           Clear all
         </button>
       </div>
+
+      {sum?.answer && !sum.busy && !empty && (
+        <div className={`nc-summary${!sum.answer.ok && 'error' in sum.answer ? ' error' : ''}`} role="status">
+          <div className="nc-summary-text">
+            {sum.answer.ok ? (
+              <>
+                {sum.answer.text}
+                <AnswerChip meta={sum.answer.meta} onCloud={() => void sumUp({ prefer: 'cloud', consent: true })} />
+              </>
+            ) : 'needsConsent' in sum.answer ? (
+              <CloudConsent label={sum.answer.needsConsent} onYes={() => void sumUp({ consent: true })} onNo={() => setSum(null)} />
+            ) : (
+              sum.answer.error
+            )}
+          </div>
+          <button className="nc-x" aria-label="Close the summary" title="Close" onClick={() => setSum(null)}>
+            <XIcon size={9} />
+          </button>
+        </div>
+      )}
 
       {center.dnd && (
         <div className="nc-banner">
@@ -120,6 +154,7 @@ export function NotificationsView({ center, onOpen }: { center: CenterView; onOp
                       <XIcon size={9} />
                     </button>
                   </div>
+                  {g.entries.length >= 3 && <div className="nc-group-sum">{groupSummary(g.entries)}</div>}
                   <AnimatePresence initial={false}>
                     {shown.map((e) => (
                       <Row key={e.id} e={e} now={now} onOpen={onOpen} />

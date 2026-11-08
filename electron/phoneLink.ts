@@ -24,7 +24,12 @@ type Deps = {
   onPhones?: () => void
   /** One of the island's own functions, for the phone (checked there). */
   call?: (fn: unknown, args: unknown) => Promise<PhoneCallResult & { status: number }>
+  /** You talked to the buddy on the phone: what it heard, or why not. */
+  voice?: (audio: Buffer, mime: string) => Promise<{ text: string } | { error: string }>
 }
+
+/** A spoken question from the phone: a minute of compressed audio is far less. */
+export const VOICE_MAX = 4 * 1024 * 1024
 
 type Phone = { res: ServerResponse; device: string; since: number }
 /** A file waiting for the phone; `touched` is when it (or a file sent with it) last moved. */
@@ -199,6 +204,26 @@ export class PhoneLink {
       send(res, status, reply)
       // Answers and changes show on the phone at once.
       this.changed()
+      return true
+    }
+    if (route === 'PUT /island/voice' && this.d.voice) {
+      const mime = String(req.headers['content-type'] ?? '').split(';')[0].trim()
+      if (!/^audio\/[\w.+-]+$/.test(mime)) {
+        send(res, 415, { ok: false, message: 'That isn’t audio.' })
+        return true
+      }
+      const chunks: Buffer[] = []
+      let size = 0
+      for await (const c of req) {
+        size += (c as Buffer).length
+        if (size > VOICE_MAX) {
+          send(res, 413, { ok: false, message: 'That’s too long to make out. Keep it under a minute.' })
+          return true
+        }
+        chunks.push(c as Buffer)
+      }
+      const r = await this.d.voice(Buffer.concat(chunks), mime)
+      send(res, 'text' in r ? 200 : 422, 'text' in r ? { ok: true, text: r.text } : { ok: false, message: r.error })
       return true
     }
     if (route === 'POST /island/media') {

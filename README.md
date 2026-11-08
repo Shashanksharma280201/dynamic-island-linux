@@ -54,6 +54,11 @@ it from the code instead, see [Install](docs/install.md).
 
 - **Now Playing**: album art and a waveform on the capsule, with play, pause, skip and seek for Spotify, YouTube and any media player.
 - **Messages and mail**: WhatsApp messages and new mail pop up as cards, and you reply right there.
+- **Island OS: your computer as one AI**: a model on this computer answers first (Ollama), the cloud only with your yes, and every answer says where it ran and what it cost. **Today** shows your day by hour from the sources you turn on (GitHub, your terminal, calendar, screen time, Codex and Gemini, mail and chats) and answers “what did I do last week?” with sources. **Agents** research your notes, watch for things (“tell me when PR #43 is reviewed”) and keep your people, promises and projects up to date. **Call notes** are made out on this computer, the audio deleted. And [The Agency](https://github.com/msitarzewski/agency-agents)'s specialist agents start in Claude with one click.
+- **A second brain**: one memory for you and every AI you use, as plain notes on your computer. Claude Code, Codex and Gemini CLI know who you are, every session gets a five-line note, and your projects get pages. [How it works](docs/brain.md).
+- **Ubuntu, the island's way**: a command bar (Ctrl+Alt+K) for apps, files, notes, sums and system changes, and Ubuntu in the island's look in one click (and back). [How it works](docs/desktop.md).
+- **A buddy for your screen**: press Ctrl+Alt+B and ask “where do I change this?”; it answers out loud and points at the spot, step by step. [How it works](docs/buddy.md).
+- **Wallpaper by asking**: “set my background to misty mountains” or “make it a video of rain” finds one on the web and sets it; videos and animations play live. [How it works](docs/wallpaper.md).
 - **Claude Code, live**: every session in your terminals shows what it's doing and what it changed. Allow its permission prompts, answer its questions and read its plans from any app.
 - **Drag actions**: drag any file and hold still, and a ring opens to convert it, shrink it, copy its text or ask Claude about it.
 - **Phone Drop**: flick a photo or file from your Android phone toward the screen; it comes out of a glow at the edge and lands in the island.
@@ -72,6 +77,7 @@ Once installed, the island sits on the right edge of your screen. Drag it
 anywhere along the edges or to the top center, and click it (or press
 **Ctrl+I**) to open the panel. Then connect what you use, from **Settings**:
 
+- [Your second brain](docs/brain.md), so every AI you use knows you and your work
 - [Claude Code](docs/setup.md#connect-claude-code), to follow your sessions and answer their prompts on the island
 - [An AI provider](docs/setup.md#use-any-ai) for the assistant
 - [WhatsApp](docs/setup.md#connect-whatsapp), [mail](docs/setup.md#add-a-mail-account) and [Spotify](docs/setup.md#connect-spotify)
@@ -89,6 +95,10 @@ anywhere along the edges or to the top center, and click it (or press
 
 - [Install](docs/install.md): installers, building from the code, updating, uninstalling
 - [Features](docs/features.md): everything the island does
+- [Your second brain](docs/brain.md): the shared memory for your AI tools
+- [The buddy](docs/buddy.md): ask about your screen, out loud, and it points
+- [Ubuntu, the island's way](docs/desktop.md): the command bar, the look, system actions
+- [Wallpaper](docs/wallpaper.md): photos, videos and animations as your background
 - [macOS and Windows](docs/platforms.md): what's different there
 - [Set it up](docs/setup.md): Claude Code, AI providers, WhatsApp, mail, Spotify, documents, drag actions, the CRM
 - [Configuration, privacy and security](docs/configuration.md)
@@ -109,7 +119,9 @@ Bug reports, ideas and pull requests are welcome: see
 the Inter typeface (SIL Open Font License), [thinking-orbs](https://libraries.dev/orbs)
 by Jakub Antalik (MIT), the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy)
 by Ryan (MIT; `mobile/src/iso/`), and the libraries in `package.json` (MIT,
-Apache-2.0 and BSD).
+Apache-2.0 and BSD). [The Agency](https://github.com/msitarzewski/agency-agents)
+by AgentLand Contributors (MIT) isn't bundled: the island downloads it when you
+ask, and credits it where its agents appear.
 
 Dynamic Island is an independent project, not made by or affiliated with
 Apple. "Dynamic Island" names the iPhone feature that inspired it.

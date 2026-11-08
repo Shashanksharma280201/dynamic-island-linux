@@ -41,9 +41,10 @@ self.onmessage = async (e: MessageEvent) => {
       if (audio.length < 16000 * 0.2) return self.postMessage({ type: 'text', id: m.id, text: '' })
       // English-only models (.en) take no language options. Commands are
       // short: cap the length and stop Whisper looping on a phrase.
+      // A call is long: read it in overlapping 30-second pieces, with no cap.
       const opts = {
         ...(m.model.endsWith('.en') ? {} : { language: 'english', task: 'transcribe' }),
-        max_new_tokens: 160,
+        ...(m.long ? { chunk_length_s: 30, stride_length_s: 5 } : { max_new_tokens: 160 }),
         no_repeat_ngram_size: 4,
       }
       const out = await asr(audio, opts)

@@ -20,6 +20,11 @@ Environment variables (set them before starting the app):
 | `DI_STT_MODEL` | Use this Whisper model id instead of the one picked in Settings |
 | `DI_DOCS_OUT` | Folder where the Documents package saves new files (default `~/Documents/Dynamic Island`) |
 | `DI_SOFFICE` | LibreOffice command for conversions (found automatically; empty to not use it) |
+| `DI_GH` | The `gh` command for Settings → Sources → GitHub (the tests use a stand-in) |
+| `DI_HISTFILE` | Your bash history file, when it isn't `~/.bash_history` |
+| `DI_AGENCY_URL` | Where The Agency is downloaded from (a .tar.gz address or a folder; the tests use a stand-in) |
+| `DI_CALL_RECORDER` | The recorder for call notes instead of ffmpeg (the tests use a stand-in that writes a WAV and waits) |
+| `DI_OLLAMA_URL` | Ollama's address for Settings → Model, instead of the one saved there (the tests use a stand-in) |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
 plain Markdown files in `~/.config/dynamic-island-linux/notes/` (one `.md`
@@ -30,6 +35,28 @@ is available, Settings warns you that they are only obfuscated.
 
 ## Privacy and security
 
+- **Settings → Privacy** shows what the island has sent off this computer,
+  where to and when: the assistant's questions (to your AI provider), session
+  summaries for the second brain, wallpaper searches and downloads, and
+  services checking your accounts. It lists what kind of thing went, never its
+  content, and keeps 30 days in `privacy-log.json` in the island's profile
+  folder. **Pause AI and the web** stops all of those sends until you turn it
+  off; an AI on this computer (Ollama) isn't sending anything away, so it keeps
+  working, as do WhatsApp, mail and Spotify.
+- **Settings → Sources** reads only what you turn on, and keeps it on this
+  computer (`os-intake.json` in the profile folder, then one note per source
+  and day in the brain). Terminal commands have passwords, tokens and keys
+  taken out before they're kept; screen time keeps app names and minutes,
+  never screenshots or private windows. GitHub is read through your own `gh`
+  login, read only. Turning a source off forgets what it kept.
+- **Call notes** record only while the red dot is on the island. The audio is
+  made out on this computer and deleted straight after, whether or not that
+  worked; the transcript stays in the island's profile folder until you add it
+  to the brain or forget it.
+- **Settings → Model**: answers start on this computer when Ollama is running;
+  a question you ask goes to the cloud only after your yes (or always, or
+  never, as you choose). What it learns about where questions go stays in
+  `engine-traces.json` in the profile folder.
 - **WhatsApp** runs WhatsApp Web inside the island as a linked device, using the
   open-source [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
   library (the same engine as whatsapp-connector). It is not an official

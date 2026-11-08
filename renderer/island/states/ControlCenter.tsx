@@ -133,16 +133,31 @@ function ShortcutSheet() {
   )
 }
 
+/** A picture frame: the wallpaper tile. */
+const PhotoIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
+    <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2" stroke="currentColor" strokeWidth="1.5" />
+    <circle cx="10.6" cy="6.1" r="1.25" fill="currentColor" />
+    <path d="M2.6 12.2 6.2 8.4l2.4 2.5 1.4-1.4 3.3 2.9" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+  </svg>
+)
+
+/**
+ * Control Center, laid out like macOS: Wi-Fi and Bluetooth in one module,
+ * Focus (Do Not Disturb) and Wallpaper as tiles beside it, then the sliders.
+ */
 export function ControlCenter({ sys, dnd = false }: { sys: SystemState | null; dnd?: boolean }) {
   const [sheet, setSheet] = useState(false)
+  const connect = !!sys && (sys.wifi !== null || sys.bluetooth !== null)
   return (
     <div className="cc" onClick={(e) => e.stopPropagation()}>
       {!sys ? (
         <div className="module caption">Loading…</div>
       ) : (
         <>
-          <div className="module toggles">
-              <Toggle label="Do Not Disturb" on={dnd} icon={<MoonIcon />} onToggle={() => void window.island.notifications.setDnd(!dnd)} />
+          <div className={`cc-grid${connect ? ' has-connect' : ''}`}>
+            {connect && (
+              <div className="module toggles cc-connect">
               {sys.wifi !== null && (
                 <Toggle
                   label="Wi-Fi"
@@ -159,6 +174,26 @@ export function ControlCenter({ sys, dnd = false }: { sys: SystemState | null; d
                   onToggle={() => send({ type: 'bluetooth', value: !sys.bluetooth })}
                 />
               )}
+              </div>
+            )}
+            <div className="module cc-tile">
+              <Toggle label="Do Not Disturb" on={dnd} icon={<MoonIcon />} onToggle={() => void window.island.notifications.setDnd(!dnd)} />
+            </div>
+            <button
+              className="module cc-tile cc-wall"
+              onClick={(e) => {
+                e.stopPropagation()
+                window.island.openSettings('wallpaper')
+              }}
+            >
+              <span className="circle">
+                <PhotoIcon />
+              </span>
+              <span>
+                <div className="label">Wallpaper</div>
+                <div className="state">Change…</div>
+              </span>
+            </button>
           </div>
           {sys.brightness !== null && (
             <div className="module">

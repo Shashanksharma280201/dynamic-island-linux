@@ -71,7 +71,7 @@ const seen = (page, sel, ms = 8000) => page.waitForSelector(sel, { timeout: ms }
     await shot('01-capsule')
     await toggle()
     check('the panel opens', await seen(page, '.hub'))
-    for (const tab of ['Controls', 'Claude', 'Music', 'Chats', 'Mail', 'Notes', 'Documents', 'CRM']) {
+    for (const tab of ['Controls', 'Today', 'Agents', 'Claude', 'Music', 'Chats', 'Mail', 'Notes', 'Documents', 'CRM']) {
       await page.click(`.rail-btn[aria-label="${tab}"]`)
       await sleep(300)
       check(`the ${tab} tab opens`, !!(await page.$('.hub')) && (await page.evaluate(() => document.querySelector('.hub')?.textContent?.length ?? 0)) > 0)
@@ -110,7 +110,10 @@ const seen = (page, sel, ms = 8000) => page.waitForSelector(sel, { timeout: ms }
     await shot('03-crm')
 
     const [settings] = await Promise.all([app.waitForEvent('window'), page.evaluate(() => window.island.openSettings())])
-    check('Settings opens', await seen(settings, '#packages', 8000))
+    // Settings shows one page at a time: the sidebar, then Packages.
+    check('Settings opens', await seen(settings, '.side-item[data-section="packages"]', 8000))
+    await settings.click('.side-item[data-section="packages"]')
+    check('and shows a page', await seen(settings, '#packages', 5000))
   } catch (e) {
     check('unexpected error', false, e.message)
     await shot('99-failure')

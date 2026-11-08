@@ -126,8 +126,8 @@ const until = async (fn, ms = 5000) => {
     await page.waitForSelector('.hub', { timeout: 5000 })
 
     // Settings → Packages
-    await settings.evaluate(() => document.getElementById('packages')?.scrollIntoView())
-    { const names = (await settings.$$eval('#packages .package-name', (e) => e.map((x) => x.textContent))).join(); check('Settings lists the packages', names === 'Basics · always on,Notes,WhatsApp,Mail,Music,Documents,CRM,Connected', names) }
+    await settings.click('.side-item[data-section="packages"]')
+    { const names = (await settings.$$eval('#packages .package-name', (e) => e.map((x) => x.textContent))).join(); check('Settings lists the packages', names === 'Basics · always on,Notes,WhatsApp,Mail,Music,Documents,CRM,Connected,Wallpaper,System', names) }
     check('and which tools ask first', (await settings.textContent('#packages [data-package="chats"]')).includes('Send a message · asks first'))
     await settings.screenshot({ path: `${OUT}/05-packages.png` })
     await settings.click('#packages input[aria-label="WhatsApp package"]')
@@ -141,6 +141,7 @@ const until = async (fn, ms = 5000) => {
     check('turning it back on brings the tab back', await page.waitForSelector('.rail-btn[aria-label="Chats"]', { timeout: 4000 }).then(() => true, () => false))
 
     // ---- Switch to an OpenAI-compatible provider ----
+    await settings.click('.side-item[data-section="ai"]')
     await settings.selectOption('#ai select', 'openai')
     await settings.waitForSelector('#ai input[aria-label="API key"]', { timeout: 3000 })
     await settings.fill('#ai input[aria-label="API key"]', 'sk-oai-test')

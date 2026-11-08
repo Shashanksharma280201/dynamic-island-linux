@@ -6,6 +6,190 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Island OS: your computer as one AI**
+
+- **This computer first**: when Ollama is running, answers are made here
+  (free, nothing leaves); the cloud answers only after your yes, or always,
+  or never (Settings → Model). Every answer says where it ran, how long it
+  took and what it cost, with **Ask cloud** beside it.
+- **Sources**: GitHub (through `gh`, read only), your terminal's history
+  (secrets taken out), a calendar, screen time (app names, never pictures)
+  and Codex and Gemini sessions, each off until you turn it on, kept as one
+  note per day in the brain.
+- **Today**: the one thing, your day by hour, what's next, and “what did I
+  do last week?” answered with numbered sources.
+- **Agents**: research over your brain, monitors (“tell me when PR #43 is
+  reviewed”), and the roster that keeps people, promises and projects up to
+  date.
+- **The Agency**: hundreds of specialist agents, downloaded when you ask, to
+  start in Claude or a terminal or install into Claude Code.
+- **Voice**: call notes made out on this computer (audio deleted), the
+  morning brief out loud, and talking over the buddy to stop it.
+- **A more modern look** for the island, Settings and the phone app.
+- **On a Mac and Windows too**: call notes (the default input on a Mac,
+  plus BlackHole when you have it; a microphone and Stereo Mix on Windows),
+  screen time (app names on a Mac; Windows sees titles too), PowerShell
+  history, and `gh` and ffmpeg found where Homebrew and winget put them.
+
+**What was kept quiet, and the rest of Ubuntu**
+
+- **An evening digest**: once a day (18:00 at first) the island shows what
+  the buddy didn't say out loud and what wasn't urgent, with the
+  notifications you didn't get to, by app. **Quiet hours** are yours to set
+  (Settings → Buddy). [The guide](docs/buddy.md#beyond-questions).
+- **Notification summaries**: one line when Do Not Disturb ends; the stack
+  names the apps waiting; a busy app says who it's from; **Sum up** puts the
+  whole list in a few sentences with your AI.
+- **Talk to the buddy from your phone**: hold to talk in Island Drop, and
+  the buddy answers out loud on the computer.
+- **The brain keeps WhatsApp, mail and notes from your phone**, each off
+  until you turn it on; what people wrote is kept as data, never
+  instructions. [The guide](docs/brain.md#what-it-captures).
+- **Blur my Shell and Just Perfection** in Settings → Desktop, from
+  extensions.gnome.org, turned on with the look and undone with it.
+- **The login screen and boot splash** in the island's look (with your
+  password): the accent, light or dark, and the island's orb while Ubuntu
+  starts. [How it works](docs/desktop.md).
+
+**Ubuntu, the island's way**
+
+- **Settings → Desktop → Make Ubuntu match the island**: light or dark and
+  the accent colour for all of Ubuntu (its own Yaru themes), following the
+  island as they change, with the Dock at the bottom like macOS's and,
+  if you like, window buttons on the left. Plain gsettings, no password;
+  **Undo** puts back exactly what was there.
+- **The command bar** (Ctrl+Alt+K): open apps (with their icons), files you
+  had open, notes and settings; work out sums; “dark mode”, “volume 40”,
+  “lock”, “wallpaper misty forest”; or ask the buddy or Claude.
+- **The System package** for the assistant: open an app, set the volume, go
+  light or dark, Do Not Disturb, lock the screen; each one asks first.
+  [How it works](docs/desktop.md).
+
+**The Jarvis layer: the buddy in front of the real work**
+
+- **Hands real work to the assistant** and follows it: “how far is it?”,
+  “stop”, “actually, use vitest” steer it; it says when it's done.
+- **Say yes or no** to a permission prompt from Claude Code or the
+  assistant.
+- **Offers, then acts on your yes**: keep a fact about you (into your
+  brain's `00-me`), click something it can see (pointed at first), or
+  type for you.
+- **Speaks up, sparingly**: a session waiting on you, a permission prompt,
+  finished work; never in quiet hours, never twice in three days.
+- **Routines** (Settings → Buddy): standing orders the assistant runs at
+  their time, still asking before it sends or changes anything.
+- **“Hey <name>”**, off by default, heard on this computer.
+  [The guide](docs/buddy.md#beyond-questions).
+
+**Search by meaning**
+
+- Settings → Second brain → **Search by meaning**: a small model on this
+  computer (23 MB, downloaded once) reads your notes, so a search finds the
+  ones that say it in other words too. Every AI's brain search uses it,
+  fused with the keyword ranking. Private notes are never read.
+  [How it works](docs/brain.md#search-by-meaning).
+
+**The loop: your brain keeps itself up to date**
+
+- Five jobs, listed in Settings → Second brain with how each last went:
+  **your commits** (each evening, kept as a source), **the evening filing**
+  (where each inbox note should go; nothing moves until you press Apply,
+  and Undo puts it back), the **daily signal** (five lines on your day),
+  the **weekly signal** (patterns with counts, on Sundays) and the
+  **morning card**.
+- **The morning card**: the one thing for today, why, and a draft if it's a
+  message, waiting on the island. **Send** hands the draft to the assistant
+  (which still asks before sending, on the island and your phone),
+  **Edit** opens it in the Claude tab, **Hold** brings it back in three
+  hours.
+- A job the computer slept through runs when it wakes. A job that didn't
+  run says so, and one that failed says why; nothing shows as fine that
+  isn't. Each can be turned off or run now. [How it works](docs/brain.md#the-loop).
+
+**The buddy: ask about your screen, out loud**
+
+- Press **Ctrl+Alt+B** and ask: “where do I change the wallpaper?”, “walk me
+  through setting up a printer”. Your character answers out loud, with
+  captions on the island, and an arrow flies from the island to the spot.
+  A walkthrough goes one step at a time: say “next” or press **Next**;
+  “stop” and “say that again” work too. [The guide](docs/buddy.md).
+- It looks at a screenshot taken when you ask, with **private windows**
+  (password managers, private browsing, your bank…) blacked out before it
+  leaves; its answers use your second brain, and each question can be kept
+  in the brain's inbox.
+- **Its voice**: Kokoro, a natural voice that runs on this computer
+  (downloaded once, about 92 MB, with espeak-ng for pronunciation), the
+  system's voice, or captions only. **Settings → Buddy** has the voice,
+  speed, tone, the private-window words and **Hear it**.
+- Settings → Privacy lists what it sent, and **Pause AI and the web** stops
+  it looking.
+
+**A look closer to macOS**
+
+- **The icon rail works like the Dock**: icons grow under the pointer (their
+  neighbours a little), show their name beside them, bounce when their count
+  goes up, and a dot marks what's running (music playing, Claude working,
+  sessions, a connected service). Reduced motion turns the movement off.
+- **Control Center** is laid out like macOS: Wi-Fi and Bluetooth in one
+  module, Do Not Disturb and a Wallpaper tile beside it, the sliders below.
+- **Banners** put the app's icon large on the left with the words beside it;
+  the close button shows on hover.
+- **Settings is laid out like System Settings**: a sidebar with coloured
+  icons in groups, one pane at a time, and a search field that finds any
+  setting by its name and takes you to it.
+- **Light and dark**: Settings and the island follow Ubuntu's own style
+  (Settings → Appearance → Style) as it changes, or stay Light or Dark
+  (Settings → General → Light or dark). In light, the panel, the Dock and
+  the cards are pale glass like macOS's; **Island colours → Always dark**
+  keeps the island black like a notch. Spotify keeps its own dark look.
+- **Accent colour**: eight, as on macOS, for buttons, links and what's
+  selected, on the island and in Settings.
+
+**Privacy**
+
+- **Settings → Privacy** lists what has left this computer, where it went
+  and when: your questions to the assistant, session summaries for your
+  brain, wallpaper searches and downloads, and services checking your
+  accounts. It says what was sent, never what it said, and stays on this
+  computer for 30 days.
+- **Pause AI and the web** stops all of that until you turn it off.
+  Session notes are written without an AI meanwhile; WhatsApp, mail,
+  Spotify and an AI on this computer (Ollama) keep working.
+
+**Wallpaper by asking**
+
+- Ask the assistant (typed or spoken): “set my background to misty mountains
+  at sunrise”, “make it a video of rain on a window”, “another one”, “put
+  the old one back”. It finds a match on the web, downloads it to Pictures ›
+  Dynamic Island Wallpapers and sets it.
+- **Settings → Wallpaper**: search photos and videos, five live animations
+  (Soft glow, Aurora, Waves, Starfield, Gradient), recent wallpapers,
+  Previous, and the desktop's own background back.
+- Photos and videos from Openverse and Wikimedia Commons with no setup, and
+  Pexels, Unsplash and Pixabay with your free keys. Every wallpaper keeps
+  its credit and licence.
+- Videos and animations play live behind everything and rest while a window
+  covers the screen or on battery.
+
+**A second brain for you and every AI you use**
+
+- **Settings → Second brain** makes a folder of plain notes (`~/Brain`, in
+  the Living Brain layout) that Claude Code, Codex, Gemini CLI and the
+  island's assistant all share. Open it in Obsidian; it keeps its own git
+  history. [The guide](docs/brain.md).
+- **Settings → You**: four short notes about you (profile, how you work,
+  goals, how you write) become the brief every AI loads. **Interview me**
+  has Claude Code ask you about yourself and write them.
+- **Connect Claude Code** in one switch: your brief in `CLAUDE.md`, the
+  project's page and last sessions at the start of each session, and the
+  brain's tools (search, read, capture, decisions, promises) over MCP.
+  Switching it off undoes it.
+- **Every Claude Code session gets a note**: five lines (shipped, decided,
+  promised, the number, next), filed with its project.
+- **Find my projects** drafts a page for each project from your Claude Code
+  history and git; keep the ones you want from the inbox.
+- `08-restricted/` stays private: no tool, index or search reads it.
+
 **Island Drop: a new look, light and dark, and a steadier link**
 
 - A cleaner design throughout: one type scale, grouped settings lists, line

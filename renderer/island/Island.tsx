@@ -1,3 +1,4 @@
+import { CallCard, CompactCall } from './states/CallActivity'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
@@ -31,7 +32,7 @@ import type { DocsAdded } from '@shared/docs'
 import type { DocsIncoming } from './hub/DocsView'
 import { errorText } from './hub/common'
 import { useNotifications } from './useNotifications'
-import { clearedText } from '@shared/notifCenter'
+import { clearedText, stackText } from '@shared/notifCenter'
 import { useSessions } from './useSessions'
 import { CompactSession, SessionCard } from './states/SessionActivity'
 import { CloseBar } from './states/CloseBar'
@@ -39,6 +40,11 @@ import { tourSteps } from './tour'
 import { WardrobePicker } from './character/Wardrobe'
 import { useDictation } from './voice/useDictation'
 import { DictationPill } from './voice/DictationPill'
+import { useBuddy } from './buddy/useBuddy'
+import { BuddyPill, buddyShown } from './buddy/BuddyPill'
+import { MorningCard, useMorning } from './states/MorningCard'
+import { EveningCard, useEvening } from './states/EveningCard'
+import { useEmbedder } from './brain/useEmbedder'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
 
@@ -87,6 +93,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
+  // False while the pointer is on a card beside the island (the tour, the morning card…), as
+  // the page sees it; true otherwise (also when only the main process reports the hover).
+  const [overIsland, setOverIsland] = useState(true)
+  const mainRef = useRef<HTMLDivElement | null>(null)
   // It stays while the pointer is on the island (you may be reaching for Undo).
   useEffect(() => {
     if (cleared === null || hover) return
@@ -201,6 +211,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const voice = useVoice(claude)
   // Dictate anywhere (its shortcut): typed into the app you're in.
   const dictation = useDictation(claude)
+  // The buddy: ask about your screen (its shortcut), it answers out loud and points.
+  const buddy = useBuddy(claude, character.name)
+  // The morning card: the one thing for today, from the brain's loop.
+  const morning = useMorning()
+  // The evening digest: what was kept quiet today.
+  const evening = useEvening()
+  // Search by meaning: the brain's notes as vectors, made here.
+  useEmbedder()
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {
@@ -282,10 +300,30 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // The main process's cursor loop is the source of truth for hover: DOM
   // mouseleave is not delivered once the window turns click-through.
   useEffect(() => window.island.onHover(setHover), [])
+  // A leave can also be lost: when the element under the pointer is removed (a button that
+  // closes its own card) and the pointer moves on before the page looks again, no mouseleave
+  // reaches the island. Any move outside it, or leaving the window, ends the hover too.
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (outerRef.current && !outerRef.current.contains(e.target as Node)) setHover(false)
+    }
+    const out = (e: MouseEvent) => {
+      if (!e.relatedTarget) setHover(false)
+    }
+    document.addEventListener('mousemove', move, true)
+    document.addEventListener('mouseout', out, true)
+    return () => {
+      document.removeEventListener('mousemove', move, true)
+      document.removeEventListener('mouseout', out, true)
+    }
+  }, [])
 
   // Hover intent: a short rest peeks, a longer one opens the full card.
   // No peek while the Undo note is up: the island growing would move it from under the pointer.
-  const stage = useHoverIntent(hover && !panel && !dropping && cleared === null)
+  // Only resting on the island itself peeks, not on the cards beside it (the tour, the morning
+  // card…): peeking changes the island's height, which slides those cards out from under a
+  // still pointer, and the peek would fold and open again and again.
+  const stage = useHoverIntent(hover && overIsland && !panel && !dropping && cleared === null)
   const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
@@ -494,7 +532,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' with-rail' : ''}`}
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseLeave={() => {
+        setHover(false)
+        setOverIsland(true)
+      }}
+      onMouseOver={(e) => setOverIsland(!!mainRef.current?.contains(e.target as Node))}
       onContextMenu={(e) => {
         e.preventDefault()
         if (p.mode === 'idle' && !showPanel) setWardrobe(true)
@@ -506,7 +548,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       {/* Rounded with border-radius set here, not a clip shape: the layout
           animation resizes with a scale transform, and Framer Motion corrects
           border-radius for it, so the corners stay round while it grows. */}
-      <motion.div className="island" layout transition={reduce ? { duration: 0.16 } : shell} style={{ borderRadius: 26 }} onScroll={unscroll}>
+      <motion.div
+        className="island"
+        layout
+        transition={reduce ? { duration: 0.16 } : shell}
+        style={{ borderRadius: 26 }}
+        onScroll={unscroll}
+        ref={mainRef}
+      >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
@@ -587,6 +636,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               )
             ) : p.primary.kind === 'job' ? (
               <JobCard id={p.primary.id} job={p.primary.job} />
+            ) : p.primary.kind === 'call' ? (
+              p.mode === 'expanded' ? <CallCard started={p.primary.call.started} /> : <CompactCall started={p.primary.call.started} />
             ) : p.primary.kind === 'connected' ? (
               p.mode === 'expanded' ? (
                 <ConnectedStatusCard
@@ -623,7 +674,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             transition={pop}
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="more">{notifCards - 1} more</span>
+            <span className="more">
+              {stackText(
+                notifCards - 1,
+                activities
+                  .filter((a) => (a.kind === 'notification' || a.kind === 'message') && a.id !== p.primary?.id)
+                  .map((a) => (a.kind === 'notification' ? a.notification.app : a.kind === 'message' ? (a.message.source === 'mail' ? 'Mail' : 'WhatsApp') : '')),
+              )}
+            </span>
             <button
               className="clear"
               onClick={async () => {
@@ -657,6 +715,62 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             >
               Undo
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {morning.card && !showPanel && !buddyShown(buddy) && (
+          <motion.div
+            key="morning"
+            className="island morning-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <MorningCard card={morning.card} act={morning.act} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {evening.card && !morning.card && !showPanel && !buddyShown(buddy) && !tourStep && (
+          <motion.div
+            key="evening"
+            className="island evening-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EveningCard
+              card={evening.card}
+              done={evening.done}
+              openNotifications={() => {
+                setTab('alerts')
+                setPanel(true)
+              }}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {buddyShown(buddy) && (
+          <motion.div
+            key="buddy"
+            className="island buddy-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="status"
+          >
+            <BuddyPill b={buddy} name={character.name} />
           </motion.div>
         )}
       </AnimatePresence>
@@ -775,6 +889,13 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             transition={{ ...pop, delay: 0.04 }}
           >
             <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length}
+              side={side}
+              running={[
+                ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
+                ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
+                ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
+                ...(connected?.manifest ? (['connected'] as const) : []),
+              ]}
               connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
               // The Connected tab only once something is connected (Settings → Connected).
               hidden={[...(pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []), ...(connected?.configured ? [] : (['connected'] as const))]}

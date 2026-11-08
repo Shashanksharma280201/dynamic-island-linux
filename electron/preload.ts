@@ -1,3 +1,14 @@
+import { COMMAND } from './commandChannels'
+import type { CommandItem } from '../shared/command'
+import { EMBED } from './embedChannels'
+import { EVENING, MORNING } from './morningChannels'
+import type { JobId, MorningCard } from '../shared/loop'
+import type { EveningCard } from '../shared/digest'
+import type { OsAnswer, OsCall } from '../shared/os'
+import { BUDDY } from './buddyChannels'
+import type { BuddyConfig, BuddyView } from '../shared/buddy'
+import type { PointerCmd } from '../shared/pointer'
+import type { IslandLook } from '../shared/theme'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
@@ -53,6 +64,9 @@ import type {
   Note,
 } from '@shared/types'
 import { SETTINGS } from '../electron/settingsChannels'
+import { BRAIN } from '../electron/brainChannels'
+import { WALLPAPER } from '../electron/wallpaperChannels'
+import type { WallItem } from '@shared/wallpaper'
 import { INBOX } from '../electron/inboxChannels'
 import { CLAUDE } from '../electron/claudeChannels'
 import { SPOTIFY } from '../electron/spotifyChannels'
@@ -74,7 +88,16 @@ function on<T>(channel: string, cb: (v: T) => void): () => void {
   return () => ipcRenderer.removeListener(channel, fn)
 }
 
+/** Island OS: one checked call for the island and Settings (see shared/os.ts for the names). */
+const os = <T = unknown>(fn: OsCall, ...args: unknown[]): Promise<T> => ipcRenderer.invoke('os:call', fn, args)
+
 const api = {
+  os,
+  /** Something Island OS shows changed ("agents"…): load it again. */
+  onOs: (cb: (topic: string) => void) => on<string>('os:changed', cb),
+  /** A recording to make out here (call notes), and the answer back. */
+  onTranscribe: (cb: (h: { id: string; data: Uint8Array; fake?: string }) => void) => on('os:transcribe', cb),
+  transcribed: (id: string, r: { text: string } | { error: string }): Promise<void> => ipcRenderer.invoke('os:transcribed', id, r),
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),
@@ -135,6 +158,51 @@ const api = {
     drop: (d: { slot: SlotId; choice?: string; paths: string[] }) => ipcRenderer.send(RING.DROP, d),
     pathFor: (f: File): string => webUtils.getPathForFile(f),
   },
+  /** The buddy: ask about your screen; it answers out loud and points. */
+  buddy: {
+    ask: (text: string) => ipcRenderer.invoke(BUDDY.ASK, text),
+    cmd: (c: 'next' | 'back' | 'stop' | 'repeat') => ipcRenderer.invoke(BUDDY.CMD, c),
+    answer: (yes: boolean) => ipcRenderer.invoke(BUDDY.ANSWER, yes),
+    get: (): Promise<BuddyView> => ipcRenderer.invoke(BUDDY.GET),
+    onState: (cb: (v: BuddyView) => void) => on(BUDDY.STATE, cb),
+    onKey: (cb: () => void) => on(BUDDY.KEY, cb),
+    /** Kokoro speaks here: say these phonemes, then report back. */
+    onSpeak: (cb: (s: { id: number; phonemes?: string; voice?: string; speed?: number; stop?: boolean }) => void) => on(BUDDY.SPEAK, cb),
+    spoken: (r: { id: number; ok: boolean; error?: string }) => ipcRenderer.send(BUDDY.SPOKEN, r),
+    /** Speech from the phone: make it out here (Whisper, on this computer), then say what was heard. */
+    onHear: (cb: (h: { id: string; mime: string; data: string; fake?: string }) => void) => on(BUDDY.HEAR, cb),
+    heard: (id: string, r: { text: string } | { error: string }) => ipcRenderer.invoke(BUDDY.HEARD, id, r),
+  },
+  /** Search by meaning: the model runs here, in a worker. */
+  embed: {
+    onAsk: (cb: (r: { id: number; texts: string[] }) => void) => on(EMBED.ASK, cb),
+    done: (r: { id: number; vectors?: Float32Array[]; error?: string }) => ipcRenderer.send(EMBED.DONE, r),
+  },
+  /** The command bar (its own window), and opening it from the island. */
+  command: {
+    open: () => ipcRenderer.invoke(COMMAND.OPEN),
+    query: (q: string): Promise<CommandItem[]> => ipcRenderer.invoke(COMMAND.QUERY, q),
+    run: (id: string) => ipcRenderer.invoke(COMMAND.RUN, id),
+    close: () => ipcRenderer.invoke(COMMAND.CLOSE),
+    onShown: (cb: () => void) => on(COMMAND.SHOWN, cb),
+  },
+  /** The morning card: the one thing for today. */
+  morning: {
+    get: (): Promise<MorningCard | null> => ipcRenderer.invoke(MORNING.GET),
+    onCard: (cb: (c: MorningCard | null) => void) => on(MORNING.CARD, cb),
+    act: (a: 'send' | 'edit' | 'hold' | 'done') => ipcRenderer.invoke(MORNING.ACT, a),
+  },
+  /** The evening digest: what was kept quiet today. */
+  evening: {
+    get: (): Promise<EveningCard | null> => ipcRenderer.invoke(EVENING.GET),
+    onCard: (cb: (c: EveningCard | null) => void) => on(EVENING.CARD, cb),
+    done: () => ipcRenderer.invoke(EVENING.DONE),
+  },
+  /** The buddy's pointer over the whole screen (its own window). */
+  pointer: {
+    onCmd: (cb: (c: PointerCmd) => void) => on(BUDDY.POINTER, cb),
+    ready: () => ipcRenderer.send(BUDDY.POINTER_READY),
+  },
   /** Phone Drop's glow over the whole screen (its own window). */
   drop: {
     onCmd: (cb: (c: DropCmd) => void) => on(DROP.CMD, cb),
@@ -194,6 +262,8 @@ const api = {
     undo: (): Promise<void> => ipcRenderer.invoke(NOTIFS.UNDO),
     seen: (): Promise<void> => ipcRenderer.invoke(NOTIFS.SEEN),
     setDnd: (on: boolean): Promise<void> => ipcRenderer.invoke(NOTIFS.SET_DND, on),
+    /** The list in a few sentences: the model on this computer first, the cloud with your yes. */
+    sumUp: (o?: { prefer?: 'local' | 'cloud'; consent?: boolean }): Promise<OsAnswer> => ipcRenderer.invoke(NOTIFS.SUM_UP, o ?? {}),
     onChanged: (cb: (v: CenterView) => void) => on(NOTIFS.CHANGED, cb),
   },
   spotify: {
@@ -269,7 +339,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string> }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string>; look?: IslandLook }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -297,6 +367,41 @@ type MailInput = Omit<MailAccountView, 'status' | 'id'> & { id?: string }
 
 /** Used by the settings window only. */
 const settings = {
+  os,
+  /** The desktop background (Settings → Wallpaper). */
+  wallpaper: {
+    search: (query: string, kind: 'image' | 'video'): Promise<{ items: WallItem[]; errors: string[] }> => ipcRenderer.invoke(WALLPAPER.SEARCH, query, kind),
+    set: (id: string): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.SET, id),
+    animation: (id: string): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.ANIMATION, id),
+    undo: (): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.UNDO),
+    restore: (): Promise<string | null> => ipcRenderer.invoke(WALLPAPER.RESTORE),
+    options: (patch: { pauseCovered?: boolean; pauseBattery?: boolean }) => ipcRenderer.invoke(WALLPAPER.OPTIONS, patch),
+    setKey: (site: 'pexels' | 'unsplash' | 'pixabay', key: string) => ipcRenderer.invoke(WALLPAPER.KEY, site, key),
+    openFolder: () => ipcRenderer.invoke(WALLPAPER.OPEN_FOLDER),
+    openPage: (url: string) => ipcRenderer.invoke(WALLPAPER.OPEN_PAGE, url),
+  },
+  /** The second brain (Settings → You and Brain). */
+  brain: {
+    create: (folder?: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.CREATE, folder),
+    pickFolder: (): Promise<string | null> => ipcRenderer.invoke(BRAIN.PICK_FOLDER),
+    setOn: (on: boolean) => ipcRenderer.invoke(BRAIN.SET_ON, on),
+    set: (patch: { captureSessions?: boolean; distil?: 'ai' | 'plain'; skip?: string[]; meaning?: boolean; whatsapp?: boolean; mail?: boolean; phone?: boolean; skipChats?: string[] }) => ipcRenderer.invoke(BRAIN.SET, patch),
+    addSkip: () => ipcRenderer.invoke(BRAIN.ADD_SKIP),
+    connect: (id: string, on: boolean): Promise<string | null> => ipcRenderer.invoke(BRAIN.CONNECT, id, on),
+    mine: (): Promise<string> => ipcRenderer.invoke(BRAIN.MINE),
+    keep: (path: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.KEEP, path),
+    keepAll: (): Promise<number> => ipcRenderer.invoke(BRAIN.KEEP_ALL),
+    archive: (path: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.ARCHIVE, path),
+    open: (path = '') => ipcRenderer.invoke(BRAIN.OPEN, path),
+    openFolder: () => ipcRenderer.invoke(BRAIN.OPEN_FOLDER),
+    interview: (): Promise<string | null> => ipcRenderer.invoke(BRAIN.INTERVIEW),
+    meGet: (file: string): Promise<string> => ipcRenderer.invoke(BRAIN.ME_GET, file),
+    meSave: (file: string, text: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.ME_SAVE, file, text),
+    brief: (): Promise<string> => ipcRenderer.invoke(BRAIN.BRIEF),
+    runJob: (id: JobId) => ipcRenderer.invoke(BRAIN.JOB_RUN, id),
+    jobOn: (id: JobId, on: boolean) => ipcRenderer.invoke(BRAIN.JOB_ON, id, on),
+    filing: (what: 'apply' | 'undo' | 'dismiss'): Promise<number> => ipcRenderer.invoke(BRAIN.FILING, what),
+  },
   get: (): Promise<SettingsState> => ipcRenderer.invoke(SETTINGS.GET),
   onChange: (cb: (s: SettingsState) => void) => on(SETTINGS.CHANGED, cb),
   setNotifications: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTIFICATIONS, on),
@@ -327,6 +432,25 @@ const settings = {
   setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
+  setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
+  setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
+  setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
+  desktop: {
+    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    getExtension: (id: string) => ipcRenderer.invoke(SETTINGS.DESKTOP_GET_EXT, id),
+    /** The login screen and boot splash (Ubuntu asks for your password). */
+    system: (what: 'apply' | 'undo') => ipcRenderer.invoke(SETTINGS.DESKTOP_SYSTEM, what),
+    apply: () => ipcRenderer.invoke(SETTINGS.DESKTOP_APPLY),
+    undo: () => ipcRenderer.invoke(SETTINGS.DESKTOP_UNDO),
+  },
+  buddy: {
+    set: (patch: Partial<BuddyConfig>) => ipcRenderer.invoke(BUDDY.SET, patch),
+    getVoice: (): Promise<string | null> => ipcRenderer.invoke(BUDDY.VOICE_GET),
+    tryVoice: () => ipcRenderer.invoke(BUDDY.VOICE_TRY),
+    setRoutine: (r: unknown): Promise<string | null> => ipcRenderer.invoke(BUDDY.ROUTINE_SET, r),
+    removeRoutine: (id: string) => ipcRenderer.invoke(BUDDY.ROUTINE_DEL, id),
+  },
+  clearPrivacy: () => ipcRenderer.invoke(SETTINGS.CLEAR_PRIVACY),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
   setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),

@@ -13,15 +13,17 @@ import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
 import { DocsAppIcon } from './AppIcons'
 import { NotificationsView } from './NotificationsView'
+import { TodayView } from './TodayView'
+import { AgentsView } from './AgentsView'
 import { SessionsView } from './SessionsView'
 import { ServicesView, useServices } from './ServicesView'
 import { ConnectedView, useConnected } from './ConnectedView'
 import type { AgentSession } from '@shared/sessions'
 import type { CenterView } from '@shared/notifCenter'
 
-export type HubTab = 'controls' | 'alerts' | 'claude' | 'sessions' | 'connected' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
+export type HubTab = 'controls' | 'today' | 'agents' | 'alerts' | 'claude' | 'sessions' | 'connected' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'alerts', 'claude', 'sessions', 'connected', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
+export const HUB_TABS: HubTab[] = ['controls', 'today', 'agents', 'alerts', 'claude', 'sessions', 'connected', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {
@@ -88,6 +90,8 @@ export function Hub({
   return (
     <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`} onClick={(e) => e.stopPropagation()}>
       {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
+      {tab === 'today' && <TodayView onTyping={onTyping} />}
+      {tab === 'agents' && <AgentsView sessions={sessions} onTyping={onTyping} />}
       {tab === 'alerts' && <NotificationsView center={center} onOpen={onTab} />}
       {tab === 'chats' && sources && <ChatsView sources={sources} onTyping={onTyping} />}
       {tab === 'mail' && sources && <MailView sources={sources} onTyping={onTyping} />}

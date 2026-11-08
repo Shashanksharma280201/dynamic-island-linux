@@ -2,7 +2,8 @@
 // /v1/models) and the OpenAI-compatible chat API (/chat/completions, /models),
 // both streaming, with tool calls. Records every request in s.log.
 //
-// Scripted by the prompt: "remember …" saves a note (tool call), "notes?"
+// Scripted by the prompt: "set my background to …" changes the wallpaper,
+// "remember …" saves a note (tool call), "notes?"
 // searches notes (tool call), "tell <name> <text>" sends a WhatsApp message
 // (tool call that asks first), "slow" waits 6 s, anything else is echoed.
 // With "(Files: … (id d3) …)" from the Documents tab: "grammar" corrects a
@@ -12,12 +13,15 @@
 // adds a contact; "delete <name>" deletes them (asks first).
 // The model "no-tools" rejects requests that include tools (like some local
 // models); the key "bad-key" is rejected.
+// Ollama too: GET /api/tags lists s.ollamaModels (none when s.ollama is
+// false) and /v1/chat/completions answers like /chat/completions; both chat
+// paths send token counts when asked (stream_options.include_usage).
 const http = require('http')
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
 function startFakeAi() {
-  const s = { log: [] }
+  const s = { log: [], ollama: true, ollamaModels: [{ name: 'llama3.2:3b', details: { parameter_size: '3.2B' } }, { name: 'qwen3:14b', details: { parameter_size: '14.8B' } }] }
   const lastUser = (messages) => {
     const users = messages.filter((m) => m.role === 'user')
     const m = users[users.length - 1]
@@ -36,8 +40,36 @@ function startFakeAi() {
   const plan = (body) => {
     const result = toolResult(body)
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
+    // The brain's loop: the daily signal and the morning card.
+    if (result === null && /exactly five lines/.test(prompt)) return { text: '- Shipped: the loop\n- Decided: rules first for filing\n- Promised: the deck for Asha\n- Number: 1 note\n- Next: send the deck' }
+    // Call notes: a summary, then to-dos.
+    if (result === null && /^A \d+-minute call, transcribed:/.test(prompt)) return { text: 'We agreed to ship the island on Friday.\n\nTo-dos:\n- Send the slides tomorrow\n- Book the launch room' }
+    // Island OS research: a plan, then a summary of the findings.
+    if (result === null && /^Question: /.test(prompt) && /\n\nFindings:\n/.test(prompt)) return { text: 'You ran the tests [1] and merged the engine [2].' }
+    if (result === null && /^Question: /.test(prompt) && !/\nSources:\n/.test(prompt)) return { text: '1. When did I run npm test?\n2. Which pull request did I merge?' }
+    // Island OS: a question about your days, answered from numbered sources (and one number that isn't there).
+    if (result === null && /\nSources:\n\[1\]/.test(prompt)) {
+      const src = [...prompt.matchAll(/^\[(\d+)\] (.+?) \(/gm)].slice(0, 2)
+      return { text: `You did ${src.map(([, n, t]) => `“${t}” [${n}]`).join(' and ')}. Also something else [9].` }
+    }
+    // Notifications, summed up.
+    if (result === null && /my notifications to sum up/.test(prompt)) return { text: 'Alice wants lunch at 1, and the design team posted new mockups on Slack. Mail has the quarterly report.' }
+    if (result === null && /chief of staff/.test(prompt)) return { text: 'One: Send Asha the deck\nWhy: You promised it on Friday.\nTo: Asha, by mail\nDraft: Hi Asha, here is the deck we talked about.' }
+    // The buddy: a question with a screenshot.
+    const last = body.messages[body.messages.length - 1]
+    const pic = Array.isArray(last?.content) && last.content.some((b) => b.type === 'image' || b.type === 'image_url')
+    if (pic && result === null) {
+      s.lastImage = last.content.find((b) => b.type === 'image')?.source?.data ?? last.content.find((b) => b.type === 'image_url')?.image_url?.url ?? ''
+      if (/please fix/i.test(prompt)) return { text: 'On it: I’ve asked the assistant. [DO: fix the failing cart test] [POINT:none]' }
+      if (/i always use pnpm/i.test(prompt)) return { text: 'Noted. [REMEMBER: prefers pnpm over npm] [POINT:none]' }
+      if (/click the red/i.test(prompt)) return { text: 'I can click it for you. [CLICK:300,350:Red window]' }
+      if (/walk me through|how do i/i.test(prompt)) return { text: 'First open the menu at the top. Then choose Settings. [POINT:400,40:Menu] [POINT:520,300:Settings]' }
+      if (/where/i.test(prompt)) return { text: 'It’s the gear at the top right. [POINT:1800,30:Settings gear]' }
+      return { text: 'I can see your screen. [POINT:none]' }
+    }
     if (result !== null) {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
+      if (/^Set as the background: /.test(result)) return { text: result.split(' (Say')[0] }
       if (/^Sent to/.test(result)) return { text: 'Sent it!' }
       if (/did not allow/.test(result)) return { text: 'Okay, I didn’t send it.' }
       if (/^Logged \(/.test(result) && /remind/i.test(prompt)) {
@@ -71,6 +103,8 @@ function startFakeAi() {
     if (del) return { text: '', tool: { name: 'crm_delete', input: { what: 'contact', id: del[1] } } }
     const tell = /^tell (\w+) (.+)/i.exec(prompt)
     if (tell) return { text: '', tool: { name: 'chats_send', input: { chat: tell[1], text: tell[2] } } }
+    const bg = /(?:background|wallpaper) to (?:an? )?(.+)/i.exec(prompt)
+    if (bg) return { text: '', tool: { name: 'wallpaper_set', input: { query: bg[1].replace(/^video of /i, ''), kind: /video/i.test(prompt) ? 'video' : 'image' } } }
     const m = /remember (?:to )?(.+)/i.exec(prompt)
     if (m) return { text: 'Sure, saving that.', tool: { name: 'notes_create', input: { text: m[1] } } }
     if (/notes\?/i.test(prompt)) return { text: '', tool: { name: 'notes_search', input: { query: '' } } }
@@ -91,6 +125,12 @@ function startFakeAi() {
         const anth = path.startsWith('/v1/')
         res.writeHead(401, { 'content-type': 'application/json' })
         return res.end(JSON.stringify(anth ? { type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } } : { error: { message: 'Incorrect API key provided', type: 'invalid_request_error' } }))
+      }
+      // ---- Ollama's model list ----
+      if (req.method === 'GET' && path === '/api/tags') {
+        if (!s.ollama) return res.writeHead(404).end()
+        res.writeHead(200, { 'content-type': 'application/json' })
+        return res.end(JSON.stringify({ models: s.ollamaModels }))
       }
       // ---- model lists ----
       if (req.method === 'GET' && path === '/v1/models') {
@@ -113,7 +153,7 @@ function startFakeAi() {
         if (p.delay) await sleep(p.delay)
         if (p.text) {
           ev('content_block_start', { index: i, content_block: { type: 'text', text: '' } })
-          for (const part of p.text.match(/.{1,8}/g)) {
+          for (const part of p.text.match(/[\s\S]{1,8}/g)) {
             ev('content_block_delta', { index: i, delta: { type: 'text_delta', text: part } })
             await sleep(20)
           }
@@ -130,7 +170,7 @@ function startFakeAi() {
         return res.end()
       }
       // ---- OpenAI-compatible chat ----
-      if (req.method === 'POST' && path === '/chat/completions') {
+      if (req.method === 'POST' && (path === '/chat/completions' || (path === '/v1/chat/completions' && s.ollama))) {
         if (body.model === 'no-tools' && body.tools) {
           res.writeHead(400, { 'content-type': 'application/json' })
           return res.end(JSON.stringify({ error: { message: 'registry.ollama.ai/library/no-tools does not support tools', type: 'invalid_request_error' } }))
@@ -142,7 +182,7 @@ function startFakeAi() {
         chunk({ role: 'assistant', content: '' })
         if (p.delay) await sleep(p.delay)
         if (p.text) {
-          for (const part of p.text.match(/.{1,8}/g)) {
+          for (const part of p.text.match(/[\s\S]{1,8}/g)) {
             chunk({ content: part })
             await sleep(20)
           }
@@ -155,6 +195,7 @@ function startFakeAi() {
           chunk({ tool_calls: [{ index: 0, function: { arguments: args.slice(5) } }] })
         }
         chunk({}, p.tool ? 'tool_calls' : 'stop')
+        if (body.stream_options?.include_usage) res.write(`data: ${JSON.stringify({ id: 'c1', object: 'chat.completion.chunk', created: 0, model: body.model, choices: [], usage: { prompt_tokens: 1200, completion_tokens: 80, total_tokens: 1280 } })}\n\n`)
         res.write('data: [DONE]\n\n')
         return res.end()
       }

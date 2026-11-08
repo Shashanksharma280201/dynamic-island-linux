@@ -148,10 +148,10 @@ export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top, on
 function Preview({ kind }: { kind: ThemePref }) {
   const s = useS()
   const half = (dark: boolean) => (
-    <View style={[s.previewHalf, { backgroundColor: dark ? '#09090b' : '#f2f2f6' }]}>
+    <View style={[s.previewHalf, { backgroundColor: dark ? '#0a0a0d' : '#f4f5f8' }]}>
       <View style={[s.previewBar, { backgroundColor: dark ? '#f4f4f6' : '#111114' }]} />
-      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d21' : '#ffffff' }]} />
-      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d21' : '#ffffff', width: '60%' }]} />
+      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d23' : '#ffffff' }]} />
+      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d23' : '#ffffff', width: '60%' }]} />
     </View>
   )
   return (

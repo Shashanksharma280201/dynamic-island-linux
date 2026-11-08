@@ -3,7 +3,7 @@
  * tools the agent may use; Settings → Packages turns them on or off. Built-in
  * packages for now; the same shape will carry third-party ones later.
  */
-export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected'
+export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected' | 'wallpaper' | 'system'
 
 /** Rail tabs a package can own. */
 export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected'
@@ -142,6 +142,32 @@ export const PACKAGES: PackageInfo[] = [
     tab: 'connected',
     permissions: ['The address and token you give it in Settings → Connected', 'Sends your answers and button presses back to that service'],
     tools: [{ name: 'connected_status', summary: 'Read what your connected package shows (read only)' }],
+  },
+  {
+    id: 'wallpaper',
+    name: 'Wallpaper',
+    description: 'Change the desktop background by asking: a photo or a video found on the web, or one of the island’s animations. Say “another one” or “put the old one back”.',
+    permissions: ['Searches photo and video sites (Openverse, Wikimedia Commons; Pexels, Unsplash and Pixabay with your keys)', 'Saves to Pictures › Dynamic Island Wallpapers', 'Your desktop background'],
+    tools: [
+      { name: 'wallpaper_set', summary: 'Find a photo or video and set it as the background' },
+      { name: 'wallpaper_search', summary: 'Find backgrounds to choose from' },
+      { name: 'wallpaper_animation', summary: 'Set one of the island’s animations' },
+      { name: 'wallpaper_undo', summary: 'Put the previous background back' },
+      { name: 'wallpaper_now', summary: 'Say what the background is' },
+    ],
+  },
+  {
+    id: 'system',
+    name: 'System',
+    description: 'Open apps, set the volume, go light or dark, turn on Do Not Disturb or lock the screen, by asking. Each one asks you first.',
+    permissions: ['Your installed apps (to open them)', 'The sound volume, light or dark, Do Not Disturb', 'Locking the screen'],
+    tools: [
+      { name: 'system_open_app', summary: 'Open an app', asks: true },
+      { name: 'system_volume', summary: 'Set the volume, or mute', asks: true },
+      { name: 'system_theme', summary: 'Go light or dark', asks: true },
+      { name: 'system_dnd', summary: 'Turn Do Not Disturb on or off', asks: true },
+      { name: 'system_lock', summary: 'Lock the screen', asks: true },
+    ],
   },
 ]
 

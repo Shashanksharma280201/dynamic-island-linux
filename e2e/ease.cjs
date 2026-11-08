@@ -123,25 +123,26 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('click a shortcut and it waits for keys', await seen(settings, '.key-recorder.recording'))
     await settings.keyboard.press('Shift+K')
     check('Shift alone is refused (that is typing)', await seen(settings, '#shortcuts .hint:has-text("Ctrl, Alt or Super")'))
-    await settings.keyboard.press('Control+Alt+K')
+    await settings.keyboard.press('Control+Alt+J')
     check('new keys are saved', await (async () => {
       for (let i = 0; i < 30; i++) {
-        if (cfg().keys?.voice === 'Control+Alt+K') return true
+        if (cfg().keys?.voice === 'Control+Alt+J') return true
         await sleep(100)
       }
       return false
     })(), JSON.stringify(cfg().keys))
-    check('and shown', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+K")'))
-    check('the island knows them too', await seen(page, '.shortcut-sheet .sheet-row:has-text("Talk to Claude") kbd:has-text("Ctrl+Alt+K")'))
+    check('and shown', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+J")'))
+    check('the island knows them too', await seen(page, '.shortcut-sheet .sheet-row:has-text("Talk to Claude") kbd:has-text("Ctrl+Alt+J")'))
     await settings.click('#shortcuts .key-recorder[data-shortcut="allow"]')
-    await settings.keyboard.press('Control+Alt+K')
-    check('keys another shortcut uses are refused, saying which', await seen(settings, '#shortcuts .error-text:has-text("Talk to Claude already uses Ctrl+Alt+K")'))
+    await settings.keyboard.press('Control+Alt+J')
+    check('keys another shortcut uses are refused, saying which', await seen(settings, '#shortcuts .error-text:has-text("Talk to Claude already uses Ctrl+Alt+J")'))
     check('and nothing changes', cfg().keys.allow === 'Control+Alt+Y')
     await shot(settings, '04-settings-shortcuts')
     await settings.click('#shortcuts .toggle-row:has(.key-recorder[data-shortcut="voice"]) button.link:has-text("Reset")')
     check('Reset puts the default back', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+Space")'))
 
     // ---- Which display ----
+    await settings.click('.side-item[data-section="general"]')
     check('Settings offers where the island lives', (await settings.$$eval('#general select.display-select option', (o) => o.map((x) => x.value))).join() === 'primary,cursor')
     await settings.selectOption('#general select.display-select', 'cursor')
     check('"the display with the pointer" is saved', await (async () => {
@@ -188,10 +189,26 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await page.click('.tour-next')
     await page.click('.tour-next')
     check('the last step says Done', await seen(page, '.tour-next:has-text("Done")'))
+    // Resting on the tour bar mustn't make the island peek: that moved the bar away and back, again and again.
+    const ys = await page.evaluate(
+      () =>
+        new Promise((resolve) => {
+          const out = []
+          const t0 = performance.now()
+          const step = () => {
+            out.push(Math.round(document.querySelector('.tour-next')?.getBoundingClientRect().y ?? -1))
+            if (performance.now() - t0 < 1800) requestAnimationFrame(step)
+            else resolve(out)
+          }
+          requestAnimationFrame(step)
+        }),
+    )
+    check('resting on the tour bar keeps the island still', new Set(ys.slice(Math.floor(ys.length / 3))).size === 1, JSON.stringify([...new Set(ys)].slice(0, 8)))
     await page.click('.tour-next')
     check('and the island is yours again', (await gone(page, '.tour-bar')) && (await seen(page, '.capsule.idle')))
 
     // ---- The desktop companion ----
+    await settings.click('.side-item[data-section="character"]')
     await settings.click('#character .toggle-row:has-text("On your desktop too") input.switch')
     const buddy = await (async () => {
       for (let i = 0; i < 50; i++) {
@@ -237,6 +254,7 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     })())
 
     // ---- Open on hover ----
+    await settings.click('.side-item[data-section="general"]')
     await settings.click('.toggle-row:has-text("Open the panel when the pointer rests on the island") input.switch')
     check('"Open on hover" is saved', await (async () => {
       for (let i = 0; i < 30; i++) {

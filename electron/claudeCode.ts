@@ -1,3 +1,4 @@
+import { egress } from './privacy'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
@@ -226,6 +227,9 @@ export class ClaudeCode {
     if (this.busy) throw new Error('Claude is still working on the last one.')
     const binary = this.d.findBinary()
     if (!binary) throw new Error('Claude Code isn’t installed (the "claude" command wasn’t found). Set its path in Settings.')
+    const paused = egress.blocked()
+    if (paused) throw new Error(paused)
+    egress.note('assistant', 'Anthropic, through Claude Code', this.sessionId ? 'your question, in the same conversation' : 'your question')
     const cwd = this.cwd()
     const run = newRun(`run-${Date.now()}-${++this.seq}`, text, cwd, Date.now())
     run.sessionId = this.sessionId

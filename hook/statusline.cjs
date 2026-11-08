@@ -6,6 +6,28 @@ const fs = require('node:fs')
 const os = require('node:os')
 const path = require('node:path')
 
+/**
+ * Write a settings file whole or not at all: next to it, then renamed over it,
+ * so Claude Code (or anything) never reads it half-written. A symlinked file
+ * stays a symlink: the file it points to is the one replaced.
+ */
+function writeWhole(file, text) {
+  let target = file
+  try {
+    target = fs.realpathSync(file)
+  } catch {
+    // doesn't exist yet
+  }
+  const tmp = `${target}.island-${process.pid}.tmp`
+  fs.writeFileSync(tmp, text)
+  try {
+    fs.renameSync(tmp, target)
+  } catch (e) {
+    fs.rmSync(tmp, { force: true })
+    throw e
+  }
+}
+
 const MARK = 'claude-island-status'
 
 const isOurs = (sl) => !!sl && JSON.stringify(sl).includes(MARK)
@@ -105,7 +127,7 @@ function main() {
   } catch {}
 
   if (uninstall) {
-    fs.writeFileSync(settingsPath, JSON.stringify(applyUninstall(current, saved), null, 2) + '\n')
+    writeWhole(settingsPath, JSON.stringify(applyUninstall(current, saved), null, 2) + '\n')
     fs.rmSync(savedPath, { force: true })
     console.log(`Removed the island status line from ${settingsPath}`)
     return
@@ -113,7 +135,7 @@ function main() {
   const cmd = scriptCommand(path.resolve(__dirname, 'claude-island-status.cjs'), process.env.DI_NODE_RUNNER)
   const { settings, previous } = applyInstall(current, cmd, saved)
   fs.writeFileSync(savedPath, JSON.stringify({ previous }, null, 2) + '\n')
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n')
+  writeWhole(settingsPath, JSON.stringify(settings, null, 2) + '\n')
   console.log(`Installed the island status line -> ${cmd}`)
 }
 

@@ -58,7 +58,7 @@ test('Claude API: a tool call runs, its result goes back, and the answer comes o
   ai.log.length = 0
   const { p, seen, notes } = turn('anthropic', 'remember to buy milk')
   const r = await p
-  expect(r).toEqual({ text: 'Done! I saved that note for you.', steps: 1 })
+  expect(r).toEqual({ text: 'Done! I saved that note for you.', steps: 1, usage: { input: 20, output: 24 } })
   expect(notes.map((n) => n.body)).toEqual(['buy milk'])
   expect(seen).toEqual(['start', 'tool:notes_create:Writing a note', 'tool-done', 'start'])
   const [first, second] = ai.log.filter((l: any) => l.path === '/v1/messages')

@@ -1,3 +1,9 @@
+import type { OsView } from './os'
+import type { DesktopView } from './desktop'
+import type { BuddySettingsView } from './buddy'
+import type { PrivacyView } from './privacy'
+import type { WallpaperView } from './wallpaper'
+import type { BrainView } from './brain'
 import type { AgentSession } from './sessions'
 import type { Shortcuts } from './shortcuts'
 import type { CharacterConfig } from './character'
@@ -106,6 +112,8 @@ export type Activity =
   | (Base & { kind: 'job'; job: JobState })
   /** A connected package's status on the capsule (today's P&L…). */
   | (Base & { kind: 'connected'; status: ConnectedCapsule })
+  /** A call being recorded for its notes (Island OS). */
+  | (Base & { kind: 'call'; call: { started: number } })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {
@@ -312,6 +320,8 @@ export type MailAccountView = {
 export type InboxUnread = { chats: number | null; mail: number | null }
 
 export type SettingsState = {
+  /** Newer states have larger numbers (Settings keeps the newest it has seen). */
+  seq: number
   notifications: boolean
   autostart: boolean
   hookInstalled: boolean
@@ -361,6 +371,25 @@ export type SettingsState = {
   character: CharacterConfig
   ai: AiSettings
   packages: PackagesConfig
+  /** The second brain (Settings → You and Settings → Brain). */
+  brain: BrainView
+  /** The desktop background (Settings → Wallpaper). */
+  wallpaper: WallpaperView
+  /** Light or dark, and whether it's dark now. */
+  theme: 'system' | 'light' | 'dark'
+  dark: boolean
+  /** The island matches the theme, or stays dark. */
+  islandTheme: 'match' | 'dark'
+  /** The accent colour's id. */
+  accent: string
+  /** Settings › Privacy: what went where, and the pause switch. */
+  privacy: PrivacyView
+  /** Settings › Buddy. */
+  buddy: BuddySettingsView
+  /** Settings › Desktop. */
+  desktop: DesktopView
+  /** Island OS: the engine (and, later, sources, memory and agents). */
+  os: OsView
 }
 
 export type ClaudeSettings = {
