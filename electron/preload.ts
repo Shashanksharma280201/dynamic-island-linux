@@ -93,6 +93,8 @@ const os = <T = unknown>(fn: OsCall, ...args: unknown[]): Promise<T> => ipcRende
 
 const api = {
   os,
+  /** Something Island OS shows changed ("agents"…): load it again. */
+  onOs: (cb: (topic: string) => void) => on<string>('os:changed', cb),
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),

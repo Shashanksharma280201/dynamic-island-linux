@@ -58,7 +58,7 @@ describe('sources for an answer', () => {
     { title: 'Island demo prep', kind: 'note', text: 'the island demo, older', path: 'p/demo.md', at: at(20, 9) - 30 * 86_400_000 },
   ]
   it('only the words that matter', () => {
-    expect(terms('What did I ship on the island last week?')).toEqual(['island'])
+    expect(terms('What did I ship on the island last week?')).toEqual(['ship', 'island'])
   })
   it('the best fits, numbered, without repeats, in the time asked about', () => {
     const picked = pickSources(cands, 'what did I ship on the island last week?', at(10, 12))

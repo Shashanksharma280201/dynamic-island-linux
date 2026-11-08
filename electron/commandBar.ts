@@ -36,6 +36,9 @@ export type CommandDeps = {
   askBuddy: (q: string) => void
   askClaude: (q: string) => void
   buddyName: () => string
+  /** The Agency's agents matching the words (none until it's downloaded); choosing one starts it in Claude. */
+  agents?: (q: string) => { id: string; name: string; emoji: string; vibe: string }[]
+  startAgent?: (id: string) => void
   /** Tests: where apps are, and how to start one. */
   dirs?: string[]
   launch?: (app: DesktopApp) => void
@@ -44,6 +47,8 @@ export type CommandDeps = {
 const SECTIONS = [
   ['you', 'You'],
   ['brain', 'Second brain'],
+  ['sources', 'Sources'],
+  ['model', 'Model'],
   ['buddy', 'Buddy'],
   ['wallpaper', 'Wallpaper'],
   ['character', 'Character'],
@@ -160,6 +165,10 @@ export class CommandBar {
     for (const r of this.recent().slice(0, 300)) {
       const s = matchScore(q, basename(r.path))
       if (s) add({ kind: 'file', title: basename(r.path), sub: r.path.replace(this.d.home, '~'), icon: 'file' }, 150 + s, () => this.d.openFile(r.path))
+    }
+    for (const a of this.d.agents?.(q).slice(0, 4) ?? []) {
+      const s = matchScore(q, a.name)
+      if (s) add({ kind: 'agent', title: `${a.emoji} ${a.name}`, sub: `The Agency · ${a.vibe || 'start it in Claude'}` }, 110 + s, () => this.d.startAgent?.(a.id))
     }
     for (const [i, n] of this.d.notes(q).slice(0, 5).entries()) add({ kind: 'note', title: n.title, sub: n.sub || n.path }, 120 - i, () => this.d.openNote(n.path))
     const name = this.d.buddyName()

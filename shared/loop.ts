@@ -5,7 +5,7 @@
  */
 import { slugify } from './brain'
 
-export type JobId = 'commits' | 'messages' | 'activity' | 'triage' | 'daily' | 'weekly' | 'morning'
+export type JobId = 'commits' | 'messages' | 'activity' | 'people' | 'triage' | 'projects' | 'daily' | 'weekly' | 'morning'
 
 /** Local time of day; weekday 0 is Sunday. */
 export type Schedule = { hour: number; minute: number; weekday?: number }
@@ -14,7 +14,9 @@ export const JOBS: { id: JobId; label: string; what: string; when: Schedule }[] 
   { id: 'commits', label: 'Your commits', what: 'Today’s commits in your projects, kept as a source.', when: { hour: 20, minute: 45 } },
   { id: 'messages', label: 'Your messages', what: 'Today’s WhatsApp chats and mail, kept as sources (when you turn them on below).', when: { hour: 20, minute: 50 } },
   { id: 'activity', label: 'Your activity', what: 'Today’s GitHub, terminal, calendar, screen time and Codex and Gemini sessions, kept as sources (each one you turn on in Settings › Sources).', when: { hour: 20, minute: 55 } },
+  { id: 'people', label: 'People', what: 'Who you were in touch with, and what you promised them in messages you sent (added to your promises, never sent anywhere).', when: { hour: 20, minute: 57 } },
   { id: 'triage', label: 'Evening filing', what: 'Where each inbox note should go. Nothing moves until you apply it.', when: { hour: 21, minute: 0 } },
+  { id: 'projects', label: 'Projects', what: 'What moved in each project this week, and which have gone quiet.', when: { hour: 21, minute: 10 } },
   { id: 'daily', label: 'Daily signal', what: 'Five lines on your day.', when: { hour: 21, minute: 15 } },
   { id: 'weekly', label: 'Weekly signal', what: 'Patterns in your week, with counts.', when: { hour: 21, minute: 30, weekday: 0 } },
   { id: 'morning', label: 'Morning card', what: 'The one thing for today, why, and a draft.', when: { hour: 6, minute: 30 } },

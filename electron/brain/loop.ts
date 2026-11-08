@@ -1,7 +1,8 @@
 import { SOURCE_INFO, activityFact, activityNote, activityPath, type Activity, type SourceId } from '@shared/intake'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { DECISIONS, INBOX, LEDGERS, PROJECTS, SOURCES, dateOf, formatNote, noteTitle, parseNote } from '@shared/brain'
+import { DECISIONS, INBOX, LEDGERS, PEOPLE, PROJECTS, SOURCES, dateOf, formatNote, noteTitle, parseNote } from '@shared/brain'
+import { dueFrom, peopleNote, personFor, projectsNote, promiseIn, promiseLine } from '@shared/agents'
 import {
   JOBS,
   cardShowing,
@@ -28,6 +29,8 @@ const STATE = '_system/jobs/state.json'
 const TRIAGE = '_system/jobs/triage.json'
 const MORNING = '_system/jobs/morning.json'
 const SIGNALS = '06-brain/signals'
+export const ROSTER_PEOPLE = '06-brain/roster/people.md'
+export const ROSTER_PROJECTS = '06-brain/roster/projects.md'
 const DAY = 86_400_000
 
 export type LoopDeps = {
@@ -333,6 +336,72 @@ export class Loop {
       a.dropDays([...days.keys()].filter((d) => d < today))
       const t = days.get(today)
       return t ? `Today: ${activityFact([...t.values()].flat())}.` : 'Kept the days it hadn’t yet.'
+    },
+
+    people: async (v) => {
+      const m = this.d.messages?.()
+      if (!m?.on) return 'Off: turn on WhatsApp or mail under What it keeps.'
+      const people = v
+        .list(PEOPLE)
+        .filter((f) => f.path.endsWith('.md'))
+        .map((f) => noteTitle(f.path, parseNote(v.read(f.path) ?? '').body))
+      const msgs = m.all()
+      if (!msgs.length) return 'No messages to read yet.'
+      const date = dateOf(this.now())
+      // Who you were in touch with: the people notes their chats match.
+      const contacts = new Map<string, { person: string; last: number; source: string; count: number }>()
+      for (const x of msgs) {
+        const person = personFor(x.chat, people) ?? personFor(x.from, people)
+        if (!person) continue
+        const c = contacts.get(person) ?? { person, last: 0, source: x.source === 'mail' ? 'mail' : 'WhatsApp', count: 0 }
+        c.count++
+        if (x.at > c.last) c.last = x.at
+        contacts.set(person, c)
+      }
+      if (contacts.size) v.write(ROSTER_PEOPLE, peopleNote([...contacts.values()], date), `people you were in touch with, ${date}`)
+      // What you promised, in messages you wrote: added once each.
+      const ledger = v.read(`${LEDGERS}/promises.md`) ?? ''
+      let added = 0
+      for (const x of msgs.filter((y) => y.out)) {
+        const what = promiseIn(x.text)
+        if (!what || ledger.includes(what)) continue
+        const to = personFor(x.chat, people) ?? x.chat
+        v.append(`${LEDGERS}/promises.md`, promiseLine({ date: dateOf(x.at), what, to, due: dueFrom(x.text, x.at), source: x.source === 'mail' ? 'mail' : 'WhatsApp' }), `a promise to ${to}: “${what}”`)
+        added++
+      }
+      return `${contacts.size} ${contacts.size === 1 ? 'person' : 'people'} in touch; ${added} promise${added === 1 ? '' : 's'} added.`
+    },
+
+    projects: async (v) => {
+      const projects = this.projects(v)
+      if (!projects.length) return 'No projects in the brain yet.'
+      const now = this.now()
+      const weekAgo = now - 7 * DAY
+      const acts = this.d.activity?.()?.all() ?? []
+      const list = projects.map((p) => {
+        const key = p.name.toLowerCase()
+        const moved: string[] = []
+        let last: number | null = null
+        for (const a of acts) {
+          if (!a.project || !a.project.toLowerCase().split('/').includes(key)) continue
+          if (!last || a.at > last) last = a.at
+          if (a.at >= weekAgo && a.source !== 'shell' && a.source !== 'screen') moved.push(a.title)
+        }
+        // Commits kept by the evening's commits job.
+        for (const f of v.list(`${SOURCES}/git`)) {
+          const body = v.read(f.path) ?? ''
+          const sec = new RegExp(`## ${p.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\n\n((?:- .*\n?)+)`).exec(body)
+          if (!sec) continue
+          const d = Date.parse(f.path.replace(/^.*\/(\d{4}-\d{2}-\d{2})\.md$/, '$1T12:00:00'))
+          if (Number.isFinite(d) && (!last || d > last)) last = d
+          if (Number.isFinite(d) && d >= weekAgo) moved.push(...sec[1].trim().split('\n').map((l) => l.replace(/^- /, '')))
+        }
+        return { name: p.name, last, moved }
+      })
+      v.write(ROSTER_PROJECTS, projectsNote(list, now, dateOf(now)), `projects, ${dateOf(now)}`)
+      const quiet = list.filter((p) => !p.last || now - p.last >= 14 * DAY).length
+      const moving = list.filter((p) => p.last && now - p.last < 7 * DAY).length
+      return `${moving} moving, ${quiet} quiet.`
     },
 
     triage: async (v) => {

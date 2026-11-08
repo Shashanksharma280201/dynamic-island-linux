@@ -9,7 +9,7 @@ let items: CommandItem[] = []
 let sel = 0
 let seq = 0
 
-const GLYPHS: Record<string, string> = { file: '📄', note: '🧠', calc: '=', setting: '⚙', system: '◐', ask: '✦', app: '▢' }
+const GLYPHS: Record<string, string> = { file: '📄', note: '🧠', calc: '=', setting: '⚙', system: '◐', ask: '✦', app: '▢', agent: '✧' }
 
 function render(): void {
   list.innerHTML = ''

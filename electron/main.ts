@@ -118,7 +118,7 @@ import type { Dock, Side } from '@shared/dock'
 import { defaultSocketPath } from '@shared/protocol'
 import { toPhysicalRect, type Rect } from '@shared/hitbox'
 import { Brain } from './brain'
-import { Wiring } from './brain/wire'
+import { Wiring, openTerminal } from './brain/wire'
 import { claudeOnce } from './brain/writer'
 import { wireBrain } from './brainIpc'
 import { Wallpapers } from './wallpaper'
@@ -150,12 +150,16 @@ import { EMBED } from './embedChannels'
 import { EVENING, MORNING } from './morningChannels'
 import { Digest } from './digest'
 import { Engine, type Cloud } from './engine'
-import { wireOs, type OsRoutes } from './osCalls'
+import { OS, wireOs, type OsRoutes } from './osCalls'
+import { Agents } from './os/agents'
+import { Agency } from './os/agency'
+import { monitorLine, researchLine } from '../shared/agents'
+import type { JobId } from '../shared/loop'
 import { Intake } from './os/intake'
 import { SOURCE_IDS, eventLine, parseSourcesConfig, type SourceId, type SourcesView } from '../shared/intake'
 import { dateOf, SOURCES as SOURCES_DIR } from '../shared/brain'
 import { ENGINE_FEATURES, parseEngineConfig } from '../shared/engine'
-import type { EngineView, OsAnswer, TodayView } from '../shared/os'
+import type { AgentsView, EngineView, OsAnswer, TodayView } from '../shared/os'
 import { byHour, citedPrompt, fromActivity, messageEntries, pickSources, plainAnswer, readCites, timeRange, type Candidate, type TimelineEntry } from '../shared/memory'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
@@ -828,6 +832,110 @@ async function main() {
       return { ok: true, text: c.text, meta: r.meta, cites: c.cites }
     },
   } satisfies Partial<OsRoutes>)
+  // ---- Island OS agents: monitors, research over the brain, the roster, and The Agency ----
+  let osTell = (_title: string, _line: string): void => {}
+  const osChanged = (topic: string) => send(win, OS.CHANGED, topic)
+  const agents = new Agents({
+    file: join(app.getPath('userData'), 'os-agents.json'),
+    home: homedir(),
+    ask: (o) => engine.ask(o),
+    candidates: (q) => {
+      const now = Date.now()
+      const range = timeRange(q, now) ?? { from: now - 90 * DAY_MS, to: now + 1 }
+      return [
+        ...brain.recall(q, 12).map((h) => ({ title: h.title, kind: sourceKind(h.path), text: h.snippet, path: h.path, at: h.date ? Date.parse(h.date) || undefined : undefined, score: 1 })),
+        ...timelineBetween(range.from, range.to).map((e) => ({ title: e.title, kind: e.source, text: [e.detail, e.project].filter(Boolean).join(' · '), at: e.at, url: e.url, path: e.path })),
+      ]
+    },
+    writeNote: (path, text, why) => {
+      const v = brain.vault()
+      if (!v) return false
+      v.write(path, text, why)
+      return true
+    },
+    texts: () => [
+      ...brain.keptMessages().map((m) => ({ at: m.at, text: `${m.chat} ${m.text}`, from: m.from || m.chat })),
+      ...intake.all().map((a) => ({ at: a.at, text: `${a.title} ${a.detail ?? ''}`, from: a.source })),
+      ...center.view().entries.map((e) => ({ at: e.at, text: `${e.title} ${e.body ?? ''}`, from: e.app })),
+    ],
+    defaultRepo: () => [...intake.all()].reverse().find((a) => a.source === 'github' && a.project)?.project ?? '',
+    tell: (title, line) => osTell(title, line),
+    onChange: () => osChanged('agents'),
+  })
+  agents.start()
+  const claudeAgentsDir = () => join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), '.claude'), 'agents')
+  const agency = new Agency({
+    dir: join(app.getPath('userData'), 'agency'),
+    claudeAgents: claudeAgentsDir,
+    openTerminal: (cwd, argv) => openTerminal(cwd, argv, (name) => findExecutable(name, ['/usr/bin', '/usr/local/bin'])),
+    claudeBinary: findClaude,
+    home: homedir(),
+    onChange: () => osChanged('agents'),
+  })
+  const ROSTER = ['people', 'triage', 'projects'] as const
+  const agentsView = (): AgentsView => {
+    const now = Date.now()
+    const jobs = brain.jobs()?.view().jobs ?? []
+    return {
+      monitors: agents.monitors().map((m) => ({ ...m, line: monitorLine(m, now) })),
+      research: agents.research().map((j) => ({ ...j, line: researchLine(j) })),
+      roster: ROSTER.flatMap((id) => {
+        const j = jobs.find((x) => x.id === id)
+        return j ? [{ id, label: id === 'triage' ? 'Inbox' : j.label, what: j.what, note: j.note, ok: j.ok, lastRun: j.lastRun }] : []
+      }),
+      brain: config.brain.on && !!brain.vault(),
+      week: engine.week(),
+      agency: agency.view(),
+    }
+  }
+  Object.assign(osRoutes, {
+    'agents.view': () => agentsView(),
+    'agents.monitor': (text: string) => {
+      agents.addMonitor(text)
+      return agentsView()
+    },
+    'agents.check': async () => {
+      await agents.checkAll()
+      return agentsView()
+    },
+    'agents.unmonitor': (id: string) => {
+      agents.removeMonitor(id)
+      return agentsView()
+    },
+    'agents.research': (q: string, consent?: boolean) => {
+      agents.startResearch(q, consent === true)
+      return agentsView()
+    },
+    'agents.forget': (id: string) => {
+      agents.removeResearch(id)
+      return agentsView()
+    },
+    'agents.run': async (id: string) => {
+      if (!(ROSTER as readonly string[]).includes(id)) throw new Error('There’s no such job.')
+      const loop = brain.jobs()
+      if (!loop) throw new Error('Turn on the second brain first (Settings › Second brain).')
+      await loop.run(id as JobId)
+      return agentsView()
+    },
+    'agency.view': () => agency.view(),
+    'agency.get': () => agency.download(),
+    'agency.search': (q: string, division?: string) => agency.search(q, division ?? ''),
+    'agency.agent': (id: string) => agency.agent(id),
+    'agency.start': (id: string, where: string) => {
+      if (where !== 'claude' && where !== 'terminal') throw new Error('Start it in Claude or a terminal.')
+      const r = agency.start(id, where)
+      if (r.draft) send(win, CLAUDE.OPEN, { draft: r.draft })
+      return r
+    },
+    'agency.install': (id: string) => {
+      agency.install(id)
+      return agency.view()
+    },
+    'agency.uninstall': (slug: string) => {
+      agency.uninstall(slug)
+      return agency.view()
+    },
+  } satisfies Partial<OsRoutes>)
   // The loop's jobs catch up when the computer wakes or you unlock it.
   powerMonitor.on('resume', () => void brain.jobs()?.tick())
   powerMonitor.on('unlock-screen', () => void brain.jobs()?.tick())
@@ -1247,6 +1355,15 @@ async function main() {
   const commandBar = new CommandBar({
     home: homeDir(),
     notes: (q) => brain.quickSearch(q),
+    agents: (q) => agency.search(q),
+    startAgent: (id) => {
+      try {
+        const r = agency.start(id, 'claude')
+        if (r.draft) send(win, CLAUDE.OPEN, { draft: r.draft })
+      } catch (e) {
+        osTell('The Agency', (e as Error).message)
+      }
+    },
     openNote: (p) => brain.open(p),
     openFile: (p) => void shell.openPath(p),
     openSettings: (s) => settings?.open(s),
@@ -1431,6 +1548,8 @@ async function main() {
   const invoker = new GtkActionInvoker()
   transient.onDismiss((id) => invokes.delete(id))
   let notifSeq = 0
+  // Island OS's agents tell you through the island, like any notification.
+  osTell = (title, line) => showNotification({ app: 'Island OS', summary: title, body: line, urgency: 'normal' })
   const showNotification = (n: NotificationData, invoke?: GtkInvoke) => {
     // Unique across restarts: the notification center keeps them.
     const id = `notif-${Date.now().toString(36)}-${notifSeq++}`

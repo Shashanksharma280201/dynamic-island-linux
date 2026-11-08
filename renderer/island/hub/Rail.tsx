@@ -7,6 +7,7 @@ import { currentWindow, type ClaudeUsage, type UsageWindow } from '@shared/claud
 import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
 import {
+  AgentsAppIcon,
   ClaudeAppIcon,
   ControlsAppIcon,
   NotificationsAppIcon,
@@ -26,6 +27,7 @@ import {
 const ITEMS: { id: HubTab; label: string; icon: ReactNode }[] = [
   { id: 'controls', label: 'Controls', icon: <ControlsAppIcon /> },
   { id: 'today', label: 'Today', icon: <TodayAppIcon /> },
+  { id: 'agents', label: 'Agents', icon: <AgentsAppIcon /> },
   { id: 'alerts', label: 'Notifications', icon: <NotificationsAppIcon /> },
   { id: 'claude', label: 'Claude', icon: <ClaudeAppIcon /> },
   { id: 'sessions', label: 'Sessions', icon: <SessionsAppIcon /> },

@@ -3,7 +3,7 @@
  * setting, work something out, change the system, or ask. The pure parts.
  */
 
-export type CommandKind = 'app' | 'file' | 'note' | 'calc' | 'setting' | 'system' | 'ask'
+export type CommandKind = 'app' | 'file' | 'note' | 'calc' | 'setting' | 'system' | 'ask' | 'agent'
 
 export type CommandItem = {
   id: string

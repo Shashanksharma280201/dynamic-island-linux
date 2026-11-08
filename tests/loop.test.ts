@@ -20,7 +20,7 @@ test('when jobs come round, and missed ones', () => {
   expect(nextDue(sunday, at(10, 9))).toBe(at(15, 21, 30))
   expect(isDue(daily, at(7, 21, 5), at(8, 22))).toBe(true) // slept through it: catch up
   expect(isDue(daily, at(8, 21, 5), at(8, 22))).toBe(false)
-  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'messages', 'activity', 'triage', 'daily', 'weekly', 'morning'])
+  expect(JOBS.map((j) => j.id)).toEqual(['commits', 'messages', 'activity', 'people', 'triage', 'projects', 'daily', 'weekly', 'morning'])
 })
 
 test('the evening filing: where each inbox note goes', () => {
@@ -164,4 +164,44 @@ test('Loop: your activity is kept as one note per source and day, and the mornin
   const off = new Loop({ vault: () => v, writer: () => null, git: async () => '', brief: () => '', onCard: () => {}, onChange: () => {}, activity: () => ({ on: false, all: () => [], dropDays: () => {}, today: () => [] }), now: () => now })
   await off.run('activity')
   expect(off.view().jobs.find((j) => j.id === 'activity')?.note).toMatch(/Off: turn on a source/)
+})
+
+test('Loop: People finds who you were in touch with and what you promised; Projects says what moved', async () => {
+  const { v } = vaultWith()
+  const now = at(8, 21)
+  v.write('07-world-model/people/asha-rao.md', formatNote({ type: 'person' }, '# Asha Rao\n\nRuns Globex.\n'), 'test')
+  v.write('07-world-model/ledgers/promises.md', '# Promises\n\n', 'test')
+  mkdirSync(join(v.root, '02-projects/island'), { recursive: true })
+  v.write('02-projects/island/island.md', formatNote({ type: 'project' }, '# island\n'), 'test')
+  mkdirSync(join(v.root, '02-projects/robot-arm'), { recursive: true })
+  v.write('02-projects/robot-arm/robot-arm.md', formatNote({ type: 'project' }, '# robot-arm\n'), 'test')
+  v.write('09-sources/git/2026-11-06.md', formatNote({ type: 'commits', date: '2026-11-06', source: 'git' }, '# Commits on 2026-11-06\n\n## island\n\n- Today panel\n- Agents panel\n'), 'test')
+  const msgs = [
+    { at: at(8, 13), source: 'whatsapp' as const, thread: 'a', chat: 'Asha Rao', from: 'Asha Rao', text: 'Can you send the deck?' },
+    { at: at(8, 13, 5), source: 'whatsapp' as const, thread: 'a', chat: 'Asha Rao', from: 'me', text: 'Sure, I’ll send the deck by Friday.', out: true },
+    { at: at(8, 14), source: 'whatsapp' as const, thread: 'b', chat: 'Stranger', from: 'Stranger', text: 'hi' },
+  ]
+  const loop = new Loop({
+    vault: () => v,
+    writer: () => null,
+    git: async () => '',
+    brief: () => '',
+    onCard: () => {},
+    onChange: () => {},
+    messages: () => ({ on: true, all: () => msgs, dropDays: () => {} }),
+    activity: () => ({ on: true, all: () => [{ at: at(8, 9), source: 'github' as const, kind: 'pr', title: 'Merged #42 The engine', project: 'me/island' }], dropDays: () => {}, today: () => [] }),
+    now: () => now,
+  })
+  await loop.run('people')
+  expect(loop.view().jobs.find((j) => j.id === 'people')).toMatchObject({ ok: true, note: '1 person in touch; 1 promise added.' })
+  expect(v.read('06-brain/roster/people.md')).toContain('- [[Asha Rao]]: 2026-11-08 (WhatsApp, 2 messages)')
+  expect(v.read('07-world-model/ledgers/promises.md')).toContain('- [ ] 2026-11-08 · send the deck by Friday · to [[Asha Rao]] · due 2026-11-13 · (WhatsApp)')
+  // Run again: the promise isn't added twice.
+  await loop.run('people')
+  expect(v.read('07-world-model/ledgers/promises.md')!.split('send the deck by Friday').length).toBe(2)
+  await loop.run('projects')
+  expect(loop.view().jobs.find((j) => j.id === 'projects')).toMatchObject({ ok: true, note: '1 moving, 1 quiet.' })
+  const note = v.read('06-brain/roster/projects.md')!
+  expect(note).toContain('- [[island]] (last 2026-11-08): Merged #42 The engine; Today panel; Agents panel')
+  expect(note).toContain('## Quiet for two weeks or more\n\n- [[robot-arm]] (nothing yet)')
 })

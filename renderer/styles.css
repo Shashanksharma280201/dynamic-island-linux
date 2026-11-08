@@ -6350,3 +6350,288 @@ button .spinner-orb,
   gap: 6px;
   font-size: 12.5px;
 }
+
+/* ---------------------------------------------------------------------------
+   Agents: coding agents, research, monitors, the roster, The Agency
+   --------------------------------------------------------------------------- */
+.card.panel.hub.agents {
+  height: clamp(440px, calc(100vh - 200px), 640px);
+}
+.agents {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.agents-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--label-2);
+}
+.agents-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agents-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--label-2);
+  padding: 2px 4px 0;
+}
+.agents-error,
+.agent-sub.warn {
+  color: var(--red-text);
+}
+.agents-error {
+  font-size: 12px;
+  padding: 2px 4px;
+}
+.agents-input input,
+.agency-search {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  outline: 0;
+  border-radius: 12px;
+  background: var(--well-2);
+  box-shadow: inset 0 0 0 0.5px var(--fill-2);
+  color: var(--label);
+  font: inherit;
+  font-size: 12.5px;
+}
+.agents-input input:focus,
+.agency-search:focus {
+  box-shadow: inset 0 0 0 1.5px var(--blue);
+}
+.agent-row,
+.agency-row,
+.agents-agency {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: var(--well-2);
+  box-shadow: inset 0 0 0 0.5px var(--fill-2);
+  text-align: left;
+  color: var(--label);
+  font: inherit;
+  border: 0;
+}
+.agency-row,
+.agents-agency {
+  cursor: pointer;
+  width: 100%;
+}
+.agency-row:hover,
+.agents-agency:hover {
+  background: var(--fill-2);
+}
+.agent-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.agent-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.agent-sub {
+  font-size: 11.5px;
+  color: var(--label-2);
+}
+.agent-state {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--fill-2);
+  color: var(--label-2);
+  white-space: nowrap;
+}
+.agent-state.run {
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green-text);
+}
+.agent-state.wait {
+  background: color-mix(in srgb, #ff9f0a 22%, transparent);
+  color: #ff9f0a;
+}
+.agent-when {
+  flex: none;
+  font-size: 11px;
+  color: var(--label-2);
+}
+.agent-x {
+  flex: none;
+  border: 0;
+  background: none;
+  color: var(--label-2);
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+.agent-meter {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--fill-2);
+  overflow: hidden;
+  margin-top: 4px;
+}
+.agent-meter i {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  transition: width 0.4s ease;
+}
+.agents-agency-glyph {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(135deg, #ff375f, #bf5af2 55%, #5e5ce6);
+  flex: none;
+}
+.agents-chev {
+  font-size: 20px;
+  color: var(--label-2);
+}
+.agents-week {
+  font-size: 11.5px;
+  color: var(--label-2);
+  padding: 2px 4px 6px;
+  font-variant-numeric: tabular-nums;
+}
+.agency-back {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 0 2px;
+  cursor: pointer;
+}
+.agency-get {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--label-2);
+}
+.agency-get p {
+  margin: 0;
+}
+.agency-divisions {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex: none;
+  padding-bottom: 2px;
+}
+.agency-divisions button {
+  flex: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: var(--fill-2);
+  color: var(--label-2);
+  cursor: pointer;
+}
+.agency-divisions button.on {
+  background: var(--div, var(--blue));
+  color: #fff;
+}
+.agency-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.agency-emoji {
+  font-size: 26px;
+  line-height: 1;
+  flex: none;
+}
+.agency-emoji.small {
+  font-size: 18px;
+  width: 26px;
+  text-align: center;
+}
+.agency-tick {
+  color: var(--green-text);
+  font-weight: 500;
+  font-size: 11px;
+}
+.agency-hero {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.agency-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.agency-vibe {
+  font-size: 12px;
+  color: var(--label-2);
+  margin-top: 2px;
+}
+.agency-desc {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.agency-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.agency-note {
+  font-size: 12px;
+  color: var(--label-2);
+}
+.agency-body {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--well-2);
+  font: 11px/1.5 ui-monospace, 'SF Mono', Menlo, monospace;
+  white-space: pre-wrap;
+  color: var(--label-2);
+  max-height: 220px;
+  overflow: auto;
+}
+.agency-credit {
+  font-size: 11px;
+  color: var(--label-2);
+  text-decoration: none;
+  padding: 0 4px 6px;
+}
+.agency-credit:hover {
+  text-decoration: underline;
+}
+.agents-input input,
+.agency-search {
+  box-sizing: border-box;
+}

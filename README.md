@@ -114,7 +114,9 @@ Bug reports, ideas and pull requests are welcome: see
 the Inter typeface (SIL Open Font License), [thinking-orbs](https://libraries.dev/orbs)
 by Jakub Antalik (MIT), the isometric kit from [Anatomy](https://github.com/wheresryan22/anatomy)
 by Ryan (MIT; `mobile/src/iso/`), and the libraries in `package.json` (MIT,
-Apache-2.0 and BSD).
+Apache-2.0 and BSD). [The Agency](https://github.com/msitarzewski/agency-agents)
+by AgentLand Contributors (MIT) isn't bundled: the island downloads it when you
+ask, and credits it where its agents appear.
 
 Dynamic Island is an independent project, not made by or affiliated with
 Apple. "Dynamic Island" names the iPhone feature that inspired it.

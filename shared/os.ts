@@ -6,6 +6,8 @@
 import type { AnswerMeta, EngineConfig, LocalModel } from './engine'
 import type { SourcesView } from './intake'
 import type { TimelineHour } from './memory'
+import type { Monitor, ResearchJob } from './agents'
+import type { AgencyAgent, AgencyView } from './agency'
 
 export type EngineView = {
   cfg: EngineConfig
@@ -33,6 +35,21 @@ export type TodayView = {
   any: boolean
 }
 
+/** The Agents panel: monitors, research, the roster that tends the brain, the week, and The Agency. */
+export type AgentsView = {
+  monitors: (Monitor & { line: string })[]
+  research: (ResearchJob & { line: string })[]
+  /** People, the evening filing (Inbox) and Projects: the brain's loop jobs that tend it. */
+  roster: { id: string; label: string; what: string; note: string; ok: boolean | null; lastRun: number }[]
+  /** The brain is on (the roster and research notes need it). */
+  brain: boolean
+  week: { local: number; cloud: number; cost: number; unknown: number }
+  agency: AgencyView
+}
+
+/** One of The Agency's agents, opened. */
+export type AgencyDetail = AgencyAgent & { body: string; installed: boolean }
+
 /** An answer as the island shows it, or why there isn't one. */
 export type OsAnswer = { ok: true; text: string; meta: AnswerMeta; cites?: OsCite[] } | { ok: false; needsConsent: string } | { ok: false; error: string }
 
@@ -49,6 +66,20 @@ export const OS_CALLS = {
   'sources.check': ['s'],
   'today.view': [],
   'today.ask': ['s', 'o?'],
+  'agents.view': [],
+  'agents.monitor': ['s'],
+  'agents.unmonitor': ['s'],
+  'agents.check': [],
+  'agents.research': ['s', 'b?'],
+  'agents.forget': ['s'],
+  'agents.run': ['s'],
+  'agency.view': [],
+  'agency.get': [],
+  'agency.search': ['s', 's?'],
+  'agency.agent': ['s'],
+  'agency.start': ['s', 's'],
+  'agency.install': ['s'],
+  'agency.uninstall': ['s'],
 } as const satisfies Record<string, readonly string[]>
 
 export type OsCall = keyof typeof OS_CALLS

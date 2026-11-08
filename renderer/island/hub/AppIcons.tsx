@@ -70,6 +70,17 @@ export const TodayAppIcon = () => (
   </Tile>
 )
 
+/** Agents: three small figures at work, one ahead. */
+export const AgentsAppIcon = () => (
+  <Tile from="#bf5af2" to="#5e5ce6">
+    <circle cx="14" cy="9.2" r="2.6" fill="#fff" />
+    <path d="M9.6 17.6c.6-2.6 2.3-3.9 4.4-3.9s3.8 1.3 4.4 3.9" fill="#fff" />
+    <circle cx="7.6" cy="13" r="1.9" fill="#fff" opacity="0.75" />
+    <circle cx="20.4" cy="13" r="1.9" fill="#fff" opacity="0.75" />
+    <path d="M4.8 19.4c.4-1.9 1.5-2.8 2.8-2.8M23.2 19.4c-.4-1.9-1.5-2.8-2.8-2.8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" opacity="0.75" fill="none" />
+  </Tile>
+)
+
 export const SessionsAppIcon = () => (
   <Tile from="#3a3a3c" to="#1c1c1e">
     <path d="m8 10 4 4-4 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />

@@ -113,7 +113,7 @@ export function timeRange(q: string, now: number): { from: number; to: number; l
 /** A source an answer may use: its words and where it came from. */
 export type Candidate = { title: string; kind: string; text: string; at?: number; path?: string; url?: string; score?: number }
 
-const STOP = new Set(['what', 'did', 'do', 'i', 'my', 'me', 'the', 'a', 'an', 'on', 'in', 'of', 'to', 'and', 'or', 'with', 'about', 'for', 'was', 'is', 'are', 'last', 'this', 'week', 'today', 'yesterday', 'when', 'who', 'how', 'which', 'have', 'has', 'we', 'it', 'at', 'from', 'that', 'ship', 'shipped'])
+const STOP = new Set(['what', 'did', 'do', 'i', 'my', 'me', 'the', 'a', 'an', 'on', 'in', 'of', 'to', 'and', 'or', 'with', 'about', 'for', 'was', 'is', 'are', 'last', 'this', 'week', 'today', 'yesterday', 'when', 'who', 'how', 'which', 'have', 'has', 'we', 'it', 'at', 'from', 'that'])
 
 /** The words that matter in a question. Pure. */
 export function terms(q: string): string[] {

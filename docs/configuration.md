@@ -22,6 +22,7 @@ Environment variables (set them before starting the app):
 | `DI_SOFFICE` | LibreOffice command for conversions (found automatically; empty to not use it) |
 | `DI_GH` | The `gh` command for Settings → Sources → GitHub (the tests use a stand-in) |
 | `DI_HISTFILE` | Your bash history file, when it isn't `~/.bash_history` |
+| `DI_AGENCY_URL` | Where The Agency is downloaded from (a .tar.gz address or a folder; the tests use a stand-in) |
 | `DI_OLLAMA_URL` | Ollama's address for Settings → Model, instead of the one saved there (the tests use a stand-in) |
 
 Settings are saved in `~/.config/dynamic-island-linux/config.json`. Notes are
