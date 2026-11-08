@@ -1,3 +1,4 @@
+import type { MeaningView } from './meaning'
 import type { LoopView } from './loop'
 /**
  * The second brain: a folder of plain Markdown you own (the Living Brain
@@ -52,13 +53,15 @@ export type BrainConfig = {
   skip: string[]
   /** The brain's MCP server port on 127.0.0.1 (stays the same, so other tools can find it). */
   port: number
+  /** Search by meaning too (a small model on this computer). */
+  meaning: boolean
   /** When the brain was made (ms): sessions before it are mined, not filed one by one. */
   since: number
 }
 
 export const BRAIN_PORT = 47823
 
-export const BRAIN_DEFAULTS: BrainConfig = { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: BRAIN_PORT, since: 0 }
+export const BRAIN_DEFAULTS: BrainConfig = { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: BRAIN_PORT, since: 0, meaning: false }
 
 /** Validate the brain section of the config. Pure. */
 export function parseBrainConfig(raw: any): BrainConfig {
@@ -68,6 +71,7 @@ export function parseBrainConfig(raw: any): BrainConfig {
   if (typeof raw.vault === 'string' && (raw.vault === '' || raw.vault.startsWith('/'))) c.vault = raw.vault
   if (typeof raw.captureSessions === 'boolean') c.captureSessions = raw.captureSessions
   if (raw.distil === 'ai' || raw.distil === 'plain') c.distil = raw.distil
+  if (typeof raw.meaning === 'boolean') c.meaning = raw.meaning
   if (Array.isArray(raw.skip)) c.skip = raw.skip.filter((s: unknown): s is string => typeof s === 'string' && s.startsWith('/')).slice(0, 50)
   const port = Number(raw.port)
   if (Number.isInteger(port) && port >= 1024 && port <= 65535) c.port = port
@@ -104,6 +108,8 @@ export type BrainView = {
   obsidian: boolean
   /** The loop's jobs, the evening filing and the morning card (when on). */
   loop: LoopView | null
+  /** Search by meaning: the model, and how many notes it has read. */
+  meaning: MeaningView
 }
 
 export type InboxItem = {

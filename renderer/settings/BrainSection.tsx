@@ -98,6 +98,22 @@ export function BrainSection({ s }: { s: SettingsState }) {
           onChange={(v) => run(() => window.settings.brain.set({ distil: v }))}
         />
       </div>
+      <Toggle
+        label="Search by meaning"
+        hint={
+          !b.meaning.on
+            ? `Find notes that say it in other words, not only the same words: a small model reads your notes on this computer (${b.meaning.sizeMb} MB, downloaded once from Hugging Face). Private notes are never read.`
+            : b.meaning.error
+              ? b.meaning.error
+              : b.meaning.downloading
+                ? `Downloading the model (${Math.round(b.meaning.progress * 100)}%)…`
+                : b.meaning.ready
+                  ? `On: ${b.meaning.notes} note${b.meaning.notes === 1 ? '' : 's'} read so far. Every AI’s brain search uses it.`
+                  : 'Getting the model…'
+        }
+        on={b.meaning.on}
+        onChange={(v) => run(() => window.settings.brain.set({ meaning: v }))}
+      />
       <div className="brain-list-row">
         <div className="toggle-row">
           <div>

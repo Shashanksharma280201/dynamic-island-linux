@@ -132,6 +132,9 @@ import { Pointer } from './buddy/pointer'
 import { captureScreen } from './buddy/screen'
 import { KOKORO_MB, KokoroFiles, SystemVoice, readingMs, testVoice } from './buddy/speech'
 import { espeakProgram, phonemize } from './buddy/phonemes'
+import { EMBED_FILES, EMBED_MB, EMBED_MODEL, hashEmbed } from '../shared/meaning'
+import { ModelFiles } from './modelFiles'
+import { EMBED } from './embedChannels'
 import { MORNING } from './morningChannels'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
@@ -510,6 +513,39 @@ async function main() {
   // Session notes are written by your island AI, or by Claude Code (Haiku)
   // when that is the island's AI; without either they are plain.
   const writerDir = join(app.getPath('userData'), 'brain-writer')
+  // ---- search by meaning: a small model in the island's page reads the notes ----
+  const embedModel = new ModelFiles(join(app.getPath('userData'), 'models'), EMBED_MODEL, EMBED_FILES, EMBED_MB, () => settings?.changed(), process.env.DI_STT_BASE_URL || undefined)
+  const embedWaiting = new Map<number, { resolve: (v: Float32Array[]) => void; reject: (e: Error) => void }>()
+  let embedSeq = 0
+  ipcMain.on(EMBED.DONE, (e, r) => {
+    if (e.sender !== win.webContents || typeof r?.id !== 'number') return
+    const w = embedWaiting.get(r.id)
+    embedWaiting.delete(r.id)
+    if (!w) return
+    if (Array.isArray(r.vectors)) w.resolve(r.vectors.map((v: ArrayLike<number>) => Float32Array.from(v)))
+    else w.reject(new Error(typeof r.error === 'string' ? r.error : 'The meaning model failed.'))
+  })
+  const islandEmbed = (texts: string[]) =>
+    new Promise<Float32Array[]>((resolve, reject) => {
+      const id = ++embedSeq
+      const timer = setTimeout(() => {
+        embedWaiting.delete(id)
+        reject(new Error('The meaning model took too long.'))
+      }, 60_000)
+      embedWaiting.set(id, {
+        resolve: (v) => {
+          clearTimeout(timer)
+          resolve(v)
+        },
+        reject: (e) => {
+          clearTimeout(timer)
+          reject(e)
+        },
+      })
+      send(win, EMBED.ASK, { id, texts })
+    })
+  // Tests: words hashed into vectors stand in for the model (DI_EMBED_FAKE).
+  const embedder = () => (process.env.DI_EMBED_FAKE ? async (texts: string[]) => texts.map(hashEmbed) : embedModel.ready() ? islandEmbed : null)
   const SESSION_SUMMARY = 'a Claude Code session’s summary, to write its five-line note'
   const brainWriter = () => {
     // Paused (Settings › Privacy): notes are written without an AI.
@@ -566,6 +602,12 @@ async function main() {
     onChange: () => settings?.changed(),
     ownFolders: [writerDir],
     onCard: (c) => send(win, MORNING.CARD, c),
+    embed: embedder,
+    meaningModel: () => ({ ready: !!process.env.DI_EMBED_FAKE || embedModel.ready(), downloading: embedModel.downloading(), progress: embedModel.progress, error: embedModel.error, sizeMb: EMBED_MB }),
+    onMeaning: () => {
+      if (process.env.DI_EMBED_FAKE || embedModel.ready()) return void brain.readForMeaning()
+      void embedModel.ensure().then(() => brain.readForMeaning()).catch(() => {})
+    },
   })
   // The loop's jobs catch up when the computer wakes or you unlock it.
   powerMonitor.on('resume', () => void brain.jobs()?.tick())

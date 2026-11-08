@@ -42,6 +42,7 @@ import { DictationPill } from './voice/DictationPill'
 import { useBuddy } from './buddy/useBuddy'
 import { BuddyPill, buddyShown } from './buddy/BuddyPill'
 import { MorningCard, useMorning } from './states/MorningCard'
+import { useEmbedder } from './brain/useEmbedder'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
 
@@ -208,6 +209,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const buddy = useBuddy(claude)
   // The morning card: the one thing for today, from the brain's loop.
   const morning = useMorning()
+  // Search by meaning: the brain's notes as vectors, made here.
+  useEmbedder()
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {

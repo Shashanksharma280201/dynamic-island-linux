@@ -105,6 +105,8 @@ function runHook(cmd, input) {
     DYNAMIC_ISLAND_SOCK: path.join(TMP, 'island.sock'),
     DI_USER_DATA: USER_DATA,
     DI_NO_GREETING: '1',
+    // Search by meaning: words hashed into vectors stand in for the model.
+    DI_EMBED_FAKE: '1',
   }
   const app = await _electron.launch({ executablePath: ELECTRON, args: [ROOT, '--no-sandbox'], cwd: ROOT, env })
   const logs = []
@@ -157,6 +159,14 @@ function runHook(cmd, input) {
     const restricted = await rpc(4, 'tools/call', { name: 'read', arguments: { path: '08-restricted/README.md' } })
     check('Restricted stays private over MCP', /private/.test(restricted.result?.content?.[0]?.text ?? ''))
     check('the capture shows in Settings’ inbox', await seen(settings, '#brain .brain-item:has-text("Uses ROS 2 Humble")'))
+
+    // ---- search by meaning ----
+    await settings.click('#brain .toggle-row:has-text("Search by meaning") input.switch')
+    check('search by meaning reads the notes', await seen(settings, '#brain .toggle-row:has-text("Search by meaning") .hint:has-text("notes read so far")', 10000))
+    const vectors = await until(() => JSON.parse(read(path.join(VAULT, '_system/index/meaning.json')) || 'null'), 8000)
+    check('their vectors are kept in the index folder, never the private ones', !!vectors && vectors.notes.length > 3 && !vectors.notes.some((n) => n.path.startsWith('08-restricted')), String(vectors?.notes?.length))
+    const found = await rpc(5, 'tools/call', { name: 'search', arguments: { query: 'Humble Ubuntu' } })
+    check('search finds by words and meaning together', /uses-ros-2-humble/.test(found.result?.content?.[0]?.text ?? ''), (found.result?.content?.[0]?.text ?? '').slice(0, 120))
 
     // ---- a session ends, and the next one starts with it ----
     const id = 'e2e-1111-2222'

@@ -1,3 +1,5 @@
+import { MeaningIndex, type Embedder } from './meaning'
+import type { MeaningView } from '@shared/meaning'
 import { Loop } from './loop'
 import { runGit } from './mine'
 import type { MorningCard } from '@shared/loop'
@@ -51,6 +53,11 @@ export type BrainDeps = {
   writer: () => { label: string; ask: (prompt: string, purpose?: string) => Promise<string> } | null
   /** The morning card changed (the island shows it). */
   onCard?: (c: MorningCard | null) => void
+  /** The model for search by meaning, when it's on and ready; and how it's doing. */
+  embed?: () => Embedder | null
+  meaningModel?: () => Omit<MeaningView, 'on' | 'notes'>
+  /** Search by meaning was turned on: fetch the model if it isn't here. */
+  onMeaning?: () => void
   findExecutable: (name: string) => string | null
   openPath: (path: string) => void
   openUrl: (url: string) => void
@@ -73,6 +80,7 @@ export class Brain {
   private index: BrainIndex | null = null
   private capture: SessionCapture | null = null
   private loop: Loop | null = null
+  private meaningIdx: MeaningIndex | null = null
   private mcp: IslandMcp | null = null
   private watchers: FSWatcher[] = []
   private timers: NodeJS.Timeout[] = []
@@ -170,7 +178,23 @@ export class Brain {
       now: this.d.now,
     })
     this.loop.start()
+    // Search by meaning: read new and changed notes a few at a time.
+    this.meaningIdx = new MeaningIndex(vault.abs('_system/index/meaning'))
+    every(2 * 60_000, () => void this.readForMeaning())
+    setTimeout(() => void this.readForMeaning(), 15_000).unref?.()
     this.d.onChange()
+  }
+
+  /** Bring the meaning index up to date (when it's on and the model is ready). */
+  async readForMeaning(max = 64): Promise<number> {
+    const embed = this.d.config().meaning ? this.d.embed?.() : null
+    if (!embed || !this.index || !this.meaningIdx) return 0
+    const n = await this.meaningIdx.update(this.index.entries(), embed, max).catch((e) => {
+      console.error('[brain] meaning:', (e as Error).message)
+      return 0
+    })
+    if (n) this.changedSoon()
+    return n
   }
 
   /** The loop, when the brain is on. */
@@ -187,6 +211,7 @@ export class Brain {
     this.mcp = null
     this.loop?.stop()
     this.loop = null
+    this.meaningIdx = null
     this.capture = null
     this.index = null
     void this.vaultObj?.flush()
@@ -298,7 +323,18 @@ export class Brain {
   tools(source = 'island'): AgentTool[] {
     const vault = this.vault()
     if (!vault || !this.index || !this.running()) return []
-    return brainTools({ vault, index: this.index, brief: () => this.brief(), source, now: this.d.now })
+    const meaning = this.meaningIdx
+    return brainTools({
+      vault,
+      index: this.index,
+      brief: () => this.brief(),
+      source,
+      now: this.d.now,
+      meaning: async (q, under) => {
+        const embed = this.d.config().meaning ? this.d.embed?.() : null
+        return embed && meaning ? meaning.query(q, embed, 30, under) : []
+      },
+    })
   }
 
   // ---------------------------------------------------------------- view ----
@@ -325,6 +361,11 @@ export class Brain {
       busy: this.busy,
       obsidian: !!this.obsidian(),
       loop: this.loop?.view() ?? null,
+      meaning: {
+        on: this.d.config().meaning,
+        notes: this.meaningIdx?.size() ?? 0,
+        ...(this.d.meaningModel?.() ?? { ready: false, downloading: false, progress: 0, error: null, sizeMb: 23 }),
+      },
     }
     if (!vault) return view
     view.notes = vault.list().length
@@ -382,12 +423,15 @@ export class Brain {
     this.d.onChange()
   }
 
-  setOptions(patch: Partial<Pick<BrainConfig, 'captureSessions' | 'distil' | 'skip'>>): void {
+  setOptions(patch: Partial<Pick<BrainConfig, 'captureSessions' | 'distil' | 'skip' | 'meaning'>>): void {
     const next: Partial<BrainConfig> = {}
     if (typeof patch.captureSessions === 'boolean') next.captureSessions = patch.captureSessions
     if (patch.distil === 'ai' || patch.distil === 'plain') next.distil = patch.distil
     if (Array.isArray(patch.skip)) next.skip = [...new Set(patch.skip.filter((s) => typeof s === 'string' && s.startsWith('/')))].slice(0, 50)
+    if (typeof patch.meaning === 'boolean') next.meaning = patch.meaning
     this.d.setConfig(next)
+    // On: the model downloads (once), then the notes are read.
+    if (next.meaning) this.d.onMeaning?.()
     this.d.onChange()
   }
 

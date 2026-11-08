@@ -1,3 +1,4 @@
+import { fuse } from '@shared/meaning'
 import { DECISIONS, INBOX, LEDGERS, dateOf, formatNote, parseNote, safeVaultPath, slugify, sourceName, type Frontmatter } from '@shared/brain'
 import { schema, str, strList, type AgentTool } from '../agent/tools'
 import type { BrainIndex } from './search'
@@ -11,6 +12,8 @@ export type BrainToolDeps = {
   /** Who is writing, for each note's `source` (e.g. "claude-code", "island"). */
   source: string
   now?: () => number
+  /** Notes close in meaning to the words, when search by meaning is on. */
+  meaning?: (query: string, under?: string) => Promise<{ path: string; score: number }[]>
 }
 
 const MAX_READ = 30_000
@@ -60,7 +63,17 @@ export function brainTools(d: BrainToolDeps): AgentTool[] {
           const ok = safeVaultPath(folder)
           if ('error' in ok) return ok.error
         }
-        const hits = d.index.search(str(i.query), { limit: typeof i.limit === 'number' ? i.limit : 8, under: folder || undefined })
+        const limit = Math.min(typeof i.limit === 'number' ? i.limit : 8, 30)
+        let hits = d.index.search(str(i.query), { limit: d.meaning ? 30 : limit, under: folder || undefined })
+        // By meaning too: notes that say it in other words. The two lists are fused.
+        const near = d.meaning ? await d.meaning(str(i.query), folder || undefined).catch(() => []) : []
+        if (near.length) {
+          const byPath = new Map(hits.map((h) => [h.path, h]))
+          hits = fuse([hits.map((h) => h.path), near.filter((n) => n.score > 0.2).map((n) => n.path)])
+            .slice(0, limit)
+            .map((f) => byPath.get(f.path) ?? d.index.describe(f.path))
+            .filter((h): h is NonNullable<typeof h> => !!h)
+        } else hits = hits.slice(0, limit)
         if (!hits.length) return 'Nothing in the brain matches that. Try other words, or a broader folder.'
         return hits.map((h, n) => `${n + 1}. ${h.path}${h.type || h.date ? ` (${[h.type, h.date].filter(Boolean).join(', ')})` : ''}: ${h.title}\n   ${h.snippet}`).join('\n')
       },

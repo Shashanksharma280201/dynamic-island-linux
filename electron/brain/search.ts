@@ -1,3 +1,4 @@
+import { embedText } from '@shared/meaning'
 import { noteTitle, parseNote, wikilinks } from '@shared/brain'
 import type { VaultFile } from './vault'
 
@@ -159,6 +160,20 @@ export class BrainIndex {
     const top = hits.sort((a, b) => b.score - a.score).slice(0, Math.min(o.limit ?? 8, 30))
     for (const h of top) h.snippet = snippet(this.body(h.path), terms)
     return top
+  }
+
+  /** Every note, for search by meaning: its path, when it changed, and what the model reads. */
+  entries(): { path: string; mtime: number; text: () => string }[] {
+    this.refresh()
+    return [...this.docs.values()].map((d) => ({ path: d.path, mtime: d.mtime, text: () => embedText(d.title, this.body(d.path)) }))
+  }
+
+  /** One note as a search hit (for one found by meaning), with the start of its body. */
+  describe(path: string): Hit | null {
+    const d = this.docs.get(path)
+    if (!d) return null
+    const body = this.body(path).replace(/^#.*\n/, '').replace(/\s+/g, ' ').trim()
+    return { path, title: d.title, score: 0, snippet: body.slice(0, 200) + (body.length > 200 ? '…' : ''), date: str(d.meta.date), type: str(d.meta.type) }
   }
 
   /** Notes that link to a note name (its file name without .md). */

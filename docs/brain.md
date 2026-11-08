@@ -87,6 +87,16 @@ one) and need a key, which the island keeps in its own folder.
 - **The inbox**: **Keep** files a note where it suggests (a kept project takes
   its waiting session notes with it); **Archive** moves it to `05-archives/`.
 
+## Search by meaning
+
+Brain search finds notes by their words. Turn on **Search by meaning**
+(Settings → Second brain) and it also finds notes that say it in other
+words: a small model (all-MiniLM-L6-v2, 23 MB, downloaded once from Hugging
+Face) reads each note on this computer and keeps a vector for it in
+`_system/index/`. Every search (yours, Claude Code's, the buddy's) then
+fuses the two rankings. New and changed notes are read a few at a time in
+the background; `08-restricted/` never is.
+
 ## The loop
 
 Jobs that keep the brain up to date without you, listed in Settings → Second
@@ -118,5 +128,5 @@ your other notes.
 
 ## Coming next
 
-The [plan](research/island-brain-and-buddy.md#the-roadmap): search by
-meaning with a local model, the Jarvis layer, and Ubuntu as an AI OS.
+The [plan](research/island-brain-and-buddy.md#the-roadmap): the Jarvis
+layer, and Ubuntu as an AI OS.

@@ -6,6 +6,14 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Search by meaning**
+
+- Settings → Second brain → **Search by meaning**: a small model on this
+  computer (23 MB, downloaded once) reads your notes, so a search finds the
+  ones that say it in other words too. Every AI's brain search uses it,
+  fused with the keyword ranking. Private notes are never read.
+  [How it works](docs/brain.md#search-by-meaning).
+
 **The loop: your brain keeps itself up to date**
 
 - Five jobs, listed in Settings → Second brain with how each last went:

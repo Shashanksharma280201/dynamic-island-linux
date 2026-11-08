@@ -1,3 +1,4 @@
+import { EMBED } from './embedChannels'
 import { MORNING } from './morningChannels'
 import type { JobId, MorningCard } from '../shared/loop'
 import { BUDDY } from './buddyChannels'
@@ -154,6 +155,11 @@ const api = {
     /** Kokoro speaks here: say these phonemes, then report back. */
     onSpeak: (cb: (s: { id: number; phonemes?: string; voice?: string; speed?: number; stop?: boolean }) => void) => on(BUDDY.SPEAK, cb),
     spoken: (r: { id: number; ok: boolean; error?: string }) => ipcRenderer.send(BUDDY.SPOKEN, r),
+  },
+  /** Search by meaning: the model runs here, in a worker. */
+  embed: {
+    onAsk: (cb: (r: { id: number; texts: string[] }) => void) => on(EMBED.ASK, cb),
+    done: (r: { id: number; vectors?: Float32Array[]; error?: string }) => ipcRenderer.send(EMBED.DONE, r),
   },
   /** The morning card: the one thing for today. */
   morning: {
@@ -345,7 +351,7 @@ const settings = {
     create: (folder?: string): Promise<string | null> => ipcRenderer.invoke(BRAIN.CREATE, folder),
     pickFolder: (): Promise<string | null> => ipcRenderer.invoke(BRAIN.PICK_FOLDER),
     setOn: (on: boolean) => ipcRenderer.invoke(BRAIN.SET_ON, on),
-    set: (patch: { captureSessions?: boolean; distil?: 'ai' | 'plain'; skip?: string[] }) => ipcRenderer.invoke(BRAIN.SET, patch),
+    set: (patch: { captureSessions?: boolean; distil?: 'ai' | 'plain'; skip?: string[]; meaning?: boolean }) => ipcRenderer.invoke(BRAIN.SET, patch),
     addSkip: () => ipcRenderer.invoke(BRAIN.ADD_SKIP),
     connect: (id: string, on: boolean): Promise<string | null> => ipcRenderer.invoke(BRAIN.CONNECT, id, on),
     mine: (): Promise<string> => ipcRenderer.invoke(BRAIN.MINE),
