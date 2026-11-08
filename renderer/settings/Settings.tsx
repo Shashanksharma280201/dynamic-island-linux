@@ -1,3 +1,4 @@
+import { DesktopSection } from './DesktopSection'
 import { BuddySection } from './BuddySection'
 import { PrivacySection } from './PrivacySection'
 import { ACCENTS, accentOf } from '@shared/theme'
@@ -316,6 +317,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
   [
     { id: 'general', label: 'General' },
     { id: 'privacy', label: 'Privacy' },
+    { id: 'desktop', label: 'Desktop' },
     { id: 'shortcuts', label: 'Keyboard shortcuts' },
     { id: 'drag', label: 'Drag actions' },
     { id: 'drop', label: 'Phone Drop' },
@@ -443,6 +445,7 @@ export function Settings() {
       <WallpaperSection s={s} />
       <PrivacySection s={s} />
       <BuddySection s={s} />
+      <DesktopSection s={s} />
       <CharacterSection s={s} />
       <AiSection s={s} />
       <PackagesSection s={s} />

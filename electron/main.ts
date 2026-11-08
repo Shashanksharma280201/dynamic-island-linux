@@ -66,7 +66,7 @@ import { MODELS, SpeechModels, registerSttScheme } from './stt'
 import { Spotify, REDIRECT_URI } from './spotify'
 import { wireSpotify } from './spotifyIpc'
 import { SPOTIFY } from './spotifyChannels'
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
 import { usageAlerts, type ClaudeRun } from '@shared/claude'
 import { homedir, hostname, networkInterfaces } from 'node:os'
 import { randomBytes } from 'node:crypto'
@@ -127,6 +127,10 @@ import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
 import { islandLook } from '../shared/theme'
 import { parseBuddyConfig } from '../shared/buddy'
+import { CommandBar, homeDir } from './commandBar'
+import { COMMAND } from './commandChannels'
+import { DesktopLook, lookSettings } from './desktopLook'
+import type { SystemContext } from './packages/systemTools'
 import { Announcer } from './announcer'
 import { Routines } from './routines'
 import { clickAt } from './buddy/click'
@@ -977,6 +981,81 @@ async function main() {
       agentFinished(run)
     },
   })
+  // ---- Ubuntu the island's way: apps, the system, the look (Settings › Desktop) ----
+  const lockScreen = () =>
+    execFile('loginctl', ['lock-session'], (e) => {
+      if (e) execFile('xdg-screensaver', ['lock'], () => {})
+    })
+  const setThemePref = (t: 'light' | 'dark') => {
+    config.theme = t
+    saveConfig(config)
+    theme.apply()
+  }
+  const commandBar = new CommandBar({
+    home: homeDir(),
+    notes: (q) => brain.quickSearch(q),
+    openNote: (p) => brain.open(p),
+    openFile: (p) => void shell.openPath(p),
+    openSettings: (s) => settings?.open(s),
+    copy: (t) => clipboard.writeText(t),
+    system: (a) => {
+      if (a.t === 'theme') setThemePref(a.value)
+      else if (a.t === 'dnd') setDnd(a.on)
+      else if (a.t === 'volume') commands.push({ type: 'volume', value: a.value })
+      else if (a.t === 'mute') commands.push({ type: 'mute' })
+      else if (a.t === 'lock') lockScreen()
+      else if (a.t === 'wallpaper') void wallpapers.setFromQuery(a.query)
+    },
+    askBuddy: (q) => void buddy.ask(q),
+    askClaude: (q) => {
+      try {
+        claudeUi!.engine().ask(q)
+        send(win, CLAUDE.OPEN, {})
+      } catch {
+        send(win, CLAUDE.OPEN, { draft: q })
+      }
+    },
+    buddyName: () => config.character.name || 'the buddy',
+  })
+  ipcMain.handle(COMMAND.OPEN, (e) => e.sender === win.webContents && commandBar.show())
+  let commandKeyOn = ''
+  const applyCommandKey = () => {
+    if (commandKeyOn) globalShortcut.unregister(commandKeyOn)
+    commandKeyOn = ''
+    if (!config.desktop.commandBar) return
+    if (globalShortcut.register(config.keys.command, () => commandBar.toggle())) commandKeyOn = config.keys.command
+    else console.error(`[island] couldn't register ${config.keys.command} for the command bar; another app may own it`)
+  }
+  applyCommandKey()
+  const systemContext: SystemContext = {
+    apps: () => commandBar.listApps(),
+    launch: (app) => commandBar.launchApp(app),
+    volume: (v) => commands.push({ type: 'volume', value: v }),
+    mute: () => commands.push({ type: 'mute' }),
+    theme: setThemePref,
+    dnd: setDnd,
+    lock: lockScreen,
+  }
+  // Ubuntu in the island's look: applied, it follows the island's light or dark and accent.
+  const desktopLook = new DesktopLook()
+  let lastLook: { changed: string[]; skipped: string[] } | null = null
+  const applyLook = async () => {
+    const res = await desktopLook.apply(lookSettings({ accent: config.accent, dark: theme.isDark(), dock: config.desktop.dock, buttonsLeft: config.desktop.buttonsLeft }), config.desktop.original)
+    config.desktop = { ...config.desktop, applied: true, original: res.original }
+    saveConfig(config)
+    lastLook = { changed: res.changed, skipped: res.skipped }
+  }
+  let looking: Promise<void> | null = null
+  const followLook = () => {
+    if (!config.desktop.applied || looking) return
+    looking = applyLook()
+      .catch((e) => console.error('[island] desktop look:', (e as Error).message))
+      .finally(() => {
+        looking = null
+        settings?.changed()
+      })
+  }
+
   // The tools of the packages that are on (Settings → Packages), for one
   // answer: the island's own agent and Claude Code both use them.
   const islandTools = () =>
@@ -997,6 +1076,7 @@ async function main() {
           return viewText(v.manifest, v.view, v.phase)
         } },
         wallpaper: wallpapers,
+        system: systemContext,
         crm: {
           store: crm,
           // One batch per answer: its changes undo in one go.
@@ -1352,6 +1432,44 @@ async function main() {
       if (patch.voiceId && config.buddy.voice === 'natural' && !kokoro.ready(config.buddy.voiceId) && kokoro.ready('af_heart')) void kokoro.ensure(config.buddy.voiceId).catch(() => {})
     },
     buddyVoice: () => kokoro.ensure(config.buddy.voiceId),
+    desktop: () => ({
+      applied: config.desktop.applied,
+      dock: config.desktop.dock,
+      buttonsLeft: config.desktop.buttonsLeft,
+      last: lastLook,
+      commandBar: config.desktop.commandBar,
+      commandKey: config.keys.command,
+      supported: process.platform === 'linux',
+    }),
+    desktopSet: async (p) => {
+      config.desktop = { ...config.desktop, ...p }
+      saveConfig(config)
+      if (p.commandBar !== undefined) applyCommandKey()
+      if ((p.dock !== undefined || p.buttonsLeft !== undefined) && config.desktop.applied) {
+        // Turned off after applying: put that part back as it was.
+        const off: Record<string, string> = {}
+        for (const [id, v] of Object.entries(config.desktop.original)) {
+          const dockKey = id.startsWith('org.gnome.shell.extensions.dash-to-dock ')
+          const buttons = id === 'org.gnome.desktop.wm.preferences button-layout'
+          if ((dockKey && p.dock === false) || (buttons && p.buttonsLeft === false)) off[id] = v
+        }
+        if (Object.keys(off).length) {
+          await desktopLook.undo(off)
+          const keep = { ...config.desktop.original }
+          for (const id of Object.keys(off)) delete keep[id]
+          config.desktop = { ...config.desktop, original: keep }
+          saveConfig(config)
+        }
+        await applyLook()
+      }
+    },
+    desktopApply: () => applyLook(),
+    desktopUndo: async () => {
+      await desktopLook.undo(config.desktop.original)
+      config.desktop = { ...config.desktop, applied: false, original: {} }
+      saveConfig(config)
+      lastLook = null
+    },
     routineSet: (raw) => routines.upsert(raw),
     routineDel: (id) => routines.remove(id),
     buddyTry: () => speakSentence(`Hi, I’m ${config.character.name || 'your buddy'}. Ask me about anything on your screen.`),
@@ -1412,6 +1530,7 @@ async function main() {
       if (id === 'panel') applyShortcut()
       else if (id === 'dictate') applyDictate()
       else if (id === 'buddy') applyBuddyKey()
+      else if (id === 'command') applyCommandKey()
       else if (id === 'voice') {
         claudeUi?.applyVoiceShortcut()
         claudeUi?.push()
@@ -1778,7 +1897,10 @@ async function main() {
       customSounds: customSounds.urls(),
       look: islandLook(config.islandTheme, theme.isDark(), config.accent),
     })
-  onLook = pushAppearance
+  onLook = () => {
+    pushAppearance()
+    followLook()
+  }
   const pushCharacter = () => {
     send(win, IPC.CHARACTER, config.character)
     updateCompanion()
@@ -2025,6 +2147,7 @@ async function main() {
     buddy.stop()
     pointer.destroy()
     routines.stop()
+    commandBar.destroy()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()

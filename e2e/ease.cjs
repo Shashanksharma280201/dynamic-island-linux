@@ -123,19 +123,19 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     check('click a shortcut and it waits for keys', await seen(settings, '.key-recorder.recording'))
     await settings.keyboard.press('Shift+K')
     check('Shift alone is refused (that is typing)', await seen(settings, '#shortcuts .hint:has-text("Ctrl, Alt or Super")'))
-    await settings.keyboard.press('Control+Alt+K')
+    await settings.keyboard.press('Control+Alt+J')
     check('new keys are saved', await (async () => {
       for (let i = 0; i < 30; i++) {
-        if (cfg().keys?.voice === 'Control+Alt+K') return true
+        if (cfg().keys?.voice === 'Control+Alt+J') return true
         await sleep(100)
       }
       return false
     })(), JSON.stringify(cfg().keys))
-    check('and shown', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+K")'))
-    check('the island knows them too', await seen(page, '.shortcut-sheet .sheet-row:has-text("Talk to Claude") kbd:has-text("Ctrl+Alt+K")'))
+    check('and shown', await seen(settings, '.key-recorder[data-shortcut="voice"]:has-text("Ctrl+Alt+J")'))
+    check('the island knows them too', await seen(page, '.shortcut-sheet .sheet-row:has-text("Talk to Claude") kbd:has-text("Ctrl+Alt+J")'))
     await settings.click('#shortcuts .key-recorder[data-shortcut="allow"]')
-    await settings.keyboard.press('Control+Alt+K')
-    check('keys another shortcut uses are refused, saying which', await seen(settings, '#shortcuts .error-text:has-text("Talk to Claude already uses Ctrl+Alt+K")'))
+    await settings.keyboard.press('Control+Alt+J')
+    check('keys another shortcut uses are refused, saying which', await seen(settings, '#shortcuts .error-text:has-text("Talk to Claude already uses Ctrl+Alt+J")'))
     check('and nothing changes', cfg().keys.allow === 'Control+Alt+Y')
     await shot(settings, '04-settings-shortcuts')
     await settings.click('#shortcuts .toggle-row:has(.key-recorder[data-shortcut="voice"]) button.link:has-text("Reset")')

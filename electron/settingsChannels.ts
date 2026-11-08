@@ -51,6 +51,9 @@ export const SETTINGS = {
   AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
   SET_THEME: 'settings:set-theme', // 'system' | 'light' | 'dark'
   SET_PAUSED: 'settings:set-paused', // boolean: Settings › Privacy
+  DESKTOP_SET: 'settings:desktop-set', // { dock?, buttonsLeft?, commandBar? }
+  DESKTOP_APPLY: 'settings:desktop-apply',
+  DESKTOP_UNDO: 'settings:desktop-undo',
   CLEAR_PRIVACY: 'settings:clear-privacy',
   SET_LOOK: 'settings:set-look', // { island?: 'match' | 'dark', accent?: AccentId }
 } as const

@@ -31,7 +31,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'right', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
-    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
+    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
     companion: { on: false, at: null },
     dictation: true,
@@ -56,6 +56,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     privacy: { paused: false },
     buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true, wake: false, alerts: true },
     routines: [],
+    desktop: { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true },
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
   }
   expect(mergeConfig(null)).toEqual(d)

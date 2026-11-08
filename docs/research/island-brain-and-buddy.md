@@ -369,6 +369,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - Local search.
   - The You and Brain pages in Settings.
 - **Done when:** a new `claude` session in any terminal, in any repo, knows who you are and what you are working on, and finishing it leaves a five-line note in the inbox.
+- **Status:** built ([the guide](../brain.md)). Search by meaning (the local embedding model) followed.
 
 ### Phase 2: The new look
 
@@ -377,6 +378,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - Settings rebuilt with a sidebar and search, with homes for You, Brain, Buddy, Agents and Privacy.
   - The new island states.
 - **Done when:** every screen works in both themes, and any setting can be found by searching for it.
+- **Status:** built: the island and Settings in light and dark with an accent colour, Settings with a sidebar and search, homes for Buddy and Privacy, and the island's Listening, Thinking, Speaking, Pointing and morning-card states. There is no separate Agents page: the loop's jobs live in Settings › Second brain.
 
 ### Phase 3: The buddy
 
@@ -389,6 +391,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - Answers that use the brain.
   - The window deny-list.
 - **Done when:** you can ask "where do I change X?" in any app and it answers out loud and points at the right control.
+- **Status:** built ([the guide](../buddy.md)), with one change: the key is tapped, not held (X11 gives no simple way to tell when a key is let go), and listening stops when you stop talking. The natural voice (Kokoro) and its pronunciation follow kokoro-js; it has not yet been heard against the real model download.
 
 ### Phase 4: The loop and the Chief of Staff
 
@@ -399,11 +402,13 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - The morning card.
   - Approval cards on the island and phone.
 - **Done when:** a week of normal work produces a weekly signal you find useful and a morning card you act on.
+- **Status:** built ([the loop](../brain.md#the-loop)): commits, the evening filing (applied by you), daily and weekly signals, the morning card with Send, Edit and Hold. The phone sees its sends through the existing approvals.
 
 ### Phase 5: The Jarvis layer
 
 - **You get:** the capabilities in section D.
 - **Done when:** you can run a normal day by voice for the things you choose, with nothing done without your yes.
+- **Status:** built ([beyond questions](../buddy.md#beyond-questions)): hand-off to the assistant with status, cancel and steer; yes and no for approvals; simple commands; speaking up within limits; point, then approve clicks and typing; memory you approve; routines; honest job status; the wake word (off by default). Not yet: the phone as a microphone, and an evening digest of what was kept quiet.
 
 ### Phase 6: Ubuntu as an AI OS
 
@@ -413,6 +418,7 @@ Each phase ends with something you use every day. Brain first, as you asked.
   - System tools.
   - The Wayland extension, when you move to 26.04.
 - **Done when:** the desktop looks like one product, and the island and buddy work the same on Wayland.
+- **Status:** the X11 parts are built ([the guide](../desktop.md)): Ubuntu in the island's look and back, the command bar, system tools that ask first. Not yet: the login screen and boot splash (they need your password), extensions such as Blur my Shell, notification summaries, and the Wayland extension, which waits for a move past 22.04.
 
 ## Risks and how the plan handles them
 
@@ -439,7 +445,7 @@ You chose the recommendations on 7 November 2026:
 5. **The buddy:** local voice (Kokoro), a key rather than a wake word to start; its name and personality when Phase 3 starts.
 6. **The first recurring job:** the morning card, with the next job chosen in Phase 4.
 7. **An always-on machine:** later.
-8. **Where to start:** Phase 1, the brain. Built.
+8. **Where to start:** Phase 1, the brain. Built, and the phases after it (see each phase's status).
 
 ## Sources
 

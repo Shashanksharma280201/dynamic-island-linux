@@ -1,3 +1,4 @@
+import type { DesktopView } from '@shared/desktop'
 import { BUDDY } from './buddyChannels'
 import type { BuddyConfig, BuddySettingsView } from '@shared/buddy'
 import { egress } from './privacy'
@@ -117,6 +118,11 @@ type Deps = {
   /** Routines: add or change one (why not, or null), or remove one. */
   routineSet: (raw: unknown) => string | null
   routineDel: (id: string) => void
+  /** Settings › Desktop. */
+  desktop: () => DesktopView
+  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean }) => Promise<void>
+  desktopApply: () => Promise<void>
+  desktopUndo: () => Promise<void>
 }
 
 /** Settings window + the IPC it uses. */
@@ -140,6 +146,7 @@ export class SettingsController {
       accent: this.d.theme().accent,
       privacy: egress.view(),
       buddy: this.d.buddy(),
+      desktop: this.d.desktop(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -505,6 +512,20 @@ export class SettingsController {
     })
     ipcMain.handle(BUDDY.ROUTINE_DEL, (_e, id) => {
       if (typeof id === 'string') this.d.routineDel(id)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_SET, async (_e, p) => {
+      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean } = {}
+      for (const k of ['dock', 'buttonsLeft', 'commandBar'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
+      await this.d.desktopSet(patch)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_APPLY, async () => {
+      await this.d.desktopApply()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_UNDO, async () => {
+      await this.d.desktopUndo()
       this.changed()
     })
     ipcMain.handle(SETTINGS.SET_PAUSED, (_e, on) => {

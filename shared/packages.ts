@@ -3,7 +3,7 @@
  * tools the agent may use; Settings → Packages turns them on or off. Built-in
  * packages for now; the same shape will carry third-party ones later.
  */
-export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected' | 'wallpaper'
+export type PackageId = 'basics' | 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected' | 'wallpaper' | 'system'
 
 /** Rail tabs a package can own. */
 export type PackageTab = 'notes' | 'chats' | 'mail' | 'music' | 'docs' | 'crm' | 'connected'
@@ -154,6 +154,19 @@ export const PACKAGES: PackageInfo[] = [
       { name: 'wallpaper_animation', summary: 'Set one of the island’s animations' },
       { name: 'wallpaper_undo', summary: 'Put the previous background back' },
       { name: 'wallpaper_now', summary: 'Say what the background is' },
+    ],
+  },
+  {
+    id: 'system',
+    name: 'System',
+    description: 'Open apps, set the volume, go light or dark, turn on Do Not Disturb or lock the screen, by asking. Each one asks you first.',
+    permissions: ['Your installed apps (to open them)', 'The sound volume, light or dark, Do Not Disturb', 'Locking the screen'],
+    tools: [
+      { name: 'system_open_app', summary: 'Open an app', asks: true },
+      { name: 'system_volume', summary: 'Set the volume, or mute', asks: true },
+      { name: 'system_theme', summary: 'Go light or dark', asks: true },
+      { name: 'system_dnd', summary: 'Turn Do Not Disturb on or off', asks: true },
+      { name: 'system_lock', summary: 'Lock the screen', asks: true },
     ],
   },
 ]

@@ -314,6 +314,12 @@ export class Brain {
     this.wiring.refreshInline()
   }
 
+  /** A few notes for the command bar (keyword search, no AI). */
+  quickSearch(q: string, n = 5): { path: string; title: string; sub: string }[] {
+    if (!this.index || !this.running()) return []
+    return this.index.search(q, { limit: n }).map((h) => ({ path: h.path, title: h.title, sub: h.snippet.replace(/\s+/g, ' ').slice(0, 90) || h.path }))
+  }
+
   /** The brief for the island's own assistant ('' when the brain is off). */
   briefForAgent(): string {
     return this.running() ? this.brief() : ''

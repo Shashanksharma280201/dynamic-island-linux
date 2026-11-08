@@ -6,6 +6,20 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**Ubuntu, the island's way**
+
+- **Settings → Desktop → Make Ubuntu match the island**: light or dark and
+  the accent colour for all of Ubuntu (its own Yaru themes), following the
+  island as they change, with the Dock at the bottom like macOS's and,
+  if you like, window buttons on the left. Plain gsettings, no password;
+  **Undo** puts back exactly what was there.
+- **The command bar** (Ctrl+Alt+K): open apps (with their icons), files you
+  had open, notes and settings; work out sums; “dark mode”, “volume 40”,
+  “lock”, “wallpaper misty forest”; or ask the buddy or Claude.
+- **The System package** for the assistant: open an app, set the volume, go
+  light or dark, Do Not Disturb, lock the screen; each one asks first.
+  [How it works](docs/desktop.md).
+
 **The Jarvis layer: the buddy in front of the real work**
 
 - **Hands real work to the assistant** and follows it: “how far is it?”,

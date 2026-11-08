@@ -55,6 +55,7 @@ function ctx(over: Partial<PackageContext> = {}) {
     crm: {} as any,
     connected: { text: () => 'Trading: +₹50.00 (1 open · 2 trades · PAPER)' },
     wallpaper,
+    system: { apps: () => [], launch: () => {}, volume: () => {}, mute: () => {}, theme: () => {}, dnd: () => {}, lock: () => {} },
     ...over,
   }
   return { c, sent, commands, replies }
@@ -63,9 +64,9 @@ function ctx(over: Partial<PackageContext> = {}) {
 const names = (t: { name: string }[]) => t.map((x) => x.name)
 
 test('the catalog and which packages are on', () => {
-  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music', 'docs', 'crm', 'connected', 'wallpaper'])
+  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music', 'docs', 'crm', 'connected', 'wallpaper', 'system'])
   expect(parsePackages({ disabled: ['mail', 'basics', 'nope', 'mail'] })).toEqual({ disabled: ['mail'] }) // basics can't be off
-  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music', 'docs', 'crm', 'connected', 'wallpaper'])
+  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music', 'docs', 'crm', 'connected', 'wallpaper', 'system'])
   expect(enabledTabs({ disabled: ['chats'] })).toEqual(['notes', 'mail', 'music', 'docs', 'crm', 'connected'])
   // The catalog lists exactly the tools each package brings.
   const all = packageTools({ disabled: [] }, ctx().c)

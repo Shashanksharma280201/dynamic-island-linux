@@ -1,3 +1,5 @@
+import { COMMAND } from './commandChannels'
+import type { CommandItem } from '../shared/command'
 import { EMBED } from './embedChannels'
 import { MORNING } from './morningChannels'
 import type { JobId, MorningCard } from '../shared/loop'
@@ -161,6 +163,14 @@ const api = {
   embed: {
     onAsk: (cb: (r: { id: number; texts: string[] }) => void) => on(EMBED.ASK, cb),
     done: (r: { id: number; vectors?: Float32Array[]; error?: string }) => ipcRenderer.send(EMBED.DONE, r),
+  },
+  /** The command bar (its own window), and opening it from the island. */
+  command: {
+    open: () => ipcRenderer.invoke(COMMAND.OPEN),
+    query: (q: string): Promise<CommandItem[]> => ipcRenderer.invoke(COMMAND.QUERY, q),
+    run: (id: string) => ipcRenderer.invoke(COMMAND.RUN, id),
+    close: () => ipcRenderer.invoke(COMMAND.CLOSE),
+    onShown: (cb: () => void) => on(COMMAND.SHOWN, cb),
   },
   /** The morning card: the one thing for today. */
   morning: {
@@ -402,6 +412,11 @@ const settings = {
   setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
   setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
+  desktop: {
+    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    apply: () => ipcRenderer.invoke(SETTINGS.DESKTOP_APPLY),
+    undo: () => ipcRenderer.invoke(SETTINGS.DESKTOP_UNDO),
+  },
   buddy: {
     set: (patch: Partial<BuddyConfig>) => ipcRenderer.invoke(BUDDY.SET, patch),
     getVoice: (): Promise<string | null> => ipcRenderer.invoke(BUDDY.VOICE_GET),

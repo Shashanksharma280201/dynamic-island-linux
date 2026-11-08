@@ -1128,3 +1128,7 @@ button.small {
 .routine-new .grow {
   flex: 1 1 220px;
 }
+
+.desktop-last {
+  margin-top: 4px;
+}

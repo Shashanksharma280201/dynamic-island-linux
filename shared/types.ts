@@ -1,3 +1,4 @@
+import type { DesktopView } from './desktop'
 import type { BuddySettingsView } from './buddy'
 import type { PrivacyView } from './privacy'
 import type { WallpaperView } from './wallpaper'
@@ -380,6 +381,8 @@ export type SettingsState = {
   privacy: PrivacyView
   /** Settings › Buddy. */
   buddy: BuddySettingsView
+  /** Settings › Desktop. */
+  desktop: DesktopView
 }
 
 export type ClaudeSettings = {

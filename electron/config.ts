@@ -1,3 +1,4 @@
+import { parseDesktopConfig, type DesktopConfig } from '../shared/desktop'
 import { parseRoutine, type Routine } from '../shared/jarvis'
 import { parseBuddyConfig, type BuddyConfig } from '../shared/buddy'
 import { ACCENTS } from '../shared/theme'
@@ -87,6 +88,8 @@ export type Config = {
   buddy: BuddyConfig
   /** Routines: standing orders the assistant runs at their time (Settings › Buddy). */
   routines: Routine[]
+  /** Ubuntu in the island's look, and the command bar (Settings › Desktop). */
+  desktop: DesktopConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -161,6 +164,7 @@ const DEFAULTS: Config = {
   privacy: { paused: false },
   buddy: parseBuddyConfig(null),
   routines: [],
+  desktop: parseDesktopConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -204,6 +208,7 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.accent === 'string' && ACCENTS.some((a) => a.id === r.accent)) c.accent = r.accent
   c.privacy = { paused: r.privacy?.paused === true }
   c.buddy = parseBuddyConfig(r.buddy)
+  c.desktop = parseDesktopConfig(r.desktop)
   c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }

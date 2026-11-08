@@ -51,6 +51,7 @@ it from the code instead, see [Install](docs/install.md).
 - **Now Playing**: album art and a waveform on the capsule, with play, pause, skip and seek for Spotify, YouTube and any media player.
 - **Messages and mail**: WhatsApp messages and new mail pop up as cards, and you reply right there.
 - **A second brain**: one memory for you and every AI you use, as plain notes on your computer. Claude Code, Codex and Gemini CLI know who you are, every session gets a five-line note, and your projects get pages. [How it works](docs/brain.md).
+- **Ubuntu, the island's way**: a command bar (Ctrl+Alt+K) for apps, files, notes, sums and system changes, and Ubuntu in the island's look in one click (and back). [How it works](docs/desktop.md).
 - **A buddy for your screen**: press Ctrl+Alt+B and ask “where do I change this?”; it answers out loud and points at the spot, step by step. [How it works](docs/buddy.md).
 - **Wallpaper by asking**: “set my background to misty mountains” or “make it a video of rain” finds one on the web and sets it; videos and animations play live. [How it works](docs/wallpaper.md).
 - **Claude Code, live**: every session in your terminals shows what it's doing and what it changed. Allow its permission prompts, answer its questions and read its plans from any app.
@@ -91,6 +92,7 @@ anywhere along the edges or to the top center, and click it (or press
 - [Features](docs/features.md): everything the island does
 - [Your second brain](docs/brain.md): the shared memory for your AI tools
 - [The buddy](docs/buddy.md): ask about your screen, out loud, and it points
+- [Ubuntu, the island's way](docs/desktop.md): the command bar, the look, system actions
 - [Wallpaper](docs/wallpaper.md): photos, videos and animations as your background
 - [macOS and Windows](docs/platforms.md): what's different there
 - [Set it up](docs/setup.md): Claude Code, AI providers, WhatsApp, mail, Spotify, documents, drag actions, the CRM
