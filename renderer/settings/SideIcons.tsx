@@ -28,6 +28,12 @@ export const SIDE_ICONS: Record<string, ReactNode> = {
       <path d="M14 7v14" stroke="#d65fd8" strokeWidth="1.2" />
     </Tile>
   ),
+  buddy: (
+    <Tile from="#7d7aff" to="#0a84ff">
+      <path d="M14 6l1.9 5.1 5.1 1.9-5.1 1.9L14 20l-1.9-5.1L7 13l5.1-1.9z" fill={W} />
+      <circle cx="20.5" cy="7.5" r="1.4" fill={W} />
+    </Tile>
+  ),
   wallpaper: <WallpaperAppIcon />,
   character: (
     <Tile from="#ffb340" to="#ff7a00">

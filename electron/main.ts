@@ -2,7 +2,7 @@ import { egress } from './privacy'
 import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
@@ -126,6 +126,13 @@ import { DesktopBackground } from './wallpaper/desktop'
 import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
 import { islandLook } from '../shared/theme'
+import { parseBuddyConfig } from '../shared/buddy'
+import { Buddy } from './buddy'
+import { Pointer } from './buddy/pointer'
+import { captureScreen } from './buddy/screen'
+import { KOKORO_MB, KokoroFiles, SystemVoice, readingMs, testVoice } from './buddy/speech'
+import { espeakProgram, phonemize } from './buddy/phonemes'
+import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
 
@@ -557,6 +564,168 @@ async function main() {
     onChange: () => settings?.changed(),
     ownFolders: [writerDir],
   })
+
+  // ---- the buddy: ask about your screen, it answers out loud and points (Settings › Buddy) ----
+  const buddyDir = join(app.getPath('userData'), 'buddy')
+  const pointer = new Pointer(() => screen.getDisplayNearestPoint(screen.getCursorScreenPoint()))
+  const systemVoice = new SystemVoice((name) => (process.env.DI_TTS_NONE ? null : findExecutable(name, ['/usr/bin', '/usr/local/bin'])))
+  const espeakBin = () => (process.env.DI_TTS_NONE ? null : findExecutable('espeak-ng', ['/usr/bin', '/usr/local/bin']) ?? findExecutable('espeak', ['/usr/bin']))
+  const kokoro = new KokoroFiles(join(app.getPath('userData'), 'models'), () => settings?.changed(), process.env.DI_STT_BASE_URL || undefined)
+  const ttsLog = process.env.DI_TTS_LOG ? testVoice(process.env.DI_TTS_LOG) : null
+  // Kokoro speaks in the island's page; it says when each sentence is done.
+  const spoken = new Map<number, (r: { ok: boolean; error?: string }) => void>()
+  let speakSeq = 0
+  ipcMain.on(BUDDY.SPOKEN, (e, r) => {
+    if (e.sender !== win.webContents || typeof r?.id !== 'number') return
+    spoken.get(r.id)?.({ ok: r.ok === true, error: typeof r.error === 'string' ? r.error : undefined })
+    spoken.delete(r.id)
+  })
+  const islandSays = (phonemes: string, voice: string, speed: number, words: string) =>
+    new Promise<void>((resolve, reject) => {
+      const id = ++speakSeq
+      const timer = setTimeout(() => {
+        spoken.delete(id)
+        reject(new Error('The natural voice took too long.'))
+      }, 20_000 + words.length * 120)
+      spoken.set(id, (r) => {
+        clearTimeout(timer)
+        if (r.ok) resolve()
+        else reject(new Error(r.error ?? 'The natural voice failed.'))
+      })
+      send(win, BUDDY.SPEAK, { id, phonemes, voice, speed })
+    })
+  let naturalTrouble = ''
+  const speakSentence = async (text: string): Promise<void> => {
+    const b = config.buddy
+    if (ttsLog) return ttsLog(b.voice, text)
+    if (b.voice === 'off') return new Promise((r) => setTimeout(r, readingMs(text)))
+    if (b.voice === 'natural') {
+      const bin = espeakBin()
+      if (bin && kokoro.ready(b.voiceId)) {
+        try {
+          const phonemes = await phonemize(text, b.voiceId.startsWith('b') ? 'b' : 'a', espeakProgram(bin))
+          await islandSays(phonemes, b.voiceId, b.speed, text)
+          naturalTrouble = ''
+          return
+        } catch (e) {
+          naturalTrouble = (e as Error).message
+          console.error('[buddy] natural voice:', naturalTrouble)
+        }
+      } else if (bin && !kokoro.downloading() && !kokoro.error) {
+        // Fetch it for next time; the system voice speaks meanwhile.
+        void kokoro.ensure(b.voiceId).catch(() => {})
+      }
+    }
+    try {
+      await systemVoice.say(text, b.speed)
+    } catch {
+      await new Promise((r) => setTimeout(r, readingMs(text)))
+    }
+  }
+  const stopSpeaking = () => {
+    systemVoice.stop()
+    send(win, BUDDY.SPEAK, { id: 0, stop: true })
+    for (const [id, done] of spoken) {
+      done({ ok: true })
+      spoken.delete(id)
+    }
+  }
+  // One answer from the AI in Settings › AI, with the screenshot.
+  const buddyModel = async (o: { system: string; prompt: string; image?: string }): Promise<string> => {
+    const ai = config.ai
+    const provider = providerInfo(ai.provider)
+    if (provider.kind !== 'claude-code') {
+      const problem = setupProblem(ai)
+      if (problem) throw new Error(problem)
+      const stored = ai.keys[ai.provider]
+      const r = await runTurn({
+        kind: provider.kind as 'anthropic' | 'openai-compatible',
+        model: modelFor(ai),
+        apiKey: stored ? decryptSecret(stored) : '',
+        baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
+        system: o.system,
+        history: [],
+        prompt: o.prompt,
+        tools: [],
+        images: o.image ? [{ mediaType: 'image/jpeg', data: o.image }] : undefined,
+        feature: 'buddy',
+        signal: AbortSignal.timeout(90_000),
+        events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
+      })
+      return r.text
+    }
+    const bin = findClaude()
+    if (!bin) throw new Error('Claude Code isn’t installed (the "claude" command wasn’t found). Pick another AI in Settings › AI.')
+    const paused = egress.blocked()
+    if (paused) throw new Error(paused)
+    let prompt = o.prompt
+    if (o.image) {
+      mkdirSync(buddyDir, { recursive: true })
+      writeFileSync(join(buddyDir, 'screen.jpg'), Buffer.from(o.image, 'base64'))
+      prompt += '\n\n(The screenshot is screen.jpg in this folder. Read it first.)'
+    }
+    egress.note('buddy', 'Anthropic, through Claude Code', o.image ? 'your question, with a screenshot' : 'your question')
+    try {
+      return await claudeOnce(bin, prompt, buddyDir, 90_000, { model: 'sonnet', args: ['--append-system-prompt', o.system, '--allowedTools', 'Read'] })
+    } finally {
+      rmSync(join(buddyDir, 'screen.jpg'), { force: true })
+    }
+  }
+  const buddy = new Buddy({
+    config: () => config.buddy,
+    name: () => config.character.name || 'Buddy',
+    model: buddyModel,
+    brief: () => brain.briefForAgent(),
+    notes: async (q) => {
+      const search = brain.tools('buddy').find((t) => t.name === 'brain_search')
+      if (!search) return ''
+      const out = await search.run({ query: q, limit: 4 })
+      return /^(No |Nothing|The brain has nothing)/.test(out) ? '' : out.slice(0, 1600)
+    },
+    save: (heard, reply) => {
+      const capture = brain.tools('buddy').find((t) => t.name === 'brain_capture')
+      if (!capture) return
+      void capture.run({ title: `Asked ${config.character.name || 'the buddy'}: ${heard.slice(0, 70)}`, text: `**Asked:** ${heard}\n\n**Answer:** ${reply}`, type: 'note' })
+    },
+    display: () => screen.getDisplayNearestPoint(screen.getCursorScreenPoint()),
+    capture: (d, words) => captureScreen(d, words),
+    from: () => {
+      const b = win.getBounds()
+      return { x: b.x + b.width / 2, y: b.y + Math.min(60, b.height / 2) }
+    },
+    pointer,
+    speak: speakSentence,
+    stopSpeaking,
+    onChange: (v) => send(win, BUDDY.STATE, v),
+  })
+  ipcMain.handle(BUDDY.ASK, (e, text) => {
+    if (e.sender !== win.webContents || typeof text !== 'string') return
+    void buddy.ask(text)
+  })
+  ipcMain.handle(BUDDY.CMD, (e, c) => {
+    if (e.sender !== win.webContents || !['next', 'back', 'stop', 'repeat'].includes(c)) return
+    void buddy.command(c)
+  })
+  ipcMain.handle(BUDDY.GET, () => buddy.view())
+  let buddyKeyOn = ''
+  const applyBuddyKey = () => {
+    if (buddyKeyOn) globalShortcut.unregister(buddyKeyOn)
+    buddyKeyOn = ''
+    if (!config.buddy.on) return
+    const accel = config.keys.buddy
+    if (globalShortcut.register(accel, () => send(win, BUDDY.KEY, null))) buddyKeyOn = accel
+    else console.error(`[island] couldn't register ${accel} for the buddy; another app may own it`)
+  }
+  applyBuddyKey()
+  const buddySettings = () => ({
+    config: config.buddy,
+    natural: { ready: kokoro.ready(config.buddy.voiceId), downloading: kokoro.downloading(), progress: kokoro.progress, error: kokoro.error ?? (naturalTrouble || null), sizeMb: KOKORO_MB },
+    espeak: !!espeakBin(),
+    systemVoice: systemVoice.available()?.split('/').pop() ?? null,
+    name: config.character.name || 'Buddy',
+    key: config.keys.buddy,
+  })
+
   const alertsSeen = new Set<string>()
   // What the agent is doing, on the island: a live card, then the answer.
   const agentChanged = (run?: ClaudeRun) => {
@@ -1013,6 +1182,17 @@ async function main() {
       saveConfig(config)
       theme.apply()
     },
+    buddy: () => buddySettings(),
+    setBuddy: (patch) => {
+      config.buddy = parseBuddyConfig({ ...config.buddy, ...patch })
+      saveConfig(config)
+      applyBuddyKey()
+      if (!config.buddy.on) buddy.stop()
+      // A new natural voice is a small download of its own.
+      if (patch.voiceId && config.buddy.voice === 'natural' && !kokoro.ready(config.buddy.voiceId) && kokoro.ready('af_heart')) void kokoro.ensure(config.buddy.voiceId).catch(() => {})
+    },
+    buddyVoice: () => kokoro.ensure(config.buddy.voiceId),
+    buddyTry: () => speakSentence(`Hi, I’m ${config.character.name || 'your buddy'}. Ask me about anything on your screen.`),
     setPaused: (on) => {
       // While paused, services check every minute whether they may look again.
       config.privacy = { paused: on }
@@ -1069,6 +1249,7 @@ async function main() {
       saveConfig(config)
       if (id === 'panel') applyShortcut()
       else if (id === 'dictate') applyDictate()
+      else if (id === 'buddy') applyBuddyKey()
       else if (id === 'voice') {
         claudeUi?.applyVoiceShortcut()
         claudeUi?.push()
@@ -1679,6 +1860,8 @@ async function main() {
     brain.stop()
     liveWall.stop()
     theme.stop()
+    buddy.stop()
+    pointer.destroy()
     backdrop.stop()
     interactivity?.stop()
     shape?.close()

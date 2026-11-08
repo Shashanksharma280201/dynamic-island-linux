@@ -1,3 +1,6 @@
+import { BUDDY } from './buddyChannels'
+import type { BuddyConfig, BuddyView } from '../shared/buddy'
+import type { PointerCmd } from '../shared/pointer'
 import type { IslandLook } from '../shared/theme'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
@@ -138,6 +141,22 @@ const api = {
     none: () => ipcRenderer.send(RING.NONE),
     drop: (d: { slot: SlotId; choice?: string; paths: string[] }) => ipcRenderer.send(RING.DROP, d),
     pathFor: (f: File): string => webUtils.getPathForFile(f),
+  },
+  /** The buddy: ask about your screen; it answers out loud and points. */
+  buddy: {
+    ask: (text: string) => ipcRenderer.invoke(BUDDY.ASK, text),
+    cmd: (c: 'next' | 'back' | 'stop' | 'repeat') => ipcRenderer.invoke(BUDDY.CMD, c),
+    get: (): Promise<BuddyView> => ipcRenderer.invoke(BUDDY.GET),
+    onState: (cb: (v: BuddyView) => void) => on(BUDDY.STATE, cb),
+    onKey: (cb: () => void) => on(BUDDY.KEY, cb),
+    /** Kokoro speaks here: say these phonemes, then report back. */
+    onSpeak: (cb: (s: { id: number; phonemes?: string; voice?: string; speed?: number; stop?: boolean }) => void) => on(BUDDY.SPEAK, cb),
+    spoken: (r: { id: number; ok: boolean; error?: string }) => ipcRenderer.send(BUDDY.SPOKEN, r),
+  },
+  /** The buddy's pointer over the whole screen (its own window). */
+  pointer: {
+    onCmd: (cb: (c: PointerCmd) => void) => on(BUDDY.POINTER, cb),
+    ready: () => ipcRenderer.send(BUDDY.POINTER_READY),
   },
   /** Phone Drop's glow over the whole screen (its own window). */
   drop: {
@@ -365,6 +384,11 @@ const settings = {
   setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
   setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
+  buddy: {
+    set: (patch: Partial<BuddyConfig>) => ipcRenderer.invoke(BUDDY.SET, patch),
+    getVoice: (): Promise<string | null> => ipcRenderer.invoke(BUDDY.VOICE_GET),
+    tryVoice: () => ipcRenderer.invoke(BUDDY.VOICE_TRY),
+  },
   clearPrivacy: () => ipcRenderer.invoke(SETTINGS.CLEAR_PRIVACY),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
   setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),

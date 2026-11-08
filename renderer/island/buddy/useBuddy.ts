@@ -1,0 +1,188 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type { ClaudeView } from '@shared/claude'
+import { IDLE_BUDDY, type BuddyView } from '@shared/buddy'
+import { Recorder } from '../voice/recorder'
+import { NOISE, transcribe, warmUp } from '../voice/useVoice'
+
+export type BuddyListen = 'idle' | 'preparing' | 'listening' | 'transcribing'
+
+export type Buddy = {
+  view: BuddyView
+  listen: BuddyListen
+  level: number
+  /** A problem with the microphone or hearing you (the buddy's own are in view.error). */
+  micError: string | null
+  /** The shortcut: listen, or send what you said, or stop it talking. */
+  key: () => void
+  cmd: (c: 'next' | 'back' | 'stop' | 'repeat') => void
+  dismiss: () => void
+}
+
+// Kokoro, in a worker; audio plays here.
+let worker: Worker | null = null
+let ctx: AudioContext | null = null
+let playing: AudioBufferSourceNode | null = null
+const waiting = new Map<number, { resolve: (a: Float32Array) => void; reject: (e: Error) => void }>()
+
+function tts(): Worker {
+  if (worker) return worker
+  worker = new Worker(new URL('./tts.worker.ts', import.meta.url), { type: 'module' })
+  worker.onmessage = (e) => {
+    const w = waiting.get(e.data.id)
+    if (!w) return
+    waiting.delete(e.data.id)
+    if (e.data.type === 'audio') w.resolve(e.data.audio)
+    else w.reject(new Error(e.data.error))
+  }
+  worker.onerror = (e) => {
+    for (const w of waiting.values()) w.reject(new Error(e.message || 'The natural voice crashed'))
+    waiting.clear()
+    worker = null
+  }
+  return worker
+}
+
+function synth(id: number, phonemes: string, voice: string, speed: number): Promise<Float32Array> {
+  return new Promise((resolve, reject) => {
+    waiting.set(id, { resolve, reject })
+    tts().postMessage({ type: 'speak', id, phonemes, voice, speed })
+  })
+}
+
+function play(audio: Float32Array): Promise<void> {
+  ctx ??= new AudioContext()
+  const buf = ctx.createBuffer(1, audio.length, 24000)
+  buf.copyToChannel(new Float32Array(audio), 0)
+  const src = ctx.createBufferSource()
+  src.buffer = buf
+  src.connect(ctx.destination)
+  playing?.stop()
+  playing = src
+  return new Promise((resolve) => {
+    src.onended = () => {
+      if (playing === src) playing = null
+      resolve()
+    }
+    src.start()
+  })
+}
+
+const plain = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
+
+/**
+ * The buddy on the island: its shortcut listens (and stops when you stop
+ * talking), sends what you said, and plays its natural voice. What it says
+ * and where it points come from the main process.
+ */
+export function useBuddy(claude: ClaudeView | null): Buddy {
+  const [view, setView] = useState<BuddyView>(IDLE_BUDDY)
+  const [listen, setListen] = useState<BuddyListen>('idle')
+  const [level, setLevel] = useState(0)
+  const [micError, setMicError] = useState<string | null>(null)
+  const rec = useRef<Recorder | null>(null)
+  const claudeRef = useRef(claude)
+  claudeRef.current = claude
+  const listenRef = useRef(listen)
+  listenRef.current = listen
+  const viewRef = useRef(view)
+  viewRef.current = view
+
+  useEffect(() => {
+    if (!window.island.buddy) return
+    void window.island.buddy.get().then(setView).catch(() => {})
+    return window.island.buddy.onState(setView)
+  }, [])
+
+  // The natural voice: the main process sends phonemes, one sentence at a time.
+  useEffect(() => {
+    if (!window.island.buddy) return
+    return window.island.buddy.onSpeak(async (s) => {
+      if (s.stop) {
+        playing?.stop()
+        playing = null
+        return
+      }
+      try {
+        const audio = await synth(s.id, s.phonemes ?? '', s.voice ?? 'af_heart', s.speed ?? 1)
+        await play(audio)
+        window.island.buddy.spoken({ id: s.id, ok: true })
+      } catch (e) {
+        window.island.buddy.spoken({ id: s.id, ok: false, error: plain(e) })
+      }
+    })
+  }, [])
+
+  const fail = (msg: string) => {
+    rec.current = null
+    setListen('idle')
+    setLevel(0)
+    setMicError(msg)
+  }
+
+  const start = useCallback(async () => {
+    const c = claudeRef.current
+    if (!c) return
+    setMicError(null)
+    try {
+      if (!c.stt.ready) {
+        setListen('preparing')
+        await window.island.claude.ensureSpeechModel()
+      }
+      const model = (claudeRef.current ?? c).stt.model
+      warmUp(model)
+      const r = new Recorder({
+        level: (rms) => setLevel(Math.min(1, rms * 12)),
+        done: async (audio, reason) => {
+          rec.current = null
+          setLevel(0)
+          if (!audio) return fail(reason === 'nothing' ? 'I didn’t hear anything. Try again a little closer to the mic.' : 'Nothing was recorded.')
+          setListen('transcribing')
+          try {
+            const text = (await transcribe(model, audio)).trim()
+            if (!text || NOISE.test(text)) return fail('I couldn’t make that out. Try again?')
+            setListen('idle')
+            await window.island.buddy.ask(text)
+          } catch (e) {
+            fail(plain(e))
+          }
+        },
+      })
+      rec.current = r
+      setListen('listening')
+      await r.start()
+    } catch (e) {
+      const msg = plain(e)
+      if (/Permission|NotAllowed/i.test(msg)) fail('The island isn’t allowed to use the microphone.')
+      else if (/NotFound|Requested device not found/i.test(msg)) fail('No microphone found.')
+      else fail(msg)
+    }
+  }, [])
+
+  const key = useCallback(() => {
+    if (listenRef.current === 'listening') return rec.current?.stop()
+    if (listenRef.current !== 'idle') return
+    // Talking or pointing: the key stops it.
+    if (viewRef.current.phase === 'speaking' || viewRef.current.phase === 'pointing') return void window.island.buddy.cmd('stop')
+    void start()
+  }, [start])
+
+  useEffect(() => {
+    if (!window.island.buddy) return
+    return window.island.buddy.onKey(key)
+  }, [key])
+
+  useEffect(() => () => rec.current?.cancel(), [])
+
+  return {
+    view,
+    listen,
+    level,
+    micError,
+    key,
+    cmd: (c) => void window.island.buddy.cmd(c),
+    dismiss: () => {
+      setMicError(null)
+      if (viewRef.current.error) void window.island.buddy.cmd('stop')
+    },
+  }
+}

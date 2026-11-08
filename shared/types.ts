@@ -1,3 +1,4 @@
+import type { BuddySettingsView } from './buddy'
 import type { PrivacyView } from './privacy'
 import type { WallpaperView } from './wallpaper'
 import type { BrainView } from './brain'
@@ -377,6 +378,8 @@ export type SettingsState = {
   accent: string
   /** Settings › Privacy: what went where, and the pause switch. */
   privacy: PrivacyView
+  /** Settings › Buddy. */
+  buddy: BuddySettingsView
 }
 
 export type ClaudeSettings = {

@@ -1032,3 +1032,70 @@ button.wall-tile:disabled {
 .privacy-empty {
   padding: 8px 0 2px;
 }
+
+/* Buddy: the private-window words. */
+.buddy-words {
+  width: 100%;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
+/* Second brain › The loop. */
+.loop-jobs {
+  margin-top: 8px;
+}
+.loop-job {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.loop-job + .loop-job {
+  border-top: 0.5px solid var(--separator);
+}
+.loop-main {
+  flex: 1;
+  min-width: 0;
+}
+.loop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+.loop-dot.ok {
+  background: var(--green);
+}
+.loop-dot.bad {
+  background: var(--red);
+}
+.loop-dot.none {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.loop-dot.off {
+  opacity: 0.35;
+}
+.loop-moves {
+  margin: 8px 0;
+  font-size: 12.5px;
+}
+.loop-move {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loop-from {
+  font-weight: 500;
+}
+.loop-one {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}

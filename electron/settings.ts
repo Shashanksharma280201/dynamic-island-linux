@@ -1,3 +1,5 @@
+import { BUDDY } from './buddyChannels'
+import type { BuddyConfig, BuddySettingsView } from '@shared/buddy'
 import { egress } from './privacy'
 import { ACCENTS } from '../shared/theme'
 import { parseCharacter } from '@shared/character'
@@ -107,6 +109,11 @@ type Deps = {
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => void
   /** Settings › Privacy. */
   setPaused: (on: boolean) => void
+  /** Settings › Buddy. */
+  buddy: () => BuddySettingsView
+  setBuddy: (patch: Partial<BuddyConfig>) => void
+  buddyVoice: () => Promise<void>
+  buddyTry: () => Promise<void>
 }
 
 /** Settings window + the IPC it uses. */
@@ -129,6 +136,7 @@ export class SettingsController {
       islandTheme: this.d.theme().island,
       accent: this.d.theme().accent,
       privacy: egress.view(),
+      buddy: this.d.buddy(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -472,6 +480,21 @@ export class SettingsController {
       if (pref === 'system' || pref === 'light' || pref === 'dark') this.d.setTheme(pref)
       this.changed()
     })
+    ipcMain.handle(BUDDY.SET, (_e, patch) => {
+      if (patch && typeof patch === 'object') this.d.setBuddy(patch)
+      this.changed()
+    })
+    ipcMain.handle(BUDDY.VOICE_GET, async () => {
+      try {
+        await this.d.buddyVoice()
+        return null
+      } catch (e) {
+        return (e as Error).message
+      } finally {
+        this.changed()
+      }
+    })
+    ipcMain.handle(BUDDY.VOICE_TRY, () => this.d.buddyTry())
     ipcMain.handle(SETTINGS.SET_PAUSED, (_e, on) => {
       this.d.setPaused(on === true)
       this.changed()

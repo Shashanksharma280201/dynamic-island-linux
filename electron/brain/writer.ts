@@ -6,10 +6,10 @@ import { mkdirSync } from 'node:fs'
  * is Claude Code. Runs in its own folder, saves no session and loads no MCP
  * servers or island hooks, so it never shows up as a session of yours.
  */
-export function claudeOnce(bin: string, prompt: string, cwd: string, timeoutMs = 120_000): Promise<string> {
+export function claudeOnce(bin: string, prompt: string, cwd: string, timeoutMs = 120_000, opts: { model?: string; args?: string[] } = {}): Promise<string> {
   mkdirSync(cwd, { recursive: true })
   return new Promise((resolve, reject) => {
-    const p = spawn(bin, ['-p', prompt, '--model', 'haiku', '--output-format', 'text', '--strict-mcp-config', '--no-session-persistence'], {
+    const p = spawn(bin, ['-p', prompt, '--model', opts.model ?? 'haiku', '--output-format', 'text', '--strict-mcp-config', '--no-session-persistence', ...(opts.args ?? [])], {
       cwd,
       env: { ...process.env, DYNAMIC_ISLAND_RUN: '1', DI_BRAIN_SKIP: '1' },
       stdio: ['ignore', 'pipe', 'pipe'],

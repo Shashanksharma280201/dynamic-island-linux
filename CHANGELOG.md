@@ -6,6 +6,24 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
+**The buddy: ask about your screen, out loud**
+
+- Press **Ctrl+Alt+B** and ask: “where do I change the wallpaper?”, “walk me
+  through setting up a printer”. Your character answers out loud, with
+  captions on the island, and an arrow flies from the island to the spot.
+  A walkthrough goes one step at a time: say “next” or press **Next**;
+  “stop” and “say that again” work too. [The guide](docs/buddy.md).
+- It looks at a screenshot taken when you ask, with **private windows**
+  (password managers, private browsing, your bank…) blacked out before it
+  leaves; its answers use your second brain, and each question can be kept
+  in the brain's inbox.
+- **Its voice**: Kokoro, a natural voice that runs on this computer
+  (downloaded once, about 92 MB, with espeak-ng for pronunciation), the
+  system's voice, or captions only. **Settings → Buddy** has the voice,
+  speed, tone, the private-window words and **Hear it**.
+- Settings → Privacy lists what it sent, and **Pause AI and the web** stops
+  it looking.
+
 **A look closer to macOS**
 
 - **The icon rail works like the Dock**: icons grow under the pointer (their

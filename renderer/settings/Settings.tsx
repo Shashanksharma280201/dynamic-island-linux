@@ -1,3 +1,4 @@
+import { BuddySection } from './BuddySection'
 import { PrivacySection } from './PrivacySection'
 import { ACCENTS, accentOf } from '@shared/theme'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -304,6 +305,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
   [
     { id: 'you', label: 'You', when: (s) => s.brain.exists },
     { id: 'brain', label: 'Second brain' },
+    { id: 'buddy', label: 'Buddy' },
     { id: 'wallpaper', label: 'Wallpaper' },
   ],
   [
@@ -440,6 +442,7 @@ export function Settings() {
       <BrainSection s={s} />
       <WallpaperSection s={s} />
       <PrivacySection s={s} />
+      <BuddySection s={s} />
       <CharacterSection s={s} />
       <AiSection s={s} />
       <PackagesSection s={s} />

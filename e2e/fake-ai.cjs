@@ -37,6 +37,15 @@ function startFakeAi() {
   const plan = (body) => {
     const result = toolResult(body)
     const prompt = lastUser(body.messages.filter((m) => !(Array.isArray(m.content) && m.content[0]?.type === 'tool_result')))
+    // The buddy: a question with a screenshot.
+    const last = body.messages[body.messages.length - 1]
+    const pic = Array.isArray(last?.content) && last.content.some((b) => b.type === 'image' || b.type === 'image_url')
+    if (pic && result === null) {
+      s.lastImage = last.content.find((b) => b.type === 'image')?.source?.data ?? last.content.find((b) => b.type === 'image_url')?.image_url?.url ?? ''
+      if (/walk me through|how do i/i.test(prompt)) return { text: 'First open the menu at the top. Then choose Settings. [POINT:400,40:Menu] [POINT:520,300:Settings]' }
+      if (/where/i.test(prompt)) return { text: 'It’s the gear at the top right. [POINT:1800,30:Settings gear]' }
+      return { text: 'I can see your screen. [POINT:none]' }
+    }
     if (result !== null) {
       if (/^Saved the note/.test(result)) return { text: 'Done! I saved that note for you.' }
       if (/^Set as the background: /.test(result)) return { text: result.split(' (Say')[0] }

@@ -1,0 +1,15 @@
+/** The buddy's messages between the main process, the island, the pointer and Settings. */
+export const BUDDY = {
+  STATE: 'buddy:state', // main -> island: BuddyView
+  KEY: 'buddy:key', // main -> island: the buddy's shortcut was pressed
+  ASK: 'buddy:ask', // island -> main (invoke): what you said or typed
+  CMD: 'buddy:cmd', // island -> main (invoke): 'next' | 'back' | 'stop' | 'repeat'
+  GET: 'buddy:get', // island -> main (invoke): BuddyView
+  SPEAK: 'buddy:speak', // main -> island: { id, phonemes, voice, speed } for Kokoro
+  SPOKEN: 'buddy:spoken', // island -> main: { id, ok, error? }
+  POINTER: 'buddy:pointer', // main -> pointer page: PointerCmd
+  POINTER_READY: 'buddy:pointer-ready', // pointer page -> main
+  SET: 'buddy:set', // settings -> main (invoke): Partial<BuddyConfig>
+  VOICE_GET: 'buddy:voice-get', // settings -> main (invoke): download the natural voice
+  VOICE_TRY: 'buddy:voice-try', // settings -> main (invoke): say a line in the chosen voice
+} as const

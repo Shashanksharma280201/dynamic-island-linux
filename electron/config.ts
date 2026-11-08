@@ -1,3 +1,4 @@
+import { parseBuddyConfig, type BuddyConfig } from '../shared/buddy'
 import { ACCENTS } from '../shared/theme'
 import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs'
@@ -81,6 +82,8 @@ export type Config = {
   accent: string
   /** Settings › Privacy: nothing goes to an AI, a photo site or a service while paused. */
   privacy: { paused: boolean }
+  /** The buddy (Settings › Buddy). */
+  buddy: BuddyConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -153,6 +156,7 @@ const DEFAULTS: Config = {
   islandTheme: 'match',
   accent: 'blue',
   privacy: { paused: false },
+  buddy: parseBuddyConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -195,6 +199,7 @@ export function mergeConfig(raw: unknown): Config {
   if (r.islandTheme === 'match' || r.islandTheme === 'dark') c.islandTheme = r.islandTheme
   if (typeof r.accent === 'string' && ACCENTS.some((a) => a.id === r.accent)) c.accent = r.accent
   c.privacy = { paused: r.privacy?.paused === true }
+  c.buddy = parseBuddyConfig(r.buddy)
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

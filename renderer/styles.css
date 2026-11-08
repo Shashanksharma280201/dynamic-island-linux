@@ -5148,6 +5148,110 @@ button .spinner-orb,
   box-shadow: 0 0 0 2px var(--blue);
 }
 
+/* The buddy: what it heard, its captions, and a walkthrough's steps. */
+.island.buddy-island {
+  border-radius: 20px;
+  width: 300px;
+  box-sizing: border-box;
+}
+.island-outer.right .island.buddy-island {
+  align-self: flex-end;
+}
+.buddy-pill {
+  padding: 10px 12px 11px;
+  font-size: 13px;
+}
+.buddy-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.buddy-glyph {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg, #5e5ce6, var(--blue));
+}
+.buddy-pill[data-phase='thinking'] .buddy-glyph,
+.buddy-pill[data-phase='transcribing'] .buddy-glyph {
+  animation: buddy-spin 1.4s linear infinite;
+}
+@keyframes buddy-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.buddy-name {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--label-2);
+}
+.buddy-step {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--blue-text);
+}
+.buddy-x {
+  border: 0;
+  background: rgba(var(--ink), 0.08);
+  color: var(--label-2);
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  line-height: 18px;
+  padding: 0;
+  cursor: pointer;
+}
+.buddy-text {
+  font-weight: 500;
+  line-height: 1.38;
+}
+.buddy-text.muted {
+  color: var(--label-2);
+}
+.buddy-error {
+  color: var(--red-text);
+}
+.buddy-heard {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--label-3);
+}
+.buddy-level {
+  display: flex;
+  gap: 3px;
+  height: 18px;
+  align-items: center;
+  margin: 2px 0 4px;
+}
+.buddy-level span {
+  width: 4px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--blue);
+  transition: transform 0.08s linear;
+}
+.buddy-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 8px;
+}
+.buddy-note {
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--label-3);
+}
+@media (prefers-reduced-motion: reduce) {
+  .buddy-pill .buddy-glyph {
+    animation: none !important;
+  }
+}
+
 /* Dictate anywhere: a pill under the island while you speak. */
 .island.dictate-pill {
   border-radius: 999px;

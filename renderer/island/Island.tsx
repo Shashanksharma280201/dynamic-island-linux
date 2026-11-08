@@ -39,6 +39,8 @@ import { tourSteps } from './tour'
 import { WardrobePicker } from './character/Wardrobe'
 import { useDictation } from './voice/useDictation'
 import { DictationPill } from './voice/DictationPill'
+import { useBuddy } from './buddy/useBuddy'
+import { BuddyPill, buddyShown } from './buddy/BuddyPill'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
 
@@ -201,6 +203,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const voice = useVoice(claude)
   // Dictate anywhere (its shortcut): typed into the app you're in.
   const dictation = useDictation(claude)
+  // The buddy: ask about your screen (its shortcut), it answers out loud and points.
+  const buddy = useBuddy(claude)
   const voiceRef = useRef(voice)
   voiceRef.current = voice
   const openClaude = () => {
@@ -657,6 +661,23 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             >
               Undo
             </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {buddyShown(buddy) && (
+          <motion.div
+            key="buddy"
+            className="island buddy-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+            role="status"
+          >
+            <BuddyPill b={buddy} name={character.name} />
           </motion.div>
         )}
       </AnimatePresence>
