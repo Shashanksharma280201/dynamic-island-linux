@@ -69,7 +69,8 @@ export async function mineHistory(d: MineDeps): Promise<MineResult> {
       }
     }
     if (!digests.length) continue
-    const cwd = digests[0].cwd
+    // The project's own folder: the shortest one its sessions ran in (a session in a subfolder is still this project's).
+    const cwd = digests.map((g) => g.cwd).sort((a, b) => a.length - b.length || a.localeCompare(b))[0]
     if (within(cwd, d.vault.root) || d.skip.some((s) => within(cwd, s))) continue
     const { name, root } = projectOf(cwd, d.hasGit)
     const p = byName.get(name) ?? { name, root, sessions: [], total: 0, first: Infinity, last: 0 }

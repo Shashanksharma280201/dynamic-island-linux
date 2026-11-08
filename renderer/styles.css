@@ -4574,6 +4574,29 @@ button.crm-menu-item:hover {
   right: auto;
   left: 34px;
 }
+/* Notes waiting to be filed: a small count on the character's upper corner. */
+.file-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--blue);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 8.5px/1 var(--font);
+  box-shadow: 0 0 0 1.5px var(--material);
+  pointer-events: none;
+}
+.island-outer.top .file-badge {
+  top: auto;
+  bottom: 2px;
+  right: 3px;
+}
 
 /* ---------------------------------------------------------------------------
    Orbs (thinking-orbs): loading, an agent's steps, the voice halo

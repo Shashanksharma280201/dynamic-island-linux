@@ -8,7 +8,7 @@ import { spring, pop, contentIn, contentOut, morphSpring, sizeRank } from '../an
 import { sound } from '../sound'
 import { useHoverIntent } from './useHoverIntent'
 import { Hello, Peek } from './states/Peek'
-import { IdlePill } from './states/IdlePill'
+import { IdlePill, useResting } from './states/IdlePill'
 import { MediaCard } from './states/MediaCard'
 import { JobCard } from './states/JobCard'
 import { ApprovalCard } from './states/ApprovalCard'
@@ -90,6 +90,7 @@ const PANEL_CLOSE_MS = 1500
 export function Island({ activities: real }: { activities: Activity[] }) {
   const character = useCharacter()
   const center = useNotifications()
+  const resting = useResting()
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
@@ -592,11 +593,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />
             ) : peeking ? (
-              <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} />
+              <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} resting={resting} />
             ) : hello && p.mode === 'idle' ? (
               <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
-              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} />
+              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} toFile={resting?.toFile ?? 0} />
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (

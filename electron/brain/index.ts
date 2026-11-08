@@ -211,6 +211,16 @@ export class Brain {
     return n
   }
 
+  /** How many notes wait in the inbox to be filed (0 without a brain). */
+  toFile(): number {
+    const v = this.d.config().on ? this.vault() : null
+    try {
+      return v ? v.list(INBOX).length : 0
+    } catch {
+      return 0
+    }
+  }
+
   /** The loop, when the brain is on. */
   jobs(): Loop | null {
     return this.loop

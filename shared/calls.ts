@@ -91,28 +91,6 @@ export function pickAudioDevices(names: string[]): { mic: string | null; monitor
   }
 }
 
-/**
- * A WAV whose recorder was stopped hard still says it's empty (the sizes
- * are written last). The sizes from the file's real length, so the audio
- * decodes. Returns the same buffer, fixed in place. Pure apart from that.
- */
-export function fixWavSizes(b: Buffer): Buffer {
-  if (b.length < 44 || b.toString('ascii', 0, 4) !== 'RIFF' || b.toString('ascii', 8, 12) !== 'WAVE') return b
-  let at = 12
-  while (at + 8 <= b.length) {
-    const id = b.toString('ascii', at, at + 4)
-    const size = b.readUInt32LE(at + 4)
-    if (id === 'data') {
-      const real = b.length - at - 8
-      if (size === 0 || size === 0xffffffff || size > real) b.writeUInt32LE(real, at + 4)
-      b.writeUInt32LE(b.length - 8, 4)
-      return b
-    }
-    at += 8 + size + (size % 2)
-  }
-  return b
-}
-
 /** How to get ffmpeg on this system. Pure. */
 export function ffmpegHint(platform: string): string {
   return platform === 'darwin' ? 'brew install ffmpeg' : platform === 'win32' ? 'winget install ffmpeg' : 'sudo apt install ffmpeg'

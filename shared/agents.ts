@@ -53,7 +53,8 @@ export function parseMonitor(text: string, repo = ''): Omit<Monitor, 'id' | 'cre
   if (ci) return { kind: 'ci', text, target: ci[1], ref: ci[2] && !/^(finishes|passes|fails)$/i.test(ci[2]) ? ci[2] : undefined }
   const mention = /\b(?:anyone|someone|somebody|a message|mail|an? email)\s+(?:mentions|says|talks about|is about|about)\s+["“]?(.{2,60}?)["”]?$/i.exec(t)
   if (mention) return { kind: 'mention', text, target: mention[1].trim() }
-  const file = /((?:~|\/)[^\s]+)\s+(?:appears|exists|is there|changes|is saved)\b/i.exec(t)
+  // A path: ~/…, /…, or a Windows one (C:\\…).
+  const file = /((?:~|\/|[A-Za-z]:[\\/])[^\s]+)\s+(?:appears|exists|is there|changes|is saved)\b/i.exec(t)
   if (file) return { kind: 'file', text, target: file[1] }
   return null
 }
