@@ -6,5 +6,6 @@ export const NOTIFS = {
   UNDO: 'notifs:undo', // invoke: put the last cleared ones back
   SEEN: 'notifs:seen', // invoke: the Notifications tab was looked at
   SET_DND: 'notifs:set-dnd', // invoke(boolean)
+  SUM_UP: 'notifs:sum-up', // invoke -> { text } | { error }: the list in a few sentences, by the AI
   CHANGED: 'notifs:changed', // main -> renderer: CenterView
 } as const

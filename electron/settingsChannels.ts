@@ -49,4 +49,13 @@ export const SETTINGS = {
   SET_AI_KEY: 'settings:set-ai-key', // (provider, key | ''): '' removes it
   SET_PACKAGE: 'settings:set-package', // (id, on)
   AI_MODELS: 'settings:ai-models', // invoke(provider) -> string[] (also tests the key)
+  SET_THEME: 'settings:set-theme', // 'system' | 'light' | 'dark'
+  SET_PAUSED: 'settings:set-paused', // boolean: Settings › Privacy
+  DESKTOP_SET: 'settings:desktop-set', // { dock?, buttonsLeft?, commandBar?, blur?, hideClock? }
+  DESKTOP_GET_EXT: 'settings:desktop-get-ext', // (extension id): from extensions.gnome.org
+  DESKTOP_SYSTEM: 'settings:desktop-system', // ('apply' | 'undo'): the login screen and boot splash (asks for your password)
+  DESKTOP_APPLY: 'settings:desktop-apply',
+  DESKTOP_UNDO: 'settings:desktop-undo',
+  CLEAR_PRIVACY: 'settings:clear-privacy',
+  SET_LOOK: 'settings:set-look', // { island?: 'match' | 'dark', accent?: AccentId }
 } as const

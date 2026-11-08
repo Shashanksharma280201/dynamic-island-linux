@@ -24,7 +24,7 @@ Your computer's Dynamic Island on your phone, and files both ways with a glow.
 - **Inbox**: your computer's WhatsApp chats and mail, to read and answer, and
   its notifications (clear one or all, Do Not Disturb).
 - **More**: **Trading** (P&L, trades to answer, positions, today's trades,
-  Stop trading / Close everything), **Notes** (read, write, edit), **Music**
+  Stop trading / Close everything), **Notes** (read, write, edit; **To my brain** sends one to your second brain's inbox, once you allow it in the island's Settings), **Music**
   (what's playing, Spotify search, playlists, where it plays), **Controls**
   (volume, brightness, mute, Wi-Fi, Bluetooth, Do Not Disturb), **CRM**
   (follow-ups, people, log a call, deals), **Documents** (convert, merge PDFs,
@@ -34,6 +34,10 @@ Your computer's Dynamic Island on your phone, and files both ways with a glow.
   **Deny** (or **Buy** / **Skip**) buttons right on them.
 - **Light and dark**: **More → Settings → Appearance**: System (follows the
   phone), Light or Dark.
+
+On the island screen, **Hold to talk to your buddy** makes the phone the
+buddy's microphone: it records only while you hold, your computer makes it
+out, and the buddy answers out loud there.
 
 ## Staying connected
 

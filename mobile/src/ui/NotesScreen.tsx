@@ -65,6 +65,8 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
   const [noteId, setNoteId] = useState(id)
   const loaded = useRef(!id)
   const saved = useRef('')
+  // Sent to the second brain's inbox (when it's on and you allowed notes from the phone).
+  const [toBrain, setToBrain] = useState<string | null>(null)
   useEffect(() => {
     if (note.data && !loaded.current) {
       loaded.current = true
@@ -96,7 +98,7 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Page
         title={noteId ? body.split('\n')[0].replace(/^#+\s*/, '').slice(0, 60) || 'Note' : 'New note'}
-        sub={act.busy === 'save' ? 'Saving…' : body !== saved.current ? 'Not saved yet' : noteId ? 'Saved on your computer' : undefined}
+        sub={act.busy === 'save' ? 'Saving…' : act.busy === 'brain' ? 'Sending to your brain…' : toBrain === body && body ? 'In your brain’s inbox' : body !== saved.current ? 'Not saved yet' : noteId ? 'Saved on your computer' : undefined}
         top={top}
         onBack={() => void close()}
         scroll={false}
@@ -127,8 +129,16 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
         <Animated.View entering={FadeInDown.springify().damping(20)} style={{ flex: 1, paddingHorizontal: 16 }}>
           <TextInput style={st.editor} multiline autoFocus={!id} value={body} onChangeText={setBody} placeholder="Write something…" placeholderTextColor={C.text3} textAlignVertical="top" />
         </Animated.View>
-        <View style={{ padding: 16, paddingBottom: 100 }}>
+        <View style={{ padding: 16, paddingBottom: 100, gap: 10 }}>
           <Btn kind="primary" label="Save" busy={act.busy === 'save'} disabled={body === saved.current} onPress={() => void save()} />
+          <Btn
+            label={toBrain === body && body ? 'In your brain’s inbox' : 'To my brain'}
+            busy={act.busy === 'brain'}
+            disabled={!body.trim() || toBrain === body}
+            onPress={async () => {
+              if ((await act.run('brain', 'brain.capture', body)) !== null) setToBrain(body)
+            }}
+          />
         </View>
       </Page>
     </KeyboardAvoidingView>

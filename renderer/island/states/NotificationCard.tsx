@@ -2,7 +2,7 @@ import type { NotificationData } from '@shared/types'
 import { Badge } from './Badge'
 import { BellIcon, XIcon } from '../icons'
 
-/** A desktop notification, styled like an Apple notification banner. */
+/** A desktop notification, as a macOS banner: the app's icon on the left, the words beside it. */
 export function NotificationCard({
   id,
   notification: n,
@@ -13,11 +13,10 @@ export function NotificationCard({
   queued: number
 }) {
   return (
-    <div className={`card notification${n.urgency === 'critical' ? ' critical' : ''}`}>
+    <div className={`card notification mac${n.urgency === 'critical' ? ' critical' : ''}`}>
+      <span className={`app-glyph big${n.icon ? '' : ' plain'}`}>{n.icon ? <img src={n.icon} alt="" /> : <BellIcon />}</span>
+      <div className="notif-main">
       <div className="card-head">
-        <span className="app-glyph" style={{ background: n.icon ? 'transparent' : 'var(--fill)' }}>
-          {n.icon ? <img src={n.icon} alt="" /> : <BellIcon />}
-        </span>
         <span className="app-name ellipsis">{n.app || 'Notification'}</span>
         <span className="spacer" />
         <Badge count={queued} />
@@ -52,6 +51,7 @@ export function NotificationCard({
           ))}
         </div>
       )}
+      </div>
     </div>
   )
 }

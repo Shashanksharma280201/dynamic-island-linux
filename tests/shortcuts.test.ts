@@ -29,7 +29,7 @@ test('clashes with our own shortcuts, however they are written', () => {
   expect(sameAccel('Alt+Control+Y', 'Control+Alt+Y')).toBe(true)
   expect(clash(DEFAULT_SHORTCUTS, 'voice', 'Control+Alt+Y')).toBe('allow')
   expect(clash(DEFAULT_SHORTCUTS, 'allow', 'Control+Alt+Y')).toBeNull()
-  expect(clash(DEFAULT_SHORTCUTS, 'voice', 'Control+Alt+K')).toBeNull()
+  expect(clash(DEFAULT_SHORTCUTS, 'voice', 'Control+Alt+J')).toBeNull()
 })
 
 test('labels and saved values', () => {

@@ -1,8 +1,9 @@
 import type { ReactNode } from 'react'
 import type { SettingsState } from '@shared/types'
 import { PACKAGES, type PackageId } from '@shared/packages'
-import { ConnectedAppIcon, CrmAppIcon, DocsAppIcon, MailAppIcon, NotesAppIcon, SettingsAppIcon, SpotifyAppIcon, WhatsAppIcon } from '../island/hub/AppIcons'
+import { ConnectedAppIcon, CrmAppIcon, DocsAppIcon, MailAppIcon, NotesAppIcon, SettingsAppIcon, SpotifyAppIcon, WallpaperAppIcon, WhatsAppIcon } from '../island/hub/AppIcons'
 import { useAction } from './Settings'
+import { SIDE_ICONS } from './SideIcons'
 
 const ICONS: Record<PackageId, ReactNode> = {
   basics: <SettingsAppIcon />,
@@ -13,6 +14,8 @@ const ICONS: Record<PackageId, ReactNode> = {
   docs: <DocsAppIcon />,
   crm: <CrmAppIcon />,
   connected: <ConnectedAppIcon />,
+  wallpaper: <WallpaperAppIcon />,
+  system: SIDE_ICONS.desktop,
 }
 
 /** Settings → Packages: what the island and its agent can do. */

@@ -32,6 +32,7 @@ export type IconName =
   | 'play'
   | 'pause'
   | 'info'
+  | 'mic'
 
 const LINES: Record<IconName, (c: string) => React.ReactNode> = {
   back: (c) => <Path d="M15 5l-7 7 7 7" stroke={c} />,
@@ -88,6 +89,12 @@ const LINES: Record<IconName, (c: string) => React.ReactNode> = {
     </>
   ),
   moon: (c) => <Path d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z" stroke={c} />,
+  mic: (c) => (
+    <>
+      <Rect x={9} y={3.5} width={6} height={11} rx={3} stroke={c} />
+      <Path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v2.5M9 20.5h6" stroke={c} />
+    </>
+  ),
   auto: (c) => (
     <>
       <Circle cx={12} cy={12} r={8.5} stroke={c} />

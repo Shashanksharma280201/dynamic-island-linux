@@ -331,6 +331,29 @@ export class DropLink {
     }
   }
 
+  /** You talked to the buddy: the recording goes to the computer, which makes it out and answers out loud. What it heard, or why not. */
+  async talk(uri: string, mime = 'audio/mp4'): Promise<{ ok: true; text: string } | { ok: false; message: string }> {
+    const url = await this.url()
+    if (!url) return { ok: false, message: this.state.error ?? 'Can’t reach your computer.' }
+    try {
+      const task = new File(uri).createUploadTask(`${url}/island/voice`, {
+        httpMethod: 'PUT',
+        headers: { ...this.auth, 'Content-Type': mime, 'X-Island-Device': DEVICE },
+      })
+      const r = await task.uploadAsync()
+      let j: any = {}
+      try {
+        j = JSON.parse(r.body)
+      } catch {
+        // not JSON
+      }
+      if (r.status >= 200 && r.status < 300 && j.ok && typeof j.text === 'string') return { ok: true, text: j.text }
+      return { ok: false, message: typeof j.message === 'string' ? j.message : linkError(r.status) }
+    } catch (e: any) {
+      return { ok: false, message: linkError(undefined, String(e?.message ?? e)) }
+    }
+  }
+
   /** Listen to the island: its view on every change, files it sends. Reconnects by itself. */
   async startLive(): Promise<void> {
     this.stopLive()

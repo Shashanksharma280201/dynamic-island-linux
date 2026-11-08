@@ -1,3 +1,9 @@
+import { parseDesktopConfig, type DesktopConfig } from '../shared/desktop'
+import { parseEngineConfig, type EngineConfig } from '../shared/engine'
+import { parseSourcesConfig, type SourcesConfig } from '../shared/intake'
+import { parseRoutine, type Routine } from '../shared/jarvis'
+import { parseBuddyConfig, type BuddyConfig } from '../shared/buddy'
+import { ACCENTS } from '../shared/theme'
 import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
@@ -12,6 +18,8 @@ import { DRAG_DEFAULTS, parseDragConfig, type DragConfig } from '@shared/dragAct
 import { parseServices, type ServicesConfig } from './services'
 import { parseConnectedConfig, type ConnectedConfig } from '@shared/connected'
 import { DROP_DEFAULTS, parseDropConfig, type DropConfig } from '@shared/drop'
+import { parseBrainConfig, type BrainConfig } from '@shared/brain'
+import { parseWallpaperConfig, type WallpaperConfig } from '@shared/wallpaper'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -66,6 +74,28 @@ export type Config = {
   ai: AiConfig
   /** Packages you turned off. */
   packages: PackagesConfig
+  /** The second brain shared by your AI tools (Settings → Brain). */
+  brain: BrainConfig
+  /** The desktop background the island set, live wallpaper options and your photo-site keys. */
+  wallpaper: WallpaperConfig
+  /** Light or dark: following the desktop, or always one. */
+  theme: 'system' | 'light' | 'dark'
+  /** The island matches the theme, or stays dark like a notch. */
+  islandTheme: 'match' | 'dark'
+  /** The accent colour (shared/theme.ts ACCENTS). */
+  accent: string
+  /** Settings › Privacy: nothing goes to an AI, a photo site or a service while paused. */
+  privacy: { paused: boolean }
+  /** The buddy (Settings › Buddy). */
+  buddy: BuddyConfig
+  /** Routines: standing orders the assistant runs at their time (Settings › Buddy). */
+  routines: Routine[]
+  /** Ubuntu in the island's look, and the command bar (Settings › Desktop). */
+  desktop: DesktopConfig
+  /** Island OS's engine: a model on this computer first, the cloud with your yes (Settings › Model). */
+  engine: EngineConfig
+  /** Island OS's intake: what it reads of what you do (Settings › Sources; each off until you turn it on). */
+  sources: SourcesConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -132,6 +162,17 @@ const DEFAULTS: Config = {
   character: parseCharacter(null),
   ai: parseAiConfig(null),
   packages: parsePackages(null),
+  brain: parseBrainConfig(null),
+  wallpaper: parseWallpaperConfig(null),
+  theme: 'system',
+  islandTheme: 'match',
+  accent: 'blue',
+  privacy: { paused: false },
+  buddy: parseBuddyConfig(null),
+  routines: [],
+  desktop: parseDesktopConfig(null),
+  engine: parseEngineConfig(null),
+  sources: parseSourcesConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -161,13 +202,24 @@ export function parseMailAccount(raw: any): StoredMailAccount | null {
 
 /** Merge a parsed file over defaults, ignoring unknown/mistyped keys. Pure. */
 export function mergeConfig(raw: unknown): Config {
-  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null) }
+  const c: Config = { ...DEFAULTS, services: parseServices(null), connected: parseConnectedConfig(null), drop: { ...DROP_DEFAULTS }, keys: parseShortcuts(null), companion: { on: false, at: null }, drag: { ...DRAG_DEFAULTS }, mail: [], dock: { ...DEFAULT_DOCK }, claude: { ...CLAUDE_DEFAULTS }, spotify: { clientId: '' }, character: parseCharacter(null), ai: parseAiConfig(null), packages: parsePackages(null), brain: parseBrainConfig(null), wallpaper: parseWallpaperConfig(null) }
   if (!raw || typeof raw !== 'object') return c
   const r = raw as any
   c.claude = parseClaudeConfig(r.claude)
   c.character = parseCharacter(r.character)
   c.ai = parseAiConfig(r.ai)
   c.packages = parsePackages(r.packages)
+  c.brain = parseBrainConfig(r.brain)
+  c.wallpaper = parseWallpaperConfig(r.wallpaper)
+  if (r.theme === 'system' || r.theme === 'light' || r.theme === 'dark') c.theme = r.theme
+  if (r.islandTheme === 'match' || r.islandTheme === 'dark') c.islandTheme = r.islandTheme
+  if (typeof r.accent === 'string' && ACCENTS.some((a) => a.id === r.accent)) c.accent = r.accent
+  c.privacy = { paused: r.privacy?.paused === true }
+  c.buddy = parseBuddyConfig(r.buddy)
+  c.desktop = parseDesktopConfig(r.desktop)
+  c.engine = parseEngineConfig(r.engine)
+  c.sources = parseSourcesConfig(r.sources)
+  c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }

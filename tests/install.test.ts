@@ -87,3 +87,18 @@ test('installer creates settings.json when missing and uninstalls cleanly', () =
   run('--uninstall')
   expect(JSON.parse(fs.readFileSync(file, 'utf8'))).toEqual({})
 })
+
+test('settings are written whole (never half-written), and a symlinked file stays a symlink', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'di-install-'))
+  const real = path.join(dir, 'dotfiles', 'claude-settings.json')
+  fs.mkdirSync(path.dirname(real))
+  fs.writeFileSync(real, JSON.stringify({ theme: 'dark' }))
+  fs.symlinkSync(real, path.join(dir, 'settings.json'))
+  execFileSync('node', ['hook/install.cjs'], { env: { ...process.env, CLAUDE_CONFIG_DIR: dir } })
+  expect(fs.lstatSync(path.join(dir, 'settings.json')).isSymbolicLink()).toBe(true)
+  const s = JSON.parse(fs.readFileSync(real, 'utf8'))
+  expect(s.theme).toBe('dark')
+  expect(JSON.stringify(s.hooks.PermissionRequest)).toContain('claude-island-hook.cjs')
+  // No temp file is left behind.
+  expect(fs.readdirSync(path.dirname(real)).filter((f) => f.includes('.island-'))).toEqual([])
+})

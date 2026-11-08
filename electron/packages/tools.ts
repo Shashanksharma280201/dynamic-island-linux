@@ -1,3 +1,4 @@
+import { systemTools, type SystemContext } from './systemTools'
 import type { ChatSummary, MediaCmd, MediaState } from '@shared/types'
 import { enabledPackages, type PackageId, type PackagesConfig } from '@shared/packages'
 import type { SpotifyView, SpSearch, PlayResult } from '@shared/spotify'
@@ -31,6 +32,10 @@ export type PackageContext = {
   crm: CrmContext
   /** The connected package's view, as text (read only: only you answer its approvals). */
   connected: { text: () => string }
+  /** The desktop background's tools (Settings → Wallpaper). */
+  wallpaper?: { tools: () => AgentTool[] }
+  /** Apps, sound, light or dark, Do Not Disturb, the lock (the System package). */
+  system?: SystemContext
   now?: () => Date
 }
 
@@ -320,6 +325,8 @@ const BUILDERS: Record<PackageId, (ctx: PackageContext) => AgentTool[]> = {
   docs: (ctx) => docsTools(ctx.docs),
   crm: (ctx) => crmTools(ctx.crm),
   connected,
+  wallpaper: (ctx) => ctx.wallpaper?.tools() ?? [],
+  system: (ctx) => (ctx.system ? systemTools(ctx.system) : []),
 }
 
 /** The agent's tools: those of the packages that are turned on. */

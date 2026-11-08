@@ -4,7 +4,7 @@
  */
 import { useId, type ReactNode } from 'react'
 
-function Tile({ from, to, children, round = false, size = 28 }: { from: string; to: string; children: ReactNode; round?: boolean; size?: number }) {
+export function Tile({ from, to, children, round = false, size = 28 }: { from: string; to: string; children: ReactNode; round?: boolean; size?: number }) {
   const id = useId()
   return (
     <svg className="app-icon" width={size} height={size} viewBox="0 0 28 28" aria-hidden>
@@ -61,6 +61,26 @@ export const ClaudeAppIcon = () => {
 }
 
 /** Sessions: a terminal prompt on dark slate, with Claude's orange cursor. */
+/** Today: a sun over a short timeline. */
+export const TodayAppIcon = () => (
+  <Tile from="#ffcc00" to="#ff9500">
+    <circle cx="14" cy="11" r="3.6" fill="#fff" />
+    <path d="M14 4.6v1.6M8.6 7l1.1 1.1M19.4 7l-1.1 1.1M6.8 11.6h1.6M19.6 11.6h1.6" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M8 18.5h12M8 21.5h8" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" opacity="0.9" />
+  </Tile>
+)
+
+/** Agents: three small figures at work, one ahead. */
+export const AgentsAppIcon = () => (
+  <Tile from="#bf5af2" to="#5e5ce6">
+    <circle cx="14" cy="9.2" r="2.6" fill="#fff" />
+    <path d="M9.6 17.6c.6-2.6 2.3-3.9 4.4-3.9s3.8 1.3 4.4 3.9" fill="#fff" />
+    <circle cx="7.6" cy="13" r="1.9" fill="#fff" opacity="0.75" />
+    <circle cx="20.4" cy="13" r="1.9" fill="#fff" opacity="0.75" />
+    <path d="M4.8 19.4c.4-1.9 1.5-2.8 2.8-2.8M23.2 19.4c-.4-1.9-1.5-2.8-2.8-2.8" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" opacity="0.75" fill="none" />
+  </Tile>
+)
+
 export const SessionsAppIcon = () => (
   <Tile from="#3a3a3c" to="#1c1c1e">
     <path d="m8 10 4 4-4 4" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
@@ -122,6 +142,15 @@ export const MailAppIcon = () => (
   <Tile from="#27a8ff" to="#0a5cff">
     <rect x="5.5" y="8.5" width="17" height="12" rx="2" fill="#fff" />
     <path d="M6.2 9.4 14 15.2l7.8-5.8" fill="none" stroke="#1c7cff" strokeWidth="1.5" strokeLinejoin="round" />
+  </Tile>
+)
+
+/** Wallpaper: a landscape (hills and a sun) on a teal-to-indigo tile, like macOS Wallpaper settings. */
+export const WallpaperAppIcon = () => (
+  <Tile from="#38d1e0" to="#3a5bff">
+    <rect x="5.5" y="7.5" width="17" height="13" rx="2.2" fill="#fff" />
+    <circle cx="17.6" cy="11.4" r="1.8" fill="#ffb02e" />
+    <path d="M6.6 19.4l4.6-5.2 3.2 3.4 2-2.1 4.4 3.9z" fill="#2f7cf6" />
   </Tile>
 )
 

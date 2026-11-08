@@ -31,7 +31,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'right', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
-    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
+    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
     companion: { on: false, at: null },
     dictation: true,
@@ -48,7 +48,18 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     character: { id: 'orbit', name: 'Orbit', outfit: 'auto', color: null },
     ai: { provider: 'claude-code', models: {}, baseUrls: {}, keys: {} },
     packages: { disabled: [] },
+    brain: { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: 47823, since: 0, meaning: false, whatsapp: false, mail: false, phone: false, skipChats: [] },
+    wallpaper: { current: null, pauseCovered: true, pauseBattery: true, keys: { pexels: '', unsplash: '', pixabay: '' }, original: '' },
+    theme: 'system',
+    islandTheme: 'match',
+    accent: 'blue',
+    privacy: { paused: false },
+    buddy: { on: true, voice: 'natural', voiceId: 'af_heart', speed: 1, look: true, tone: 'friendly', private: ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank'], save: true, wake: false, alerts: true, quietFrom: 22, quietTo: 8, digest: true, digestAt: 18, interrupt: true, speakMorning: false },
+    routines: [],
+    desktop: { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false, system: { applied: false, gdmPrevious: '', splashPrevious: '' } },
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
+    engine: { localFirst: true, localUrl: 'http://localhost:11434', dailyModel: '', researchModel: '', cloud: 'ask', jobs: {}, learn: true },
+    sources: { on: { github: false, shell: false, calendar: false, screen: false, codex: false, gemini: false }, calendar: '', skip: [] },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)

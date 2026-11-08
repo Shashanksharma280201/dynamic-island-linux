@@ -1,3 +1,9 @@
+import type { OsView } from '@shared/os'
+import type { DesktopView } from '@shared/desktop'
+import { BUDDY } from './buddyChannels'
+import type { BuddyConfig, BuddySettingsView } from '@shared/buddy'
+import { egress } from './privacy'
+import { ACCENTS } from '../shared/theme'
 import { parseCharacter } from '@shared/character'
 import { PACKAGES } from '@shared/packages'
 import { PROVIDERS, baseUrlFor, modelFor, providerInfo, validBaseUrl, type ProviderId } from '@shared/ai'
@@ -19,6 +25,8 @@ import type { ServiceHub } from './services'
 import type { ConnectedHub } from './connected'
 import { cleanUrl } from '@shared/connected'
 import { displayChoices } from './window'
+import type { BrainView } from '@shared/brain'
+import type { WallpaperView } from '@shared/wallpaper'
 import { agentHooks, isHookInstalled, setAgentHook, setHookInstalled } from './hookSetup'
 import { MAIL_PRESETS, presetFor, testMailAccount, type MailAccount } from './providers/mail'
 import type { MailManager } from './mailManager'
@@ -92,21 +100,66 @@ type Deps = {
   onAi: (previous: ProviderId) => void
   listModels: (provider: ProviderId) => Promise<string[]>
   onPackages: () => void
+  /** The second brain, for Settings → You and Brain. */
+  brain: () => BrainView
+  /** The desktop background, for Settings → Wallpaper. */
+  wallpaper: () => WallpaperView
+  /** Light or dark: as you set it, and whether it's dark now. */
+  theme: () => { pref: 'system' | 'light' | 'dark'; dark: boolean; island: 'match' | 'dark'; accent: string }
+  setTheme: (pref: 'system' | 'light' | 'dark') => void
+  /** The island's colours and the accent. */
+  setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => void
+  /** Settings › Privacy. */
+  setPaused: (on: boolean) => void
+  /** Settings › Buddy. */
+  buddy: () => BuddySettingsView
+  setBuddy: (patch: Partial<BuddyConfig>) => void
+  buddyVoice: () => Promise<void>
+  buddyTry: () => Promise<void>
+  /** Routines: add or change one (why not, or null), or remove one. */
+  routineSet: (raw: unknown) => string | null
+  routineDel: (id: string) => void
+  /** Settings › Desktop. */
+  desktop: () => DesktopView
+  os: () => OsView
+  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => Promise<void>
+  desktopGetExtension: (id: string) => Promise<void>
+  desktopSystem: (what: 'apply' | 'undo') => Promise<void>
+  desktopApply: () => Promise<void>
+  desktopUndo: () => Promise<void>
 }
 
 /** Settings window + the IPC it uses. */
 export class SettingsController {
   private win: BrowserWindow | null = null
+  /** Each state is numbered, so Settings never shows an older one after a newer (pushes can arrive out of order). */
+  private seq = 0
 
   constructor(private d: Deps) {}
+
+  /** Is this Settings' own page? */
+  owns(wc: Electron.WebContents): boolean {
+    return !!this.win && !this.win.isDestroyed() && this.win.webContents === wc
+  }
 
   state(): SettingsState {
     const { config, mail, whatsapp, whatsappCapable } = this.d
     return {
+      seq: ++this.seq,
       notifications: config.notifications,
       autostart: isAutostartEnabled(),
       hookInstalled: isHookInstalled(),
       agentHooks: agentHooks(),
+      brain: this.d.brain(),
+      wallpaper: this.d.wallpaper(),
+      theme: this.d.theme().pref,
+      dark: this.d.theme().dark,
+      islandTheme: this.d.theme().island,
+      accent: this.d.theme().accent,
+      privacy: egress.view(),
+      buddy: this.d.buddy(),
+      desktop: this.d.desktop(),
+      os: this.d.os(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -176,18 +229,19 @@ export class SettingsController {
   open(section?: string): void {
     if (this.win && !this.win.isDestroyed()) {
       // Already open: just go to the section asked for.
-      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`document.getElementById(${JSON.stringify(section)})?.scrollIntoView({ behavior: 'smooth' })`)
+      if (section && /^[a-z-]+$/.test(section)) void this.win.webContents.executeJavaScript(`location.hash = ${JSON.stringify(section)}`)
       this.win.show()
       this.win.focus()
       return
     }
+    // Like macOS System Settings: a sidebar of sections beside one pane.
     this.win = new BrowserWindow({
-      width: 620,
-      height: 760,
-      minWidth: 480,
+      width: 900,
+      height: 700,
+      minWidth: 720,
       minHeight: 480,
       title: 'Dynamic Island Settings',
-      backgroundColor: '#15171c',
+      backgroundColor: this.d.theme().dark ? '#1e1e20' : '#f2f2f5',
       autoHideMenuBar: true,
       webPreferences: {
         preload: resolve(here, '../preload/preload.mjs'),
@@ -444,6 +498,70 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.SET_DOCK_SIDE, (_e, side) => {
       if (side === 'left' || side === 'right' || side === 'top') this.d.onDockSide(side)
+    })
+    ipcMain.handle(SETTINGS.SET_THEME, (_e, pref) => {
+      if (pref === 'system' || pref === 'light' || pref === 'dark') this.d.setTheme(pref)
+      this.changed()
+    })
+    ipcMain.handle(BUDDY.SET, (_e, patch) => {
+      if (patch && typeof patch === 'object') this.d.setBuddy(patch)
+      this.changed()
+    })
+    ipcMain.handle(BUDDY.VOICE_GET, async () => {
+      try {
+        await this.d.buddyVoice()
+        return null
+      } catch (e) {
+        return (e as Error).message
+      } finally {
+        this.changed()
+      }
+    })
+    ipcMain.handle(BUDDY.VOICE_TRY, () => this.d.buddyTry())
+    ipcMain.handle(BUDDY.ROUTINE_SET, (_e, raw) => {
+      const e = this.d.routineSet(raw)
+      this.changed()
+      return e
+    })
+    ipcMain.handle(BUDDY.ROUTINE_DEL, (_e, id) => {
+      if (typeof id === 'string') this.d.routineDel(id)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_SET, async (_e, p) => {
+      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean } = {}
+      for (const k of ['dock', 'buttonsLeft', 'commandBar', 'blur', 'hideClock'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
+      await this.d.desktopSet(patch)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_GET_EXT, async (_e, id) => {
+      if (typeof id === 'string') await this.d.desktopGetExtension(id)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_SYSTEM, async (_e, what) => {
+      if (what === 'apply' || what === 'undo') await this.d.desktopSystem(what)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_APPLY, async () => {
+      await this.d.desktopApply()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.DESKTOP_UNDO, async () => {
+      await this.d.desktopUndo()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_PAUSED, (_e, on) => {
+      this.d.setPaused(on === true)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.CLEAR_PRIVACY, () => {
+      egress.clear()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_LOOK, (_e, l) => {
+      const island = l?.island === 'match' || l?.island === 'dark' ? l.island : undefined
+      const accent = typeof l?.accent === 'string' && ACCENTS.some((a) => a.id === l.accent) ? l.accent : undefined
+      if (island || accent) this.d.setLook({ island, accent })
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_HOOK, async (_e, on) => {
       await setHookInstalled(on === true)

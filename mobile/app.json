@@ -23,10 +23,10 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.VIBRATE",
-        "android.permission.POST_NOTIFICATIONS"
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.RECORD_AUDIO"
       ],
       "blockedPermissions": [
-        "android.permission.RECORD_AUDIO",
         "android.permission.ACCESS_MEDIA_LOCATION",
         "android.permission.SYSTEM_ALERT_WINDOW",
         "android.permission.WRITE_EXTERNAL_STORAGE"
@@ -59,6 +59,12 @@
     },
     "plugins": [
       "expo-secure-store",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Island Drop records only while you hold Talk, and sends it to your computer, where your buddy makes it out."
+        }
+      ],
       [
         "expo-camera",
         {

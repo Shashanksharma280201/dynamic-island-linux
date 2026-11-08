@@ -335,6 +335,7 @@ function speechWav(text, file) {
     await settings.screenshot({ path: `${OUT}/10-settings.png`, fullPage: true })
 
     // ---- Character: pick one, name it; the island follows ----
+    await settings.click('.side-item[data-section="character"]')
     await settings.click('#character .character-tile:has-text("Bolt")')
     const cfg = () => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8')).character
     check('picking a character saves it', await until(() => cfg()?.id === 'bolt' && cfg()?.name === 'Bolt', 4000), JSON.stringify(cfg()))

@@ -1,6 +1,21 @@
 import { PACKAGES, enabledPackages, enabledTabs, parsePackages } from '../shared/packages'
 import { packageTools, type PackageContext } from '../electron/packages/tools'
 import { runTool } from '../electron/agent/tools'
+import { Wallpapers } from '../electron/wallpaper'
+import { DesktopBackground } from '../electron/wallpaper/desktop'
+import { parseWallpaperConfig } from '../shared/wallpaper'
+
+const wallpaper = new Wallpapers({
+  config: () => parseWallpaperConfig(null),
+  setConfig: () => {},
+  keys: () => ({ pexels: '', unsplash: '', pixabay: '' }),
+  dir: '/nonexistent/walls',
+  historyFile: '/nonexistent/walls.json',
+  screen: () => ({ width: 1920, height: 1080 }),
+  desktop: new DesktopBackground({ env: {} }),
+  live: { show: async () => {}, stop: () => {}, still: async () => null, state: () => 'off' },
+  onChange: () => {},
+})
 
 function ctx(over: Partial<PackageContext> = {}) {
   const sent: string[] = []
@@ -39,6 +54,8 @@ function ctx(over: Partial<PackageContext> = {}) {
     docs: {} as any,
     crm: {} as any,
     connected: { text: () => 'Trading: +₹50.00 (1 open · 2 trades · PAPER)' },
+    wallpaper,
+    system: { apps: () => [], launch: () => {}, volume: () => {}, mute: () => {}, theme: () => {}, dnd: () => {}, lock: () => {} },
     ...over,
   }
   return { c, sent, commands, replies }
@@ -47,9 +64,9 @@ function ctx(over: Partial<PackageContext> = {}) {
 const names = (t: { name: string }[]) => t.map((x) => x.name)
 
 test('the catalog and which packages are on', () => {
-  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music', 'docs', 'crm', 'connected'])
+  expect(PACKAGES.map((p) => p.id)).toEqual(['basics', 'notes', 'chats', 'mail', 'music', 'docs', 'crm', 'connected', 'wallpaper', 'system'])
   expect(parsePackages({ disabled: ['mail', 'basics', 'nope', 'mail'] })).toEqual({ disabled: ['mail'] }) // basics can't be off
-  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music', 'docs', 'crm', 'connected'])
+  expect(enabledPackages({ disabled: ['mail'] })).toEqual(['basics', 'notes', 'chats', 'music', 'docs', 'crm', 'connected', 'wallpaper', 'system'])
   expect(enabledTabs({ disabled: ['chats'] })).toEqual(['notes', 'mail', 'music', 'docs', 'crm', 'connected'])
   // The catalog lists exactly the tools each package brings.
   const all = packageTools({ disabled: [] }, ctx().c)

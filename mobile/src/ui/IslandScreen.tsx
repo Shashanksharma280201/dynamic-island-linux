@@ -10,6 +10,7 @@ import type { PhoneMedia, PhoneSession, PhoneTrading } from '../islandTypes'
 import type { DropLink, Live, LinkState } from '../link'
 import { routeName } from '../protocol'
 import { ApprovalCard } from './Approvals'
+import { TalkButton } from './TalkButton'
 import { Icon } from './icons'
 import { themed, useTheme, type Palette } from './theme'
 
@@ -80,6 +81,7 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
         active={active}
         onTest={() => void link.ping()}
       />
+      {mode !== 'offline' && <TalkButton link={link} />}
       {mode === 'offline' && !!(state.error || live.error) && (
         <View style={s.problem}>
           <Icon name="info" size={18} color={C.red} />

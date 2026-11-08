@@ -58,6 +58,15 @@ export function transcribe(model: string, audio: Float32Array): Promise<string> 
   })
 }
 
+/** A long recording (a call), read in pieces. */
+export function transcribeLong(model: string, audio: Float32Array): Promise<string> {
+  const id = ++seq
+  return new Promise((resolve, reject) => {
+    pending.set(id, { resolve, reject })
+    getWorker().postMessage({ type: 'transcribe', id, model, audio, long: true }, [audio.buffer])
+  })
+}
+
 /** Whisper sometimes "hears" these in silence or noise. */
 export const NOISE = /^[\s.,!?]*$|^\[(blank_audio|music|noise|silence)\]$|^\((.*)\)$/i
 

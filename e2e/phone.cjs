@@ -100,7 +100,7 @@ function listen() {
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
     cwd: ROOT,
-    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1', DI_FAKE_DRAG: SCRIPT, DI_CLAUDE_BIN: path.join(__dirname, 'fake-claude.cjs'), DI_WHATSAPP_ENGINE: 'fake', DI_FAKE_WA_READY_MS: '500', DI_DEMO_LOG: WA_LOG },
+    env: { ...process.env, HOME, DI_USER_DATA: USER_DATA, DYNAMIC_ISLAND_SOCK: SOCK, DI_BACKDROP: 'off', DI_DROP_TOKEN: TOKEN, DI_DROP_PORT: String(PORT), DI_DROP_FOLDER: path.join(TMP, 'Downloads'), DI_TEST_HOOKS: '1', DI_FAKE_DRAG: SCRIPT, DI_CLAUDE_BIN: path.join(__dirname, 'fake-claude.cjs'), DI_WHATSAPP_ENGINE: 'fake', DI_FAKE_WA_READY_MS: '500', DI_DEMO_LOG: WA_LOG, DI_STT_FAKE: 'where is the settings gear' },
   })
   const logs = []
   app.process().stderr.on('data', (d) => logs.push(d.toString()))
@@ -294,6 +294,38 @@ function listen() {
     say({ end: true })
     await sleep(900)
     check('letting go short of the edge sends nothing', phone.events.filter((e) => e.ev === 'incoming').length === before + 1 && !['aim', 'aim-ready'].includes((await lit())?.phase ?? ''), JSON.stringify(await lit()))
+
+    // ---- The phone as the buddy's microphone ----
+    // A second of sound as a WAV, as a recording would arrive (the phone sends AAC; the island decodes either).
+    const wav = (secs) => {
+      const rate = 16000
+      const n = Math.round(rate * secs)
+      const b = Buffer.alloc(44 + n * 2)
+      b.write('RIFF', 0)
+      b.writeUInt32LE(36 + n * 2, 4)
+      b.write('WAVEfmt ', 8)
+      b.writeUInt32LE(16, 16)
+      b.writeUInt16LE(1, 20)
+      b.writeUInt16LE(1, 22)
+      b.writeUInt32LE(rate, 24)
+      b.writeUInt32LE(rate * 2, 28)
+      b.writeUInt16LE(2, 32)
+      b.writeUInt16LE(16, 34)
+      b.write('data', 36)
+      b.writeUInt32LE(n * 2, 40)
+      for (let i = 0; i < n; i++) b.writeInt16LE(Math.round(Math.sin((i / rate) * 2 * Math.PI * 220) * 8000), 44 + i * 2)
+      return b
+    }
+    const talk = (body, type = 'audio/wav') => fetch(`${BASE}/island/voice`, { method: 'PUT', headers: { ...auth, 'Content-Type': type }, body }).then(async (r) => ({ status: r.status, ...(await r.json().catch(() => ({}))) }))
+    const heardBack = await talk(wav(1.2))
+    check('the phone is the buddy’s microphone: the island makes it out', heardBack.status === 200 && heardBack.ok === true && heardBack.text === 'where is the settings gear', JSON.stringify(heardBack))
+    check('and asks it, as if you’d said it to the computer', !!(await until(async () => (await page.evaluate(() => window.island.buddy.get())).heard === 'where is the settings gear', 6000)))
+    const short = await talk(wav(0.1))
+    check('a tap is too short to make out', short.status === 422 && /too short/.test(short.message), JSON.stringify(short))
+    const notAudio = await talk(Buffer.from('hello'), 'text/plain')
+    check('only audio is taken', notAudio.status === 415)
+    const unpairedTalk = await fetch(`${BASE}/island/voice`, { method: 'PUT', headers: { Authorization: 'Bearer ' + 'x'.repeat(44), 'Content-Type': 'audio/wav' }, body: wav(1) })
+    check('and only from a paired phone', unpairedTalk.status === 401 || unpairedTalk.status === 403, String(unpairedTalk.status))
   } catch (e) {
     check('unexpected error', false, e.message)
     await page.screenshot({ path: path.join(OUT, 'phone-failure.png') }).catch(() => {})

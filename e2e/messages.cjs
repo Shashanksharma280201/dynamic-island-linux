@@ -197,7 +197,7 @@ const b64 = (s) => Buffer.from(s).toString('base64')
 
     check(
       'the section icons sit in a rail beside the panel',
-      (await page.$$('.rail-btn[aria-label]')).length === 12 && !(await page.$('.tabs')),
+      (await page.$$('.rail-btn[aria-label]')).length === 14 && !(await page.$('.tabs')),
       (await page.$$eval('.rail-btn[aria-label]', (e) => e.map((x) => x.getAttribute('aria-label')))).join(','),
     )
     // Record the Chats panel's height every frame while it opens and loads.
@@ -449,8 +449,12 @@ const b64 = (s) => Buffer.from(s).toString('base64')
 
     // ---- Settings window ----
     const [settings] = await Promise.all([app.waitForEvent('window'), page.evaluate(() => window.island.openSettings())])
+    // Settings opens on its first section; the sidebar goes to the others.
+    await settings.waitForSelector('.side-item[data-section="whatsapp"]', { timeout: 8000 })
+    await settings.click('.side-item[data-section="whatsapp"]')
     await settings.waitForSelector('text=Connected as Demo User', { timeout: 5000 })
     check('settings shows WhatsApp linked', true)
+    await settings.click('.side-item[data-section="mail"]')
     await settings.waitForSelector('.account .dot.ok', { timeout: 5000 })
     check('settings shows the mail account connected', true)
 
@@ -461,11 +465,13 @@ const b64 = (s) => Buffer.from(s).toString('base64')
           .find((b) => b.webContents.getURL().includes('index.html'))
           .getBounds(),
       )
+    await settings.click('.side-item[data-section="general"]')
     await settings.click('.segmented button:has-text("Left")')
     check('settings can move the island to the left edge', await until(async () => (await bounds()).x === 0, 3000))
     await settings.click('.segmented button:has-text("Right")')
     check('and back to the right', await until(async () => (await bounds()).x > 0, 3000))
 
+    await settings.click('.side-item[data-section="mail"]')
     await settings.click('text=Add Account…')
     await settings.fill('input[placeholder="Email address"]', 'me@x.test')
     await settings.fill('input[placeholder="Label (e.g. Work)"]', 'Second')
@@ -478,12 +484,12 @@ const b64 = (s) => Buffer.from(s).toString('base64')
       await ports[i].fill(String(port))
       await tls[i].uncheck()
     }
-    await settings.click('button:has-text("Test")')
+    await settings.click('#mail button:has-text("Test")')
     check('wrong password is reported', await settings.waitForSelector('.editor .error', { timeout: 8000 }).then(() => true, () => false))
     await settings.fill('input[placeholder="App password"]', 'pw')
-    await settings.click('button:has-text("Test")')
+    await settings.click('#mail button:has-text("Test")')
     check('connection test passes', await settings.waitForSelector('text=Connection works', { timeout: 8000 }).then(() => true, () => false))
-    await settings.click('button:has-text("Save")')
+    await settings.click('#mail button:has-text("Save")')
     check('second account saved', await until(async () => (await settings.$$('.account')).length === 2, 5000))
     const saved = JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8'))
     check(

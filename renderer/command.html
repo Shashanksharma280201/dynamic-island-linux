@@ -1,0 +1,17 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Command bar</title>
+  </head>
+  <body>
+    <div class="bar">
+      <div class="field">
+        <svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5" fill="none" stroke="currentColor" stroke-width="2" /><path d="M13 13l4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
+        <input id="q" type="text" placeholder="Open, find, work out or ask…" aria-label="Search" autocomplete="off" spellcheck="false" />
+      </div>
+      <ul id="list" role="listbox" aria-label="Results"></ul>
+    </div>
+    <script type="module" src="./command/main.ts"></script>
+  </body>
+</html>

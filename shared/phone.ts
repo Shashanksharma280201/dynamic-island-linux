@@ -217,6 +217,7 @@ export const PHONE_CALLS = {
   'notes.get': ['s'],
   'notes.save': ['s?', 's'],
   'notes.remove': ['s'],
+  'brain.capture': ['s'],
   'spotify.state': [],
   'spotify.home': [],
   'spotify.search': ['s'],

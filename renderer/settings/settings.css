@@ -1,21 +1,93 @@
 @import '@fontsource-variable/inter';
 
-/* Apple System Settings, dark: grouped inset lists, iOS switches. */
+/* macOS System Settings: a sidebar of sections with coloured icons and a
+   search field, one pane at a time, grouped rounded lists. Light and dark
+   follow the desktop (or Settings → General). */
 :root {
-  color-scheme: dark;
-  --bg: #1c1c1e;
-  --group: #2c2c2e;
-  --field: #1c1c1e;
-  --separator: rgba(84, 84, 88, 0.6);
-  --text: rgba(255, 255, 255, 0.96);
-  --muted: rgba(235, 235, 245, 0.6);
-  --blue: #0a84ff;
-  --green: #30d158;
-  --red: #ff453a;
-  --fill: rgba(120, 120, 128, 0.32);
+  color-scheme: light;
+  --bg: #f5f5f7;
+  --side: #e8e8eb;
+  --group: #ffffff;
+  --field: #ffffff;
+  --separator: rgba(0, 0, 0, 0.1);
+  --border: rgba(0, 0, 0, 0.12);
+  --text: rgba(0, 0, 0, 0.87);
+  --muted: rgba(60, 60, 67, 0.64);
+  --blue: var(--accent-light, #007aff);
+  --green: #34c759;
+  --red: #ff3b30;
+  --fill: rgba(120, 120, 128, 0.18);
+  --tint: rgba(0, 0, 0, 0.035);
+  --tint-2: rgba(0, 0, 0, 0.06);
+  --hover: rgba(0, 0, 0, 0.05);
+  --seg-on: #ffffff;
+  --red-text: #d70015;
+  --green-text: #248a3d;
+  --orange-text: #c93400;
+  --warn-text: #9a5b00;
+  --group-shadow: 0 0.5px 1.5px rgba(0, 0, 0, 0.08);
+  --hit: rgba(255, 204, 0, 0.55);
+}
+/* Dark: as the desktop or Settings → General says (set on <html> by the page), else the system's. */
+:root[data-theme='dark'] {
+    color-scheme: dark;
+    --bg: #1e1e20;
+    --side: #28282b;
+    --group: rgba(255, 255, 255, 0.05);
+    --field: rgba(255, 255, 255, 0.06);
+    --separator: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: rgba(255, 255, 255, 0.93);
+    --muted: rgba(235, 235, 245, 0.6);
+    --blue: var(--accent-dark, #0a84ff);
+    --green: #30d158;
+    --red: #ff453a;
+    --fill: rgba(120, 120, 128, 0.32);
+    --tint: rgba(255, 255, 255, 0.04);
+    --tint-2: rgba(255, 255, 255, 0.08);
+    --hover: rgba(255, 255, 255, 0.06);
+    --seg-on: #636366;
+    --red-text: #ff6961;
+    --green-text: #30d158;
+    --orange-text: #ffb340;
+    --warn-text: #ffd60a;
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    --hit: rgba(255, 214, 10, 0.5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #1e1e20;
+    --side: #28282b;
+    --group: rgba(255, 255, 255, 0.05);
+    --field: rgba(255, 255, 255, 0.06);
+    --separator: rgba(255, 255, 255, 0.09);
+    --border: rgba(255, 255, 255, 0.12);
+    --text: rgba(255, 255, 255, 0.93);
+    --muted: rgba(235, 235, 245, 0.6);
+    --blue: var(--accent-dark, #0a84ff);
+    --green: #30d158;
+    --red: #ff453a;
+    --fill: rgba(120, 120, 128, 0.32);
+    --tint: rgba(255, 255, 255, 0.04);
+    --tint-2: rgba(255, 255, 255, 0.08);
+    --hover: rgba(255, 255, 255, 0.06);
+    --seg-on: #636366;
+    --red-text: #ff6961;
+    --green-text: #30d158;
+    --orange-text: #ffb340;
+    --warn-text: #ffd60a;
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+    --hit: rgba(255, 214, 10, 0.5);
+  }
 }
 * {
   box-sizing: border-box;
+}
+html,
+body,
+#root {
+  height: 100%;
 }
 body {
   margin: 0;
@@ -25,34 +97,105 @@ body {
   -webkit-font-smoothing: antialiased;
   letter-spacing: -0.005em;
 }
-main {
-  max-width: 620px;
-  margin: 0 auto;
-  padding: 28px 22px 44px;
+
+/* The window: sidebar and pane. */
+.settings-app {
+  display: flex;
+  height: 100%;
 }
-h1 {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0 0 20px;
+.side {
+  width: 228px;
+  flex: none;
+  background: var(--side);
+  border-right: 0.5px solid var(--separator);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-/* Section header sits above its group, like iOS. */
-h2 {
-  font-size: 12px;
+.side-search {
+  padding: 14px 12px 8px;
+}
+.side-search input[type='search'] {
+  width: 100%;
+  padding: 6px 10px 6px 28px;
+  border-radius: 8px;
+  background: var(--tint-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 16 16' fill='none' stroke='%238e8e93' stroke-width='1.8' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cpath d='M11 11l3.5 3.5'/%3E%3C/svg%3E") 9px center no-repeat;
+  border: 0.5px solid transparent;
+}
+.side nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px 10px 16px;
+}
+.side-group + .side-group {
+  margin-top: 14px;
+}
+button.side-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 5px 8px;
+  margin: 1px 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--text);
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 13px;
+  text-align: left;
+  transform: none;
+}
+button.side-item:hover:not(.on) {
+  filter: none;
+  background: var(--hover);
+}
+button.side-item.on {
+  background: var(--blue);
+  color: #fff;
+}
+.side-icon {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  display: inline-flex;
+}
+.side-icon svg {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0.5px 1px rgba(0, 0, 0, 0.18));
+}
+.side-empty {
+  padding: 10px 8px;
   color: var(--muted);
-  margin: 0 0 6px 14px;
+}
+
+main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 28px 44px;
+}
+main > * {
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
+}
+/* The pane's title: the section's own heading. */
+section > h2 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--text);
+  margin: 0 0 14px 2px;
 }
 section {
-  margin-bottom: 24px;
+  margin-bottom: 30px;
 }
 section > h2 + * {
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
 }
-/* Everything after the header forms one rounded group of rows. */
+/* Everything after the heading forms one rounded group of rows. */
 section > :not(h2) {
   background: var(--group);
   padding: 11px 14px;
@@ -63,14 +206,17 @@ section > :not(h2):not(:last-child)::after {
   content: '';
   position: absolute;
   left: 14px;
-  right: 0;
+  right: 14px;
   bottom: 0;
   height: 0.5px;
   background: var(--separator);
 }
 section > :last-child {
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
+}
+section > h2 ~ :not(h2) {
+  box-shadow: var(--group-shadow);
 }
 .toggle-row {
   display: flex;
@@ -95,6 +241,17 @@ section > :last-child {
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+/* A search match, glowing like System Settings' results. */
+.hit {
+  box-shadow: inset 0 0 0 2px var(--hit) !important;
+  border-radius: 8px;
+}
+.no-results {
+  text-align: center;
+  color: var(--muted);
+  padding: 60px 0;
+  font-size: 14px;
 }
 
 /* iOS switch */
@@ -148,8 +305,8 @@ input.switch:checked::after {
   cursor: pointer;
 }
 .segmented button.on {
-  background: #636366;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  background: var(--seg-on);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Fields and buttons */
@@ -164,7 +321,7 @@ input:not([type='checkbox']) {
   min-width: 0;
 }
 input:not([type='checkbox']):focus {
-  outline: 3px solid rgba(10, 132, 255, 0.5);
+  outline: 3px solid color-mix(in srgb, var(--blue) 45%, transparent);
   outline-offset: 0;
   border-color: var(--blue);
 }
@@ -190,20 +347,20 @@ button.secondary {
   color: var(--text);
 }
 button.danger {
-  background: rgba(255, 69, 58, 0.18);
-  color: #ff6961;
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+  color: var(--red-text);
 }
 button:disabled {
   opacity: 0.45;
   cursor: default;
 }
 .error {
-  color: #ff6961;
+  color: var(--red-text);
   font-size: 12.5px;
   margin: 0;
 }
 .warn {
-  color: #ffd60a;
+  color: var(--warn-text);
   font-size: 12.5px;
   margin: 0;
 }
@@ -309,7 +466,7 @@ section > button.row-button:last-child {
 }
 section > button.row-button:hover {
   filter: none;
-  background: #3a3a3c;
+  background: var(--hover);
 }
 ol.hint.steps {
   margin: 0;
@@ -317,7 +474,7 @@ ol.hint.steps {
   line-height: 1.6;
 }
 ol.hint.steps code {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-2);
   border-radius: 4px;
   padding: 1px 5px;
   color: var(--text);
@@ -346,17 +503,17 @@ button.link {
   padding: 12px 6px 10px;
   border-radius: 12px;
   border: 1.5px solid transparent;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--tint);
   color: inherit;
   font: inherit;
   cursor: pointer;
 }
 .character-tile:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--tint-2);
 }
 .character-tile.on {
-  border-color: var(--accent, #0a84ff);
-  background: rgba(10, 132, 255, 0.12);
+  border-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
 }
 .character-tile b {
   margin-top: 6px;
@@ -388,8 +545,8 @@ select.display-select {
   padding: 1px 7px;
   border-radius: 999px;
   font-size: 11px;
-  background: rgba(48, 209, 88, 0.18);
-  color: #30d158;
+  background: color-mix(in srgb, var(--green) 18%, transparent);
+  color: var(--green-text);
 }
 
 /* Packages */
@@ -423,12 +580,12 @@ select.display-select {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--tint-2);
   color: var(--muted);
 }
 .package-tool.asks {
   background: rgba(255, 159, 10, 0.14);
-  color: #ffb340;
+  color: var(--orange-text);
 }
 .package-row .switch {
   margin-top: 4px;
@@ -454,7 +611,7 @@ button.key-recorder {
 button.key-recorder.recording {
   border-color: var(--blue);
   color: var(--blue);
-  box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.35);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 35%, transparent);
 }
 button.link {
   background: none;
@@ -463,7 +620,7 @@ button.link {
   font-weight: 500;
 }
 .error-text {
-  color: #ff6961;
+  color: var(--red-text);
 }
 /* Character → outfit and colour. */
 .wardrobe-row {
@@ -491,7 +648,7 @@ button.link {
 }
 .wardrobe-item.on {
   border-color: var(--blue);
-  background: rgba(10, 132, 255, 0.14);
+  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 .swatches {
   display: flex;
@@ -503,7 +660,7 @@ button.link {
   height: 26px;
   padding: 0;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.15);
+  border: 2px solid var(--border);
 }
 .swatch.own {
   background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
@@ -533,7 +690,7 @@ button.link {
   color: var(--green);
 }
 .service-status.bad {
-  color: #ff6961;
+  color: var(--red-text);
 }
 .svc-swatch {
   display: inline-block;
@@ -567,4 +724,629 @@ button.link {
   border-radius: 10px;
   background: #fff;
   padding: 6px;
+}
+
+/* Settings → Brain and You */
+.brain-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.brain-title {
+  font-size: 14.5px;
+  font-weight: 600;
+}
+.brain-subhead {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.brain-subhead .hint {
+  font-weight: 400;
+}
+.brain-parts {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.brain-parts li::before {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--muted);
+  margin-right: 7px;
+  vertical-align: 0;
+}
+.brain-parts li.done {
+  color: var(--text);
+}
+.brain-parts li.done::before {
+  background: var(--green);
+  border-color: var(--green);
+}
+.brain-tool,
+.brain-inbox,
+.brain-list-row,
+.brain-log {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.brain-tool .code,
+.brain-chip code {
+  display: block;
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-radius: 7px;
+  background: var(--field);
+  font: 11.5px/1.45 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.brain-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.brain-chip code {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+}
+.brain-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 0.5px solid var(--separator);
+}
+.brain-item-text {
+  flex: 1;
+  min-width: 0;
+}
+button.link.brain-item-title {
+  padding: 0;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.brain-log ul {
+  margin: 0;
+  padding-left: 16px;
+  display: grid;
+  gap: 2px;
+}
+.me-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+}
+.me-editor textarea {
+  width: 100%;
+  min-height: 180px;
+  resize: vertical;
+  border-radius: 8px;
+  border: 0.5px solid var(--separator);
+  background: var(--field);
+  color: var(--text);
+  padding: 9px 10px;
+  font: 12.5px/1.5 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+}
+pre.brief {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 11.5px/1.5 ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  color: var(--muted);
+  max-height: 340px;
+  overflow: auto;
+}
+#you .toggle-row > button,
+#brain .toggle-row > button,
+#brain .brain-item > button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Settings → Wallpaper */
+.wall-now {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.wall-now-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.wall-preview {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--field);
+  box-shadow: inset 0 0 0 0.5px var(--border);
+}
+.wall-preview.big {
+  width: 168px;
+  flex: none;
+}
+.wall-preview.empty {
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11.5px;
+  background: linear-gradient(135deg, #2b2d42, #1c1c1e);
+}
+.wall-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.wall-badge {
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+}
+.wall-search,
+.wall-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+}
+.wall-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+}
+button.wall-tile {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  color: var(--text);
+}
+button.wall-tile:hover .wall-preview,
+button.wall-tile.on .wall-preview {
+  box-shadow: 0 0 0 2.5px var(--blue);
+}
+button.wall-tile:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+.wall-tile-title,
+.wall-tile-meta {
+  display: block;
+  max-width: 100%;
+}
+.wall-tile-title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-tile-meta {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wall-key-name {
+  width: 150px;
+  flex: none;
+}
+#wallpaper .row > button,
+#wallpaper .wall-now button {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* Accent colour swatches, like macOS's Appearance settings. */
+.accent-swatches {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.accent-swatch {
+  width: 18px;
+  height: 18px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+.accent-swatch.on {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* Privacy: where things went. */
+.privacy-block {
+  padding: 11px 14px;
+}
+.privacy-list {
+  margin-top: 8px;
+}
+.privacy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+}
+.privacy-row + .privacy-row {
+  border-top: 0.5px solid var(--separator);
+}
+.privacy-main {
+  flex: 1;
+  min-width: 0;
+}
+.privacy-to {
+  font-weight: 500;
+}
+.privacy-feature {
+  font-weight: 600;
+}
+.privacy-meta {
+  flex-shrink: 0;
+  text-align: right;
+}
+.privacy-empty {
+  padding: 8px 0 2px;
+}
+
+/* Buddy: the private-window words. */
+.buddy-words {
+  width: 100%;
+  margin-top: 8px;
+  box-sizing: border-box;
+}
+
+/* Second brain › The loop. */
+.loop-jobs {
+  margin-top: 8px;
+}
+.loop-job {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.loop-job + .loop-job {
+  border-top: 0.5px solid var(--separator);
+}
+.loop-main {
+  flex: 1;
+  min-width: 0;
+}
+.loop-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--muted);
+}
+.loop-dot.ok {
+  background: var(--green);
+}
+.loop-dot.bad {
+  background: var(--red);
+}
+.loop-dot.none {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--muted);
+}
+.loop-dot.off {
+  opacity: 0.35;
+}
+.loop-moves {
+  margin: 8px 0;
+  font-size: 12.5px;
+}
+.loop-move {
+  padding: 2px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.loop-from {
+  font-weight: 500;
+}
+.loop-one {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 4px 0 2px;
+}
+button.small {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Buddy › Routines. */
+.routine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+}
+.routine + .routine {
+  border-top: 0.5px solid var(--separator);
+}
+.routine-main {
+  flex: 1;
+  min-width: 0;
+}
+.routine-ask {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.routine-new {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+.routine-new .grow {
+  flex: 1 1 220px;
+}
+
+.desktop-last {
+  margin-top: 4px;
+}
+
+/* Settings › Desktop: the login screen and boot splash's two buttons, side by side. */
+.desktop-system > .row {
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+}
+.desktop-system > .row button {
+  white-space: nowrap;
+}
+
+/* Model */
+.model-local .hint {
+  max-width: 460px;
+}
+.model-local.found > div > div:first-child::after {
+  content: '';
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: #30d158;
+  vertical-align: 1px;
+}
+.model-job select,
+.model-pick select {
+  min-width: 150px;
+}
+.model-address input {
+  width: 220px;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+.model-learned,
+.model-week {
+  margin: 8px 2px 0;
+}
+.model-job {
+  justify-content: space-between;
+}
+
+/* Sources */
+.source-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+.source-status {
+  margin-top: 3px;
+}
+.source-row.failed .source-status {
+  color: #ff453a;
+}
+.source-calendar input,
+.source-skip input {
+  width: 240px;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+
+/* ===========================================================================
+   The modern look: larger, softer groups; bolder pane titles; a sidebar
+   whose selection glows in the accent; buttons with depth; one focus ring;
+   smoother motion. (Later rules win over the older ones above.)
+   =========================================================================== */
+:root {
+  --bg: #f4f5f8;
+  --side: #eceef2;
+  --radius-group: 14px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --glow: color-mix(in srgb, var(--blue) 32%, transparent);
+  --ring: 0 0 0 1px var(--blue), 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent);
+  --group-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px -10px rgba(20, 20, 40, 0.14);
+}
+:root[data-theme='dark'] {
+  --bg: #161619;
+  --side: #1f1f23;
+  --group: rgba(255, 255, 255, 0.045);
+  --glow: color-mix(in srgb, var(--blue) 42%, transparent);
+  --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #161619;
+    --side: #1f1f23;
+    --group: rgba(255, 255, 255, 0.045);
+    --glow: color-mix(in srgb, var(--blue) 42%, transparent);
+    --group-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08), 0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* The pane: a bigger title, rounder groups. */
+section > h2 {
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  margin: 4px 0 16px 2px;
+}
+section > h2 + * {
+  border-top-left-radius: var(--radius-group);
+  border-top-right-radius: var(--radius-group);
+}
+section > :last-child {
+  border-bottom-left-radius: var(--radius-group);
+  border-bottom-right-radius: var(--radius-group);
+}
+section > :not(h2) {
+  padding: 13px 16px;
+}
+section > :not(h2):not(:last-child)::after {
+  left: 16px;
+  right: 16px;
+}
+.toggle-row {
+  transition: background 0.16s var(--ease);
+}
+
+/* The sidebar: a softer selection that glows in the accent. */
+.side {
+  border-right: 0;
+  box-shadow: inset -0.5px 0 0 var(--separator);
+}
+.side-search input[type='search'] {
+  border-radius: 10px;
+  padding: 7px 10px 7px 30px;
+}
+button.side-item {
+  border-radius: 9px;
+  padding: 6px 9px;
+  transition: background 0.16s var(--ease), color 0.16s var(--ease);
+}
+button.side-item.on {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 82%, #fff) 0%, var(--blue) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 6px 14px -8px var(--glow);
+}
+
+/* Buttons: depth for the main one, tiles for the rest. */
+button {
+  transition:
+    filter 0.16s var(--ease),
+    transform 0.16s var(--ease),
+    box-shadow 0.16s var(--ease),
+    background 0.16s var(--ease);
+}
+button:not([class]) {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--blue) 82%, #fff) 0%, var(--blue) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    0 6px 14px -8px var(--glow);
+}
+button:not([class]):hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+button.secondary {
+  box-shadow: inset 0 0 0 0.5px var(--separator);
+}
+.segmented {
+  border-radius: 10px;
+}
+.segmented button {
+  border-radius: 8px;
+  transition: background 0.16s var(--ease), box-shadow 0.16s var(--ease);
+}
+.segmented button.on {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 4px 10px -6px rgba(0, 0, 0, 0.25);
+}
+
+/* Fields: rounder, and one focus ring everywhere. */
+input:not([type='checkbox']),
+select,
+textarea {
+  border-radius: 10px;
+  transition: box-shadow 0.16s var(--ease), border-color 0.16s var(--ease);
+}
+input:not([type='checkbox']):focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  box-shadow: var(--ring);
+}
+button:focus-visible,
+input.switch:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+input.switch {
+  transition: background 0.2s var(--ease);
+}
+input.switch::after {
+  transition: transform 0.2s var(--ease), left 0.2s var(--ease);
+}
+
+/* Thin scrollbars. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text) 22%, transparent) transparent;
+}
+::selection {
+  background: color-mix(in srgb, var(--blue) 30%, transparent);
+}
+/* A row's own button keeps to one line. */
+.toggle-row > button,
+.toggle-row > span > button {
+  flex: none;
+  white-space: nowrap;
 }
