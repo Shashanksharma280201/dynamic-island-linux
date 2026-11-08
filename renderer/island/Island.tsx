@@ -92,7 +92,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // "Cleared 3 notifications · Undo", for a few seconds after Clear all.
   const [cleared, setCleared] = useState<number | null>(null)
   const [hover, setHover] = useState(false)
-  const [overIsland, setOverIsland] = useState(false)
+  // False while the pointer is on a card beside the island (the tour, the morning card…), as
+  // the page sees it; true otherwise (also when only the main process reports the hover).
+  const [overIsland, setOverIsland] = useState(true)
+  const mainRef = useRef<HTMLDivElement | null>(null)
   // It stays while the pointer is on the island (you may be reaching for Undo).
   useEffect(() => {
     if (cleared === null || hover) return
@@ -511,7 +514,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' with-rail' : ''}`}
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
+      onMouseLeave={() => {
+        setHover(false)
+        setOverIsland(true)
+      }}
+      onMouseOver={(e) => setOverIsland(!!mainRef.current?.contains(e.target as Node))}
       onContextMenu={(e) => {
         e.preventDefault()
         if (p.mode === 'idle' && !showPanel) setWardrobe(true)
@@ -529,8 +536,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         transition={reduce ? { duration: 0.16 } : shell}
         style={{ borderRadius: 26 }}
         onScroll={unscroll}
-        onMouseEnter={() => setOverIsland(true)}
-        onMouseLeave={() => setOverIsland(false)}
+        ref={mainRef}
       >
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
