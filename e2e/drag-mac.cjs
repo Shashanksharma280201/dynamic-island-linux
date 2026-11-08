@@ -133,6 +133,8 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
   await app.close().catch(() => {})
   fs.writeFileSync(path.join(OUT, 'drag-mac.log'), logs.join(''))
   const failed = results.filter((r) => !r.ok).length
+  // What the app said, when something failed (CI's artifacts aren't always at hand).
+  if (failed) console.log(`\n---- the app's log (last 80 lines) ----\n${logs.join('').split('\n').slice(-80).join('\n')}`)
   console.log(`\n${results.length - failed}/${results.length} checks passed`)
   process.exit(failed ? 1 : 0)
 })()
