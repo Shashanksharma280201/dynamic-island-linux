@@ -1,3 +1,4 @@
+import { egress, hostOf } from './privacy'
 import {
   calSnapshot,
   ciFromChecks,
@@ -151,6 +152,12 @@ export class ServiceHub {
       if (this.running) this.schedule(id, 60_000)
       return
     }
+    // Paused (Settings › Privacy): look again in a minute.
+    if (egress.blocked()) {
+      if (this.running) this.schedule(id, 60_000)
+      return
+    }
+    egress.note('services', hostOf(apiBase(id, this.d.config()[id].url)), `your ${serviceInfo(id).name} key, to read what’s new`)
     const now = (this.d.now ?? Date.now)()
     let next = POLL_MS[id]
     try {

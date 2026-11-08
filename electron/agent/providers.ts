@@ -1,3 +1,4 @@
+import { egress, hostOf } from '../privacy'
 import type Anthropic from '@anthropic-ai/sdk'
 import type OpenAI from 'openai'
 import type { ProviderKind } from '@shared/ai'
@@ -28,6 +29,11 @@ export type TurnRequest = {
   approve?: Approver
   signal: AbortSignal
   events: TurnEvents
+  /** For Settings › Privacy: which feature asks (assistant by default) and what goes. */
+  feature?: string
+  purpose?: string
+  /** Pictures sent with the prompt (a screenshot for the buddy), base64. */
+  images?: { mediaType: 'image/jpeg' | 'image/png'; data: string }[]
 }
 
 export type TurnResult = { text: string; steps: number }
@@ -70,7 +76,12 @@ async function anthropicTurn(r: TurnRequest): Promise<TurnResult> {
   for (const t of r.history) {
     messages.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.assistant })
   }
-  messages.push({ role: 'user', content: r.prompt })
+  messages.push({
+    role: 'user',
+    content: r.images?.length
+      ? [...r.images.map((im) => ({ type: 'image' as const, source: { type: 'base64' as const, media_type: im.mediaType, data: im.data } })), { type: 'text' as const, text: r.prompt }]
+      : r.prompt,
+  })
   // Tool inputs here are small, so the server's buffered validation is kept
   // (no eager_input_streaming); inputs are still checked before running.
   const tools: Anthropic.Beta.BetaTool[] = r.tools.map((t) => ({ name: t.name, description: t.description, input_schema: t.input_schema }))
@@ -150,7 +161,12 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
   const client = new OpenAISdk({ apiKey: r.apiKey || 'not-needed', baseURL: r.baseUrl, maxRetries: 2 })
   const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [{ role: 'system', content: r.system }]
   for (const t of r.history) messages.push({ role: 'user', content: t.user }, { role: 'assistant', content: t.assistant })
-  messages.push({ role: 'user', content: r.prompt })
+  messages.push({
+    role: 'user',
+    content: r.images?.length
+      ? [{ type: 'text', text: r.prompt }, ...r.images.map((im) => ({ type: 'image_url' as const, image_url: { url: `data:${im.mediaType};base64,${im.data}` } }))]
+      : r.prompt,
+  })
   let tools: OpenAI.Chat.ChatCompletionTool[] | undefined = r.tools.map((t) => ({
     type: 'function',
     function: { name: t.name, description: t.description, parameters: t.input_schema },
@@ -215,7 +231,19 @@ async function openaiTurn(r: TurnRequest): Promise<TurnResult> {
 
 // ---------------------------------------------------------------- shared ----
 
+/** What a turn sends, in words, for Settings › Privacy. Pure. */
+export function describeTurn(r: Pick<TurnRequest, 'history' | 'purpose' | 'images'>): string {
+  if (r.purpose) return r.purpose
+  const n = r.history.length
+  const pic = r.images?.length ? ', with a screenshot' : ''
+  return (n ? `your question and ${n} earlier turn${n === 1 ? '' : 's'}` : 'your question') + pic
+}
+
 export function runTurn(r: TurnRequest): Promise<TurnResult> {
+  const host = hostOf(r.baseUrl || (r.kind === 'anthropic' ? 'https://api.anthropic.com' : 'https://api.openai.com'))
+  const paused = egress.blocked(host)
+  if (paused) return Promise.reject(new AgentError(paused))
+  egress.note(r.feature ?? 'assistant', host, describeTurn(r))
   return r.kind === 'anthropic' ? anthropicTurn(r) : openaiTurn(r)
 }
 

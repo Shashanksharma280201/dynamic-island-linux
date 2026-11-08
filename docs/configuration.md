@@ -30,6 +30,14 @@ is available, Settings warns you that they are only obfuscated.
 
 ## Privacy and security
 
+- **Settings → Privacy** shows what the island has sent off this computer,
+  where to and when: the assistant's questions (to your AI provider), session
+  summaries for the second brain, wallpaper searches and downloads, and
+  services checking your accounts. It lists what kind of thing went, never its
+  content, and keeps 30 days in `privacy-log.json` in the island's profile
+  folder. **Pause AI and the web** stops all of those sends until you turn it
+  off; an AI on this computer (Ollama) isn't sending anything away, so it keeps
+  working, as do WhatsApp, mail and Spotify.
 - **WhatsApp** runs WhatsApp Web inside the island as a linked device, using the
   open-source [whatsapp-web.js](https://github.com/pedroslopez/whatsapp-web.js)
   library (the same engine as whatsapp-connector). It is not an official

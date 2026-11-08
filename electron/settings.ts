@@ -1,3 +1,5 @@
+import { egress } from './privacy'
+import { ACCENTS } from '../shared/theme'
 import { parseCharacter } from '@shared/character'
 import { PACKAGES } from '@shared/packages'
 import { PROVIDERS, baseUrlFor, modelFor, providerInfo, validBaseUrl, type ProviderId } from '@shared/ai'
@@ -99,8 +101,12 @@ type Deps = {
   /** The desktop background, for Settings → Wallpaper. */
   wallpaper: () => WallpaperView
   /** Light or dark: as you set it, and whether it's dark now. */
-  theme: () => { pref: 'system' | 'light' | 'dark'; dark: boolean }
+  theme: () => { pref: 'system' | 'light' | 'dark'; dark: boolean; island: 'match' | 'dark'; accent: string }
   setTheme: (pref: 'system' | 'light' | 'dark') => void
+  /** The island's colours and the accent. */
+  setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => void
+  /** Settings › Privacy. */
+  setPaused: (on: boolean) => void
 }
 
 /** Settings window + the IPC it uses. */
@@ -120,6 +126,9 @@ export class SettingsController {
       wallpaper: this.d.wallpaper(),
       theme: this.d.theme().pref,
       dark: this.d.theme().dark,
+      islandTheme: this.d.theme().island,
+      accent: this.d.theme().accent,
+      privacy: egress.view(),
       secureStorage: isSecretStorageSecure(),
       dockSide: config.dock.side,
       appearance: config.appearance,
@@ -461,6 +470,20 @@ export class SettingsController {
     })
     ipcMain.handle(SETTINGS.SET_THEME, (_e, pref) => {
       if (pref === 'system' || pref === 'light' || pref === 'dark') this.d.setTheme(pref)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_PAUSED, (_e, on) => {
+      this.d.setPaused(on === true)
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.CLEAR_PRIVACY, () => {
+      egress.clear()
+      this.changed()
+    })
+    ipcMain.handle(SETTINGS.SET_LOOK, (_e, l) => {
+      const island = l?.island === 'match' || l?.island === 'dark' ? l.island : undefined
+      const accent = typeof l?.accent === 'string' && ACCENTS.some((a) => a.id === l.accent) ? l.accent : undefined
+      if (island || accent) this.d.setLook({ island, accent })
       this.changed()
     })
     ipcMain.handle(SETTINGS.SET_HOOK, async (_e, on) => {

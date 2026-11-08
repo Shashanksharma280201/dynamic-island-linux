@@ -1,3 +1,4 @@
+import type { IslandLook } from '../shared/theme'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
 import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
@@ -272,7 +273,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string> }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string>; look?: IslandLook }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -362,6 +363,9 @@ const settings = {
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
   setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
+  setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
+  setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
+  clearPrivacy: () => ipcRenderer.invoke(SETTINGS.CLEAR_PRIVACY),
   aiModels: (provider: ProviderId): Promise<string[]> => ipcRenderer.invoke(SETTINGS.AI_MODELS, provider),
   setPackage: (id: PackageId, on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PACKAGE, id, on),
   setShortcut: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_SHORTCUT, on),

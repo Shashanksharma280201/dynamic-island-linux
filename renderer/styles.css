@@ -1,15 +1,22 @@
 @import '@fontsource-variable/inter';
 
 /* ---------------------------------------------------------------------------
-   Design tokens: Apple's dark-mode system colours, labels, fills and materials
+   Design tokens: Apple's system colours, labels, fills and materials, dark by
+   default and light under data-theme='light'. --ink is the colour overlays,
+   hairlines and hover fills are made of (white on dark, black on light).
+   The accent (Settings, General) comes in as --accent-dark / --accent-light.
    --------------------------------------------------------------------------- */
-:root {
-  --blue: #0a84ff;
+:root,
+.stay-dark,
+.music,
+.wa-viewer {
+  --blue: var(--accent-dark, #0a84ff);
   --green: #30d158;
   --red: #ff453a;
   --orange: #ff9f0a;
   --yellow: #ffd60a;
   --whatsapp: #25d366;
+  --ink: 255, 255, 255;
 
   --label: rgba(255, 255, 255, 0.96);
   --label-2: rgba(235, 235, 245, 0.62);
@@ -20,13 +27,29 @@
   --fill-2: rgba(120, 120, 128, 0.26);
   --fill-3: rgba(118, 118, 128, 0.2);
 
+  /* Text in a colour, readable on this background. */
+  --red-text: #ff8a80;
+  --orange-text: #ffb340;
+  --green-text: #4ade80;
+  --blue-text: #74b6ff;
+  --purple-text: #d9a6ff;
+  /* Sunken fields: replies, notes, code, diffs. */
+  --well: rgba(0, 0, 0, 0.3);
+  --well-2: rgba(0, 0, 0, 0.18);
+
   /* "Glass": HUD material with a specular edge. Without compositor blur the
      desktop behind would show through sharply, so it stays fairly dense. */
   --material: rgba(26, 26, 30, 0.86);
   --material-top: rgba(56, 56, 62, 0.86);
   --edge: rgba(255, 255, 255, 0.16);
   --edge-bottom: rgba(255, 255, 255, 0.04);
-
+}
+.stay-dark,
+.music,
+.wa-viewer {
+  color: var(--label);
+}
+:root {
   --radius-card: 26px;
   --radius-module: 18px;
   --font: 'Inter Variable', -apple-system, 'SF Pro Text', system-ui, sans-serif;
@@ -40,6 +63,46 @@
 :root[data-appearance='solid'] {
   --material: rgba(18, 18, 20, 0.98);
   --material-top: rgba(34, 34, 38, 0.98);
+}
+
+/* Light, like macOS's light Control Center and notifications. */
+:root[data-theme='light'] {
+  --blue: var(--accent-light, #007aff);
+  --green: #28cd41;
+  --red: #ff3b30;
+  --orange: #ff9500;
+  --yellow: #ffcc00;
+  --ink: 0, 0, 0;
+
+  --label: rgba(0, 0, 0, 0.88);
+  --label-2: rgba(60, 60, 67, 0.66);
+  --label-3: rgba(60, 60, 67, 0.4);
+  --separator: rgba(0, 0, 0, 0.1);
+
+  --fill: rgba(120, 120, 128, 0.2);
+  --fill-2: rgba(120, 120, 128, 0.16);
+  --fill-3: rgba(118, 118, 128, 0.12);
+
+  --red-text: #d70015;
+  --orange-text: #c93400;
+  --green-text: #1f7a36;
+  --blue-text: #0040dd;
+  --purple-text: #8944ab;
+  --well: rgba(255, 255, 255, 0.78);
+  --well-2: rgba(255, 255, 255, 0.55);
+
+  --material: rgba(244, 244, 247, 0.9);
+  --material-top: rgba(255, 255, 255, 0.92);
+  --edge: rgba(255, 255, 255, 0.9);
+  --edge-bottom: rgba(0, 0, 0, 0.05);
+}
+:root[data-theme='light'][data-appearance='glass'][data-blur='yes'] {
+  --material: rgba(246, 246, 249, 0.6);
+  --material-top: rgba(255, 255, 255, 0.62);
+}
+:root[data-theme='light'][data-appearance='solid'] {
+  --material: rgba(242, 242, 245, 0.99);
+  --material-top: rgba(252, 252, 253, 0.99);
 }
 
 html,
@@ -124,7 +187,7 @@ button {
   box-shadow:
     inset 0 1px 0 var(--edge),
     inset 0 -1px 0 var(--edge-bottom),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+    inset 0 0 0 0.5px rgba(var(--ink), 0.07);
 }
 .island.detached {
   border-radius: 999px;
@@ -212,7 +275,7 @@ button {
 }
 .pill.danger {
   background: rgba(255, 69, 58, 0.2);
-  color: #ff6961;
+  color: var(--red-text);
 }
 .pill.wide {
   width: 100%;
@@ -385,14 +448,14 @@ button {
 /* Approval */
 .code {
   margin: 0;
-  background: rgba(0, 0, 0, 0.32);
+  background: var(--well);
   border: 0.5px solid var(--separator);
   border-radius: 12px;
   padding: 10px 12px;
   font-family: var(--mono);
   font-size: 12px;
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--ink), 0.88);
   white-space: pre-wrap;
   word-break: break-word;
   max-height: 180px;
@@ -438,7 +501,7 @@ button {
 }
 .progress .fill {
   height: 100%;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(var(--ink), 0.92);
   border-radius: 999px;
   transition: width 1s linear;
 }
@@ -462,7 +525,7 @@ button {
 .notif-body {
   font-size: 13px;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.84);
+  color: rgba(var(--ink), 0.84);
 }
 .avatar {
   width: 40px;
@@ -520,7 +583,7 @@ button {
   font-size: 12px;
 }
 .status.error {
-  color: #ff6961;
+  color: var(--red-text);
 }
 .status.ok {
   color: var(--green);
@@ -537,7 +600,7 @@ button {
   flex: 1;
   display: flex;
   align-items: flex-end;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--well);
   border: 0.5px solid var(--edge);
   border-radius: 18px;
   padding: 4px 4px 4px 12px;
@@ -593,11 +656,11 @@ button {
   gap: 10px;
 }
 .module {
-  background: rgba(255, 255, 255, 0.075);
-  border: 0.5px solid rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.075);
+  border: 0.5px solid rgba(var(--ink), 0.1);
   border-radius: var(--radius-module);
   padding: 12px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 0 rgba(var(--ink), 0.05);
 }
 /* macOS Control Center: connectivity on the left, tiles on the right. */
 .cc-grid {
@@ -722,6 +785,11 @@ button.cc-tile:active .circle {
   mix-blend-mode: normal;
   display: flex;
   pointer-events: none;
+}
+/* Light: the white level needs an edge on the pale track. */
+:root[data-theme='light'] .slider .level {
+  background: #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12), 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 .slider .icon.over-track {
   color: var(--label-2);
@@ -865,7 +933,7 @@ button.cc-tile:active .circle {
 }
 .claude-steps li.cur {
   font-weight: 600;
-  background: linear-gradient(90deg, var(--label-2) 0%, #fff 45%, var(--label-2) 70%) 0 0 / 200% 100%;
+  background: linear-gradient(90deg, var(--label-2) 0%, var(--label) 45%, var(--label-2) 70%) 0 0 / 200% 100%;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -935,7 +1003,7 @@ button.cc-tile:active .circle {
   height: 30px;
   border-radius: 0 0 22px 22px;
   background: var(--material);
-  box-shadow: inset 0 -1px 0 var(--edge-bottom), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 -1px 0 var(--edge-bottom), inset 0 0 0 0.5px rgba(var(--ink), 0.1);
 }
 .approval-stack.second {
   left: 28px;
@@ -950,12 +1018,12 @@ button.cc-tile:active .circle {
   padding: 3px 5px;
   margin-left: 7px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   opacity: 0.85;
   vertical-align: 1px;
 }
 .pill.primary .key {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(var(--ink), 0.25);
 }
 
 /* ---------------------------------------------------------------------------
@@ -978,7 +1046,7 @@ button.cc-tile:active .circle {
   width: 5px;
   height: 22px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(var(--ink), 0.28);
 }
 .dragging .capsule {
   cursor: grabbing;
@@ -1024,7 +1092,7 @@ button.cc-tile:active .circle {
 }
 .pill.always {
   background: rgba(10, 132, 255, 0.16);
-  color: #4da3ff;
+  color: var(--blue-text);
 }
 
 /* ---------------------------------------------------------------------------
@@ -1049,7 +1117,7 @@ button.cc-tile:active .circle {
   transition: background 0.18s ease, color 0.18s ease;
 }
 .tabs button.on {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   color: var(--label);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
 }
@@ -1079,7 +1147,7 @@ button.cc-tile:active .circle {
   position: relative;
 }
 .list-row:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
 }
 .list-row + .list-row::before {
   content: '';
@@ -1246,7 +1314,7 @@ button.cc-tile:active .circle {
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--ink), 0.88);
   user-select: text;
 }
 
@@ -1286,8 +1354,8 @@ button.cc-tile:active .circle {
   height: 18px;
   margin: 16px auto;
   border-radius: 999px;
-  border: 2.5px solid rgba(255, 255, 255, 0.18);
-  border-top-color: rgba(255, 255, 255, 0.85);
+  border: 2.5px solid rgba(var(--ink), 0.18);
+  border-top-color: rgba(var(--ink), 0.85);
   animation: spin 0.8s linear infinite;
   display: block;
 }
@@ -1338,6 +1406,19 @@ button.cc-tile:active .circle {
   --edge: rgba(255, 255, 255, 0.26);
   --edge-bottom: rgba(255, 255, 255, 0.06);
 }
+/* Light frosted glass: the same snapshot under a pale tint. */
+:root[data-theme='light'][data-frost='yes'][data-appearance='glass'] .island::before {
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgba(248, 248, 250, 0.68) 45%, rgba(242, 242, 246, 0.74) 100%),
+    var(--backdrop);
+  filter: blur(22px) saturate(1.6) brightness(1.04);
+}
+:root[data-theme='light'][data-frost='yes'][data-appearance='glass'] {
+  --edge: rgba(255, 255, 255, 0.9);
+  --edge-bottom: rgba(0, 0, 0, 0.05);
+  --label-2: rgba(36, 36, 42, 0.72);
+  --label-3: rgba(36, 36, 42, 0.5);
+}
 
 /* ---------------------------------------------------------------------------
    Panel with a detached icon rail
@@ -1377,7 +1458,7 @@ button.cc-tile:active .circle {
     transform 0.12s ease;
 }
 .rail-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
   color: var(--label);
 }
 .rail-btn:active {
@@ -1450,7 +1531,7 @@ button.cc-tile:active .circle {
   min-height: 300px;
   max-height: 420px;
   resize: none;
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--well-2);
   border: 0.5px solid var(--separator);
   border-radius: 14px;
   padding: 12px 14px;
@@ -1480,7 +1561,7 @@ button.cc-tile:active .circle {
 .reader,
 .note-editor {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(var(--ink), 0.22) transparent;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1519,7 +1600,7 @@ button.cc-tile:active .circle {
   width: 44px;
   height: 44px;
   font-size: 15px;
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.18);
 }
 .chat-row + .chat-row::before {
   left: 62px;
@@ -1549,7 +1630,7 @@ button.cc-tile:active .circle {
   color: rgba(235, 235, 245, 0.7);
 }
 .chat-row.unread .preview {
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(var(--ink), 0.92);
 }
 .chat-row .you {
   color: var(--label-2);
@@ -1593,7 +1674,7 @@ button.cc-tile:active .circle {
   word-break: break-word;
   white-space: pre-wrap;
   background: rgba(58, 58, 64, 0.72);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.08);
 }
 .conversation .bubble.mine {
   background: linear-gradient(180deg, #2b95ff, #0a7cff);
@@ -1619,7 +1700,7 @@ button.cc-tile:active .circle {
   font-variant-numeric: tabular-nums;
 }
 .conversation .bubble.mine .stamp {
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(var(--ink), 0.72);
 }
 
 /* ---- WhatsApp media ---- */
@@ -1653,7 +1734,7 @@ button.cc-tile:active .circle {
   border: 0;
   border-radius: 15px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--ink), 0.06);
   cursor: zoom-in;
 }
 .wa-visual img {
@@ -1679,7 +1760,7 @@ button.cc-tile:active .circle {
   display: block;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.02));
+  background: linear-gradient(135deg, rgba(var(--ink), 0.1), rgba(var(--ink), 0.02));
 }
 .wa-play {
   position: absolute;
@@ -1732,7 +1813,7 @@ button.cc-tile:active .circle {
   align-items: center;
   justify-content: center;
   color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   cursor: pointer;
 }
 .wa-voice-btn .spinner {
@@ -1747,7 +1828,7 @@ button.cc-tile:active .circle {
 .wa-voice-track {
   height: 4px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.22);
   overflow: hidden;
 }
 .wa-voice-track span {
@@ -1771,14 +1852,14 @@ button.cc-tile:active .circle {
   padding: 8px 10px;
   border: 0;
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.18);
+  background: var(--well-2);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 .wa-doc:hover {
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--well);
 }
 .wa-doc-icon {
   flex: none;
@@ -1788,7 +1869,7 @@ button.cc-tile:active .circle {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
 }
 .wa-doc-text {
   flex: 1;
@@ -1943,12 +2024,12 @@ button.cc-tile:active .circle {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.42;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--ink), 0.88);
   white-space: pre-wrap;
   word-break: break-word;
 }
 .claude-reply.error {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 
 .claude-panel {
@@ -1979,8 +2060,8 @@ button.cc-tile:active .circle {
 
 /* Plan limits */
 .limits {
-  background: rgba(255, 255, 255, 0.06);
-  border: 0.5px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.06);
+  border: 0.5px solid rgba(var(--ink), 0.08);
   border-radius: 14px;
   padding: 10px 12px;
 }
@@ -2008,7 +2089,7 @@ button.cc-tile:active .circle {
   margin: 6px 0 4px;
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--ink), 0.12);
   overflow: hidden;
 }
 .meter-bar > span {
@@ -2025,7 +2106,7 @@ button.cc-tile:active .circle {
   background: var(--red);
 }
 .meter.full .meter-pct {
-  color: #ff8a80;
+  color: var(--red-text);
   font-size: 12.5px;
 }
 .meter-reset {
@@ -2058,7 +2139,7 @@ button.cc-tile:active .circle {
   overflow-y: auto;
   padding: 2px 2px 4px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(var(--ink), 0.22) transparent;
 }
 .claude-thread > * {
   flex-shrink: 0;
@@ -2097,13 +2178,13 @@ button.cc-tile:active .circle {
   min-width: 0;
 }
 .claude-answer.failed .claude-answer-text {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .claude-answer.live .claude-status {
   margin: 1px 0 3px;
 }
 .claude-live-reply {
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--ink), 0.9);
 }
 
 /* Voice */
@@ -2151,11 +2232,11 @@ button.cc-tile:active .circle {
   cursor: pointer;
   flex-shrink: 0;
   color: #fff;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(var(--ink), 0.14);
   transition: background 0.15s ease, box-shadow 0.08s linear;
 }
 .round-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.22);
 }
 .round-btn.mic.on {
   background: #ff9f0a;
@@ -2210,7 +2291,7 @@ button.cc-tile:active .circle {
   transition: stroke-dasharray 0.5s ease, stroke 0.3s ease;
 }
 .ring-track {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(var(--ink), 0.1);
 }
 .ring-track.session {
   stroke-width: 2.4;
@@ -2258,8 +2339,8 @@ button.cc-tile:active .circle {
   height: 40px;
   border-radius: 999px;
   pointer-events: none;
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.22);
+  background: rgba(var(--ink), 0.16);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.22);
 }
 .rail-btn > .app-icon {
   position: relative;
@@ -2287,8 +2368,8 @@ button.cc-tile:active .circle {
   height: 4px;
   margin-top: -2px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.78);
-  box-shadow: 0 0 4px rgba(255, 255, 255, 0.4);
+  background: rgba(var(--ink), 0.78);
+  box-shadow: 0 0 4px rgba(var(--ink), 0.4);
 }
 .rail[data-side='left'] .rail-btn.running::after {
   right: auto;
@@ -2302,8 +2383,8 @@ button.cc-tile:active .circle {
   background: rgba(30, 30, 34, 0.92);
   box-shadow:
     0 6px 18px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 0.5px rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.95);
+    inset 0 0 0 0.5px rgba(var(--ink), 0.14);
+  color: rgba(var(--ink), 0.95);
   font-size: 12.5px;
   font-weight: 500;
   letter-spacing: -0.005em;
@@ -3242,7 +3323,7 @@ button.sp-device {
 .doc-form .doc-input {
   flex: 1;
   min-width: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--well);
   border: 0.5px solid var(--edge);
   border-radius: 999px;
   padding: 5px 11px;
@@ -3264,11 +3345,11 @@ button.sp-device {
   padding: 6px 6px 6px 10px;
   border-radius: 12px;
   background: rgba(48, 209, 88, 0.12);
-  color: rgba(255, 255, 255, 0.9);
+  color: rgba(var(--ink), 0.9);
 }
 .docs-result.error {
   background: rgba(255, 69, 58, 0.14);
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .docs-result-text {
   flex: 1;
@@ -3312,7 +3393,7 @@ button.sp-device {
   gap: 10px;
   padding: 8px 10px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--ink), 0.06);
 }
 .ask-bar.setup .caption {
   flex: 1;
@@ -3324,10 +3405,10 @@ button.sp-device {
   gap: 9px;
   padding: 8px 8px 8px 9px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--ink), 0.06);
 }
 .ask-run.failed .claude-status {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .ask-run-text {
   flex: 1;
@@ -3341,7 +3422,7 @@ button.sp-device {
   overflow-wrap: anywhere;
   font-size: 12.5px;
   line-height: 1.4;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--ink), 0.88);
   user-select: text;
 }
 .ask-ideas {
@@ -3349,7 +3430,7 @@ button.sp-device {
 }
 .chip.idea {
   background: rgba(10, 132, 255, 0.18);
-  color: #7cc0ff;
+  color: var(--blue-text);
 }
 .chip.recipe {
   display: inline-flex;
@@ -3357,7 +3438,7 @@ button.sp-device {
   gap: 2px;
   padding: 0 4px 0 0;
   background: rgba(191, 90, 242, 0.2);
-  color: #d9a6ff;
+  color: var(--purple-text);
 }
 .chip.recipe .plain {
   color: inherit;
@@ -3486,7 +3567,7 @@ button.sp-device {
   gap: 5px;
 }
 .crm-tabs button.on {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--ink), 0.16);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 .crm-due-badge {
@@ -3555,7 +3636,7 @@ button.sp-device {
   padding: 0 5px;
   border-radius: 999px;
   background: rgba(255, 159, 10, 0.22);
-  color: #ffb340;
+  color: var(--orange-text);
   font-size: 11px;
   font-weight: 700;
   display: inline-flex;
@@ -3575,17 +3656,17 @@ button.sp-device {
 .crm-pill.status-lead,
 .chip.status-lead.on {
   background: rgba(255, 159, 10, 0.22);
-  color: #ffb340;
+  color: var(--orange-text);
 }
 .crm-pill.status-customer,
 .chip.status-customer.on {
   background: rgba(48, 209, 88, 0.2);
-  color: #4ade80;
+  color: var(--green-text);
 }
 .crm-pill.status-partner,
 .chip.status-partner.on {
   background: rgba(191, 90, 242, 0.22);
-  color: #d9a6ff;
+  color: var(--purple-text);
 }
 .chip.status-other.on {
   background: var(--fill);
@@ -3594,32 +3675,32 @@ button.sp-device {
 .crm-pill.stage-new,
 .chip.stage-new.on {
   background: rgba(142, 142, 147, 0.28);
-  color: #d1d1d6;
+  color: var(--label);
 }
 .crm-pill.stage-qualified,
 .chip.stage-qualified.on {
   background: rgba(100, 210, 255, 0.2);
-  color: #7fd8ff;
+  color: var(--blue-text);
 }
 .crm-pill.stage-proposal,
 .chip.stage-proposal.on {
   background: rgba(10, 132, 255, 0.24);
-  color: #74b6ff;
+  color: var(--blue-text);
 }
 .crm-pill.stage-negotiation,
 .chip.stage-negotiation.on {
   background: rgba(255, 159, 10, 0.22);
-  color: #ffb340;
+  color: var(--orange-text);
 }
 .crm-pill.stage-won,
 .chip.stage-won.on {
   background: rgba(48, 209, 88, 0.22);
-  color: #4ade80;
+  color: var(--green-text);
 }
 .crm-pill.stage-lost,
 .chip.stage-lost.on {
   background: rgba(255, 69, 58, 0.2);
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .crm-money {
   font-variant-numeric: tabular-nums;
@@ -3671,7 +3752,7 @@ button.sp-device {
 .crm-details {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--ink), 0.05);
   border-radius: 12px;
   overflow: hidden;
 }
@@ -3692,7 +3773,7 @@ button.sp-device {
   border-top: 0.5px solid var(--separator);
 }
 .crm-detail:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--ink), 0.05);
 }
 .crm-detail-value {
   min-width: 0;
@@ -3721,7 +3802,7 @@ button.sp-device {
 .crm-about {
   font-size: 12.5px;
   line-height: 1.45;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(var(--ink), 0.85);
   white-space: pre-wrap;
   padding: 8px 10px;
   user-select: text;
@@ -3763,7 +3844,7 @@ button.sp-device {
   border-radius: 10px;
 }
 .crm-task:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--ink), 0.05);
 }
 .crm-check {
   border: 1.5px solid var(--label-3);
@@ -3795,7 +3876,7 @@ button.sp-device {
 }
 .caption.late,
 .crm-group-title.late {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .crm-group {
   display: flex;
@@ -3830,14 +3911,14 @@ button.sp-device {
   gap: 8px;
   padding: 7px 10px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--ink), 0.05);
   color: var(--label);
   font: inherit;
   text-align: left;
   cursor: pointer;
 }
 .crm-deal-card:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--ink), 0.09);
 }
 .crm-deal-title {
   flex: 1;
@@ -3874,7 +3955,7 @@ button.sp-device {
   border-radius: 10px;
 }
 .crm-entry:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--ink), 0.04);
 }
 .crm-entry-icon {
   width: 24px;
@@ -3892,13 +3973,13 @@ button.sp-device {
   height: 13px;
 }
 .crm-entry.kind-call .crm-entry-icon {
-  color: #4ade80;
+  color: var(--green-text);
 }
 .crm-entry.kind-meeting .crm-entry-icon {
-  color: #d9a6ff;
+  color: var(--purple-text);
 }
 .crm-entry.kind-email .crm-entry-icon {
-  color: #74b6ff;
+  color: var(--blue-text);
 }
 .crm-entry-main {
   flex: 1;
@@ -3946,7 +4027,7 @@ button.sp-device {
 }
 .crm-body.deep {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+  scrollbar-color: rgba(var(--ink), 0.22) transparent;
 }
 /* A one-line box: long text scrolls without a scrollbar, like Messages. */
 .reply-field textarea {
@@ -3957,7 +4038,7 @@ button.sp-device {
   box-sizing: border-box;
   width: 100%;
   min-width: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--well);
   border: 0.5px solid var(--edge);
   border-radius: 10px;
   padding: 7px 10px;
@@ -4058,7 +4139,7 @@ textarea.crm-input {
   border-top: 0.5px solid var(--separator);
 }
 button.crm-menu-item:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
 }
 .crm-menu-item .caption {
   margin-left: auto;
@@ -4138,7 +4219,7 @@ button.crm-menu-item:hover {
   padding: 8px 10px;
   border-radius: 12px;
   background: rgba(94, 92, 230, 0.18);
-  color: #c7c6ff;
+  color: var(--purple-text);
   font-size: 12px;
   line-height: 1.3;
 }
@@ -4146,7 +4227,7 @@ button.crm-menu-item:hover {
   flex: 1;
 }
 .nc-banner .plain {
-  color: #fff;
+  color: var(--label);
   font-weight: 600;
 }
 .nc-list {
@@ -4193,8 +4274,8 @@ button.crm-menu-item:hover {
   gap: 10px;
   padding: 9px 10px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 0.5px solid rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
+  border: 0.5px solid rgba(var(--ink), 0.07);
   touch-action: pan-y;
   cursor: grab;
 }
@@ -4202,7 +4283,7 @@ button.crm-menu-item:hover {
   cursor: pointer;
 }
 .nc-row:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
 }
 .nc-row.unseen::before {
   content: '';
@@ -4514,7 +4595,7 @@ button .spinner-orb,
   border-radius: 10px;
   font-size: 12.5px;
   font-weight: 600;
-  color: #ffd9a8;
+  color: var(--orange-text);
   background: rgba(255, 159, 10, 0.16);
   box-shadow: inset 0 0 0 0.5px rgba(255, 159, 10, 0.4);
 }
@@ -4580,8 +4661,8 @@ button .spinner-orb,
   border: 0;
   border-radius: 12px;
   padding: 9px 11px;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.07);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.08);
   color: var(--label);
   font: inherit;
   font-size: 13px;
@@ -4592,7 +4673,7 @@ button .spinner-orb,
     transform 0.15s;
 }
 .q-option:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(var(--ink), 0.11);
 }
 .q-option:active {
   transform: scale(0.985);
@@ -4647,7 +4728,7 @@ button .spinner-orb,
   font: inherit;
   font-size: 13px;
   color: var(--label);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--well);
   box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.6);
   outline: none;
 }
@@ -4662,7 +4743,7 @@ button .spinner-orb,
   overflow-y: auto;
   padding: 10px 12px;
   border-radius: 12px;
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--well);
   border: 0.5px solid var(--separator);
   font-size: 12.5px;
   line-height: 1.5;
@@ -4696,12 +4777,12 @@ button .spinner-orb,
   color: var(--label);
   padding: 9px 11px;
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.07);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.07);
   cursor: pointer;
 }
 .session-row:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
 }
 .session-row.waiting {
   box-shadow: inset 0 0 0 1px rgba(255, 159, 10, 0.5);
@@ -4770,7 +4851,7 @@ button .spinner-orb,
   line-height: 1.4;
   padding: 8px 11px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--ink), 0.06);
 }
 .session-final {
   max-height: 160px;
@@ -4798,8 +4879,8 @@ button .spinner-orb,
 }
 .diff-file {
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.05);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.07);
   overflow: hidden;
 }
 .diff-name {
@@ -4826,7 +4907,7 @@ button .spinner-orb,
 .diff-body {
   max-height: 260px;
   overflow: auto;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--well);
   font: 11.5px/1.5 var(--mono);
   user-select: text;
 }
@@ -4852,20 +4933,20 @@ button .spinner-orb,
 }
 .dl.add {
   background: rgba(48, 209, 88, 0.14);
-  color: #b5f5c4;
+  color: var(--green-text);
 }
 .dl.add .dm {
   color: var(--green);
 }
 .dl.del {
   background: rgba(255, 69, 58, 0.14);
-  color: #ffc1bc;
+  color: var(--red-text);
 }
 .dl.del .dm {
   color: var(--red);
 }
 .dl.ctx {
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--ink), 0.62);
 }
 
 /* A card that closes by itself: the time it has left, and a pin to keep it. */
@@ -4884,20 +4965,20 @@ button .spinner-orb,
   flex: 1;
   height: 2.5px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
   overflow: hidden;
 }
 .close-bar span {
   display: block;
   height: 100%;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(var(--ink), 0.34);
   transform-origin: left center;
   animation: close-bar linear forwards;
   transition: background 0.2s;
 }
 .close-bar.held span {
-  background: rgba(255, 255, 255, 0.55);
+  background: rgba(var(--ink), 0.55);
 }
 @keyframes close-bar {
   from {
@@ -4919,13 +5000,13 @@ button .spinner-orb,
   align-items: center;
   justify-content: center;
   color: var(--label-2);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--ink), 0.12);
   cursor: pointer;
   animation: rise 0.18s cubic-bezier(0, 0, 0.2, 1) both;
 }
 .pin-btn:hover {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.22);
+  color: var(--label);
+  background: rgba(var(--ink), 0.22);
 }
 @media (prefers-reduced-motion: reduce) {
   .close-bar span {
@@ -5032,13 +5113,13 @@ button .spinner-orb,
   padding: 6px 2px 4px;
   border: 0;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--ink), 0.06);
   color: var(--label-2);
   font: 500 10px/1.2 var(--font);
   cursor: pointer;
 }
 .wardrobe-card .wardrobe-item:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(var(--ink), 0.11);
 }
 .wardrobe-card .wardrobe-item.on {
   color: var(--label);
@@ -5055,7 +5136,7 @@ button .spinner-orb,
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.18);
+  border: 2px solid rgba(var(--ink), 0.18);
   padding: 0;
   cursor: pointer;
 }
@@ -5093,7 +5174,7 @@ button .spinner-orb,
   color: var(--label-2);
 }
 .dictate.error .dictate-text {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .dictate-hint {
   color: var(--label-3);
@@ -5138,7 +5219,7 @@ button .spinner-orb,
   padding: 5px 6px 5px 5px;
   margin-bottom: 6px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
   font-size: 12px;
   color: var(--label-2);
   animation: rise 0.2s cubic-bezier(0, 0, 0.2, 1) both;
@@ -5181,8 +5262,8 @@ button .spinner-orb,
 .svc-card {
   border-radius: 16px;
   padding: 10px 12px 8px;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 0 0 0.5px rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.06);
+  box-shadow: inset 0 0 0 0.5px rgba(var(--ink), 0.07);
 }
 .svc-head {
   display: flex;
@@ -5231,7 +5312,7 @@ button .spinner-orb,
   cursor: pointer;
 }
 .svc-row.opens:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
 }
 .svc-row:disabled {
   opacity: 1;
@@ -5293,7 +5374,7 @@ button .spinner-orb,
   padding: 4px 0;
 }
 .svc-note.bad {
-  color: #ff8a80;
+  color: var(--red-text);
 }
 .svc-note .link {
   border: 0;
@@ -5329,7 +5410,7 @@ button .spinner-orb,
   gap: 1px;
   padding: 8px 9px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
 }
 .recap-chip b {
   font-size: 15px;
@@ -5368,7 +5449,7 @@ button .spinner-orb,
   height: 128px;
   border-radius: 10px;
   object-fit: cover;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--ink), 0.07);
   flex: none;
 }
 .recap-share-side {
@@ -5419,7 +5500,7 @@ button .spinner-orb,
 .job-bar {
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--ink), 0.1);
   overflow: hidden;
 }
 .job-bar i {
@@ -5457,7 +5538,7 @@ button .spinner-orb,
 }
 .job-mark.bad {
   background: rgba(255, 69, 58, 0.18);
-  color: #ff6961;
+  color: var(--red-text);
 }
 .job-ico {
   width: 13px;
@@ -5473,13 +5554,13 @@ button .spinner-orb,
   gap: 10px;
   padding: 8px 10px 8px 12px;
   border-radius: 13px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.07);
+  border: 1px solid rgba(var(--ink), 0.08);
   cursor: grab;
   transition: background 0.12s ease;
 }
 .job-file:hover {
-  background: rgba(255, 255, 255, 0.11);
+  background: rgba(var(--ink), 0.11);
 }
 .job-name {
   font-size: 12.5px;
@@ -5500,7 +5581,7 @@ button .spinner-orb,
   height: 36px;
   border-radius: 7px;
   object-fit: cover;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 1px rgba(var(--ink), 0.14);
 }
 .job-doc i {
   position: absolute;
@@ -5602,7 +5683,7 @@ button .spinner-orb,
   color: var(--label-2);
   padding: 2px 7px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.08);
 }
 .ask-timer.low {
   color: var(--orange);
@@ -5667,7 +5748,7 @@ button .spinner-orb,
   padding: 2px 8px;
   border-radius: 999px;
   color: var(--label-2);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--ink), 0.08);
 }
 .cv-live.live {
   color: var(--green);
@@ -5688,7 +5769,7 @@ button .spinner-orb,
   flex-direction: column;
   padding: 7px 9px;
   border-radius: 11px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--ink), 0.05);
 }
 .cv-stat-label {
   font-size: 10.5px;

@@ -27,12 +27,18 @@ export function App() {
   )
   useEffect(
     () =>
-      window.island.onAppearance(({ appearance, blur, sounds, openOnHover, customSounds }) => {
+      window.island.onAppearance(({ appearance, blur, sounds, openOnHover, customSounds, look }) => {
         setSoundsOn(!!sounds)
         setCustomSounds(customSounds)
-        document.documentElement.dataset.openOnHover = openOnHover ? 'yes' : 'no'
-        document.documentElement.dataset.appearance = appearance
-        document.documentElement.dataset.blur = blur ? 'yes' : 'no'
+        const root = document.documentElement
+        root.dataset.openOnHover = openOnHover ? 'yes' : 'no'
+        root.dataset.appearance = appearance
+        root.dataset.blur = blur ? 'yes' : 'no'
+        if (look) {
+          root.dataset.theme = look.theme
+          root.style.setProperty('--accent-dark', look.accent.dark)
+          root.style.setProperty('--accent-light', look.accent.light)
+        }
       }),
     [],
   )

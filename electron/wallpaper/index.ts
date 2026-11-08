@@ -1,3 +1,4 @@
+import { egress, hostOf } from '../privacy'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writeFileSync, createWriteStream } from 'node:fs'
 import { basename, join } from 'node:path'
@@ -121,6 +122,8 @@ export class Wallpapers {
   async search(query: string, kind: 'image' | 'video' = 'image'): Promise<SearchResult> {
     const q = query.trim().slice(0, 200)
     if (!q) return { items: [], errors: ['Say what to look for.'] }
+    const paused = egress.blocked()
+    if (paused) return { items: [], errors: [paused] }
     const r = await searchWalls({ query: q, kind, keys: this.d.keys(), screen: this.d.screen(), endpoints: this.d.endpoints, fetch: this.d.fetch })
     for (const i of r.items) this.found.set(i.id, i)
     this.last = { query: q.toLowerCase(), kind, items: r.items }
@@ -244,6 +247,9 @@ export class Wallpapers {
   /** Download a photo or video into the wallpapers folder (streamed, size-capped). */
   private async download(item: WallItem): Promise<string> {
     const url = downloadUrl(item)
+    const paused = egress.blocked(hostOf(url))
+    if (paused) throw new Error(paused)
+    egress.note('wallpaper', hostOf(url), `a download of “${item.title}”`)
     const r = await this.fetch(url, { headers: { 'User-Agent': USER_AGENT }, signal: AbortSignal.timeout(180_000) })
     if (!r.ok || !r.body) throw new Error(`The ${item.kind === 'video' ? 'video' : 'photo'} couldn’t be downloaded (${r.status}).`)
     const type = r.headers.get('content-type') ?? ''

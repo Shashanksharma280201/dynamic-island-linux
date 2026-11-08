@@ -1,3 +1,5 @@
+import { PrivacySection } from './PrivacySection'
+import { ACCENTS, accentOf } from '@shared/theme'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SettingsState, WaState } from '@shared/types'
 import { MailSection } from './MailSection'
@@ -311,6 +313,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
   ],
   [
     { id: 'general', label: 'General' },
+    { id: 'privacy', label: 'Privacy' },
     { id: 'shortcuts', label: 'Keyboard shortcuts' },
     { id: 'drag', label: 'Drag actions' },
     { id: 'drop', label: 'Phone Drop' },
@@ -327,7 +330,7 @@ const NAV: { id: string; label: string; when?: (s: SettingsState) => boolean }[]
 ]
 
 /** The rows a search can light up inside a section. */
-const ROWS = '.toggle-row, .row, .package-row, .service-row, .brain-tool, .brain-item, .wall-block, .wall-now, .me-editor, .character-grid, .wardrobe-row, .slider-row, .range-row'
+const ROWS = '.toggle-row, .row, .privacy-row, .package-row, .service-row, .brain-tool, .brain-item, .wall-block, .wall-now, .me-editor, .character-grid, .wardrobe-row, .slider-row, .range-row'
 
 export function Settings() {
   const [s, setS] = useState<SettingsState | null>(null)
@@ -383,10 +386,16 @@ export function Settings() {
     }
   }, [query, s]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => paneRef.current?.scrollTo(0, 0), [current])
-  // Light or dark, as the island says (it follows the desktop, or your choice).
+  // Light or dark, as the island says (it follows the desktop, or your choice), and the accent.
   useEffect(() => {
     if (s) document.documentElement.dataset.theme = s.dark ? 'dark' : 'light'
   }, [s?.dark]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!s) return
+    const a = accentOf(s.accent)
+    document.documentElement.style.setProperty('--accent-dark', a.dark)
+    document.documentElement.style.setProperty('--accent-light', a.light)
+  }, [s?.accent]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (loadError) return <SettingsProblem detail={loadError} />
   if (!s) return <main>Loading…</main>
@@ -430,6 +439,7 @@ export function Settings() {
       <YouSection s={s} />
       <BrainSection s={s} />
       <WallpaperSection s={s} />
+      <PrivacySection s={s} />
       <CharacterSection s={s} />
       <AiSection s={s} />
       <PackagesSection s={s} />
@@ -445,7 +455,7 @@ export function Settings() {
           <div>
             <div>Light or dark</div>
             <div className="hint">
-              For this window. {s.theme === 'system' ? `Following your desktop: ${s.dark ? 'dark' : 'light'} now.` : 'The island itself stays dark, like the notch it’s named after.'}
+              For Settings and the island. {s.theme === 'system' ? `Following your desktop: ${s.dark ? 'dark' : 'light'} now.` : ''}
             </div>
           </div>
           <Segmented
@@ -457,6 +467,40 @@ export function Settings() {
             ]}
             onChange={(v) => general.run(() => window.settings.setTheme(v))}
           />
+        </div>
+        <div className="toggle-row">
+          <div>
+            <div>Island colours</div>
+            <div className="hint">The panel and cards in light or dark with everything else, or always dark, like the notch it’s named after.</div>
+          </div>
+          <Segmented
+            value={s.islandTheme}
+            options={[
+              { value: 'match', label: 'Match' },
+              { value: 'dark', label: 'Always dark' },
+            ]}
+            onChange={(v) => general.run(() => window.settings.setLook({ island: v }))}
+          />
+        </div>
+        <div className="toggle-row">
+          <div>
+            <div>Accent colour</div>
+            <div className="hint">Buttons, links and what’s selected, on the island and here.</div>
+          </div>
+          <div className="accent-swatches" role="radiogroup" aria-label="Accent colour">
+            {ACCENTS.map((a) => (
+              <button
+                key={a.id}
+                role="radio"
+                aria-checked={s.accent === a.id}
+                aria-label={a.name}
+                title={a.name}
+                className={`accent-swatch${s.accent === a.id ? ' on' : ''}`}
+                style={{ background: s.dark ? a.dark : a.light }}
+                onClick={() => general.run(() => window.settings.setLook({ accent: a.id }))}
+              />
+            ))}
+          </div>
         </div>
         <div className="toggle-row">
           <div>

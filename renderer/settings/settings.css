@@ -13,7 +13,7 @@
   --border: rgba(0, 0, 0, 0.12);
   --text: rgba(0, 0, 0, 0.87);
   --muted: rgba(60, 60, 67, 0.64);
-  --blue: #007aff;
+  --blue: var(--accent-light, #007aff);
   --green: #34c759;
   --red: #ff3b30;
   --fill: rgba(120, 120, 128, 0.18);
@@ -39,7 +39,7 @@
     --border: rgba(255, 255, 255, 0.12);
     --text: rgba(255, 255, 255, 0.93);
     --muted: rgba(235, 235, 245, 0.6);
-    --blue: #0a84ff;
+    --blue: var(--accent-dark, #0a84ff);
     --green: #30d158;
     --red: #ff453a;
     --fill: rgba(120, 120, 128, 0.32);
@@ -65,7 +65,7 @@
     --border: rgba(255, 255, 255, 0.12);
     --text: rgba(255, 255, 255, 0.93);
     --muted: rgba(235, 235, 245, 0.6);
-    --blue: #0a84ff;
+    --blue: var(--accent-dark, #0a84ff);
     --green: #30d158;
     --red: #ff453a;
     --fill: rgba(120, 120, 128, 0.32);
@@ -976,4 +976,59 @@ button.wall-tile:disabled {
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+}
+
+/* Accent colour swatches, like macOS's Appearance settings. */
+.accent-swatches {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.accent-swatch {
+  width: 18px;
+  height: 18px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 0;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.18);
+  cursor: pointer;
+}
+.accent-swatch.on {
+  outline: 2px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* Privacy: where things went. */
+.privacy-block {
+  padding: 11px 14px;
+}
+.privacy-list {
+  margin-top: 8px;
+}
+.privacy-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 0;
+}
+.privacy-row + .privacy-row {
+  border-top: 0.5px solid var(--separator);
+}
+.privacy-main {
+  flex: 1;
+  min-width: 0;
+}
+.privacy-to {
+  font-weight: 500;
+}
+.privacy-feature {
+  font-weight: 600;
+}
+.privacy-meta {
+  flex-shrink: 0;
+  text-align: right;
+}
+.privacy-empty {
+  padding: 8px 0 2px;
 }

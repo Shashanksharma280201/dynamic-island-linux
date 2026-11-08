@@ -50,6 +50,15 @@ export const SIDE_ICONS: Record<string, ReactNode> = {
     </Tile>
   ),
   general: <SettingsAppIcon />,
+  privacy: (
+    <Tile from="#5ac8fa" to="#0a6cff">
+      {/* A raised hand, as in macOS's Privacy & Security. */}
+      <path
+        d="M10.2 20.5c-1.6-1.3-2.7-3.2-3.1-4.6-.3-.9.6-1.5 1.3-.9l1.7 1.6V9.2c0-.7.5-1.2 1.1-1.2s1.1.5 1.1 1.2v4.3h.4V7.8c0-.7.5-1.2 1.1-1.2s1.1.5 1.1 1.2v5.7h.4V8.6c0-.7.5-1.2 1.1-1.2s1.1.5 1.1 1.2v4.9h.4v-3.5c0-.7.5-1.2 1.1-1.2s1.1.5 1.1 1.2v5.4c0 3.6-2.4 6.1-5.6 6.1-1.3 0-2.4-.4-3.3-1z"
+        fill={W}
+      />
+    </Tile>
+  ),
   shortcuts: (
     <Tile from="#8e8e93" to="#636366">
       <rect x="6" y="9" width="16" height="10" rx="2" fill={W} />

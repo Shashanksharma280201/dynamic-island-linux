@@ -1,3 +1,4 @@
+import type { PrivacyView } from './privacy'
 import type { WallpaperView } from './wallpaper'
 import type { BrainView } from './brain'
 import type { AgentSession } from './sessions'
@@ -367,9 +368,15 @@ export type SettingsState = {
   brain: BrainView
   /** The desktop background (Settings → Wallpaper). */
   wallpaper: WallpaperView
-  /** Light or dark for Settings, and whether it's dark now. */
+  /** Light or dark, and whether it's dark now. */
   theme: 'system' | 'light' | 'dark'
   dark: boolean
+  /** The island matches the theme, or stays dark. */
+  islandTheme: 'match' | 'dark'
+  /** The accent colour's id. */
+  accent: string
+  /** Settings › Privacy: what went where, and the pause switch. */
+  privacy: PrivacyView
 }
 
 export type ClaudeSettings = {

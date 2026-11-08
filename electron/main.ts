@@ -1,3 +1,4 @@
+import { egress } from './privacy'
 import { app, clipboard, dialog, ipcMain, nativeImage, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -124,6 +125,7 @@ import { LiveWallpaper } from './wallpaper/live'
 import { DesktopBackground } from './wallpaper/desktop'
 import { endpointsAt } from './wallpaper/search'
 import { wireWallpaper } from './wallpaperIpc'
+import { islandLook } from '../shared/theme'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
 
@@ -205,10 +207,16 @@ async function main() {
   // Your own sounds (Settings → General → Sounds → Open Folder).
   let onSounds = () => {}
   const customSounds = new CustomSounds(join(app.getPath('userData'), 'sounds'), () => onSounds())
-  // ---- light or dark (Settings follows the desktop, or your choice) ----
+  // ---- what leaves this computer (Settings › Privacy) ----
+  egress.init({ file: join(app.getPath('userData'), 'privacy-log.json'), paused: () => config.privacy.paused, onChange: () => settings?.changed() })
+  // ---- light or dark (Settings and the island follow the desktop, or your choice) ----
+  let onLook = () => {}
   const theme = new SystemTheme(
     () => config.theme,
-    () => settings?.changed(),
+    () => {
+      settings?.changed()
+      onLook()
+    },
   )
 
   // ---- the desktop background (Settings → Wallpaper, or ask the assistant) ----
@@ -495,6 +503,8 @@ async function main() {
   // when that is the island's AI; without either they are plain.
   const writerDir = join(app.getPath('userData'), 'brain-writer')
   const brainWriter = () => {
+    // Paused (Settings › Privacy): notes are written without an AI.
+    if (egress.blocked()) return null
     const ai = config.ai
     const provider = providerInfo(ai.provider)
     if (provider.kind !== 'claude-code' && !setupProblem(ai)) {
@@ -512,13 +522,23 @@ async function main() {
             history: [],
             prompt,
             tools: [],
+            feature: 'brain',
+            purpose: 'a Claude Code session’s summary, to write its five-line note',
             signal: AbortSignal.timeout(120_000),
             events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
           }).then((r) => r.text),
       }
     }
     const bin = findClaude()
-    return bin ? { label: 'Claude Code (Haiku)', ask: (prompt: string) => claudeOnce(bin, prompt, writerDir) } : null
+    return bin
+      ? {
+          label: 'Claude Code (Haiku)',
+          ask: (prompt: string) => {
+            egress.note('brain', 'Anthropic, through Claude Code', 'a Claude Code session’s summary, to write its five-line note')
+            return claudeOnce(bin, prompt, writerDir)
+          },
+        }
+      : null
   }
   const brain = new Brain({
     config: () => config.brain,
@@ -987,11 +1007,22 @@ async function main() {
   settings = new SettingsController({
     brain: () => brain.view(),
     wallpaper: () => wallpapers.view(),
-    theme: () => ({ pref: config.theme, dark: theme.isDark() }),
+    theme: () => ({ pref: config.theme, dark: theme.isDark(), island: config.islandTheme, accent: config.accent }),
     setTheme: (pref) => {
       config.theme = pref
       saveConfig(config)
       theme.apply()
+    },
+    setPaused: (on) => {
+      // While paused, services check every minute whether they may look again.
+      config.privacy = { paused: on }
+      saveConfig(config)
+    },
+    setLook: (l) => {
+      if (l.island) config.islandTheme = l.island
+      if (l.accent) config.accent = l.accent
+      saveConfig(config)
+      onLook()
     },
     drag: () => ({ available: process.platform === 'linux', problem: dragRing.problem }),
     drop: dropStatus,
@@ -1396,7 +1427,15 @@ async function main() {
   applyShortcut()
   backdrop.start()
   const pushAppearance = () =>
-    send(win, IPC.APPEARANCE, { appearance: config.appearance, blur: blurBehind, sounds: config.sounds, openOnHover: config.openOnHover, customSounds: customSounds.urls() })
+    send(win, IPC.APPEARANCE, {
+      appearance: config.appearance,
+      blur: blurBehind,
+      sounds: config.sounds,
+      openOnHover: config.openOnHover,
+      customSounds: customSounds.urls(),
+      look: islandLook(config.islandTheme, theme.isDark(), config.accent),
+    })
+  onLook = pushAppearance
   const pushCharacter = () => {
     send(win, IPC.CHARACTER, config.character)
     updateCompanion()

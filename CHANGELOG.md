@@ -19,9 +19,24 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Settings is laid out like System Settings**: a sidebar with coloured
   icons in groups, one pane at a time, and a search field that finds any
   setting by its name and takes you to it.
-- **Light and dark**: Settings follows Ubuntu's own style (Settings →
-  Appearance → Style) as it changes, or stays Light or Dark (Settings →
-  General → Light or dark).
+- **Light and dark**: Settings and the island follow Ubuntu's own style
+  (Settings → Appearance → Style) as it changes, or stay Light or Dark
+  (Settings → General → Light or dark). In light, the panel, the Dock and
+  the cards are pale glass like macOS's; **Island colours → Always dark**
+  keeps the island black like a notch. Spotify keeps its own dark look.
+- **Accent colour**: eight, as on macOS, for buttons, links and what's
+  selected, on the island and in Settings.
+
+**Privacy**
+
+- **Settings → Privacy** lists what has left this computer, where it went
+  and when: your questions to the assistant, session summaries for your
+  brain, wallpaper searches and downloads, and services checking your
+  accounts. It says what was sent, never what it said, and stays on this
+  computer for 30 days.
+- **Pause AI and the web** stops all of that until you turn it off.
+  Session notes are written without an AI meanwhile; WhatsApp, mail,
+  Spotify and an AI on this computer (Ollama) keep working.
 
 **Wallpaper by asking**
 

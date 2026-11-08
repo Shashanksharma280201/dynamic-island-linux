@@ -1,3 +1,4 @@
+import { egress, hostOf } from '../privacy'
 import {
   parseOpenverse,
   parsePexelsPhotos,
@@ -75,6 +76,7 @@ export async function searchWalls(o: {
   const lists = await Promise.all(
     asks.map(async (a) => {
       try {
+        egress.note('wallpaper', hostOf(a.url), `your search words: “${o.query}”`)
         const r = await f(a.url, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/json', ...a.headers }, signal: AbortSignal.timeout(12_000) })
         if (r.status === 401 || r.status === 403) throw new Error('your key was refused')
         if (r.status === 429) throw new Error('too many searches, try again in a minute')

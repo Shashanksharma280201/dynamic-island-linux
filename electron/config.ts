@@ -1,3 +1,4 @@
+import { ACCENTS } from '../shared/theme'
 import { app } from 'electron'
 import { readFileSync, writeFileSync, mkdirSync, renameSync } from 'node:fs'
 import { join } from 'node:path'
@@ -72,8 +73,14 @@ export type Config = {
   brain: BrainConfig
   /** The desktop background the island set, live wallpaper options and your photo-site keys. */
   wallpaper: WallpaperConfig
-  /** Light or dark for Settings: following the desktop, or always one. */
+  /** Light or dark: following the desktop, or always one. */
   theme: 'system' | 'light' | 'dark'
+  /** The island matches the theme, or stays dark like a notch. */
+  islandTheme: 'match' | 'dark'
+  /** The accent colour (shared/theme.ts ACCENTS). */
+  accent: string
+  /** Settings › Privacy: nothing goes to an AI, a photo site or a service while paused. */
+  privacy: { paused: boolean }
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -143,6 +150,9 @@ const DEFAULTS: Config = {
   brain: parseBrainConfig(null),
   wallpaper: parseWallpaperConfig(null),
   theme: 'system',
+  islandTheme: 'match',
+  accent: 'blue',
+  privacy: { paused: false },
 }
 
 function server(raw: any): ServerConfig | null {
@@ -182,6 +192,9 @@ export function mergeConfig(raw: unknown): Config {
   c.brain = parseBrainConfig(r.brain)
   c.wallpaper = parseWallpaperConfig(r.wallpaper)
   if (r.theme === 'system' || r.theme === 'light' || r.theme === 'dark') c.theme = r.theme
+  if (r.islandTheme === 'match' || r.islandTheme === 'dark') c.islandTheme = r.islandTheme
+  if (typeof r.accent === 'string' && ACCENTS.some((a) => a.id === r.accent)) c.accent = r.accent
+  c.privacy = { paused: r.privacy?.paused === true }
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
   }
