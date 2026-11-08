@@ -299,6 +299,23 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // The main process's cursor loop is the source of truth for hover: DOM
   // mouseleave is not delivered once the window turns click-through.
   useEffect(() => window.island.onHover(setHover), [])
+  // A leave can also be lost: when the element under the pointer is removed (a button that
+  // closes its own card) and the pointer moves on before the page looks again, no mouseleave
+  // reaches the island. Any move outside it, or leaving the window, ends the hover too.
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (outerRef.current && !outerRef.current.contains(e.target as Node)) setHover(false)
+    }
+    const out = (e: MouseEvent) => {
+      if (!e.relatedTarget) setHover(false)
+    }
+    document.addEventListener('mousemove', move, true)
+    document.addEventListener('mouseout', out, true)
+    return () => {
+      document.removeEventListener('mousemove', move, true)
+      document.removeEventListener('mouseout', out, true)
+    }
+  }, [])
 
   // Hover intent: a short rest peeks, a longer one opens the full card.
   // No peek while the Undo note is up: the island growing would move it from under the pointer.

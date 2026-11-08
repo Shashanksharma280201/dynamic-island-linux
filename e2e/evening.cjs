@@ -191,8 +191,10 @@ function approval(input) {
     await gone(page, '.nc-summary')
 
     // ---- The island's stack names the apps ----
+    // Opened from the keyboard it stays until you close it the same way (the shortcut sends this).
     await page.mouse.move(2, 2)
-    check('and closes when you move away', await gone(page, '.hub', 8000))
+    await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).webContents.send('island:toggle-panel'))
+    check('and the shortcut closes it', await gone(page, '.hub', 5000))
     notify('Mail', 'Bob', 'Hi')
     notify('Calendar', 'Standup', 'Room 2')
     notify('Slack', 'Carol', 'Ping')
