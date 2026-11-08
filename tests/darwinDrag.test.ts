@@ -1,3 +1,4 @@
+import { Script } from 'node:vm'
 import { describe, expect, it } from 'vitest'
 import { DRAG_HELPER, dragLine } from '../electron/platform/darwinDrag'
 
@@ -22,5 +23,11 @@ describe('the macOS drag helper', () => {
     expect(DRAG_HELPER).toContain('NSPasteboardURLReadingFileURLsOnlyKey')
     // Nothing that would need Accessibility or Input Monitoring.
     expect(DRAG_HELPER).not.toMatch(/CGEventTap|CGEventPost|addGlobalMonitor/)
+  })
+  it('is a script that parses, and gives a drag a moment to write its files', () => {
+    expect(() => new Script(DRAG_HELPER)).not.toThrow()
+    // The dragging app clears the pasteboard before it writes: no files at the first look isn't the answer yet.
+    expect(DRAG_HELPER).toMatch(/state = 'settling'/)
+    expect(DRAG_HELPER).toMatch(/Date\.now\(\) - changedAt > 400/)
   })
 })

@@ -7,7 +7,8 @@ import type { DragEvents, DragSource } from '../dragSource'
  * Notices file drags in any app on macOS. Every drag writes what it carries
  * to the system's drag pasteboard, so its change count moves when one starts:
  * while the left button is down, a change with file URLs on it is a file
- * drag, and those URLs are its files. Runs as JavaScript for Automation
+ * drag, and those URLs are its files (looked for again for a moment after
+ * the change: the dragging app clears the pasteboard before it writes). Runs as JavaScript for Automation
  * (osascript, built in) and needs no permission: it only reads the button,
  * the Option key and the drag pasteboard. One JSON object a line:
  * {"ready":true}, {"start":[paths]}, {"held":true,"alt":false} while the drag
@@ -46,7 +47,9 @@ function files() {
 say({ ready: true })
 let down = false
 let base = 0
-let state = 'idle' // idle, watching (button down), dragging (files), other (a drag of something else)
+// idle, watching (button down), settling (it changed, files not there yet), dragging (files), other (a drag of something else)
+let state = 'idle'
+let changedAt = 0
 while (true) {
   const b = held()
   if (b && !down) {
@@ -61,12 +64,21 @@ while (true) {
     state = 'idle'
   }
   if (state === 'watching' && pb.changeCount !== base) {
+    state = 'settling'
+    changedAt = Date.now()
+    if (debug) say({ debug: 'changed', count: pb.changeCount, files: files().length })
+  }
+  // A drag clears the pasteboard, then writes what it carries: look again for a moment before
+  // calling it a drag of something else.
+  if (state === 'settling') {
     const f = files()
-    if (debug) say({ debug: 'changed', count: pb.changeCount, files: f.length })
     if (f.length) {
       state = 'dragging'
       say({ start: f })
-    } else state = 'other'
+    } else if (Date.now() - changedAt > 400) {
+      state = 'other'
+      if (debug) say({ debug: 'other', count: pb.changeCount })
+    }
   }
   if (state === 'dragging') say({ held: true, alt: ($.NSEvent.modifierFlags & OPTION) !== 0 })
   $.NSThread.sleepForTimeInterval(state === 'idle' ? 0.05 : 0.03)
