@@ -28,6 +28,7 @@ export const FEATURE_NAMES: Record<string, string> = {
   services: 'Services',
   buddy: 'Buddy',
   claude: 'Claude Code',
+  notifications: 'Notifications',
 }
 
 /** "3 min ago", "yesterday 18:04", "12 Nov 09:30". Pure. */

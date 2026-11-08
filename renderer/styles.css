@@ -4246,6 +4246,31 @@ button.crm-menu-item:hover {
   flex-direction: column;
   gap: 4px;
 }
+.nc-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 9px 11px;
+  border-radius: 14px;
+  background: var(--well-2);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.nc-summary.error {
+  color: var(--label-2);
+}
+.nc-summary-text {
+  flex: 1;
+}
+.nc-group-sum {
+  color: var(--label-2);
+  font-size: 11.5px;
+  margin: -2px 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .nc-group-head {
   display: flex;
   align-items: center;
@@ -5205,6 +5230,67 @@ button .spinner-orb,
   justify-content: flex-end;
   gap: 6px;
   margin-top: 10px;
+}
+
+/* Settings › Buddy: quiet hours and the evening digest. */
+.buddy-hours {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  color: var(--label-2);
+  font-size: 12.5px;
+}
+
+/* The evening digest: what was kept quiet today. */
+.island.evening-island {
+  border-radius: 22px;
+  width: 340px;
+  box-sizing: border-box;
+}
+.island-outer.right .island.evening-island {
+  align-self: flex-end;
+}
+.evening-glyph {
+  background: linear-gradient(180deg, #7d7aff, #4b44c8);
+  color: #fff;
+  font-size: 13px;
+}
+.evening-title {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 2px 0 6px;
+}
+.evening-kept {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.evening-kept li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.evening-line {
+  font-size: 13px;
+  line-height: 1.3;
+}
+.evening-why,
+.evening-more {
+  color: var(--label-2);
+  font-size: 11.5px;
+}
+.evening-notifs {
+  margin-top: 8px;
+  padding: 7px 10px;
+  border-radius: 12px;
+  background: var(--well-2);
+  font-size: 12.5px;
+  line-height: 1.35;
 }
 
 /* The buddy: what it heard, its captions, and a walkthrough's steps. */

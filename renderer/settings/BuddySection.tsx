@@ -135,10 +135,31 @@ export function BuddySection({ s }: { s: SettingsState }) {
       />
       <Toggle
         label="Say what’s urgent out loud"
-        hint="A Claude Code session waiting on you, a permission prompt (say yes or no), or work it handed off that finished. Never between 22:00 and 8:00, never the same thing twice in three days, a few an hour at most."
+        hint={`A Claude Code session waiting on you, a permission prompt (say yes or no), or work it handed off that finished. ${c.quietFrom === c.quietTo ? 'At any hour' : `Never between ${hhmm(c.quietFrom, 0)} and ${hhmm(c.quietTo, 0)}`}, never the same thing twice in three days, a few an hour at most.`}
         on={c.alerts}
         onChange={(v) => set({ alerts: v })}
       />
+      <div className="toggle-row buddy-quiet">
+        <div>
+          <div>Quiet hours</div>
+          <div className="hint">Nothing is said out loud between these hours; it’s shown on the island and kept for the evening digest. The same hour twice means none.</div>
+        </div>
+        <span className="buddy-hours">
+          <HourSelect value={c.quietFrom} label="Quiet from" onChange={(h) => set({ quietFrom: h })} />
+          <span>to</span>
+          <HourSelect value={c.quietTo} label="Quiet until" onChange={(h) => set({ quietTo: h })} />
+        </span>
+      </div>
+      <div className="toggle-row buddy-digest">
+        <div>
+          <div>An evening digest</div>
+          <div className="hint">Once a day on the island: what wasn’t said out loud (quiet hours, not urgent, the brain’s jobs, your routines) and the notifications you didn’t get to. Shown only when there’s something to tell; if the computer was asleep, as soon as it wakes.</div>
+        </div>
+        <span className="buddy-hours">
+          <HourSelect value={c.digestAt} label="Digest at" disabled={!c.digest} onChange={(h) => set({ digestAt: h })} />
+          <input className="switch" type="checkbox" checked={c.digest} aria-label="An evening digest" onChange={(e) => set({ digest: e.target.checked })} />
+        </span>
+      </div>
       <div className="row">
         <button className="secondary" disabled={busy} onClick={() => run(() => window.settings.buddy.tryVoice())}>
           Hear it
@@ -147,6 +168,19 @@ export function BuddySection({ s }: { s: SettingsState }) {
       <RoutinesBlock routines={b.routines} run={run} />
       {error && <div className="error">{error}</div>}
     </section>
+  )
+}
+
+/** An hour of the day, as 18:00. */
+function HourSelect({ value, label, disabled, onChange }: { value: number; label: string; disabled?: boolean; onChange: (h: number) => void }) {
+  return (
+    <select value={value} aria-label={label} disabled={disabled} onChange={(e) => onChange(Number(e.target.value))}>
+      {Array.from({ length: 24 }, (_, h) => (
+        <option key={h} value={h}>
+          {hhmm(h, 0)}
+        </option>
+      ))}
+    </select>
   )
 }
 

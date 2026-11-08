@@ -53,6 +53,8 @@ export type BrainDeps = {
   writer: () => { label: string; ask: (prompt: string, purpose?: string) => Promise<string> } | null
   /** The morning card changed (the island shows it). */
   onCard?: (c: MorningCard | null) => void
+  /** One of the loop's jobs ran. */
+  onJob?: (label: string, ok: boolean, note: string) => void
   /** The model for search by meaning, when it's on and ready; and how it's doing. */
   embed?: () => Embedder | null
   meaningModel?: () => Omit<MeaningView, 'on' | 'notes'>
@@ -175,6 +177,7 @@ export class Brain {
       brief: () => this.brief(),
       onCard: (c) => this.d.onCard?.(c),
       onChange: () => this.changedSoon(),
+      onRan: (label, ok, note) => this.d.onJob?.(label, ok, note),
       now: this.d.now,
     })
     this.loop.start()

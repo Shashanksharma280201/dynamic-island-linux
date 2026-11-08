@@ -34,8 +34,17 @@ Its name and look are your character's (Settings → Character).
   for you. Nothing happens until you press Keep or Allow, or say yes.
 - **It speaks up, sparingly.** A Claude Code session waiting on you, a
   permission prompt, or work it handed off that finished, said out loud:
-  never between 22:00 and 8:00, never twice in three days, a few an hour
-  at most, and not a kind you keep dismissing.
+  never in your quiet hours (22:00 to 8:00 at first; change them in
+  Settings → Buddy), never twice in three days, a few an hour at most, and
+  not a kind you keep dismissing.
+- **An evening digest.** What it didn't say (quiet hours, the hourly limit,
+  a kind you wave away) and what was never urgent (the brain's jobs, your
+  routines) is kept for the evening. At 18:00 (or the hour you pick in
+  Settings → Buddy; as soon as the computer wakes if it was asleep) the
+  island shows it in one card, with the notifications you didn't get to,
+  by app. **Open notifications** goes to the list; **Got it** puts it away
+  for the day. Nothing is shown when there's nothing to tell, and a
+  permission prompt is never kept: it was answered at the time.
 - **Routines.** Standing orders in Settings → Buddy (“at 18:30, wrap up my
   day in three lines”): the assistant runs them at their time, or as soon
   as the computer wakes. Anything that sends or changes something still

@@ -27,6 +27,13 @@ export type BuddyConfig = {
   wake: boolean
   /** Say urgent things out loud (a session waiting on you), sparingly. */
   alerts: boolean
+  /** Quiet hours: nothing is said out loud from this hour to that one (0 to 23; the same hour for none). */
+  quietFrom: number
+  quietTo: number
+  /** The evening digest: what was kept quiet, on the island once a day. */
+  digest: boolean
+  /** Its hour (0 to 23). */
+  digestAt: number
 }
 
 export const DEFAULT_PRIVATE = ['KeePassXC', 'Bitwarden', '1Password', 'Proton Pass', 'Password', 'Private Browsing', 'Incognito', 'Bank']
@@ -55,6 +62,10 @@ export const BUDDY_DEFAULTS: BuddyConfig = {
   save: true,
   wake: false,
   alerts: true,
+  quietFrom: 22,
+  quietTo: 8,
+  digest: true,
+  digestAt: 18,
 }
 
 export function parseBuddyConfig(raw: any): BuddyConfig {
@@ -70,6 +81,11 @@ export function parseBuddyConfig(raw: any): BuddyConfig {
   if (typeof r.save === 'boolean') c.save = r.save
   if (typeof r.wake === 'boolean') c.wake = r.wake
   if (typeof r.alerts === 'boolean') c.alerts = r.alerts
+  const hour = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 && (v as number) <= 23 ? (v as number) : null)
+  c.quietFrom = hour(r.quietFrom) ?? c.quietFrom
+  c.quietTo = hour(r.quietTo) ?? c.quietTo
+  if (typeof r.digest === 'boolean') c.digest = r.digest
+  c.digestAt = hour(r.digestAt) ?? c.digestAt
   return c
 }
 

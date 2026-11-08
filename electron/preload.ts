@@ -1,8 +1,9 @@
 import { COMMAND } from './commandChannels'
 import type { CommandItem } from '../shared/command'
 import { EMBED } from './embedChannels'
-import { MORNING } from './morningChannels'
+import { EVENING, MORNING } from './morningChannels'
 import type { JobId, MorningCard } from '../shared/loop'
+import type { EveningCard } from '../shared/digest'
 import { BUDDY } from './buddyChannels'
 import type { BuddyConfig, BuddyView } from '../shared/buddy'
 import type { PointerCmd } from '../shared/pointer'
@@ -178,6 +179,12 @@ const api = {
     onCard: (cb: (c: MorningCard | null) => void) => on(MORNING.CARD, cb),
     act: (a: 'send' | 'edit' | 'hold' | 'done') => ipcRenderer.invoke(MORNING.ACT, a),
   },
+  /** The evening digest: what was kept quiet today. */
+  evening: {
+    get: (): Promise<EveningCard | null> => ipcRenderer.invoke(EVENING.GET),
+    onCard: (cb: (c: EveningCard | null) => void) => on(EVENING.CARD, cb),
+    done: () => ipcRenderer.invoke(EVENING.DONE),
+  },
   /** The buddy's pointer over the whole screen (its own window). */
   pointer: {
     onCmd: (cb: (c: PointerCmd) => void) => on(BUDDY.POINTER, cb),
@@ -242,6 +249,8 @@ const api = {
     undo: (): Promise<void> => ipcRenderer.invoke(NOTIFS.UNDO),
     seen: (): Promise<void> => ipcRenderer.invoke(NOTIFS.SEEN),
     setDnd: (on: boolean): Promise<void> => ipcRenderer.invoke(NOTIFS.SET_DND, on),
+    /** The list in a few sentences, by the AI. */
+    sumUp: (): Promise<{ text: string } | { error: string }> => ipcRenderer.invoke(NOTIFS.SUM_UP),
     onChanged: (cb: (v: CenterView) => void) => on(NOTIFS.CHANGED, cb),
   },
   spotify: {

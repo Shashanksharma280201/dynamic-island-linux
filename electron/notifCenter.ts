@@ -121,6 +121,8 @@ export type CenterActions = {
   /** Dismiss the island's notification and message cards too. */
   clearCards: () => void
   setDnd: (on: boolean) => void
+  /** The list in a few sentences, by the AI in Settings › AI. */
+  sumUp: () => Promise<{ text: string } | { error: string }>
 }
 
 export function wireNotificationCenter(center: NotificationCenter, a: CenterActions): void {
@@ -137,4 +139,5 @@ export function wireNotificationCenter(center: NotificationCenter, a: CenterActi
   ipcMain.handle(NOTIFS.UNDO, () => center.undo())
   ipcMain.handle(NOTIFS.SEEN, () => center.markSeen())
   ipcMain.handle(NOTIFS.SET_DND, (_e, on) => a.setDnd(on === true))
+  ipcMain.handle(NOTIFS.SUM_UP, () => a.sumUp())
 }

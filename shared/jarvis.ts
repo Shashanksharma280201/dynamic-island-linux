@@ -76,12 +76,15 @@ export function inQuietHours(hour: number, c: AlertsConfig): boolean {
   return c.quietFrom < c.quietTo ? hour >= c.quietFrom && hour < c.quietTo : hour >= c.quietFrom || hour < c.quietTo
 }
 
+/** Why something wasn't said out loud. */
+export type KeptWhy = 'medium' | 'low' | 'muted' | 'quiet-hours' | 'dismissed' | 'repeat' | 'limit'
+
 /**
- * Speak now, only show it, or keep it for the evening: high only is spoken,
- * never in quiet hours, never twice in three days, at most a few an hour, and
- * not a kind you keep dismissing. Pure.
+ * Speak now, only show it, or keep it for the evening, and why: high only is
+ * spoken, never in quiet hours, never twice in three days, at most a few an
+ * hour, and not a kind you keep dismissing. Pure.
  */
-export function alertWay(o: {
+export function alertDecision(o: {
   priority: AlertPriority
   key: string
   kind: string
@@ -91,14 +94,20 @@ export function alertWay(o: {
   spoken: Record<string, number>
   /** How many times you dismissed each kind without acting. */
   dismissed: Record<string, number>
-}): 'speak' | 'show' | 'digest' {
-  if (o.priority === 'low') return 'digest'
-  if (o.priority === 'medium' || !o.config.speak) return 'show'
-  if (inQuietHours(new Date(o.now).getHours(), o.config)) return 'show'
-  if ((o.dismissed[o.kind] ?? 0) >= 3) return 'show'
-  if (o.now - (o.spoken[o.key] ?? -Infinity) < 72 * 3_600_000) return 'show'
+}): { way: 'speak' | 'show' | 'digest'; why: KeptWhy | null } {
+  if (o.priority === 'low') return { way: 'digest', why: 'low' }
+  if (o.priority === 'medium') return { way: 'show', why: 'medium' }
+  if (!o.config.speak) return { way: 'show', why: 'muted' }
+  if (inQuietHours(new Date(o.now).getHours(), o.config)) return { way: 'show', why: 'quiet-hours' }
+  if ((o.dismissed[o.kind] ?? 0) >= 3) return { way: 'show', why: 'dismissed' }
+  if (o.now - (o.spoken[o.key] ?? -Infinity) < 72 * 3_600_000) return { way: 'show', why: 'repeat' }
   const lastHour = Object.values(o.spoken).filter((t) => o.now - t < 3_600_000).length
-  return lastHour >= o.config.perHour ? 'show' : 'speak'
+  return lastHour >= o.config.perHour ? { way: 'show', why: 'limit' } : { way: 'speak', why: null }
+}
+
+/** Speak now, only show it, or keep it for the evening. Pure. */
+export function alertWay(o: Parameters<typeof alertDecision>[0]): 'speak' | 'show' | 'digest' {
+  return alertDecision(o).way
 }
 
 // ------------------------------------------------------------ wake word ----

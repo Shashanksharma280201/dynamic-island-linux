@@ -74,6 +74,7 @@ import { TransientCards } from './transient'
 import { uninstall } from './uninstall'
 import { MessageHub, MESSAGE_MS } from './messages'
 import { NotificationCenter, NOTIFS, wireNotificationCenter } from './notifCenter'
+import { appsText, countByApp, sumUpPrompt } from '../shared/notifCenter'
 import { SessionTracker } from './sessions'
 import { RecapStore } from './recap'
 import { recapCard, recapDue, weekBefore, weekOf } from '@shared/recap'
@@ -143,7 +144,8 @@ import { espeakProgram, phonemize } from './buddy/phonemes'
 import { EMBED_FILES, EMBED_MB, EMBED_MODEL, hashEmbed } from '../shared/meaning'
 import { ModelFiles } from './modelFiles'
 import { EMBED } from './embedChannels'
-import { MORNING } from './morningChannels'
+import { EVENING, MORNING } from './morningChannels'
+import { Digest } from './digest'
 import { BUDDY } from './buddyChannels'
 import { SystemTheme } from './theme'
 import { runTurn } from './agent/providers'
@@ -316,17 +318,41 @@ async function main() {
     send(win, NOTIFS.CHANGED, center.view())
     tray?.refresh()
   })
+  // Since when Do Not Disturb has held notifications (for the summary when it ends).
+  let dndSince = config.dnd ? Date.now() : 0
   const setDnd = (on: boolean) => {
     if (config.dnd === on) return
     config.dnd = on
     saveConfig(config)
     center.changed()
     settings?.changed()
+    if (on) return void (dndSince = Date.now())
+    // What came in quietly, in one line.
+    const held = countByApp(center.view().entries, dndSince - 1)
+    if (held.total)
+      transient.show(
+        { kind: 'notification', id: `dnd-held-${Date.now()}`, priority: 5, notification: { app: 'Do Not Disturb', summary: `While it was on: ${held.total} ${held.total === 1 ? 'notification' : 'notifications'}`, body: `${appsText(held.apps)}. They’re in Notifications.` } },
+        10_000,
+      )
   }
   const clearCards = () => {
     for (const a of store.list()) if (a.kind === 'notification' || a.kind === 'message') transient.dismiss(a.id)
   }
-  wireNotificationCenter(center, { clearCards, setDnd })
+  wireNotificationCenter(center, {
+    clearCards,
+    setDnd,
+    sumUp: async () => {
+      const list = center.view().entries
+      if (!list.length) return { error: 'There’s nothing to sum up.' }
+      const a = answerer('notifications', 'You sum up the user’s notifications briefly and plainly.', 'your notifications, to sum them up')
+      if (!a) return { error: egress.blocked() ?? 'Pick an AI in Settings › AI to sum them up.' }
+      try {
+        return { text: (await a.ask(sumUpPrompt(list))).trim() }
+      } catch (e) {
+        return { error: (e as Error).message || 'It couldn’t sum them up.' }
+      }
+    },
+  })
   const notes = new NotesStore(join(app.getPath('userData'), 'notes'))
   // ---- documents: files you add, and what's made from them ----
   // LibreOffice (deb, snap or flatpak), for exact Office → PDF conversions.
@@ -561,8 +587,9 @@ async function main() {
   // Tests: words hashed into vectors stand in for the model (DI_EMBED_FAKE).
   const embedder = () => (process.env.DI_EMBED_FAKE ? async (texts: string[]) => texts.map(hashEmbed) : embedModel.ready() ? islandEmbed : null)
   const SESSION_SUMMARY = 'a Claude Code session’s summary, to write its five-line note'
-  const brainWriter = () => {
-    // Paused (Settings › Privacy): notes are written without an AI.
+  /** One plain answer from the AI in Settings › AI (or Claude Code's Haiku), for a feature; null when there's none or it's paused. */
+  const answerer = (feature: string, system: string, fallbackPurpose: string) => {
+    // Paused (Settings › Privacy): nothing goes out.
     if (egress.blocked()) return null
     const ai = config.ai
     const provider = providerInfo(ai.provider)
@@ -571,17 +598,17 @@ async function main() {
       const model = modelFor(ai)
       return {
         label: `${provider.label} (${model})`,
-        ask: (prompt: string, purpose = SESSION_SUMMARY) =>
+        ask: (prompt: string, purpose = fallbackPurpose) =>
           runTurn({
             kind: provider.kind as 'anthropic' | 'openai-compatible',
             model,
             apiKey: stored ? decryptSecret(stored) : '',
             baseUrl: process.env.DI_AI_BASE_URL || (provider.kind === 'anthropic' ? undefined : baseUrlFor(ai)),
-            system: 'You write short, plain notes for the user’s second brain.',
+            system,
             history: [],
             prompt,
             tools: [],
-            feature: 'brain',
+            feature,
             purpose,
             signal: AbortSignal.timeout(120_000),
             events: { onMessageStart() {}, onText() {}, onTool() {}, onToolDone() {} },
@@ -592,13 +619,16 @@ async function main() {
     return bin
       ? {
           label: 'Claude Code (Haiku)',
-          ask: (prompt: string, purpose = SESSION_SUMMARY) => {
-            egress.note('brain', 'Anthropic, through Claude Code', purpose)
-            return claudeOnce(bin, prompt, writerDir)
+          ask: (prompt: string, purpose = fallbackPurpose) => {
+            egress.note(feature, 'Anthropic, through Claude Code', purpose)
+            // The brain's prompts say everything already; the others start with what they're for.
+            return claudeOnce(bin, feature === 'brain' ? prompt : `${system}\n\n${prompt}`, writerDir)
           },
         }
       : null
   }
+  // Notes are written without an AI when there's none (or it's paused).
+  const brainWriter = () => answerer('brain', 'You write short, plain notes for the user’s second brain.', SESSION_SUMMARY)
   const brain = new Brain({
     config: () => config.brain,
     setConfig: (patch) => {
@@ -616,6 +646,8 @@ async function main() {
     onChange: () => settings?.changed(),
     ownFolders: [writerDir],
     onCard: (c) => send(win, MORNING.CARD, c),
+    // Each job's result waits for the evening digest.
+    onJob: (label, ok, note) => announcerRef?.event({ key: `job:${label}`, kind: 'job', priority: 'low', line: ok ? `${label}: ${note}` : `${label} didn’t run. ${note.replace(/^Failed:\s*/, '')}` }),
     embed: embedder,
     meaningModel: () => ({ ready: !!process.env.DI_EMBED_FAKE || embedModel.ready(), downloading: embedModel.downloading(), progress: embedModel.progress, error: embedModel.error, sizeMb: EMBED_MB }),
     onMeaning: () => {
@@ -837,7 +869,26 @@ async function main() {
     void buddy.answer(yes === true)
   })
   // Speaking up, sparingly: a session waiting on you, work it handed off that finished.
-  const announcer = new Announcer({ config: () => ({ ...ALERT_DEFAULTS, speak: config.buddy.on && config.buddy.alerts }), say: (l) => buddy.announce(l) })
+  // The evening digest: what wasn't said out loud, and the notifications you didn't get to.
+  const digest = new Digest({
+    file: join(app.getPath('userData'), 'digest.json'),
+    config: () => ({ on: config.buddy.digest, at: config.buddy.digestAt }),
+    entries: () => center.view().entries,
+    onCard: (c) => send(win, EVENING.CARD, c),
+  })
+  ipcMain.handle(EVENING.GET, () => digest.card())
+  ipcMain.handle(EVENING.DONE, (e) => {
+    if (e.sender === win.webContents) digest.done()
+  })
+  const announcer = new Announcer({
+    config: () => ({ ...ALERT_DEFAULTS, speak: config.buddy.on && config.buddy.alerts, quietFrom: config.buddy.quietFrom, quietTo: config.buddy.quietTo }),
+    say: (l) => buddy.announce(l),
+    kept: (item) => digest.add(item),
+  })
+  // Tests check every second instead of every minute.
+  digest.start(Number(process.env.DI_DIGEST_TICK_MS) || 60_000)
+  powerMonitor.on('resume', () => digest.tick())
+  powerMonitor.on('unlock-screen', () => digest.tick())
   // Routines: standing orders, run by the assistant at their time.
   const routines = new Routines({
     routines: () => config.routines,
@@ -847,7 +898,10 @@ async function main() {
       settings?.changed()
     },
     ask: (p) => claudeUi!.engine().ask(p),
-    started: (r) => console.error(`[island] routine: ${r.name}`),
+    started: (r) => {
+      console.error(`[island] routine: ${r.name}`)
+      announcer.event({ key: `routine:${r.id}`, kind: 'routine', priority: 'low', line: `Your routine “${r.name}” ran.` })
+    },
   })
   routines.start()
   announcerRef = announcer

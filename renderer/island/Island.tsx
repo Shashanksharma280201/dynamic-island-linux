@@ -31,7 +31,7 @@ import type { DocsAdded } from '@shared/docs'
 import type { DocsIncoming } from './hub/DocsView'
 import { errorText } from './hub/common'
 import { useNotifications } from './useNotifications'
-import { clearedText } from '@shared/notifCenter'
+import { clearedText, stackText } from '@shared/notifCenter'
 import { useSessions } from './useSessions'
 import { CompactSession, SessionCard } from './states/SessionActivity'
 import { CloseBar } from './states/CloseBar'
@@ -42,6 +42,7 @@ import { DictationPill } from './voice/DictationPill'
 import { useBuddy } from './buddy/useBuddy'
 import { BuddyPill, buddyShown } from './buddy/BuddyPill'
 import { MorningCard, useMorning } from './states/MorningCard'
+import { EveningCard, useEvening } from './states/EveningCard'
 import { useEmbedder } from './brain/useEmbedder'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
@@ -209,6 +210,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const buddy = useBuddy(claude, character.name)
   // The morning card: the one thing for today, from the brain's loop.
   const morning = useMorning()
+  // The evening digest: what was kept quiet today.
+  const evening = useEvening()
   // Search by meaning: the brain's notes as vectors, made here.
   useEmbedder()
   const voiceRef = useRef(voice)
@@ -633,7 +636,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             transition={pop}
             onClick={(e) => e.stopPropagation()}
           >
-            <span className="more">{notifCards - 1} more</span>
+            <span className="more">
+              {stackText(
+                notifCards - 1,
+                activities
+                  .filter((a) => (a.kind === 'notification' || a.kind === 'message') && a.id !== p.primary?.id)
+                  .map((a) => (a.kind === 'notification' ? a.notification.app : a.kind === 'message' ? (a.message.source === 'mail' ? 'Mail' : 'WhatsApp') : '')),
+              )}
+            </span>
             <button
               className="clear"
               onClick={async () => {
@@ -683,6 +693,29 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             onClick={(e) => e.stopPropagation()}
           >
             <MorningCard card={morning.card} act={morning.act} />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {evening.card && !morning.card && !showPanel && !buddyShown(buddy) && !tourStep && (
+          <motion.div
+            key="evening"
+            className="island evening-island"
+            initial={{ opacity: 0, y: -10, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.94, transition: { duration: 0.16 } }}
+            transition={pop}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <EveningCard
+              card={evening.card}
+              done={evening.done}
+              openNotifications={() => {
+                setTab('alerts')
+                setPanel(true)
+              }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

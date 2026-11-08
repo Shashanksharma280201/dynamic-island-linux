@@ -37,6 +37,8 @@ export type LoopDeps = {
   /** The morning card changed (show it, or put it away). */
   onCard: (c: MorningCard | null) => void
   onChange: () => void
+  /** A job ran (for the evening digest). */
+  onRan?: (label: string, ok: boolean, note: string) => void
   now?: () => number
 }
 
@@ -138,7 +140,9 @@ export class Loop {
     }
     this.state[id] = { ...this.state[id], lastRun: this.now(), ok, note }
     this.save()
-    v.log(`${JOBS.find((j) => j.id === id)!.label}: ${note}`)
+    const label = JOBS.find((j) => j.id === id)!.label
+    v.log(`${label}: ${note}`)
+    this.d.onRan?.(label, ok, note)
     this.d.onChange()
   }
 
