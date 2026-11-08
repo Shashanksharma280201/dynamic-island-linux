@@ -159,6 +159,9 @@ const api = {
     /** Kokoro speaks here: say these phonemes, then report back. */
     onSpeak: (cb: (s: { id: number; phonemes?: string; voice?: string; speed?: number; stop?: boolean }) => void) => on(BUDDY.SPEAK, cb),
     spoken: (r: { id: number; ok: boolean; error?: string }) => ipcRenderer.send(BUDDY.SPOKEN, r),
+    /** Speech from the phone: make it out here (Whisper, on this computer), then say what was heard. */
+    onHear: (cb: (h: { id: string; mime: string; data: string; fake?: string }) => void) => on(BUDDY.HEAR, cb),
+    heard: (id: string, r: { text: string } | { error: string }) => ipcRenderer.invoke(BUDDY.HEARD, id, r),
   },
   /** Search by meaning: the model runs here, in a worker. */
   embed: {

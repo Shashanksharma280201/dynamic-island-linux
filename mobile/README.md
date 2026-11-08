@@ -35,6 +35,10 @@ Your computer's Dynamic Island on your phone, and files both ways with a glow.
 - **Light and dark**: **More → Settings → Appearance**: System (follows the
   phone), Light or Dark.
 
+On the island screen, **Hold to talk to your buddy** makes the phone the
+buddy's microphone: it records only while you hold, your computer makes it
+out, and the buddy answers out loud there.
+
 ## Staying connected
 
 - The app reconnects by itself the moment the phone's Wi-Fi changes or comes

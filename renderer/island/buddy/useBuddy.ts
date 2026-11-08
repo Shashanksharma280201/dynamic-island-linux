@@ -72,6 +72,20 @@ function play(audio: Float32Array): Promise<void> {
 
 const plain = (e: unknown) => String((e as Error)?.message ?? e).replace(/^Error invoking remote method '[^']+': (Error: )?/, '')
 
+/** A recording from the phone (AAC, WAV…) as 16 kHz mono, as Whisper wants it. */
+export async function decodeForWhisper(bytes: ArrayBuffer): Promise<Float32Array> {
+  // Decoding into a 16 kHz context resamples on the way.
+  const ac = new OfflineAudioContext(1, 1, 16000)
+  const b = await ac.decodeAudioData(bytes)
+  if (b.numberOfChannels === 1) return b.getChannelData(0).slice()
+  const out = new Float32Array(b.length)
+  for (let c = 0; c < b.numberOfChannels; c++) {
+    const d = b.getChannelData(c)
+    for (let i = 0; i < d.length; i++) out[i] += d[i] / b.numberOfChannels
+  }
+  return out
+}
+
 /**
  * The buddy on the island: its shortcut listens (and stops when you stop
  * talking), sends what you said, and plays its natural voice. What it says
@@ -175,6 +189,36 @@ export function useBuddy(claude: ClaudeView | null, name = 'Buddy'): Buddy {
   }, [key])
 
   useEffect(() => () => rec.current?.cancel(), [])
+
+  // The phone as the microphone: its recording is made out here, on this computer.
+  useEffect(() => {
+    if (!window.island.buddy?.onHear) return
+    return window.island.buddy.onHear(async (h) => {
+      const answer = (r: { text: string } | { error: string }) => void window.island.buddy.heard(h.id, r)
+      try {
+        const bytes = Uint8Array.from(atob(h.data), (ch) => ch.charCodeAt(0))
+        const audio = await decodeForWhisper(bytes.buffer)
+        if (audio.length < 16000 * 0.3) return answer({ error: 'That was too short to make out.' })
+        setListen('transcribing')
+        let text: string
+        if (h.fake) {
+          // Tests: a stand-in for Whisper, once the audio really decoded.
+          text = h.fake
+        } else {
+          const c = claudeRef.current
+          if (!c) return answer({ error: 'The island is still starting.' })
+          if (!c.stt.ready) await window.island.claude.ensureSpeechModel()
+          text = (await transcribe((claudeRef.current ?? c).stt.model, audio)).trim()
+        }
+        setListen('idle')
+        if (!text || NOISE.test(text)) return answer({ error: 'I couldn’t make that out. Try again?' })
+        answer({ text })
+      } catch (e) {
+        setListen('idle')
+        answer({ error: plain(e) })
+      }
+    })
+  }, [])
 
   // The wake word: while it's idle, listen for "hey <name>" (speech stays on this computer).
   const nameRef = useRef(name)

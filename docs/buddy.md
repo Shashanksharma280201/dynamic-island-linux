@@ -49,6 +49,13 @@ Its name and look are your character's (Settings → Character).
   day in three lines”): the assistant runs them at their time, or as soon
   as the computer wakes. Anything that sends or changes something still
   asks.
+- **Talk to it from your phone.** In Island Drop, hold **Hold to talk to
+  your buddy** on the island screen, say it, and let go: the phone is the
+  microphone. The recording goes to your computer over the link (only
+  while you hold, at most a minute), is made out there with the same
+  on-device Whisper, and the buddy answers out loud on the computer, as if
+  you'd pressed the key. The phone shows what it heard. Saying “yes” or
+  “no” to a permission prompt works from there too.
 - **“Hey <name>”**, off by default: say its name and ask, without the key.
   Speech is turned into text on this computer, it listens only while it's
   idle, and nothing leaves until it hears its name.

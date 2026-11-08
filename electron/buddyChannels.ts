@@ -15,4 +15,6 @@ export const BUDDY = {
   VOICE_TRY: 'buddy:voice-try', // settings -> main (invoke): say a line in the chosen voice
   ROUTINE_SET: 'buddy:routine-set', // settings -> main (invoke): a routine -> why not, or null
   ROUTINE_DEL: 'buddy:routine-del', // settings -> main (invoke): its id
+  HEAR: 'buddy:hear', // main -> island: { id, mime, data (base64), fake? }: speech from the phone to make out
+  HEARD: 'buddy:heard', // island -> main (invoke): (id, { text } | { error })
 } as const

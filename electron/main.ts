@@ -278,6 +278,8 @@ async function main() {
   let claudeUi: ClaudeController | null = null
   // Set once the buddy is up (events before then aren't spoken).
   let announcerRef: Announcer | null = null
+  // Set once the buddy is up: speech from the phone.
+  let hearFromPhone: (audio: Buffer, mime: string) => Promise<{ text: string } | { error: string }> = async () => ({ error: 'The island is still starting.' })
   let display: Display = placeIslandWindow(win, config.dock.side, config.display)
   // The side actually shown: config.dock.side, or a preview while dragging.
   let shownSide: Side = config.dock.side
@@ -917,6 +919,32 @@ async function main() {
     void buddy.command(c)
   })
   ipcMain.handle(BUDDY.GET, () => buddy.view())
+  // The phone as the buddy's microphone: its recording is made out here (Whisper, in the island's page), then asked as if you'd said it.
+  const hearing = new Map<string, (r: { text: string } | { error: string }) => void>()
+  let hearSeq = 0
+  hearFromPhone = async (audio, mime) => {
+    if (!config.buddy.on) return { error: `Turn on ${config.character.name || 'the buddy'} in Settings › Buddy on your computer.` }
+    const id = `hear-${++hearSeq}`
+    const r = await new Promise<{ text: string } | { error: string }>((resolve) => {
+      const timer = setTimeout(() => hearing.delete(id) && resolve({ error: 'It took too long to make that out.' }), 90_000)
+      hearing.set(id, (x) => {
+        clearTimeout(timer)
+        hearing.delete(id)
+        resolve(x)
+      })
+      // Tests: a stand-in for Whisper (the real model can't be downloaded there).
+      send(win, BUDDY.HEAR, { id, mime, data: audio.toString('base64'), fake: process.env.DI_STT_FAKE || undefined })
+    })
+    if ('text' in r) void buddy.ask(r.text)
+    return r
+  }
+  ipcMain.handle(BUDDY.HEARD, (e, id, r) => {
+    if (e.sender !== win.webContents || typeof id !== 'string') return
+    const done = hearing.get(id)
+    if (!done) return
+    if (r && typeof r.text === 'string' && r.text.trim()) done({ text: r.text.trim().slice(0, 2000) })
+    else done({ error: typeof r?.error === 'string' ? r.error.slice(0, 300) : 'I couldn’t make that out.' })
+  })
   let buddyKeyOn = ''
   const applyBuddyKey = () => {
     if (buddyKeyOn) globalShortcut.unregister(buddyKeyOn)
@@ -1419,6 +1447,7 @@ async function main() {
       settings?.changed()
     },
     call: (fn, args) => phoneCall(phoneRoutes, fn, args),
+    voice: (audio, mime) => hearFromPhone(audio, mime),
   })
   phonePush = (topic, data) => phoneLink.push(topic, data)
   const phoneOut = new PhoneOut({ link: phoneLink, overlay: dropOverlay, present: (id, job, made) => dragJobs.present(id, job, made), side: () => ({ side: phoneDrop.side, at: phoneDrop.at }) })
