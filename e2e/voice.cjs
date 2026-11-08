@@ -67,8 +67,10 @@ function wav(file, samples) {
 const tone = Array.from({ length: 16000 * 2 }, (_, i) => 0.3 * Math.sin((2 * Math.PI * 440 * i) / 16000))
 const CALL_WAV = path.join(TMP, 'call.wav')
 wav(CALL_WAV, tone)
-// The microphone: someone talking (espeak), with quiet around it.
+// The microphone: someone talking (espeak), with quiet around it. Without espeak-ng there's no
+// voice to talk over it with (a steady tone isn't one: the microphone's noise suppression takes it out).
 const MIC = path.join(TMP, 'mic.wav')
+let voice = true
 try {
   const raw = path.join(TMP, 'raw.wav')
   execFileSync('espeak-ng', ['-v', 'en-us', '-s', '150', '-w', raw, 'Wait, what about the slides for Friday?'])
@@ -79,8 +81,8 @@ try {
   const speech = Array.from({ length: Math.floor((n * 16000) / rate) }, (_, i) => pcm.readInt16LE(Math.min(n - 1, Math.floor((i * rate) / 16000)) * 2) / 32767)
   wav(MIC, [...Array(16000 * 1.5).fill(0), ...speech, ...Array(16000 * 2.5).fill(0)])
 } catch {
-  // No espeak: a loud tone stands in for a voice.
-  wav(MIC, [...Array(16000 * 1.5).fill(0), ...tone.map((v) => v * 2), ...Array(16000 * 2.5).fill(0)])
+  voice = false
+  wav(MIC, Array(16000 * 2).fill(0))
 }
 // A stand-in for ffmpeg: writes the call's audio to its last argument and waits for Stop.
 const REC = path.join(TMP, 'recorder.sh')
@@ -149,6 +151,10 @@ fs.chmodSync(REC, 0o755)
     await until(async () => (await page.evaluate(() => window.island.buddy.get())).phase === 'idle', 15000)
 
     // ---- Talking over it ----
+    if (!voice) {
+      console.log('SKIP talking over it (install espeak-ng for a voice on the microphone)')
+      return
+    }
     await settings.click('#buddy .toggle-row:has-text("Talk over it") input')
     check('Talk over it is saved', !!(await until(() => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8')).buddy.interrupt === true)))
     const before = said().split('\n').filter(Boolean).length
