@@ -622,33 +622,11 @@ button.link {
 .error-text {
   color: var(--red-text);
 }
-/* Character → outfit and colour. */
+/* Character → colour. */
 .wardrobe-row {
   display: flex;
   flex-direction: column;
   gap: 10px;
-}
-.wardrobe-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(76px, 1fr));
-  gap: 6px;
-}
-.wardrobe-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: 8px 4px 6px;
-  border-radius: 12px;
-  background: var(--field);
-  color: var(--text);
-  border: 1.5px solid transparent;
-  font-size: 11px;
-  font-weight: 500;
-}
-.wardrobe-item.on {
-  border-color: var(--blue);
-  background: color-mix(in srgb, var(--blue) 14%, transparent);
 }
 .swatches {
   display: flex;
@@ -661,9 +639,6 @@ button.link {
   padding: 0;
   border-radius: 50%;
   border: 2px solid var(--border);
-}
-.swatch.own {
-  background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
 }
 .swatch.on {
   border-color: #fff;

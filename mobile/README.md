@@ -67,10 +67,13 @@ Tailscale), with the token from the island's pairing QR (protocol:
 
 ## Install
 
-Download `island-drop.apk` from the latest
+Download `island-drop.apk` from the
+[latest release](https://github.com/Shashanksharma280201/dynamic-island-linux/releases/latest)
+(its checksum is in `SHA256SUMS.txt` there), open it on your phone and
+install it (allow "install unknown apps" once). The newest build of the
+code is also on the latest
 [Island Drop (Android)](https://github.com/Shashanksharma280201/dynamic-island-linux/actions/workflows/android.yml)
-run (open the run, then **Artifacts**), open it on your phone and install it
-(allow "install unknown apps" once).
+run (open the run, then **Artifacts**).
 
 Then on the computer: **Settings → Phone Drop**, turn it on, **Show QR**, and
 scan it from the app.

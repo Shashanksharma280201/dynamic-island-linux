@@ -6,7 +6,8 @@ test('parseDock validates and clamps', () => {
   expect(parseDock(undefined)).toEqual(DEFAULT_DOCK)
   expect(parseDock({ side: 'left', y: 0.5 })).toEqual({ side: 'left', y: 0.5 })
   expect(parseDock({ side: 'top', y: 7 })).toEqual({ side: 'top', y: 1 })
-  expect(parseDock({ side: 'bottom', y: 0.2 })).toEqual({ side: 'right', y: 0.2 })
+  expect(DEFAULT_DOCK.side).toBe('top')
+  expect(parseDock({ side: 'bottom', y: 0.2 })).toEqual({ side: 'top', y: 0.2 })
   expect(parseDock({ side: 'left', y: 'x' })).toEqual({ side: 'left', y: DEFAULT_DOCK.y })
 })
 

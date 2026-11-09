@@ -5,6 +5,9 @@ import type { SkillDetail, SkillMeta, SkillsView } from '@shared/skills'
 import { agentName, type AgentSession } from '@shared/sessions'
 import { moneyText } from '@shared/engine'
 
+/** An agent's mark: the first letter of its name (its own emoji isn't shown). */
+const agentMark = (name: string) => (name.match(/[A-Za-z0-9]/)?.[0] ?? '·').toUpperCase()
+
 const ago = (t: number) => {
   if (!t) return 'not yet'
   const m = Math.round((Date.now() - t) / 60_000)
@@ -350,7 +353,7 @@ function AgencyBrowser({ view, onBack, onTyping, reload }: { view: AgencyView; o
       <div className="agents agency">
         {back}
         <div className="agency-hero">
-          <span className="agency-emoji">{open.emoji}</span>
+          <span className="agency-emoji mark">{agentMark(open.name)}</span>
           <div>
             <div className="agency-name">{open.name}</div>
             {open.vibe && <div className="agency-vibe">{open.vibe}</div>}
@@ -417,7 +420,7 @@ function AgencyBrowser({ view, onBack, onTyping, reload }: { view: AgencyView; o
           <div className="agency-list">
             {list.map((a) => (
               <button key={a.id} className="agency-row" data-agent={a.id} onClick={() => void window.island.os<AgencyDetail | null>('agency.agent', a.id).then((d) => d && setOpen(d))}>
-                <span className="agency-emoji small">{a.emoji}</span>
+                <span className="agency-emoji small mark">{agentMark(a.name)}</span>
                 <span className="agent-main">
                   <span className="agent-name ellipsis">
                     {a.name}

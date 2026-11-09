@@ -89,7 +89,7 @@ npm install
 npm start
 ```
 
-The island appears on the right edge of the screen. Close it with `Ctrl+C` in
+The island appears at the top centre of the screen. Close it with `Ctrl+C` in
 the terminal, or **Quit** in its tray menu (top right).
 
 **4. Install it as an app** so it's in your app launcher:
@@ -142,7 +142,7 @@ npm install
 npm start
 ```
 
-The island appears on the right edge of the screen and its icon in the menu
+The island appears at the top centre of the screen and its icon in the menu
 bar (top right). Close it with `Ctrl+C` in Terminal, or **Quit** in the menu
 bar icon.
 
@@ -212,7 +212,7 @@ npm install
 npm start
 ```
 
-The island appears on the right edge of the screen and its icon in the
+The island appears at the top centre of the screen and its icon in the
 taskbar's notification area (bottom right; it may be under the **^** arrow).
 Close it with `Ctrl+C` in Command Prompt, or **Quit** in that icon's menu.
 

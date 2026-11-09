@@ -134,5 +134,5 @@ test('media: captions only, never the preview data; thumbnails and file details 
   expect(msgs.every((m) => !m.text.includes('/9j/'))).toBe(true)
   // The chat list preview of a captionless photo is just "Photo".
   const chat = chatsFromRaw(readChatsFromStore(10), 10).find((c) => c.id === '3@c.us')
-  expect(chat?.last).toBe('📷 Photo')
+  expect(chat?.last).toBe('Photo')
 })

@@ -284,7 +284,7 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     away()
     check('and it closes again when you move away', await gone(page, '.hub', 5000))
 
-    // ---- The wardrobe ----
+    // ---- The orb's colour ----
     if (await page.$('.hub')) {
       key('ctrl+i')
       await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
@@ -294,26 +294,24 @@ const gone = (page, sel, ms = 4000) => page.waitForSelector(sel, { state: 'detac
     await page.evaluate(() => document.querySelector('.island-outer').dispatchEvent(new MouseEvent('mouseout', { bubbles: true, relatedTarget: document.body })))
     await page.waitForSelector('.capsule.idle', { timeout: 4000 })
     await page.click('.capsule.idle', { button: 'right' })
-    check('right-click the island to dress it up', await seen(page, '.wardrobe-card'))
-    check('every outfit to pick', (await page.$$('.wardrobe-card .wardrobe-item')).length === 15)
+    check('right-click the island to pick its colour', await seen(page, '.wardrobe-card'))
+    check('its orb and every colour to pick (no outfits, no faces)', !!(await page.$('.wardrobe-card .character canvas.orb')) && (await page.$$('.wardrobe-card .swatch')).length === 8 && !(await page.$('.wardrobe-card .wardrobe-item')))
     await sleep(500)
-    await shot(page, '08-wardrobe')
-    await page.click('.wardrobe-card .wardrobe-item[data-outfit="crown"]')
+    await shot(page, '08-colour')
     await page.click('.wardrobe-card .swatch[aria-label="Sky"]')
-    check('the outfit and colour are saved', await (async () => {
+    check('the colour is saved', await (async () => {
       for (let i = 0; i < 30; i++) {
-        const c = cfg().character
-        if (c?.outfit === 'crown' && c?.color === '#5ac8fa') return true
+        if (cfg().character?.color === '#5ac8fa') return true
         await sleep(100)
       }
       return false
     })(), JSON.stringify(cfg().character))
     await sleep(400)
-    await shot(page, '09-wardrobe-crown')
+    await shot(page, '09-colour-sky')
     await page.click('.wardrobe-card button:has-text("Done")')
-    check('and the island wears them', await seen(page, '.capsule.idle svg.character[data-outfit="crown"]'))
+    check('and the island’s orb takes it', await seen(page, '.capsule.idle .character[data-color="#5ac8fa"] canvas.orb'))
     await sleep(400)
-    await shot(page, '10-capsule-crown')
+    await shot(page, '10-capsule-sky')
 
     // ---- Dictate anywhere: what you said is typed into the app you're in ----
     const fakeApp = (cls) => {

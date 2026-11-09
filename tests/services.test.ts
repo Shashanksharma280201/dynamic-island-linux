@@ -66,7 +66,7 @@ test('Resend, Notion, Cal.com and n8n', () => {
   const r = resendSnapshot({ data: [{ id: 'e1', to: ['a@b.co'], subject: 'Welcome', created_at: '2026-10-14T09:00:00Z', last_event: 'bounced' }] })
   expect(r.sections[0].rows[0]).toMatchObject({ title: 'Welcome', sub: 'a@b.co', tone: 'bad' })
   expect(notionTitle({ properties: { Name: { type: 'title', title: [{ plain_text: 'Road' }, { plain_text: 'map' }] } } })).toBe('Roadmap')
-  expect(notionSnapshot({ results: [{ id: 'p', url: 'https://www.notion.so/p', icon: { type: 'emoji', emoji: '🗺' }, last_edited_time: '2026-10-14T09:00:00Z', properties: { title: { type: 'title', title: [{ plain_text: 'Plan' }] } } }] }).sections[0].rows[0].title).toBe('🗺 Plan')
+  expect(notionSnapshot({ results: [{ id: 'p', url: 'https://www.notion.so/p', icon: { type: 'emoji', emoji: '🗺' }, last_edited_time: '2026-10-14T09:00:00Z', properties: { title: { type: 'title', title: [{ plain_text: 'Plan' }] } } }] }).sections[0].rows[0].title).toBe('Plan')
   const now = Date.parse('2026-10-14T09:00:00Z')
   const cal = calSnapshot({ data: [{ id: 2, title: 'Later', start: '2026-10-15T09:00:00Z' }, { id: 1, title: 'Soon', start: '2026-10-14T10:00:00Z', attendees: [{ name: 'Ann' }] }, { id: 0, title: 'Past', start: '2026-10-13T09:00:00Z' }] }, now)
   expect(cal.sections[0].rows.map((x) => x.title)).toEqual(['Soon', 'Later'])

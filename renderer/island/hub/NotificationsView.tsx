@@ -108,7 +108,7 @@ export function NotificationsView({ center, onOpen }: { center: CenterView; onOp
 
       {empty ? (
         <div className="nc-empty">
-          <Orb state="breathing" size={64} tuned dots={0.6} speed={0.7} fps={20} title="All caught up" />
+          <Orb state="breathing" size={64} tuned dots={0.6} speed={0.7} fps={12} title="All caught up" />
           <div className="title">You're all caught up</div>
           <div className="caption">Notifications and messages land here, so nothing gets lost when a card closes.</div>
         </div>

@@ -1,6 +1,7 @@
 import { Image, StyleSheet, Text, View } from 'react-native'
 import type { Item } from '../files'
 import { extOf, kindColor, themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 /** A photo, or a coloured tile with the file's type. */
 export function Face({ item, size }: { item: Pick<Item, 'uri' | 'name' | 'kind' | 'count'>; size: number }) {
@@ -16,7 +17,11 @@ export function Face({ item, size }: { item: Pick<Item, 'uri' | 'name' | 'kind' 
     )
   return (
     <View style={[s.typeTile, { width: size, height: size, backgroundColor: kindColor(item.name) }]}>
-      {item.kind === 'video' && <Text style={s.play}>▶</Text>}
+      {item.kind === 'video' && (
+        <View style={s.play}>
+          <Icon name="play" size={16} color="rgba(255,255,255,0.9)" />
+        </View>
+      )}
       <Text style={s.typeText}>{extOf(item.name)}</Text>
     </View>
   )
@@ -25,7 +30,7 @@ export function Face({ item, size }: { item: Pick<Item, 'uri' | 'name' | 'kind' 
 const useS = themed((C) => ({
   typeTile: { justifyContent: 'flex-end', padding: 14 },
   typeText: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  play: { position: 'absolute', top: 12, right: 14, color: 'rgba(255,255,255,0.9)', fontSize: 18 },
+  play: { position: 'absolute', top: 12, right: 12 },
   tab: { position: 'absolute', top: 14, left: 14, width: 34, height: 9, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.45)' },
   files: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '700', marginTop: -2 },
 }))

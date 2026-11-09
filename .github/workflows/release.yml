@@ -179,6 +179,7 @@ jobs:
             echo "| Mac with Apple silicon (M1 and newer) | $(mac MSeries arm64) |"
             echo "| Mac with Intel | $(mac intel x64) |"
             echo "| Windows 10 or 11 | [dynamic-island-windows-$VER-x64.exe]($dl/dynamic-island-windows-$VER-x64.exe) |"
+            echo "| Android phone (Island Drop) | [island-drop.apk]($dl/island-drop.apk), added a few minutes after the rest: Phone Drop, and the island on your phone |"
             echo
             if [ -n "$pkg" ]; then
               echo "**Mac:** the one command above is the easiest. Or open the \`.pkg\`: when macOS says it can't verify it, open **System Settings → Privacy & Security**, click **Open Anyway**, and install; the island starts by itself. With the \`.dmg\` instead, after dragging the app to Applications run \`xattr -dr com.apple.quarantine \"/Applications/Dynamic Island.app\"\` once in Terminal, or macOS says it's damaged (the app isn't signed with an Apple Developer ID yet)."
@@ -203,6 +204,15 @@ jobs:
           # Until the install test below passes, the latest release (what the
           # one-line install gets) stays the previous one.
           prerelease: true
+
+  # The phone app (Island Drop for Android), added to the release too.
+  apk:
+    needs: release
+    uses: ./.github/workflows/android.yml
+    with:
+      release: ${{ inputs.tag || github.ref_name }}
+    permissions:
+      contents: write
 
   verify:
     # Install the release that was just published, on every OS, the way the

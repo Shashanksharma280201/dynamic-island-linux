@@ -53,15 +53,15 @@ export type WaMediaFile = { mime: string; data: string; name?: string }
 export type WaMedia = { mime: string; data: Buffer; name?: string }
 
 const MEDIA_LABEL: Record<string, string> = {
-  image: '📷 Photo',
-  video: '🎥 Video',
-  audio: '🎵 Audio',
-  ptt: '🎤 Voice message',
-  document: '📄 Document',
+  image: 'Photo',
+  video: 'Video',
+  audio: 'Audio',
+  ptt: 'Voice message',
+  document: 'Document',
   sticker: 'Sticker',
-  location: '📍 Location',
-  vcard: '👤 Contact',
-  multi_vcard: '👤 Contacts',
+  location: 'Location',
+  vcard: 'Contact',
+  multi_vcard: 'Contacts',
 }
 
 /**

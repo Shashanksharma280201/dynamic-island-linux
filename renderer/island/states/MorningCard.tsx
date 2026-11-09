@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { cardShowing, type MorningCard as Card } from '@shared/loop'
+import { SunIcon } from '../icons'
 
 /** The morning card, as the island shows it, and whether to show it. */
 export function useMorning(): { card: Card | null; act: (a: 'send' | 'edit' | 'hold' | 'done') => void } {
@@ -25,7 +26,7 @@ export function MorningCard({ card, act }: { card: Card; act: (a: 'send' | 'edit
     <div className="card morning-card" onClick={(e) => e.stopPropagation()}>
       <div className="card-head">
         <span className="app-glyph morning-glyph" aria-hidden="true">
-          ☀
+          <SunIcon />
         </span>
         <span className="app-name">Good morning</span>
         <span className="spacer" />

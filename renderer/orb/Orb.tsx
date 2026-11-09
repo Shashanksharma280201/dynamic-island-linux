@@ -1,5 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { MODE_FRAMES, paintFrame, resolvePreset, type OrbState } from 'thinking-orbs/engine'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
+import { MODE_FRAMES, resolvePreset, type OrbFrame, type OrbState } from 'thinking-orbs/engine'
 import { scaleCounts, scaleRadii } from 'thinking-orbs'
 import { isCalm, onCalm } from '../anim/calm'
 
@@ -27,7 +27,97 @@ export function parseTint(color: string | undefined): { r: number; g: number; b:
   return fn ? { r: Number(fn[1]), g: Number(fn[2]), b: Number(fn[3]) } : undefined
 }
 
-/** The tint for an agent at work (Claude's warm orange, as on Orbit's halo). */
+type Tint = { r: number; g: number; b: number }
+
+/** How far the dots at the back fade (the engine fades them all the way, into the glass). */
+const DEPTH_FADE = { dark: 0.55, light: 0.45 }
+
+/**
+ * A dot's ink: the tint (white, or grey on light glass), fading with its
+ * depth `w` toward the glass (darker on dark glass, lighter on light), but
+ * only partly, so the whole orb stays visible. Pure.
+ */
+export function inkOf(w: number, alpha: number, tint?: Tint, light = false): string {
+  const c = tint ?? (light ? { r: 72, g: 72, b: 78 } : { r: 255, g: 255, b: 255 })
+  const f = (v: number) => Math.round(light ? v + (255 - v) * w * DEPTH_FADE.light : v * (1 - w * DEPTH_FADE.dark))
+  return `rgba(${f(c.r)},${f(c.g)},${f(c.b)},${alpha})`
+}
+
+/** Shades a frame's dots are grouped into: few enough to fill in a handful of strokes, more than the eye tells apart at these sizes. */
+const SHADES = 10
+
+/**
+ * A frame's dots grouped by shade: each group is the ink and alpha rounded to
+ * one of SHADES steps, kept in the order the frame's depth sort first meets
+ * it (back to front). Pure.
+ */
+export function shadeGroups<D extends { white: number; a?: number }>(dots: D[]): { w: number; a: number; dots: D[] }[] {
+  const groups = new Map<number, { w: number; a: number; dots: D[] }>()
+  for (const d of dots) {
+    const w = Math.round(Math.min(1, Math.max(0, d.white)) * SHADES) / SHADES
+    const a = Math.round(Math.min(1, Math.max(0, d.a ?? 1)) * SHADES) / SHADES
+    if (a <= 0) continue
+    const key = w * 100 + a
+    let g = groups.get(key)
+    if (!g) groups.set(key, (g = { w, a, dots: [] }))
+    g.dots.push(d)
+  }
+  return [...groups.values()]
+}
+
+/**
+ * Paints a frame like the engine's own painter, at a fraction of the work:
+ * its few lines one by one, then its dots one fill per shade (the engine sets
+ * a new colour and fills once per dot, hundreds a frame).
+ */
+export function paintGrouped(ctx: CanvasRenderingContext2D, frame: OrbFrame, tint?: Tint, light = false): void {
+  for (const l of frame.lines) {
+    const a = l.a ?? 1
+    if (a < 0.02) continue
+    ctx.strokeStyle = inkOf(Math.min(1, Math.max(0, l.white)), a, tint, light)
+    ctx.lineWidth = l.w
+    ctx.beginPath()
+    ctx.moveTo(l.x1, l.y1)
+    ctx.lineTo(l.x2, l.y2)
+    ctx.stroke()
+  }
+  for (const g of shadeGroups(frame.dots)) {
+    ctx.fillStyle = inkOf(g.w, g.a, tint, light)
+    ctx.beginPath()
+    for (const d of g.dots) {
+      ctx.moveTo(d.x + d.r, d.y)
+      ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2)
+    }
+    ctx.fill()
+  }
+}
+
+/**
+ * The ink an orb is drawn in: its colour on dark glass; on light glass a
+ * deeper shade of it (a pale tint is lost on white), and dark grey for the
+ * plain ones (white dots would vanish). Pure.
+ */
+export function orbInk(color: string | undefined, light: boolean): Tint | undefined {
+  const t = parseTint(color)
+  if (!light) return t
+  if (!t) return { r: 72, g: 72, b: 78 }
+  const k = 0.74
+  return { r: Math.round(t.r * k), g: Math.round(t.g * k), b: Math.round(t.b * k) }
+}
+
+/** Whether this window is in the light theme (and follows it when it changes). */
+function useLight(): boolean {
+  return useSyncExternalStore(
+    (cb) => {
+      const mo = new MutationObserver(cb)
+      mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
+      return () => mo.disconnect()
+    },
+    () => document.documentElement.dataset.theme === 'light',
+  )
+}
+
+/** The tint for an agent at work (Claude's warm orange). */
 export const AGENT_INK = '#ffb48f'
 
 const LABELS: Record<OrbState, string> = {
@@ -53,8 +143,8 @@ export function pace(now: number, due: number, every: number): { draw: boolean; 
   return { draw: true, due: Math.max(due + every, now + every / 2) }
 }
 
-/** How often orbs are drawn unless asked otherwise: smooth for their slow motion, half the work of every screen refresh. */
-export const ORB_FPS = 30
+/** How often orbs are drawn unless asked otherwise: smooth at these sizes, and each frame costs a repaint of the island. */
+export const ORB_FPS = 24
 
 const reducedMotion = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches
 
@@ -77,6 +167,7 @@ export function Orb({
   level,
   fps = ORB_FPS,
   tuned = false,
+  bright = false,
   className,
   title,
 }: {
@@ -95,10 +186,13 @@ export function Orb({
   fps?: number
   /** Drawn exactly as tuned for this size (20, 32 or 64 px), without the small-size bolding. */
   tuned?: boolean
+  /** Every dot at full strength (the globe otherwise dims the ones its scan isn't on). */
+  bright?: boolean
   className?: string
   title?: string
 }) {
   const ref = useRef<HTMLCanvasElement | null>(null)
+  const light = useLight()
   const levelRef = useRef(level)
   levelRef.current = level
 
@@ -120,12 +214,13 @@ export function Orb({
       if (dotSize !== 1) opts = scaleRadii(opts, Math.max(0.1, dotSize))
     } else {
       opts = scaleCounts(preset, Math.max(0.1, dots * Math.sqrt(grow)))
-      // Small ones get bolder dots, or they fade into a grey smudge on dark glass.
-      const bold = size <= 24 ? 1.35 : size <= 32 ? 1.15 : 1
+      // Small ones get bolder dots, or they fade into a smudge on the glass.
+      const bold = size <= 24 ? 1.55 : size <= 32 ? 1.3 : 1.1
       opts = scaleRadii(opts, Math.max(0.1, dotSize * bold * Math.pow(scale, 0.6)))
     }
+    if (bright && typeof (opts as { dimBase?: number }).dimBase === 'number') opts = { ...opts, dimBase: Math.max((opts as { dimBase: number }).dimBase, 0.85) } as typeof opts
     const draw = MODE_FRAMES[mode]
-    const tint = parseTint(color)
+    const tint = orbInk(color, light)
 
     // Our own clock, so a changing voice level speeds it up without a jump.
     let t = (performance.now() / 1000) * baseSpeed * speed
@@ -146,23 +241,28 @@ export function Orb({
         ctx.scale(k, k)
         ctx.translate(-size / 2, -size / 2)
       }
-      paintFrame(ctx, draw(size, t, opts), true, tint)
+      paintGrouped(ctx, draw(size, t, opts), tint, light)
     }
 
     frame(performance.now())
     if (paused || reducedMotion()) return
 
     let raf = 0
+    let timer: ReturnType<typeof setTimeout> | undefined
     let running = false
     let onScreen = true
     let due = 0
     let stilled = isCalm()
     const every = 1000 / Math.max(1, Math.min(120, fps))
+    // Woken by a timer only when a frame is due, then drawn on the next
+    // refresh: asking for every refresh (60 a second) and skipping most of
+    // them kept the island busy even at 12 frames a second.
     const loop = (now: number) => {
+      if (!running) return
       const p = pace(now, due, every)
       due = p.due
       if (p.draw) frame(now)
-      if (running) raf = requestAnimationFrame(loop)
+      timer = setTimeout(() => (raf = requestAnimationFrame(loop)), Math.max(0, due - performance.now() - 4))
     }
     const start = () => {
       if (running || !onScreen || stilled || document.visibilityState === 'hidden') return
@@ -173,6 +273,7 @@ export function Orb({
     }
     const stop = () => {
       running = false
+      clearTimeout(timer)
       cancelAnimationFrame(raf)
     }
     const io = new IntersectionObserver(([e]) => {
@@ -195,7 +296,7 @@ export function Orb({
       io.disconnect()
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [state, size, color, speed, dots, dotSize, paused, fps, tuned])
+  }, [state, size, color, light, speed, dots, dotSize, paused, fps, tuned, bright])
 
   return (
     <canvas
