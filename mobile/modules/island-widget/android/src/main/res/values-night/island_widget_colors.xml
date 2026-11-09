@@ -1,0 +1,5 @@
+<resources>
+  <color name="island_widget_bg">#FF14151A</color>
+  <color name="island_widget_text">#FFF4F4F6</color>
+  <color name="island_widget_text2">#A3EBEBF5</color>
+</resources>

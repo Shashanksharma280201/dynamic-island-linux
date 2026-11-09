@@ -6,6 +6,7 @@ import { CHARACTER_COLOR, CHARACTER_DOTS, MOODS, MOOD_COLOR as ISLAND_MOOD_COLOR
 import { ORB_FOR_MOOD as ISLAND_ORB_FOR_MOOD, orbFps as islandFps, orbSpeed as islandSpeed } from '@shared/orbs'
 import { MOOD_COLOR, ORB_COLOR, ORB_DOTS, ORB_FOR_MOOD, dotsPath, inkOf, moodWords, orbFps, orbForMood, orbInk, orbSpeed, ringKind, scaleCounts, scaleRadii, shadeGroups } from '../mobile/src/orb'
 import { dayTitle } from '../mobile/src/words'
+import { islandSummary } from '../mobile/src/summary'
 
 test('the phone’s orbs are the island’s', () => {
   expect(ORB_COLOR).toEqual(CHARACTER_COLOR)
@@ -54,4 +55,17 @@ test('the day in words', () => {
   expect(dayTitle('2026-11-09')).toBe('Monday, 9 November')
   expect(dayTitle('2027-01-01')).toBe('Friday, 1 January')
   expect(dayTitle('soon')).toBe('soon')
+})
+
+test('the island in a few words, for the tab, the widget and the lock screen', () => {
+  const view: any = { approvals: [{ id: 'a' }, { id: 'b' }], sessions: [{ id: 's', project: 'shop', phase: 'working' }], character: { id: 'bolt', name: 'Bolt', color: '#4da3ff', mood: 'attention' } }
+  expect(islandSummary(view, 'live', 'laptop')).toEqual({ orb: view.character, line: '2 waiting for you', detail: 'laptop · Connected', ring: '#ff9f0a', dim: false, chip: '2' })
+  // At work: the project it's on.
+  const busy = { ...view, approvals: [], character: { ...view.character, mood: 'working' } }
+  expect(islandSummary(busy, 'live', 'laptop')).toMatchObject({ line: 'At work', detail: 'shop · laptop', chip: null })
+  // Offline: said once, faded, no ring.
+  expect(islandSummary(view, 'offline', 'laptop')).toMatchObject({ line: 'Offline', detail: 'laptop · Can’t reach it', ring: null, dim: true, chip: null })
+  // An island that doesn't send its orb: the default one, its mood from what's there.
+  expect(islandSummary({ ...view, character: undefined }, 'live', 'laptop').orb).toEqual({ id: 'orbit', name: 'Orbit', color: '#ff8a65', mood: 'attention' })
+  expect(islandSummary(undefined, 'searching', 'laptop')).toMatchObject({ line: 'Connecting…', detail: 'laptop · Connecting…' })
 })

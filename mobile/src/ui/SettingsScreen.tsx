@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
+import { islandWidget } from '../../modules/island-widget'
 import { shareIntake } from '../../modules/share-intake'
 import { DEVICE, type DropLink, type Live, type LinkState } from '../link'
 import { useActivity } from '../activity'
@@ -123,7 +124,7 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
         <Row
           icon={{ name: 'bell', color: C.red }}
           title="Stay connected"
-          sub={liveLink.available ? 'Approvals and files arrive even when the app is closed (a quiet ongoing notification).' : 'Needs the installed app (not Expo Go).'}
+          sub={liveLink.available ? 'Approvals and files arrive even when the app is closed. What the island is doing shows in one quiet line on the lock screen (on Android 16, a chip in the status bar).' : 'Needs the installed app (not Expo Go).'}
           right={<Switch value={prefs.background && liveLink.available} disabled={!liveLink.available} onChange={(background) => setPrefs({ ...prefs, background })} />}
         />
         <Row
@@ -134,6 +135,21 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
           last
         />
       </Section>
+
+      {islandWidget.available && (
+        <Section title="Home screen" note="Press and hold an empty spot on your home screen, then Widgets, to add it yourself. Phones that allow widgets on the lock screen can put it there too.">
+          <Row
+            icon={{ name: 'layers', color: C.violet }}
+            title="Island widget"
+            sub="The orb, what it’s doing and your computer, on your home screen. Tap it to open the app."
+            onPress={() => {
+              if (!islandWidget.add()) Alert.alert('Add it from the home screen', 'Press and hold an empty spot on your home screen, choose Widgets, then Island Drop.')
+            }}
+            right={<Text style={s.add}>Add</Text>}
+            last
+          />
+        </Section>
+      )}
 
       <Section title="Good to know">
         <Row icon={{ name: 'shield', color: C.green }} title="Approvals" sub="Answer here, on the notification or on the island: the first answer wins. They stay private on the lock screen." />
@@ -183,6 +199,7 @@ function Preview({ kind }: { kind: ThemePref }) {
 }
 
 const useS = themed((C) => ({
+  add: { color: C.accent, fontSize: 15, fontWeight: '600' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
   heroName: { color: C.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.2 },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },

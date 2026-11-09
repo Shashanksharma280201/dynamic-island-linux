@@ -6,7 +6,8 @@ import Svg, { Path } from 'react-native-svg'
 import { useActivity } from '../activity'
 import { linkMode, linkStatus } from '../linkStatus'
 import type { LinkMode } from '../iso/LinkFigure'
-import { ORB_COLOR, MOOD_COLOR, moodWords } from '../orb'
+import { MOOD_COLOR } from '../orb'
+import { islandSummary } from '../summary'
 import type { PhoneCharacter } from '../islandTypes'
 import { Btn } from './kit'
 import { Orb } from './Orb'
@@ -61,11 +62,12 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
   const mode = linkMode(state, live, act)
   const color = mode === 'offline' ? C.red : mode === 'searching' ? C.orange : C.green
   const quiet = v && !v.approvals.length && !v.media && !v.trading && !v.sessions.some((x) => x.phase === 'working' || x.phase === 'waiting')
-  // The orb as the island draws it (an older island doesn't say: the default orb, its mood from what's here).
+  // The orb and what it's doing, as the widget and the lock screen say it.
+  const sum = islandSummary(v, mode, link.pairing.name)
+  const orb = sum.orb
+  const orbLine = sum.line
   const working = v?.sessions.find((x) => x.phase === 'working')
-  const orb = v?.character ?? { id: 'orbit', name: 'Orbit', color: ORB_COLOR.orbit, mood: v?.approvals.length ? 'attention' : working ? 'working' : 'idle' }
   const busy = orb.mood === 'working' || orb.mood === 'writing' || orb.mood === 'searching' || orb.mood === 'thinking'
-  const orbLine = mode === 'offline' ? 'Offline' : orb.mood === 'attention' && v?.approvals.length ? `${v.approvals.length} waiting for you` : moodWords(orb.mood)
   const orbHint = mode === 'offline' ? 'It wakes when the link is back' : busy && working ? working.project : 'Live from your computer'
 
   return (
