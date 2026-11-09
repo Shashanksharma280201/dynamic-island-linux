@@ -2,12 +2,10 @@
 
 Your computer's Dynamic Island on your phone, and files both ways with a glow.
 
-- **Island**: first, **Fig. 1, the link**: an isometric drawing of your
-  computer and phone on one bench, joined by a glass tube. A capsule runs
-  along it while files go (toward the computer when you send, toward the
-  phone when it sends), the lamp is green when they can reach each other
-  (amber while looking, red when they can't), and the gauge reads the round
-  trip in milliseconds. Tap it to test the link. Then what's waiting for your answer on the computer (Claude Code
+- **Island**: first, **the island's orb**, as on your computer: the same
+  dotted motion, in its colour (or the one you picked), with the mood's ring,
+  its name and what it's doing ("2 waiting for you", "At work" and the
+  project, "Offline"), and **Hold to talk to** it. Then what's waiting for your answer on the computer (Claude Code
   wanting to run a command or edit a file, its questions and plans, the island
   assistant about to act for you, a trade from your trading engine), with the
   same buttons as the island. Answer here or on the computer, whichever is
@@ -48,6 +46,12 @@ out, and the buddy answers out loud there.
   Wi-Fi, and keeps the new address. Each time it connects, the computer tells
   it all the addresses it has now (Wi-Fi, Tailscale), so it can follow it
   from one to the other.
+- **More → Settings** starts with **Fig. 1, the link**: an isometric drawing
+  of your computer and phone on one bench, joined by a glass tube. A capsule
+  runs along it while files go (toward the computer when you send, toward
+  the phone when it sends), the lamp is green when they can reach each other
+  (amber while looking, red when they can't), and the gauge reads the round
+  trip in milliseconds. Tap it to test the link.
 - **More → Settings → Connection** shows the route (Wi-Fi or Tailscale), the
   address, the last round trip, **Test the connection** and **Find my
   computer again**.

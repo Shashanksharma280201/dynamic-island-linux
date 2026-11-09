@@ -10,6 +10,7 @@ import { notifyBatch, notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
 import { Aurora, EdgeGlow, Wash } from './Glow'
 import { extOf, kindColor, themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 const SPRING = { damping: 16, stiffness: 150, mass: 1 }
 
@@ -184,7 +185,7 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
           )}
           {done === 'ok' && (
             <View style={s.check}>
-              <Text style={s.checkText}>✓</Text>
+              <Icon name="check" size={16} color="#fff" />
             </View>
           )}
         </View>
@@ -218,7 +219,6 @@ const useS = themed((C) => ({
   tileSub: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700' },
   folderTab: { position: 'absolute', top: 16, left: 16, width: 42, height: 11, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.45)' },
   check: { position: 'absolute', right: 10, top: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
-  checkText: { color: '#fff', fontSize: 18, fontWeight: '800' },
   caption: { alignItems: 'center', marginTop: 12 },
   name: { color: C.text, fontSize: 15, fontWeight: '700' },
   sub: { color: C.text2, fontSize: 13, marginTop: 3 },

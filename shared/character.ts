@@ -62,6 +62,16 @@ export const BODY_COLORS: { id: string; label: string; color: string | null }[] 
   { id: 'rose', label: 'Rose', color: '#ff7eb6' },
 ]
 
+/** Each orb's own colour (your pick in Settings replaces it). */
+export const CHARACTER_COLOR: Record<CharacterId, string> = { orbit: '#ff8a65', bolt: '#4da3ff', puff: '#ff8cc0' }
+
+/** How each orb's dots are drawn: Orbit as tuned, Bolt finer and denser, Puff fewer and softer. */
+export const CHARACTER_DOTS: Record<CharacterId, { dots: number; dotSize: number }> = {
+  orbit: { dots: 1, dotSize: 1.2 },
+  bolt: { dots: 1.45, dotSize: 0.95 },
+  puff: { dots: 0.72, dotSize: 1.55 },
+}
+
 /** The character as configured: which orb, what you call it, its colour. */
 export type CharacterConfig = { id: CharacterId; name: string; color?: string | null }
 

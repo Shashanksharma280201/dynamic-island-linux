@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics'
 import type { PhoneApproval, PhoneLine } from '../islandTypes'
 import type { DropLink } from '../link'
 import { themed, useTheme, type Palette } from './theme'
+import { Icon, type IconName } from './icons'
 
 const toneColor = (C: Palette, t?: PhoneLine['tone']) => (t === 'up' ? C.green : t === 'down' ? C.red : t === 'warn' ? C.orange : C.text)
 
@@ -50,7 +51,7 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
   const questions = a.questions ?? []
   const ready = questions.every((q) => (picks[q.question] ?? []).length > 0)
   const answers = Object.fromEntries(questions.map((q) => [q.question, (picks[q.question] ?? []).join(', ')]))
-  const glyph = a.kind === 'trade' ? '₹' : a.kind === 'agent' ? '✦' : '>_'
+  const glyph: IconName = a.kind === 'trade' ? 'trend' : a.kind === 'agent' ? 'sparkle' : a.kind === 'question' ? 'question' : a.kind === 'plan' ? 'list' : 'terminal'
 
   return (
     <Animated.View
@@ -62,7 +63,7 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
       <View style={[s.stripe, { backgroundColor: a.color }]} />
       <View style={s.head}>
         <View style={[s.glyph, { backgroundColor: a.color }]}>
-          <Text style={s.glyphText}>{glyph}</Text>
+          <Icon name={glyph} size={16} color="#fff" />
         </View>
         <Text style={s.app} numberOfLines={1}>
           {a.app}
@@ -154,14 +155,13 @@ const useS = themed((C) => ({
   stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glyph: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  glyphText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   app: { color: C.text2, fontSize: 13, fontWeight: '700', flex: 1 },
   where: { color: C.text3, fontWeight: '600' },
   timer: { backgroundColor: C.fill, borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3 },
   timerText: { color: C.text2, fontSize: 12, fontWeight: '700', fontVariant: ['tabular-nums'] },
   title: { color: C.text, fontSize: 18, fontWeight: '700', marginTop: 10, letterSpacing: -0.2 },
   code: { backgroundColor: C.dark ? 'rgba(0,0,0,0.35)' : C.card2, borderRadius: 12, padding: 12, marginTop: 10 },
-  codeText: { color: '#e5e5ea', fontFamily: 'monospace', fontSize: 13, lineHeight: 19 },
+  codeText: { color: C.dark ? '#e5e5ea' : C.text, fontFamily: 'monospace', fontSize: 13, lineHeight: 19 },
   plan: { maxHeight: 220, backgroundColor: C.dark ? 'rgba(0,0,0,0.25)' : C.card2, borderRadius: 12, padding: 12, marginTop: 10 },
   planText: { color: C.text, fontSize: 14, lineHeight: 20 },
   body: { color: C.text2, fontSize: 14, lineHeight: 20, marginTop: 6 },

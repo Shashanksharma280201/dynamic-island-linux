@@ -19,7 +19,7 @@ const MAX_MS = 60_000
  * What you say is recorded only while you hold, sent to your computer, and
  * made out there; the buddy answers out loud on the computer.
  */
-export function TalkButton({ link }: { link: DropLink }) {
+export function TalkButton({ link, name }: { link: DropLink; name?: string }) {
   const C = useTheme()
   const s = useS()
   const rec = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
@@ -85,7 +85,7 @@ export function TalkButton({ link }: { link: DropLink }) {
     else setError(r.message)
   }
 
-  const label = phase === 'listening' ? 'Listening… let go to send' : phase === 'sending' ? 'Making it out on your computer…' : 'Hold to talk to your buddy'
+  const label = phase === 'listening' ? 'Listening… let go to send' : phase === 'sending' ? 'Making it out on your computer…' : `Hold to talk to ${name || 'your buddy'}`
   return (
     <View style={s.wrap}>
       <Pressable
@@ -96,7 +96,7 @@ export function TalkButton({ link }: { link: DropLink }) {
         onPressOut={() => {
           holding.current = false
           if (started.current) void end()
-        }} disabled={phase === 'sending'} accessibilityRole="button" accessibilityLabel="Hold to talk to your buddy">
+        }} disabled={phase === 'sending'} accessibilityRole="button" accessibilityLabel={`Hold to talk to ${name || 'your buddy'}`}>
         <Animated.View style={[s.button, { backgroundColor: phase === 'listening' ? C.red : C.primary }, phase === 'sending' && { opacity: 0.6 }, ring]}>
           <Icon name="mic" size={22} color={C.onPrimary} />
           <Text style={[s.label, { color: C.onPrimary }]}>{label}</Text>
