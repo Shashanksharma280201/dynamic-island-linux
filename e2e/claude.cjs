@@ -284,6 +284,10 @@ function speechWav(text, file) {
     xt('key', 'ctrl+i')
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
     xt(10, 10)
+    // The page's pointer off the island too: its last click (Don't Allow) was on the panel, and
+    // a hovered island shows the full card instead of the capsule. Moving the real pointer
+    // doesn't move it once the island is click-through there.
+    await page.mouse.move(5, 300)
     await page.evaluate(() => window.island.claude.ask('something slow in the background'))
     check('a running command shows the character on the capsule', await page.waitForSelector('.claude-capsule .character', { timeout: 5000 }).then(() => true, () => false))
     await sleep(600) // let the previous card finish leaving
