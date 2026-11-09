@@ -235,6 +235,9 @@ function speechWav(text, file) {
     // ---- Claude Code uses the island's tools (MCP) ----
     check('each run gets the island’s tools', runs().at(-1)?.args.includes('--mcp-config') && runs().at(-1)?.args.includes('mcp__island'))
     const islandAsk = async (tool, input) => {
+      // The answer shows a moment before the run ends, and Enter does nothing
+      // while it's still running: wait for it to finish first.
+      await idle()
       await page.fill('.claude-field textarea', `use island tool ${tool} ${JSON.stringify(input)}`)
       await page.press('.claude-field textarea', 'Enter')
     }

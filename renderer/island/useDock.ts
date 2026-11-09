@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import type { DockState } from '@shared/types'
-import { DEFAULT_DOCK, EDGE_MARGIN, clamp01, islandTop, sideForPoint, type Side } from '@shared/dock'
+import { DEFAULT_DOCK, EDGE_MARGIN, PANEL_PLACE_HEIGHT, clamp01, islandTop, panelTop, sideForPoint, type Side } from '@shared/dock'
 
 const DRAG_THRESHOLD = 5
 
@@ -14,7 +14,7 @@ const NO_DRAG = 'button, input, textarea, select, a, .no-drag'
  * near the top center docks it there. On release the
  * new dock is saved. Returns a flag to swallow the click that ends a drag.
  */
-export function useDock() {
+export function useDock(open?: { readonly current: boolean }) {
   const [dock, setDock] = useState<DockState>({
     ...DEFAULT_DOCK,
     workArea: { x: 0, y: 0, width: window.screen.width, height: window.innerHeight },
@@ -40,7 +40,10 @@ export function useDock() {
    * island off the pointer for the whole drag. */
   const settledCenter = (el: HTMLElement) => {
     const h = el.offsetHeight
-    return (dock.side === 'top' ? EDGE_MARGIN : islandTop(anchor, h, window.innerHeight)) + h / 2
+    if (dock.side === 'top') return EDGE_MARGIN + h / 2
+    // The open panel sits where a PANEL_PLACE_HEIGHT one would (see panelTop).
+    if (open?.current) return panelTop(anchor, h, window.innerHeight) + PANEL_PLACE_HEIGHT / 2
+    return islandTop(anchor, h, window.innerHeight) + h / 2
   }
 
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {

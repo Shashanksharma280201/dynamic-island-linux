@@ -81,10 +81,22 @@ import type { CenterView } from '@shared/notifCenter'
 import type { PlayResult, SpDevice, SpHome, SpPage, SpSearch, SpotifyView } from '@shared/spotify'
 import type { ClaudeView } from '@shared/claude'
 
-/** Subscribe and return an unsubscribe function. */
+/**
+ * What the main process pushes as the current state (where the island is
+ * docked, which tabs are on…): sent when the page loads and again on each
+ * change. A part of the page that starts listening after that first push (it
+ * mounts a moment later) would miss it until the next change, so the latest
+ * value is kept here and handed to each new listener.
+ */
+const STATE_CHANNELS: string[] = [IPC.DOCK, IPC.PACKAGES, IPC.APPEARANCE, IPC.CHARACTER, IPC.KEYS, IPC.STATE, NOTIFS.CHANGED, SESSIONS.CHANGED, SERVICES.CHANGED, CONNECTED.CHANGED]
+const latest = new Map<string, unknown>()
+for (const c of STATE_CHANNELS) ipcRenderer.on(c, (_e, v) => latest.set(c, v))
+
+/** Subscribe and return an unsubscribe function. A state channel's latest value comes at once. */
 function on<T>(channel: string, cb: (v: T) => void): () => void {
   const fn = (_e: unknown, v: T) => cb(v)
   ipcRenderer.on(channel, fn)
+  if (latest.has(channel)) cb(latest.get(channel) as T)
   return () => ipcRenderer.removeListener(channel, fn)
 }
 

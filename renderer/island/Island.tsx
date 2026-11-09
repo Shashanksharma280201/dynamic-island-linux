@@ -25,7 +25,7 @@ import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
 import { useVoice } from './voice/useVoice'
 import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
-import { EDGE_MARGIN, islandTop } from '@shared/dock'
+import { EDGE_MARGIN, islandTop, panelTop } from '@shared/dock'
 import { Character, useCharacter } from './character/Character'
 import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 import type { DocsAdded } from '@shared/docs'
@@ -117,9 +117,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const outerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [areaH, setAreaH] = useState(window.innerHeight)
-  const { side, anchor, dragging, handlers, consumeDragClick } = useDock()
+  // The panel is open (set below, read when a drag starts).
+  const openNow = useRef(false)
+  const { side, anchor, dragging, handlers, consumeDragClick } = useDock(openNow)
   const atTop = side === 'top'
-  const top = atTop ? EDGE_MARGIN : islandTop(anchor, size.h, areaH)
   /** Left edge of the island in the window: on an edge, or centered at the top. */
   const leftFor = (w: number) =>
     side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
@@ -328,6 +329,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
+  openNow.current = showPanel
+  // On a side edge the island centres on its anchor; the open panel keeps its
+  // top still instead, so the row of sections doesn't move as you switch.
+  const top = atTop ? EDGE_MARGIN : showPanel ? panelTop(anchor, size.h, areaH) : islandTop(anchor, size.h, areaH)
   // What the resting island says: asked again each time it comes to rest.
   const resting = useResting(p.mode === 'idle' && !showPanel)
   const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
