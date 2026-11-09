@@ -4,7 +4,9 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
-## Unreleased
+## 0.6.0 (2026-11-09)
+
+**At the top, in orbs**
 
 - **The island starts at the top centre**, like a Mac's (it was on the right
   edge). Drag it to an edge, or pick Left, Top or Right in Settings → General;
