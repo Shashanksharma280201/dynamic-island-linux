@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-// Search by meaning: notes and questions as vectors (bge-small-en-v1.5, on
+// Search by meaning: notes and questions as vectors (gte-small, on
 // this computer), off the UI thread. The model comes from island-model://.
 import { env, pipeline } from '@huggingface/transformers'
 import { EMBED_MODEL, EMBED_POOLING } from '@shared/meaning'

@@ -202,8 +202,12 @@ export class Brain {
     this.d.onChange()
   }
 
-  /** Bring the meaning index up to date, about `budget` sections at a time (when it's on and the model is ready). */
-  async readForMeaning(budget = 128): Promise<number> {
+  /**
+   * Bring the meaning index up to date, about `budget` sections at a time
+   * (when it's on and the model is ready): every two minutes, a few seconds
+   * of one core in the island's worker until it has caught up.
+   */
+  async readForMeaning(budget = 64): Promise<number> {
     const embed = this.d.config().meaning ? this.d.embed?.() : null
     if (!embed || !this.index || !this.meaningIdx) return 0
     const n = await this.meaningIdx.update(this.index.entries(), embed, budget).catch((e) => {

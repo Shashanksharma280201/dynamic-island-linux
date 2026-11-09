@@ -1,18 +1,28 @@
 /**
  * Search by meaning: each section of a note as a vector from a small local
- * model (bge-small-en-v1.5), compared with the question's. The pure parts.
+ * model (gte-small), compared with the question's. The pure parts.
+ *
+ * The model and the way of reading were chosen by the "Search by meaning
+ * (real model)" workflow, which compares small models on a test vault
+ * (tests/meaningModel.real.test.ts): gte-small by section found the right
+ * note first for 84% of its questions and every fact deep in a long note,
+ * where all-MiniLM-L6-v2 reading each note's start found 61% and 14%.
  */
 
-export const EMBED_MODEL = 'Xenova/bge-small-en-v1.5'
+export const EMBED_MODEL = 'Xenova/gte-small'
 export const EMBED_FILES = ['config.json', 'tokenizer.json', 'tokenizer_config.json', 'onnx/model_quantized.onnx']
 export const EMBED_MB = 34
 export const DIMS = 384
-/** How the model makes one vector of a text's words: BGE takes its first token's ([CLS]). */
-export const EMBED_POOLING: 'cls' | 'mean' = 'cls'
-/** What the model wants before a question, to find the passages that answer it. */
-export const QUERY_PREFIX = 'Represent this sentence for searching relevant passages: '
-/** Notes found only by meaning must be at least this close to the question (cosine, for this model). */
-export const MEANING_MIN = 0.5
+/** How the model makes one vector of a text's words: the mean of them all. */
+export const EMBED_POOLING: 'cls' | 'mean' = 'mean'
+/** What the model wants before a question (gte-small wants nothing). */
+export const QUERY_PREFIX = ''
+/**
+ * Notes found only by meaning must be at least this close to the question
+ * (cosine, for this model: its answers scored 0.79 to 0.88 on the test vault,
+ * the closest note to a question nothing answers at most 0.77).
+ */
+export const MEANING_MIN = 0.78
 /** Models used before, whose files can go once this one is in use. */
 export const OLD_EMBED_MODELS = ['Xenova/all-MiniLM-L6-v2']
 
@@ -146,7 +156,7 @@ export function fuse(lists: string[][], k = 60): { path: string; score: number }
  */
 export function hashEmbed(text: string): Float32Array {
   const v = new Float32Array(DIMS)
-  for (const m of text.replace(QUERY_PREFIX, '').toLowerCase().matchAll(/[\p{L}\p{N}]{3,}/gu)) {
+  for (const m of (QUERY_PREFIX ? text.replace(QUERY_PREFIX, '') : text).toLowerCase().matchAll(/[\p{L}\p{N}]{3,}/gu)) {
     let h = 2166136261
     for (const c of m[0]) h = Math.imul(h ^ c.charCodeAt(0), 16777619)
     v[(h >>> 0) % DIMS] += 1
