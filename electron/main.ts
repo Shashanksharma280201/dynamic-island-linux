@@ -310,6 +310,9 @@ async function main() {
   } else {
     await win.loadFile(resolve(here, '../renderer/index.html'))
   }
+  // Where it's docked, before anything else starts (media, notifications… can
+  // take seconds): until then the page lays the island out for the default.
+  pushDock()
   win.showInactive()
 
   const pushState = () => send(win, IPC.STATE, store.list())
