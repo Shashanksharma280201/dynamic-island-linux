@@ -4,6 +4,15 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+- **One island, opening in one movement**: clicking the island grows it into
+  the panel as a single shape (the separate column of icons beside it is
+  gone). Its sections are a row across the top: drawn line icons, the open
+  one lit in your accent, names under the pointer, counts and a running dot.
+  The panel is a little wider so they all fit, and a new section slides in
+  from the side you went.
+
 ## 0.6.0 (2026-11-09)
 
 **At the top, in orbs**

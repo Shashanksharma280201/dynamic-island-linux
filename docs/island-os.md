@@ -66,7 +66,7 @@ The first panel on the island's rail:
 
 ## Agents
 
-The second panel on the rail:
+The third section in the bar across the top of the open island:
 
 - **Your coding agents** that are working or need you.
 - **Research a question…** plans a few questions, reads your notes and

@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import { useRef, type ReactNode } from 'react'
 import type { InboxSources, SystemState } from '@shared/types'
 import { ControlCenter } from '../states/ControlCenter'
 import { ChatsView } from './ChatsView'
@@ -11,7 +11,7 @@ import { MusicView } from '../music/MusicView'
 import type { ClaudeView } from '@shared/claude'
 import type { Voice } from '../voice/useVoice'
 import { useLoad } from './common'
-import { DocsAppIcon } from './AppIcons'
+import { DocIcon } from '../icons'
 import { NotificationsView } from './NotificationsView'
 import { TodayView } from './TodayView'
 import { AgentsView } from './AgentsView'
@@ -43,8 +43,9 @@ export function rememberTab(t: HubTab): void {
 }
 
 /**
- * The panel that opens when you click the island. Which section it shows is
- * picked with the detached icon rail next to it (see Rail).
+ * The panel that opens when you click the island: the island itself grows
+ * into it, with its sections in a row across the top (`bar`, see TabBar) and
+ * the open one below.
  */
 export function Hub({
   sys,
@@ -57,8 +58,11 @@ export function Hub({
   center,
   onTab,
   sessions,
+  bar,
 }: {
   sys: SystemState | null
+  /** The row of sections across the top. */
+  bar?: ReactNode
   tab: HubTab
   /** The notification center (Notifications tab, Do Not Disturb). */
   center: CenterView
@@ -84,11 +88,13 @@ export function Hub({
   )
   const services = useServices()
   const connected = useConnected()
-  // A new tab slides in from the direction you went on the rail.
+  // A new tab slides in from the side you went along the bar.
   const last = useRef({ tab, dir: '' })
-  if (last.current.tab !== tab) last.current = { tab, dir: HUB_TABS.indexOf(tab) > HUB_TABS.indexOf(last.current.tab) ? 'from-below' : 'from-above' }
+  if (last.current.tab !== tab) last.current = { tab, dir: HUB_TABS.indexOf(tab) > HUB_TABS.indexOf(last.current.tab) ? 'from-right' : 'from-left' }
   return (
-    <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`} onClick={(e) => e.stopPropagation()}>
+    <div className="hub-shell" onClick={(e) => e.stopPropagation()}>
+      {bar}
+      <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`}>
       {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
       {tab === 'today' && <TodayView onTyping={onTyping} />}
       {tab === 'agents' && <AgentsView sessions={sessions} onTyping={onTyping} />}
@@ -104,6 +110,7 @@ export function Hub({
       {tab === 'docs' && <DocsView claude={claude} onTyping={onTyping} incoming={incoming} />}
       {tab === 'crm' && <CrmView claude={claude} onTyping={onTyping} />}
       {dropping && <DropZone />}
+      </div>
     </div>
   )
 }
@@ -112,7 +119,7 @@ export function Hub({
 function DropZone() {
   return (
     <div className="drop-zone" aria-hidden>
-      <DocsAppIcon />
+      <DocIcon size={34} />
       <div className="title">Drop to add to Documents</div>
     </div>
   )
