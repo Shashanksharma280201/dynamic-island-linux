@@ -1,11 +1,26 @@
 name: Island Drop (Android)
 
 # Builds the Island Drop app (mobile/) into an APK you can install on your
-# phone: download it from the run's artifacts.
+# phone: download it from the run's artifacts. Given a release's tag (the
+# Release workflow passes it, or run this with one), it's added to that
+# release as island-drop.apk, with its checksum in SHA256SUMS.txt.
 on:
   push:
     paths: ['mobile/**', '.github/workflows/android.yml']
   workflow_dispatch:
+    inputs:
+      release:
+        description: Add the APK to this release (its tag, e.g. v0.5.0); leave empty for just the artifact
+        required: false
+        default: ''
+  workflow_call:
+    inputs:
+      release:
+        type: string
+        required: true
+
+permissions:
+  contents: write
 
 jobs:
   apk:
@@ -42,3 +57,19 @@ jobs:
         with:
           name: island-drop-apk
           path: mobile/island-drop.apk
+      - name: Add it to the release
+        if: inputs.release != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.release }}
+        run: |
+          gh release upload "$TAG" island-drop.apk --clobber --repo "${{ github.repository }}"
+          # Its checksum next to the installers' (the line replaced if it's there already).
+          gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums --repo "${{ github.repository }}" || mkdir -p sums
+          touch sums/SHA256SUMS.txt
+          grep -v ' island-drop.apk$' sums/SHA256SUMS.txt > sums/next.txt || true
+          sha256sum island-drop.apk >> sums/next.txt
+          mv sums/next.txt sums/SHA256SUMS.txt
+          gh release upload "$TAG" sums/SHA256SUMS.txt --clobber --repo "${{ github.repository }}"
+          echo "::notice title=island-drop.apk::added to $TAG"
+

@@ -67,7 +67,7 @@ export function Peek({ activity, canDrop, resting }: { activity: Activity | null
         </div>
         {l.sub && <div className="peek-sub ellipsis">{l.sub}</div>}
       </div>
-      <Character mood={l.mood} size={38} track />
+      <Character mood={l.mood} size={38} />
     </div>
   )
 }
@@ -81,7 +81,7 @@ export function Hello({ tip }: { tip: boolean }) {
         <div className="peek-title ellipsis">{tip ? 'Click me or press ⌘I' : `Hi, I'm ${name}`}</div>
         <div className="peek-sub ellipsis">{tip ? 'Drag me to any screen edge' : partOfDay(new Date().getHours())}</div>
       </div>
-      <Character mood="done" size={38} track />
+      <Character mood="done" size={38} />
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { appsText, eveningTitle, type EveningCard as Card } from '@shared/digest'
+import { MoonIcon } from '../icons'
 
 /** The evening digest, as the island shows it. */
 export function useEvening(): { card: Card | null; done: () => void } {
@@ -26,7 +27,7 @@ export function EveningCard({ card, done, openNotifications }: { card: Card; don
     <div className="card evening-card" onClick={(e) => e.stopPropagation()}>
       <div className="card-head">
         <span className="app-glyph evening-glyph" aria-hidden="true">
-          ☾
+          <MoonIcon size={16} />
         </span>
         <span className="app-name">This evening</span>
       </div>

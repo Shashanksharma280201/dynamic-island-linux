@@ -53,7 +53,7 @@ function Companion() {
       }}
     >
       <CharacterContext.Provider value={state.character}>
-        <Character mood={state.mood} size={92} track label={`${state.character.name}: click to open the island, drag to move`} />
+        <Character mood={state.mood} size={92} label={`${state.character.name}: click to open the island, drag to move`} />
       </CharacterContext.Provider>
     </div>
   )

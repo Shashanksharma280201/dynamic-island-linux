@@ -8,7 +8,8 @@ export type Side = 'left' | 'right' | 'top'
  * the work area height (kept while it is at the top, for when it goes back). */
 export type Dock = { side: Side; y: number }
 
-export const DEFAULT_DOCK: Dock = { side: 'right', y: 0.3 }
+/** At the top centre, like a Mac's island (and the edges' y for when it moves there). */
+export const DEFAULT_DOCK: Dock = { side: 'top', y: 0.3 }
 
 /** Width of the transparent window column the island lives in: the widest
  * panel plus its icon rail (~430px) with room for the drop shadow to fade out

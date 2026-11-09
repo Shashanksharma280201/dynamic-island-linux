@@ -323,20 +323,17 @@ async function main() {
   // Away from the computer, or its screen locked: the orbs stop drawing.
   const calm = watchCalm((c) => send(win, IPC.CALM, c))
   app.on('before-quit', () => calm.stop())
-  // The character's eyes follow the pointer anywhere on screen: 15 times a
-  // second, and only when it moved.
+  // A moved pointer wakes the orbs at once when you're back (four times a
+  // second is plenty for that, and costs next to nothing).
   let lastCursor = ''
   setInterval(() => {
     if (win.isDestroyed() || !win.isVisible()) return
     const c = screen.getCursorScreenPoint()
-    const b = win.getBounds()
-    const at = { x: c.x - b.x, y: c.y - b.y }
-    const k = `${at.x},${at.y}`
+    const k = `${c.x},${c.y}`
     if (k === lastCursor) return
     lastCursor = k
     calm.poke()
-    send(win, IPC.CURSOR, at)
-  }, 66)
+  }, 250)
   store.onChange(pushState)
   const transient = new TransientCards(store)
   // Everything shown (or kept quiet in Do Not Disturb) stays here until cleared.
@@ -1560,9 +1557,20 @@ async function main() {
   // Ubuntu in the island's look: applied, it follows the island's light or dark and accent.
   const desktopLook = new DesktopLook()
   let lastLook: { changed: string[]; skipped: string[] } | null = null
-  const applyLook = async () => {
+  // One change to the look at a time: each reads what the last one kept for
+  // Undo (a switch flipped while an apply was still setting keys lost them).
+  let lookChain: Promise<unknown> = Promise.resolve()
+  const oneAtATime = <T>(f: () => Promise<T>): Promise<T> => {
+    const next = lookChain.then(f, f)
+    lookChain = next.catch(() => {})
+    return next
+  }
+  const applyLook = () => oneAtATime(applyLookNow)
+  // Again with what changed (an accent, an extension), unless Undo came first.
+  const reapplyLook = () => oneAtATime(async () => (config.desktop.applied ? applyLookNow() : undefined))
+  const applyLookNow = async () => {
     const ext = (id: ExtensionId) => findExtension(EXTENSIONS.find((e) => e.id === id)!.uuid, homeDir())
-    const extensions = { blur: config.desktop.blur ? ext('blur') : null, clock: config.desktop.hideClock ? ext('perfection') : null }
+    const extensions = { bar: config.desktop.hideBar ? ext('hidebar') : null, blur: config.desktop.blur ? ext('blur') : null, clock: config.desktop.hideClock ? ext('perfection') : null }
     const res = await desktopLook.apply(lookSettings({ accent: config.accent, dark: theme.isDark(), dock: config.desktop.dock, buttonsLeft: config.desktop.buttonsLeft, extensions }), config.desktop.original)
     config.desktop = { ...config.desktop, applied: true, original: res.original }
     saveConfig(config)
@@ -1577,7 +1585,7 @@ async function main() {
   let looking: Promise<void> | null = null
   const followLook = () => {
     if (!config.desktop.applied || looking) return
-    looking = applyLook()
+    looking = reapplyLook()
       .catch((e) => console.error('[island] desktop look:', (e as Error).message))
       .finally(() => {
         looking = null
@@ -1978,6 +1986,7 @@ async function main() {
       supported: process.platform === 'linux',
       blur: config.desktop.blur,
       hideClock: config.desktop.hideClock,
+      hideBar: config.desktop.hideBar,
       extensions: EXTENSIONS.map((e) => ({ id: e.id, name: e.name, what: e.what, installed: !!findExtension(e.uuid, homeDir()), busy: false, error: null, justInstalled: false, ...extState.get(e.id) })),
       system: { applied: config.desktop.system.applied, ...systemState },
     }),
@@ -2022,15 +2031,24 @@ async function main() {
       settings?.changed()
       const problem = await extInstaller.install(e.uuid)
       extState.set(e.id, { busy: false, error: problem, justInstalled: !problem })
+      // Getting Hide Top Bar is asking for the bar hidden: it's on, and the island takes the top centre.
+      if (!problem && e.id === 'hidebar') {
+        config.desktop = { ...config.desktop, hideBar: true }
+        saveConfig(config)
+        if (config.dock.side !== 'top') setDock({ ...config.dock, side: 'top' })
+      }
       // Applied already: it's turned on too (GNOME starts it when you log in again).
-      if (!problem && config.desktop.applied) await applyLook().catch(() => {})
+      if (!problem && config.desktop.applied) await reapplyLook().catch(() => {})
     },
     desktopSet: async (p) => {
       config.desktop = { ...config.desktop, ...p }
       saveConfig(config)
       if (p.commandBar !== undefined) applyCommandKey()
-      const extChanged = p.blur !== undefined || p.hideClock !== undefined
-      if ((p.dock !== undefined || p.buttonsLeft !== undefined || extChanged) && config.desktop.applied) {
+      // The bar hidden, the island takes its place: the top centre.
+      if (p.hideBar === true && config.dock.side !== 'top') setDock({ ...config.dock, side: 'top' })
+      const extChanged = p.blur !== undefined || p.hideClock !== undefined || p.hideBar !== undefined
+      if ((p.dock !== undefined || p.buttonsLeft !== undefined || extChanged) && config.desktop.applied) await oneAtATime(async () => {
+        if (!config.desktop.applied) return
         // Turned off after applying: put that part back as it was. (The extensions' keys go back together, then what's still wanted is set again.)
         const off: Record<string, string> = {}
         for (const [id, v] of Object.entries(config.desktop.original)) {
@@ -2045,16 +2063,17 @@ async function main() {
           config.desktop = { ...config.desktop, original: keep }
           saveConfig(config)
         }
-        await applyLook()
-      }
+        await applyLookNow()
+      })
     },
     desktopApply: () => applyLook(),
-    desktopUndo: async () => {
-      await desktopLook.undo(config.desktop.original, extensionSchemaDirs(homeDir()))
-      config.desktop = { ...config.desktop, applied: false, original: {} }
-      saveConfig(config)
-      lastLook = null
-    },
+    desktopUndo: () =>
+      oneAtATime(async () => {
+        await desktopLook.undo(config.desktop.original, extensionSchemaDirs(homeDir()))
+        config.desktop = { ...config.desktop, applied: false, original: {} }
+        saveConfig(config)
+        lastLook = null
+      }),
     routineSet: (raw) => routines.upsert(raw),
     routineDel: (id) => routines.remove(id),
     buddyTry: () => speakSentence(`Hi, I’m ${config.character.name || 'your buddy'}. Ask me about anything on your screen.`),
@@ -2646,12 +2665,11 @@ async function main() {
     pushAppearance()
     settings?.changed()
   }
-  // The wardrobe on the island (right-click the character).
+  // The orb's colour, picked on the island (right-click the character).
   ipcMain.on(IPC.SET_LOOK, (_e, patch) => {
     if (!patch || typeof patch !== 'object') return
     config.character = parseCharacter({
       ...config.character,
-      ...('outfit' in patch ? { outfit: patch.outfit } : {}),
       ...('color' in patch ? { color: patch.color } : {}),
     })
     saveConfig(config)

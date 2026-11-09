@@ -7,6 +7,7 @@ import type { DropLink, Live } from '../link'
 import { NowPlaying } from './IslandScreen'
 import { Btn, Card, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 const SPOTIFY = '#1db954'
 
@@ -131,7 +132,7 @@ function TrackRow({ t, onPress, last, busy }: { t: SpTrack; onPress: () => void;
       last={last}
       onPress={onPress}
       left={t.image ? <Image source={{ uri: t.image }} style={st.cover} /> : <View style={[st.cover, { backgroundColor: C.card2 }]} />}
-      right={<Text style={{ color: busy ? SPOTIFY : C.text3, fontSize: 18 }}>▶</Text>}
+      right={<Icon name="play" size={18} color={busy ? SPOTIFY : C.text3} />}
     />
   )
 }

@@ -3,7 +3,7 @@ import type { ToolRequest, DecisionMsg } from '@shared/types'
 import { describeTool } from '@shared/toolDetail'
 import { ruleLabel } from '@shared/format'
 import { Badge } from './Badge'
-import { TerminalIcon } from '../icons'
+import { ClaudeMark, TerminalIcon } from '../icons'
 import { Character } from '../character/Character'
 import { sound } from '../../sound'
 import type { ApprovalKey } from '@shared/approvalKeys'
@@ -99,7 +99,7 @@ function PlanCard({
     <div className="card approval plan-card" data-tool="ExitPlanMode">
       <div className="card-head">
         <span className="claude-mark" aria-hidden>
-          ✳
+          <ClaudeMark />
         </span>
         <span className="app-name ellipsis">Claude has a plan{project ? ` · ${project}` : ''}</span>
         <span className="spacer" />

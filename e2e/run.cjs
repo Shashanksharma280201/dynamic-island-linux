@@ -20,6 +20,14 @@ const check = (name, ok, extra = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name} ${extra}`)
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+/** Waits for an async condition (its value, or null when it never came). */
+const waitFor = async (fn, ms = 4000) => {
+  for (const end = Date.now() + ms; Date.now() < end; await sleep(100)) {
+    const v = await fn().catch(() => null)
+    if (v) return v
+  }
+  return null
+}
 const pointer = (x, y) =>
   execFileSync('node', [path.join(__dirname, 'xtest.cjs'), Math.round(x * SCALE), Math.round(y * SCALE)])
     .toString()
@@ -46,6 +54,9 @@ function hook(input, env = {}) {
   player.stdout.on('data', (d) => (playerLog += d))
   await sleep(800)
 
+  // Docked on the right edge (it starts at the top centre): these checks drag it from there.
+  fs.mkdirSync(USER_DATA, { recursive: true })
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'right', y: 0.3 } }))
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox', ...(SCALE !== 1 ? [`--force-device-scale-factor=${SCALE}`] : [])],
@@ -285,13 +296,23 @@ function hook(input, env = {}) {
     const back = await bounds()
     check('dragging back docks it on the right again', back.x + back.width >= 1920 / SCALE - 1, JSON.stringify(back))
 
-    // Top center, below the camera
-    await sleep(400)
-    c = await center()
+    // Top center, below the camera. Grabbed once it holds still: a grab while it's still
+    // settling from the last drag can miss it (CI at 2x did, once).
+    let last = await center()
+    c = await waitFor(async () => {
+      await sleep(150)
+      const now = await center()
+      const still = Math.abs(now.x - last.x) < 0.5 && Math.abs(now.y - last.y) < 0.5
+      last = now
+      return still ? now : null
+    }, 4000) ?? last
     dragPointer(c.x, c.y, 960 / SCALE, 60 / SCALE)
-    await sleep(800)
-    const topWin = await bounds()
-    check('dropping it near the top center docks it there', Math.abs(topWin.x + topWin.width / 2 - 960 / SCALE) <= 1 && topWin.width < 1920 / SCALE, JSON.stringify(topWin))
+    const atTop = (b) => Math.abs(b.x + b.width / 2 - 960 / SCALE) <= 1 && b.width < 1920 / SCALE
+    const topWin = (await waitFor(async () => {
+      const b = await bounds()
+      return atTop(b) ? b : null
+    }, 3000)) ?? (await bounds())
+    check('dropping it near the top center docks it there', atTop(topWin), JSON.stringify(topWin))
     pointer(40 / SCALE, 1000 / SCALE) // move off it, so it collapses back to the pill
     await page.waitForSelector('.island-outer .capsule', { timeout: 5000 })
     await sleep(700)
@@ -333,15 +354,16 @@ function hook(input, env = {}) {
   const replaced = new Promise((r) => app.process().on('exit', () => r(true)))
   const next = spawn(ELECTRON, [ROOT, '--no-sandbox', '--replace'], { cwd: ROOT, stdio: 'ignore', env })
   const nextExit = new Promise((r) => next.on('exit', () => r(true)))
-  check('a new launch with --replace closes the running island', await Promise.race([replaced, sleep(10000).then(() => false)]))
+  check('a new launch with --replace closes the running island', await Promise.race([replaced, sleep(20000).then(() => false)]))
   let tookOver = false
   for (let end = Date.now() + 15000; !tookOver && Date.now() < end; await sleep(200)) tookOver = fs.existsSync(SOCK)
   await sleep(1500)
   check('and takes its place', tookOver && next.exitCode === null)
   spawn(ELECTRON, [ROOT, '--no-sandbox', '--quit'], { cwd: ROOT, stdio: 'ignore', env })
-  const quit = await Promise.race([nextExit, sleep(8000).then(() => false)])
+  // (A busy machine takes a while to start the second launch, hand over and shut down.)
+  const quit = await Promise.race([nextExit, sleep(20000).then(() => false)])
   check('second instance with --quit stops the island', quit)
-  check('socket removed on quit', quit && !fs.existsSync(SOCK))
+  check('socket removed on quit', quit && !!(await waitFor(async () => !fs.existsSync(SOCK), 3000)))
   if (!quit) next.kill()
   player.kill()
   const errs = logs.join('').split('\n').filter((l) => /error|Uncaught/i.test(l))

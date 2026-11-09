@@ -102,7 +102,7 @@ export function MoreScreen(p: Props) {
   }, [open, setOpen])
   const detail: Partial<Record<MoreId, string>> = {
     trading: live.view?.trading?.short ?? live.view?.trading?.text,
-    music: live.view?.media ? `${live.view.media.playing ? '▶' : '❚❚'} ${live.view.media.title}` : undefined,
+    music: live.view?.media ? `${live.view.media.playing ? 'Playing' : 'Paused'}: ${live.view.media.title}` : undefined,
   }
   const back = () => setOpen(null)
   return (

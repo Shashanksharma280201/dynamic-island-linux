@@ -37,7 +37,7 @@ import { useSessions } from './useSessions'
 import { CompactSession, SessionCard } from './states/SessionActivity'
 import { CloseBar } from './states/CloseBar'
 import { tourSteps } from './tour'
-import { WardrobePicker } from './character/Wardrobe'
+import { ColourPicker } from './character/ColourPicker'
 import { useDictation } from './voice/useDictation'
 import { DictationPill } from './voice/DictationPill'
 import { useBuddy } from './buddy/useBuddy'
@@ -262,7 +262,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   )
   // The weekly recap, when the main process shows it.
   const [recapShow, closeRecap] = useRecap()
-  // Right-click the resting island: dress the character up.
+  // Right-click the resting island: pick the orb's colour.
   const [wardrobe, setWardrobe] = useState(false)
   // "Show me around": example cards, one step at a time (nothing real is touched).
   const panelKey = useShortcutLabel('panel')
@@ -334,7 +334,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
 
   useEffect(() => window.island.setPanel(showPanel), [showPanel])
 
-  // The wardrobe closes once the pointer has left for a moment.
+  // The colour card closes once the pointer has left for a moment.
   useEffect(() => {
     if (!wardrobe || hover) return
     const t = setTimeout(() => setWardrobe(false), PANEL_CLOSE_MS * 2)
@@ -342,7 +342,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   }, [wardrobe, hover])
 
   // "Open on hover" (Settings): resting on the resting island opens the panel.
-  // Only on a fresh rest: closing the panel (or the wardrobe) under the pointer
+  // Only on a fresh rest: closing the panel (or the colour card) under the pointer
   // mustn't open it again until the pointer has left.
   const hoverArmed = useRef(true)
   useEffect(() => {
@@ -576,20 +576,16 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             ) : dressing ? (
               <div className="card wardrobe-card" onClick={(e) => e.stopPropagation()}>
                 <div className="card-head">
-                  <span className="app-name">Dress up {character.name}</span>
+                  <span className="app-name">{character.name}’s colour</span>
                   <span className="spacer" />
                   <button className="pill primary small" onClick={() => setWardrobe(false)}>
                     Done
                   </button>
                 </div>
-                <WardrobePicker
-                  id={character.id}
-                  outfit={character.outfit ?? 'auto'}
-                  color={character.color ?? null}
-                  size={38}
-                  onOutfit={(outfit) => window.island.setLook({ outfit })}
-                  onColor={(color) => window.island.setLook({ color })}
-                />
+                <div className="wardrobe-preview">
+                  <Character mood="idle" size={64} ring={false} />
+                </div>
+                <ColourPicker id={character.id} color={character.color ?? null} onColor={(color) => window.island.setLook({ color })} />
               </div>
             ) : dropping || adding ? (
               <DropCard count={adding || dragCount} adding={adding > 0} />

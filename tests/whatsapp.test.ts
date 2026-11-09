@@ -13,11 +13,11 @@ import {
 
 test('messageText labels media', () => {
   expect(messageText('chat', ' hi ')).toBe('hi')
-  expect(messageText('image', 'look')).toBe('📷 Photo: look')
-  expect(messageText('ptt', '')).toBe('🎤 Voice message')
+  expect(messageText('image', 'look')).toBe('Photo: look')
+  expect(messageText('ptt', '')).toBe('Voice message')
   expect(messageText('sticker', 'x')).toBe('Sticker')
   // WhatsApp Web's preview image in `body` never shows as text.
-  expect(messageText('image', '/9j/' + 'A'.repeat(200))).toBe('📷 Photo')
+  expect(messageText('image', '/9j/' + 'A'.repeat(200))).toBe('Photo')
   expect(messageText('chat', 'a normal message with words')).toBe('a normal message with words')
 })
 

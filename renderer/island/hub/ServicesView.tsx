@@ -60,7 +60,7 @@ export function ServicesView({ list }: { list: ServiceState[] }) {
           <span className="large-title">Services</span>
         </div>
         <Empty
-          icon={<Character mood="idle" size={56} track interactive />}
+          icon={<Character mood="idle" size={56} interactive />}
           title="Follow your services here"
           body="GitHub pull requests and CI, Vercel deploys, Stripe payments, Resend emails, Notion pages, Cal.com calls and n8n workflows, with a heads-up on the island when something needs you."
           action={

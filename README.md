@@ -65,7 +65,7 @@ it from the code instead, see [Install](docs/install.md).
 - **An assistant**: Claude, ChatGPT, Gemini, DeepSeek, OpenRouter or Ollama, and it asks before it sends or changes anything.
 - **Documents and a CRM**: merge, split and convert files, have Word files corrected as tracked changes, and keep a simple CRM.
 - **Notifications**: every app's notifications on the island, a notification center, and Do Not Disturb.
-- **A character**: Orbit, Bolt or Puff shows what's going on. Dress it up, put it on your desktop, and get a recap of your week every Monday.
+- **An orb**: Orbit, Bolt or Puff, a dotted orb in its own colour, shows what's going on. Put it on your desktop too, and get a recap of your week every Monday.
 - **Control Center**: volume, brightness, Wi-Fi and Bluetooth, one click away.
 
 Everything is optional and works without accounts. Your settings, notes,
@@ -80,8 +80,8 @@ documents and CRM stay on your computer. See [all features](docs/features.md).
 
 ## Get started
 
-Once installed, the island sits on the right edge of your screen. Drag it
-anywhere along the edges or to the top center, and click it (or press
+Once installed, the island sits at the top center of your screen. Drag it
+anywhere along the left or right edge, or back to the top center, and click it (or press
 **Ctrl+I**) to open the panel. Then connect what you use, from **Settings**:
 
 - [Your second brain](docs/brain.md), so every AI you use knows you and your work

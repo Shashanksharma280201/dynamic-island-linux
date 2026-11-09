@@ -122,7 +122,7 @@ type Deps = {
   /** Settings › Desktop. */
   desktop: () => DesktopView
   os: () => OsView
-  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => Promise<void>
+  desktopSet: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean; hideBar?: boolean }) => Promise<void>
   desktopGetExtension: (id: string) => Promise<void>
   desktopSystem: (what: 'apply' | 'undo') => Promise<void>
   desktopApply: () => Promise<void>
@@ -442,7 +442,6 @@ export class SettingsController {
         id: typeof patch?.id === 'string' ? patch.id : config.character.id,
         // Switching without renaming takes the new character's own name.
         name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
-        outfit: patch && 'outfit' in patch ? patch.outfit : config.character.outfit,
         color: patch && 'color' in patch ? patch.color : config.character.color,
       })
       this.save()
@@ -528,8 +527,8 @@ export class SettingsController {
       this.changed()
     })
     ipcMain.handle(SETTINGS.DESKTOP_SET, async (_e, p) => {
-      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean } = {}
-      for (const k of ['dock', 'buttonsLeft', 'commandBar', 'blur', 'hideClock'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
+      const patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean; hideBar?: boolean } = {}
+      for (const k of ['dock', 'buttonsLeft', 'commandBar', 'blur', 'hideClock', 'hideBar'] as const) if (typeof p?.[k] === 'boolean') patch[k] = p[k]
       await this.d.desktopSet(patch)
       this.changed()
     })

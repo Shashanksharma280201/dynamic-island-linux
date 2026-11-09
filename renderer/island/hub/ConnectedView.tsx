@@ -127,7 +127,7 @@ export function ConnectedView({ state }: { state: ConnectedState | null }) {
           <span className="large-title">{title}</span>
         </div>
         <Empty
-          icon={<Character mood="idle" size={56} track interactive />}
+          icon={<Character mood="idle" size={56} interactive />}
           title="Connect your trading engine"
           body="Start the Day-Trading server on this computer, then paste its address and token in Settings. Its P&L shows on the island, and each trade waits for your OK."
           action={

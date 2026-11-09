@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { SettingsState } from '@shared/types'
 import { CHARACTERS, MOODS, type CharacterMood } from '@shared/character'
 import { Character } from '../island/character/Character'
-import { WardrobePicker } from '../island/character/Wardrobe'
+import { ColourPicker } from '../island/character/ColourPicker'
 import { useAction } from './Settings'
 
 const MOOD_LABEL: Record<CharacterMood, string> = {
@@ -48,7 +48,7 @@ export function CharacterSection({ s }: { s: SettingsState }) {
               className={`character-tile${on ? ' on' : ''}`}
               onClick={() => !on && run(() => window.settings.setCharacter({ id: c.id }))}
             >
-              <Character id={c.id} mood={mood} size={84} label={`${c.name}, ${MOOD_LABEL[mood]}`} outfit={s.character.outfit} paint={s.character.color ?? null} />
+              <Character id={c.id} mood={mood} size={84} label={`${c.name}, ${MOOD_LABEL[mood]}`} paint={s.character.color ?? null} />
               <b>{c.name}</b>
               <span className="hint">{c.kind}</span>
             </button>
@@ -82,17 +82,10 @@ export function CharacterSection({ s }: { s: SettingsState }) {
       </label>
       <div className="wardrobe-row">
         <div>
-          <div>Outfit and colour</div>
-          <div className="hint">Seasonal changes with the date. You can also right-click the island to dress it.</div>
+          <div>Colour</div>
+          <div className="hint">Its own, or another. You can also right-click the island to change it.</div>
         </div>
-        <WardrobePicker
-          id={s.character.id}
-          outfit={s.character.outfit ?? 'auto'}
-          color={s.character.color ?? null}
-          size={52}
-          onOutfit={(outfit) => void run(() => window.settings.setCharacter({ outfit }))}
-          onColor={(color) => void run(() => window.settings.setCharacter({ color }))}
-        />
+        <ColourPicker id={s.character.id} color={s.character.color ?? null} onColor={(color) => void run(() => window.settings.setCharacter({ color }))} />
       </div>
       {error && <div className="error">{error}</div>}
     </section>

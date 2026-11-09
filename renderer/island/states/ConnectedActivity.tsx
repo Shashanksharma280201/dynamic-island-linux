@@ -84,7 +84,7 @@ export function CompactConnected({ status }: { status: ConnectedCapsule }) {
         {arrow}
       </span>
       <span className="cc-short">{status.short}</span>
-      <Character mood={status.tone === 'down' || status.tone === 'warn' ? 'attention' : 'idle'} size={26} track />
+      <Character mood={status.tone === 'down' || status.tone === 'warn' ? 'attention' : 'idle'} size={26} />
     </div>
   )
 }

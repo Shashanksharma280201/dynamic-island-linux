@@ -34,13 +34,13 @@ export function SessionsView({ sessions, claude }: { sessions: AgentSession[]; c
       {sessions.length === 0 ? (
         hooked ? (
           <Empty
-            icon={<Character mood="idle" size={56} track interactive />}
+            icon={<Character mood="idle" size={56} interactive />}
             title="No sessions right now"
             body="Start Claude Code in any terminal and follow it here: each step, the files it changes, and a nudge when it needs you."
           />
         ) : (
           <Empty
-            icon={<Character mood="listening" size={56} track interactive />}
+            icon={<Character mood="listening" size={56} interactive />}
             title="Follow Claude Code from anywhere"
             body="Turn on the Claude Code hook and every session in your terminals shows up here live. You can answer its questions and approvals from the island too."
             action={
@@ -107,7 +107,7 @@ function SessionDetail({ s, now, onBack }: { s: AgentSession; now: number; onBac
         )}
       </div>
       <div className="session-hero">
-        <Character mood={sessionMood(s)} size={44} track interactive />
+        <Character mood={sessionMood(s)} size={44} interactive />
         <div className="session-text">
           <div className="session-title large">
             <span className="ellipsis">{s.project || '~'}</span>

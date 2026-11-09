@@ -12,7 +12,7 @@ export function useRecap(): [RecapShow | null, () => void] {
 }
 
 /** The shareable picture: 1080×1920, your character on top, the week below. */
-async function drawRecap(card: Card, name: string, characterSvg: string | null): Promise<string> {
+async function drawRecap(card: Card, name: string, orbPicture: string | null): Promise<string> {
   const W = 1080
   const H = 1920
   const c = document.createElement('canvas')
@@ -38,7 +38,7 @@ async function drawRecap(card: Card, name: string, characterSvg: string | null):
     g.arc(W / 2 + Math.cos(a) * r * 0.92, 400 + Math.sin(a) * r * 0.72, 3 + (i % 3), 0, Math.PI * 2)
     g.fill()
   }
-  if (characterSvg) {
+  if (orbPicture) {
     await new Promise<void>((resolve) => {
       const img = new Image()
       img.onload = () => {
@@ -46,7 +46,7 @@ async function drawRecap(card: Card, name: string, characterSvg: string | null):
         resolve()
       }
       img.onerror = () => resolve()
-      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(characterSvg)}`
+      img.src = orbPicture
     })
   }
   g.textAlign = 'center'
@@ -97,9 +97,14 @@ export function RecapCard({ r, onClose }: { r: RecapShow; onClose: () => void })
   useEffect(() => {
     if (!share) return
     let live = true
-    const svg = charRef.current?.querySelector('svg.character')
-    const markup = svg ? new XMLSerializer().serializeToString(svg) : null
-    void drawRecap(card, r.name, markup).then((p) => live && setPng(p))
+    const orb = charRef.current?.querySelector('canvas.orb') as HTMLCanvasElement | null
+    let picture: string | null = null
+    try {
+      picture = orb ? orb.toDataURL('image/png') : null
+    } catch {
+      picture = null
+    }
+    void drawRecap(card, r.name, picture).then((p) => live && setPng(p))
     return () => void (live = false)
   }, [share, hide]) // eslint-disable-line react-hooks/exhaustive-deps
 

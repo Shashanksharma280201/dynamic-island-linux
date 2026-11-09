@@ -24,6 +24,7 @@ const check = (name, ok, extra = '') => {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const key = (combo) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'key', combo])
+const pointer = (x, y) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), Math.round(x * SCALE), Math.round(y * SCALE)])
 const seen = (page, sel, ms = 6000) => page.waitForSelector(sel, { timeout: ms }).then(() => true, () => false)
 const post = (port, p, body) =>
   new Promise((resolve) => {
@@ -55,6 +56,10 @@ const getJson = (port, p) => new Promise((resolve) => http.get({ host: '127.0.0.
     await page.waitForSelector('.capsule.idle', { timeout: 8000 })
 
     // ---- An empty tab says how to start ----
+    // The pointer off the island first: opened from the keyboard, the panel stays
+    // until the pointer has been on it (with the island at the top centre, the
+    // middle of the screen is inside it, and it closed once Settings opened).
+    pointer(20, 500)
     key('ctrl+i')
     await page.waitForSelector('.hub', { timeout: 3000 })
     await page.click('.rail-btn[aria-label="Services"]')
@@ -94,7 +99,7 @@ const getJson = (port, p) => new Promise((resolve) => http.get({ host: '127.0.0.
     check('Vercel: the deploy, building', await seen(page, `${card('vercel')} .svc-row:has-text("shop-site") .svc-side:has-text("Building")`))
     check('Stripe: the balance and payments', (await seen(page, `${card('stripe')} .svc-big:has-text("$1,240.50")`)) && (await seen(page, `${card('stripe')} .svc-row:has-text("Starter plan")`)))
     check('Resend: emails', await seen(page, `${card('resend')} .svc-row:has-text("Your receipt")`))
-    check('Notion: recent pages', await seen(page, `${card('notion')} .svc-row:has-text("🗺 Roadmap")`))
+    check('Notion: recent pages', await seen(page, `${card('notion')} .svc-row:has-text("Roadmap")`))
     check('Cal.com: the next call', await seen(page, `${card('calcom')} .svc-row:has-text("Intro call")`))
     check('n8n: executions, by workflow name', await seen(page, `${card('n8n')} .svc-row:has-text("Daily digest")`))
     const hits = await getJson(port, '/__hits')

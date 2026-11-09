@@ -332,7 +332,7 @@ export function notionSnapshot(json: any): ServiceSnapshot {
         title: 'Recently edited',
         rows: arr(json?.results)
           .slice(0, 5)
-          .map((p) => ({ id: str(p?.id), title: `${p?.icon?.type === 'emoji' ? `${str(p.icon.emoji)} ` : ''}${notionTitle(p)}`, at: ms(p?.last_edited_time), url: str(p?.url) || undefined })),
+          .map((p) => ({ id: str(p?.id), title: notionTitle(p), at: ms(p?.last_edited_time), url: str(p?.url) || undefined })),
         empty: 'No pages shared with the integration yet',
       },
     ],

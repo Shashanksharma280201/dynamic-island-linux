@@ -10,7 +10,7 @@ import type { BuddyConfig, BuddyView } from '../shared/buddy'
 import type { PointerCmd } from '../shared/pointer'
 import type { IslandLook } from '../shared/theme'
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import type { CharacterConfig, CharacterId, CharacterMood, Outfit } from '@shared/character'
+import type { CharacterConfig, CharacterId, CharacterMood } from '@shared/character'
 import type { ProviderId } from '@shared/ai'
 import type { PackageId, PackageTab } from '@shared/packages'
 import type { DocAction, DocActionResult, DocEntry, DocRecipe, DocsAdded, DocsView } from '@shared/docs'
@@ -101,7 +101,6 @@ const api = {
   onState: (cb: (a: Activity[]) => void) => on(IPC.STATE, cb),
   onSysState: (cb: (s: SystemState) => void) => on(IPC.SYS_STATE, cb),
   onHover: (cb: (inside: boolean) => void) => on(IPC.HOVER, cb),
-  onCursor: (cb: (at: { x: number; y: number }) => void) => on(IPC.CURSOR, cb),
   onCalm: (cb: (calm: boolean) => void) => on(IPC.CALM, cb),
   onGreet: (cb: (g: { first: boolean }) => void) => on(IPC.GREET, cb),
   sendDecision: (msg: DecisionMsg) => ipcRenderer.send(IPC.DECISION, msg),
@@ -117,7 +116,7 @@ const api = {
   /** The global shortcuts' keys (they can be changed in Settings). */
   onKeys: (cb: (k: Shortcuts) => void) => on(IPC.KEYS, cb),
   /** Dress the character from the island (right-click wardrobe). */
-  setLook: (patch: { outfit?: Outfit; color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
+  setLook: (patch: { color?: string | null }) => ipcRenderer.send(IPC.SET_LOOK, patch),
   /** Services you follow: their cards, a fresh look, opening their pages. */
   services: {
     view: (): Promise<ServiceState[]> => ipcRenderer.invoke(SERVICES.VIEW),
@@ -429,14 +428,14 @@ const settings = {
   setDictation: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_DICTATION, on),
   setDockSide: (side: Side) => ipcRenderer.invoke(SETTINGS.SET_DOCK_SIDE, side),
   setAppearance: (a: 'glass' | 'solid') => ipcRenderer.invoke(SETTINGS.SET_APPEARANCE, a),
-  setCharacter: (patch: { id?: CharacterId; name?: string; outfit?: Outfit; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
+  setCharacter: (patch: { id?: CharacterId; name?: string; color?: string | null }) => ipcRenderer.invoke(SETTINGS.SET_CHARACTER, patch),
   setAi: (patch: { provider?: ProviderId; model?: string; baseUrl?: string }) => ipcRenderer.invoke(SETTINGS.SET_AI, patch),
   setAiKey: (provider: ProviderId, key: string) => ipcRenderer.invoke(SETTINGS.SET_AI_KEY, provider, key),
   setTheme: (pref: 'system' | 'light' | 'dark') => ipcRenderer.invoke(SETTINGS.SET_THEME, pref),
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
   setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
   desktop: {
-    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean; hideBar?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
     getExtension: (id: string) => ipcRenderer.invoke(SETTINGS.DESKTOP_GET_EXT, id),
     /** The login screen and boot splash (Ubuntu asks for your password). */
     system: (what: 'apply' | 'undo') => ipcRenderer.invoke(SETTINGS.DESKTOP_SYSTEM, what),

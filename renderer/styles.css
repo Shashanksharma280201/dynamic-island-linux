@@ -5197,35 +5197,14 @@ button .spinner-orb,
   align-self: flex-start;
 }
 
-/* The wardrobe: right-click the resting island. */
+/* The orb's colour: right-click the resting island. */
 .card.wardrobe-card {
-  width: 372px;
+  width: 300px;
 }
-.wardrobe-card .wardrobe-grid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px;
-}
-.wardrobe-card .wardrobe-item {
+.wardrobe-card .wardrobe-preview {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1px;
-  padding: 6px 2px 4px;
-  border: 0;
-  border-radius: 12px;
-  background: rgba(var(--ink), 0.06);
-  color: var(--label-2);
-  font: 500 10px/1.2 var(--font);
-  cursor: pointer;
-}
-.wardrobe-card .wardrobe-item:hover {
-  background: rgba(var(--ink), 0.11);
-}
-.wardrobe-card .wardrobe-item.on {
-  color: var(--label);
-  background: rgba(10, 132, 255, 0.22);
-  box-shadow: inset 0 0 0 1px rgba(10, 132, 255, 0.7);
+  justify-content: center;
+  padding: 4px 0 2px;
 }
 .wardrobe-card .swatches {
   display: flex;
@@ -5240,9 +5219,6 @@ button .spinner-orb,
   border: 2px solid rgba(var(--ink), 0.18);
   padding: 0;
   cursor: pointer;
-}
-.wardrobe-card .swatch.own {
-  background: conic-gradient(#f6b597, #d9714b, #eef1f5, #fff6f0, #f6b597);
 }
 .wardrobe-card .swatch.on {
   border-color: #fff;
@@ -6600,6 +6576,23 @@ button .spinner-orb,
   font-size: 18px;
   width: 26px;
   text-align: center;
+}
+.agency-emoji.mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: rgba(var(--ink), 0.08);
+  color: var(--label);
+  font: 700 16px/1 var(--font);
+}
+.agency-emoji.small.mark {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 .agency-tick {
   color: var(--green-text);

@@ -61,6 +61,17 @@ const until = async (f, ms = 8000) => {
   }
   try {
     await page.waitForSelector('.island', { timeout: 15000 })
+    const at = await app.evaluate(({ BrowserWindow, screen }) => {
+      const b = BrowserWindow.getAllWindows().find((w) => w.webContents.getURL().includes('index.html')).getBounds()
+      const a = screen.getPrimaryDisplay().workArea
+      return { mid: b.x + b.width / 2, center: a.x + a.width / 2, top: b.y - a.y, narrow: b.width < a.width }
+    })
+    check('a new island sits at the top centre', Math.abs(at.mid - at.center) <= 1 && at.top === 0 && at.narrow, JSON.stringify(at))
+    const pill = await page.evaluate(() => {
+      const r = document.querySelector('.island-outer').getBoundingClientRect()
+      return { mid: r.x + r.width / 2, top: r.y, w: window.innerWidth }
+    })
+    check('its pill centred in the band, just under the top', Math.abs(pill.mid - pill.w / 2) <= 2 && pill.top >= 0 && pill.top <= 24, JSON.stringify(pill))
     check('the island is light when the theme is light', !!(await until(async () => (await theme()) === 'light')))
     check('and its material is light', await island(() => getComputedStyle(document.documentElement).getPropertyValue('--material').includes('244')))
 

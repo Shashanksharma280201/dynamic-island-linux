@@ -28,7 +28,7 @@ export function yaruAccent(accent: string): string {
 }
 
 /** The settings that make Ubuntu look like the island. Pure. */
-export function lookSettings(o: { accent: string; dark: boolean; dock: boolean; buttonsLeft: boolean; extensions?: { blur?: string | null; clock?: string | null } }): LookSetting[] {
+export function lookSettings(o: { accent: string; dark: boolean; dock: boolean; buttonsLeft: boolean; extensions?: ExtensionFolders }): LookSetting[] {
   const a = yaruAccent(o.accent)
   const theme = `Yaru${a ? `-${a}` : ''}${o.dark ? '-dark' : ''}`
   const q = (s: string) => `'${s}'`
@@ -51,11 +51,15 @@ export function lookSettings(o: { accent: string; dark: boolean; dock: boolean; 
   return [...out, ...extensionSettings(o.extensions ?? {})]
 }
 
-/** Turn on the extensions that are installed and wanted (each its folder, or null), and hide the clock. Pure. */
-export function extensionSettings(o: { blur?: string | null; clock?: string | null }): LookSetting[] {
+/** The extensions that are installed and wanted: each its folder, or null. */
+export type ExtensionFolders = { bar?: string | null; blur?: string | null; clock?: string | null }
+
+/** Turn on the extensions that are installed and wanted, hide the top bar (Mac-style) and the clock. Pure. */
+export function extensionSettings(o: ExtensionFolders): LookSetting[] {
+  const bar = EXTENSIONS.find((e) => e.id === 'hidebar')!
   const blur = EXTENSIONS.find((e) => e.id === 'blur')!
   const perf = EXTENSIONS.find((e) => e.id === 'perfection')!
-  const on = [o.blur ? blur : null, o.clock ? perf : null].filter((e): e is (typeof EXTENSIONS)[number] => !!e)
+  const on = [o.bar ? bar : null, o.blur ? blur : null, o.clock ? perf : null].filter((e): e is (typeof EXTENSIONS)[number] => !!e)
   if (!on.length) return []
   const uuids = on.map((e) => e.uuid)
   const out: LookSetting[] = [
@@ -63,6 +67,18 @@ export function extensionSettings(o: { blur?: string | null; clock?: string | nu
     { schema: 'org.gnome.shell', key: 'disabled-extensions', value: '', removeFromList: uuids, what: '' },
     { schema: 'org.gnome.shell', key: 'enabled-extensions', value: '', addToList: uuids, what: `${on.map((e) => e.name).join(' and ')} on` },
   ]
+  if (o.bar) {
+    // Like a Mac's menu bar set to hide: always hidden (not just when a window
+    // is under it), back while the pointer pushes against the top edge or in
+    // the overview.
+    const s = { schema: bar.schema, schemadir: `${o.bar}/schemas` }
+    out.push(
+      { ...s, key: 'mouse-sensitive', value: 'true', what: 'The top bar hidden until you push the pointer against the top edge' },
+      { ...s, key: 'enable-intellihide', value: 'false', what: '' },
+      { ...s, key: 'show-in-overview', value: 'true', what: '' },
+      { ...s, key: 'mouse-triggers-overview', value: 'false', what: '' },
+    )
+  }
   if (o.clock) out.push({ schema: perf.schema, key: 'clock-menu', value: 'false', schemadir: `${o.clock}/schemas`, what: 'The top bar’s clock hidden' })
   return out
 }

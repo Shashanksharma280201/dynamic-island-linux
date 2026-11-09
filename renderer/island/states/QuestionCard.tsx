@@ -4,6 +4,7 @@ import { parseQuestions, questionAnswer, type Question } from '@shared/questions
 import { Badge } from './Badge'
 import { useShortcutLabel } from '../useShortcuts'
 import { sound } from '../../sound'
+import { ClaudeMark } from '../icons'
 
 /**
  * Claude asking you something (AskUserQuestion), answered on the island: one
@@ -69,7 +70,7 @@ export function QuestionCard({ request, queued, project }: { request: ToolReques
     <div className="card approval question-card" data-tool="AskUserQuestion">
       <div className="card-head">
         <span className="claude-mark" aria-hidden>
-          ✳
+          <ClaudeMark />
         </span>
         <span className="app-name ellipsis">Claude asks{project ? ` · ${project}` : ''}</span>
         <span className="spacer" />
