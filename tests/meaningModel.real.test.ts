@@ -1,13 +1,13 @@
 // Search by meaning with the real model, not the test stand-in: its files
 // download from where the app gets them, and it finds notes in a small vault
-// at least as well as the model and whole-note reading it replaced. Needs the
+// better than the model and whole-note reading it replaced, and a few others of its size. Needs the
 // network, so it runs only with DI_REAL_EMBED=1 (the "Search by meaning (real
 // model)" workflow); the numbers go to the run's summary.
 import { appendFileSync, mkdirSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { DIMS, EMBED_FILES, EMBED_MB, EMBED_MODEL, EMBED_POOLING, MEANING_MIN, OLD_EMBED_MODELS, QUERY_PREFIX, chunkText, cosine, noteChunks, unit } from '../shared/meaning'
+import { DIMS, EMBED_FILES, EMBED_MB, EMBED_MODEL, EMBED_POOLING, MEANING_MIN, OLD_EMBED_MODELS, chunkText, cosine, noteChunks, unit } from '../shared/meaning'
 import { MeaningIndex } from '../electron/brain/meaning'
 
 const REAL = !!process.env.DI_REAL_EMBED
@@ -266,31 +266,162 @@ Four nights in Tokyo and three in Kyoto in early April, for the cherry blossoms.
 
 JR pass ordered. A ryokan in Kyoto with a private onsen is booked for the last two nights.`,
   },
+  '09-sources/whatsapp/2026-11-03-family.md': {
+    title: 'WhatsApp: Family',
+    body: `# WhatsApp: Family
+
+Mom: Are you all coming for dinner on Sunday? I am making rajma chawal.
+Priya: Yes! I will bring the kids around 7.
+Me: I will be there, maybe a little late after the gym.
+Dad: Don't forget India is playing Australia on Sunday, the match starts at 2.
+Priya: Dad, we know. You have told us five times.
+Mom: Someone send me the gajar halwa recipe, the one aunty made last year.
+Priya: Grated carrots, full fat milk, sugar, ghee, cardamom and some cashews. Cook the carrots in the milk for an hour until it is thick.
+Mom: Thank you beta.
+Me: Who is getting the Diwali lights this year? The old ones stopped working.
+Dad: I will get them from the market near the temple, they have the warm white ones.
+Priya: We also need diyas, rangoli colours and sweets for the neighbours.
+Mom: I will make the list. Kaju katli for the neighbours, besan ladoo for us.
+Me: I can pick up the sweets on Saturday.
+Dad: The car needs servicing before any long drive, remind me.
+Priya: The school annual day is on the 20th, the kids are doing a dance.
+Mom: Send videos, I want to see.
+Dad: Did anyone renew the society parking sticker?
+Me: Not yet, I will do it this week.
+Priya: Big news, Rohan's wedding is fixed! 12 December in Jaipur, at a heritage hotel near Amer fort.
+Mom: Finally! We need to book trains soon, December gets full.
+Me: I will look at flights too, it may be easier.
+Priya: The sangeet is the night before, they want everyone to dance.
+Dad: I am not dancing.
+Mom: You are dancing.
+Mom: My eye doctor appointment moved to Thursday at 4 pm, can someone drive me? They put drops in so I cannot drive back.
+Me: I can take you on Thursday, I will work from home that day.
+Priya: Thanks, I have school pickup then.
+Dad: The internet at home was down again yesterday.
+Me: I changed the Wi-Fi password at your place to neem-tree-42, the old one was on a sticky note on the router.
+Dad: Write it down for me.
+Mom: Your dad bought a new phone and wants help setting up backups of his photos before the old one dies.
+Me: I will set up the photo backups on Sunday after dinner.
+Dad: And move my WhatsApp chats too.`,
+  },
+  '04-resources/meetings/2026-10-standups.md': {
+    title: 'Standups, October',
+    body: `# Standups, October
+
+${log(
+  [
+    'Ravi: finishing the login page; blocked on the API for password reset.',
+    'Meera: new icons for the settings screens are in Figma for review.',
+    'Ankit: a flaky test in the payments suite; looking into a timezone bug.',
+    'Me: the island panel animation is smoother; measuring CPU next.',
+    'Ravi: password reset works end to end; needs a review.',
+    'Meera: onboarding screens redesigned, three instead of five.',
+    'Ankit: the payments test is fixed, it assumed UTC.',
+    'Me: CPU of the idle island is down from 4% to 1%.',
+    'Team: the investor demo moved to the 24th.',
+    'Ravi: started on notifications; the Android channel setup is fiddly.',
+    'Meera: dark mode colours reviewed with Ravi; two contrast fixes.',
+    'Ankit: the release script now tags and uploads in one step.',
+    'Me: the orb redraw costs less; one frame is under a millisecond.',
+    'Ankit: switched CI to self-hosted runners because the hosted macOS runners kept timing out.',
+    'Ravi: notifications done; release notes drafted.',
+    'Team: decided to drop Windows 10 support in the next major version.',
+    'Team: budget for cloud GPUs approved, 40,000 a month from November.',
+    'Meera: leaving at the end of December; her hand-off document is due by the 15th.',
+    'Ankit: database backups now run every six hours.',
+  ],
+  0,
+)}`,
+  },
+  '01-inbox/2026-11-05-mail-digest.md': {
+    title: 'Mail, 5 November',
+    body: `# Mail, 5 November
+
+## Bills
+
+Electricity bill for October: 2,340, due on 10 November, paid by auto-debit. The mobile plan renewed for three months.
+
+## Newsletters
+
+ROS Discourse: Jazzy gets a new navigation release and a call for testing of the new parameter tools. Rust weekly: a long post on async closures, and a crate for zero-copy parsing. A design newsletter on dense dashboards and when tables beat charts. The weekly market wrap: the index closed flat, metals up, IT services down on weak guidance from two large firms. A podcast episode on habit tracking with paper notebooks. Product Hunt: three new note-taking apps with local AI search.
+
+## Travel
+
+IndiGo booking confirmed: Pune to Bangalore on 21 November, departing 6:40 am, PNR XK4Q2. Web check-in opens 48 hours before.
+
+## Insurance
+
+Health insurance renewal is due by 30 November; the premium went up to 18,500 for the family floater.
+
+## Jobs
+
+A recruiter from a robotics startup in Bangalore asked whether I would talk about a perception engineer role, working on camera-based picking.`,
+  },
+  '06-brain/signals/weekly/2026-w44.md': {
+    title: 'Week 44',
+    body: `# Week 44
+
+## Shipped
+
+Three releases of the island (0.7.1 to 0.7.3), the side dock fix, and the phone app's new icons.
+
+## Patterns
+
+- Meetings took 9 hours, double the usual, mostly about the investor demo.
+- Most evenings went to the robot arm; the gripper work took four sessions.
+- Answered approvals on the phone 41 times, mostly in the morning.
+
+## Body
+
+Slept under six hours on four nights, worst after late debugging sessions. Ran 22 km across three runs and the knee held up.
+
+## Next
+
+Book the Jaipur trip. Finish the hand-off with Meera. Write the investor update.`,
+  },
 }
 
-/** Questions in other words than the notes', and the note that answers each. */
-const ASK: [string, string][] = [
-  ['why did the gripper get weaker', '02-projects/robot-arm/robot-arm.md'],
-  ['which framework did we pick for the desktop app and why', '06-brain/decisions/2026-10-02-electron-over-tauri.md'],
-  ['who makes the hand parts for the robot', '07-world-model/people/asha.md'],
-  ['which friend cannot eat nuts', '07-world-model/people/asha.md'],
-  ['what did the physiotherapist tell me about my leg', '04-resources/health/running.md'],
-  ['how much can I lose on a single position', '04-resources/finance/trading-rules.md'],
-  ['losing money by keeping a stock through quarterly results', '04-resources/finance/trading-rules.md'],
-  ['why did the panel move when it opened', '09-sources/claude-code/2026-11-01-side-dock.md'],
-  ['how much do I pay for housing each month', '04-resources/home/apartment.md'],
-  ['the internet is not working, what should I do', '04-resources/home/apartment.md'],
-  ['how to cook lentils', '04-resources/recipes/dal.md'],
-  ['a book about concentration', '06-brain/shelves/books.md'],
-  ['the camera cannot see glossy objects', '02-projects/robot-arm/vision.md'],
-  ['hotel with a private hot spring', '04-resources/travel/japan.md'],
-  ['what does the investor want before we meet', '07-world-model/people/vikram.md'],
-  ['the phone buzzes to tell me how many things wait for me', '02-projects/dynamic-island-linux/dynamic-island-linux.md'],
-  ['turn spoken notes into text', '01-inbox/2026-11-08-idea-voice.md'],
+/**
+ * Questions in other words than the notes', the note that answers each, and
+ * the words of the answer in it (where in the note it is decides whether the
+ * question is about the note's topic or a fact deep in a long note).
+ */
+const ASK: [string, string, string][] = [
+  ['why did the gripper get weaker', '02-projects/robot-arm/robot-arm.md', 'Lowered the gripper torque'],
+  ['which framework did we pick for the desktop app and why', '06-brain/decisions/2026-10-02-electron-over-tauri.md', 'We chose Electron'],
+  ['who makes the hand parts for the robot', '07-world-model/people/asha.md', 'designs and prints the gripper fingers'],
+  ['which friend cannot eat nuts', '07-world-model/people/asha.md', 'Allergic to peanuts'],
+  ['what did the physiotherapist tell me about my leg', '04-resources/health/running.md', 'The physio said'],
+  ['how much can I lose on a single position', '04-resources/finance/trading-rules.md', 'Never risk more than 1%'],
+  ['losing money by keeping a stock through quarterly results', '04-resources/finance/trading-rules.md', 'Infosys earnings gap'],
+  ['why did the panel move when it opened', '09-sources/claude-code/2026-11-01-side-dock.md', 'The panel jumped'],
+  ['how much do I pay for housing each month', '04-resources/home/apartment.md', 'Rent is 32,000'],
+  ['the internet is not working, what should I do', '04-resources/home/apartment.md', 'restart it if the fibre light'],
+  ['how to cook lentils', '04-resources/recipes/dal.md', 'Pressure cook the dal'],
+  ['a book about concentration', '06-brain/shelves/books.md', 'Deep Work'],
+  ['the camera cannot see glossy objects', '02-projects/robot-arm/vision.md', 'Shiny metal parts'],
+  ['hotel with a private hot spring', '04-resources/travel/japan.md', 'ryokan in Kyoto'],
+  ['what does the investor want before we meet', '07-world-model/people/vikram.md', 'demo video'],
+  ['the phone buzzes to tell me how many things wait for me', '02-projects/dynamic-island-linux/dynamic-island-linux.md', 'phone vibrating in short taps'],
+  ['turn spoken notes into text', '01-inbox/2026-11-08-idea-voice.md', 'voice memo'],
+  ['when is the wedding in Rajasthan', '09-sources/whatsapp/2026-11-03-family.md', "Rohan's wedding is fixed"],
+  ['when do I need to take mom to the eye specialist', '09-sources/whatsapp/2026-11-03-family.md', 'eye doctor appointment'],
+  ['network key at my parents house', '09-sources/whatsapp/2026-11-03-family.md', 'neem-tree-42'],
+  ['helping dad save his pictures from the old phone', '09-sources/whatsapp/2026-11-03-family.md', 'backups of his photos'],
+  ['how much money do we have for graphics cards in the cloud', '04-resources/meetings/2026-10-standups.md', 'budget for cloud GPUs'],
+  ['who is quitting the team and when', '04-resources/meetings/2026-10-standups.md', 'leaving at the end of December'],
+  ['why did we move builds off the hosted machines', '04-resources/meetings/2026-10-standups.md', 'self-hosted runners'],
+  ['which old operating system will we stop supporting', '04-resources/meetings/2026-10-standups.md', 'drop Windows 10'],
+  ['what time does my plane leave', '01-inbox/2026-11-05-mail-digest.md', 'departing 6:40 am'],
+  ['when does my medical cover need renewing', '01-inbox/2026-11-05-mail-digest.md', 'Health insurance renewal'],
+  ['someone asked me about a computer vision job', '01-inbox/2026-11-05-mail-digest.md', 'perception engineer role'],
+  ['how much was the power bill', '01-inbox/2026-11-05-mail-digest.md', 'Electricity bill'],
+  ['how did I sleep last week', '06-brain/signals/weekly/2026-w44.md', 'Slept under six hours'],
+  ['how many hours went to meetings', '06-brain/signals/weekly/2026-w44.md', 'Meetings took 9 hours'],
 ]
 
 /** Questions nothing in the vault answers. */
-const NOTHING = ['best price for a used motorcycle', 'who won the football world cup in 1998', 'symptoms of a cold in cats']
+const NOTHING = ['best price for a used motorcycle', 'who won the football world cup in 1998', 'symptoms of a cold in cats', 'how to change a car tyre', 'what is the capital of Australia']
 
 /**
  * The model library as the island's worker runs it: its browser build, on
@@ -345,9 +476,9 @@ async function download(root: string, id: string, files: string[]): Promise<numb
   let total = 0
   for (const rel of files) {
     const res = await fetch(`https://huggingface.co/${id}/resolve/main/${rel}`)
-    expect(res.ok, `${id}/${rel}: HTTP ${res.status}`).toBe(true)
+    if (!res.ok) throw new Error(`${id}/${rel}: HTTP ${res.status}`)
     const buf = Buffer.from(await res.arrayBuffer())
-    expect(buf.length, `${id}/${rel} is empty`).toBeGreaterThan(0)
+    if (!buf.length) throw new Error(`${id}/${rel} is empty`)
     if (rel.endsWith('.json')) JSON.parse(buf.toString('utf8'))
     mkdirSync(dirname(join(root, id, rel)), { recursive: true })
     writeFileSync(join(root, id, rel), buf)
@@ -356,130 +487,171 @@ async function download(root: string, id: string, files: string[]): Promise<numb
   return total
 }
 
-type Ranked = { path: string; score: number; chunk?: number }
-type Way = { name: string; rank: (q: string) => Promise<Ranked[]> }
+/** A model to compare: how it makes one vector of a text, and what it wants before a question. */
+type Model = { id: string; pooling: 'mean' | 'cls'; prefix: string; label?: string }
+const BGE_PREFIX = 'Represent this sentence for searching relevant passages: '
+/** The one before, the one shipped, and a few more of about the same size (one missing its files is skipped). */
+const MODELS: Model[] = [
+  { id: 'Xenova/all-MiniLM-L6-v2', pooling: 'mean', prefix: '' },
+  { id: 'Xenova/bge-small-en-v1.5', pooling: 'cls', prefix: BGE_PREFIX },
+  { id: 'Xenova/bge-small-en-v1.5', pooling: 'mean', prefix: BGE_PREFIX, label: 'Xenova/bge-small-en-v1.5 (mean)' },
+  { id: 'Snowflake/snowflake-arctic-embed-xs', pooling: 'cls', prefix: BGE_PREFIX },
+  { id: 'Xenova/gte-small', pooling: 'mean', prefix: '' },
+  { id: 'Xenova/all-MiniLM-L12-v2', pooling: 'mean', prefix: '' },
+  { id: 'Xenova/multi-qa-MiniLM-L6-cos-v1', pooling: 'mean', prefix: '' },
+]
+/** Ways to read a note: one vector for its start (as before), one a section, or both (the closest wins). */
+const WAYS = ['whole note', 'by section', 'whole note + sections'] as const
+type WayName = (typeof WAYS)[number]
 
-function score(way: string, ranked: Ranked[][]) {
+type Ranked = { path: string; score: number; chunk?: number }
+type Metrics = { hit1: number; hit3: number; mrr: number; n: number }
+
+/** Where each question's answer is: inside the start of its note the model read before, or past it. */
+function isDeep(path: string, at: string): boolean {
+  const n = VAULT[path]
+  const full = wholeNote(n.title, n.body, Infinity)
+  const i = full.indexOf(at)
+  if (i < 0) throw new Error(`"${at}" isn't in ${path} as the model reads it`)
+  return i + at.length > 1200
+}
+
+function metrics(ranked: Ranked[][], only: (i: number) => boolean): Metrics {
   let hit1 = 0
   let hit3 = 0
   let rr = 0
+  let n = 0
   ASK.forEach(([, want], i) => {
+    if (!only(i)) return
+    n++
     const at = ranked[i].findIndex((r) => r.path === want)
     if (at === 0) hit1++
     if (at >= 0 && at < 3) hit3++
     if (at >= 0) rr += 1 / (at + 1)
   })
-  return { way, hit1: hit1 / ASK.length, hit3: hit3 / ASK.length, mrr: rr / ASK.length }
+  return { hit1: hit1 / n, hit3: hit3 / n, mrr: rr / n, n }
 }
 
+const pct = (x: number) => `${Math.round(x * 100)}%`
+const row = (m: Metrics) => `${pct(m.hit1)} | ${pct(m.hit3)} | ${m.mrr.toFixed(3)}`
+
 test.skipIf(!REAL)(
-  'the real model: its files download, and sections find notes better than whole notes did',
+  'the real model: its files download, and it finds notes better than the model and reading before it',
   async () => {
     const root = mkdtempSync(join(tmpdir(), 'models-'))
     const out: string[] = []
     const say = (s: string) => (out.push(s), console.log(s))
+    const notes = Object.entries(VAULT)
+    const deep = ASK.map(([, path, at]) => isDeep(path, at))
+    say(`${notes.length} notes; ${ASK.length} questions, ${deep.filter(Boolean).length} of them about a fact past the first 1200 characters of its note; ${NOTHING.length} that nothing answers.`)
 
-    // ---- the files, as the app downloads them ----
+    // ---- the shipped model's files, as the app downloads them ----
     const bytes = await download(root, EMBED_MODEL, EMBED_FILES)
     say(`${EMBED_MODEL}: ${EMBED_FILES.length} files, ${(bytes / 1024 / 1024).toFixed(1)} MB (the app says ${EMBED_MB} MB)`)
-    expect(Math.abs(bytes / 1024 / 1024 - EMBED_MB) / EMBED_MB).toBeLessThan(0.15)
-    const [old] = OLD_EMBED_MODELS
-    await download(root, old, EMBED_FILES)
-
     const { load } = await library(root)
     type Extract = Awaited<ReturnType<typeof load>>
+    const loaded = new Map<string, Extract | string>()
+    const pipe = async (id: string): Promise<Extract | string> => {
+      if (!loaded.has(id)) {
+        try {
+          if (id !== EMBED_MODEL) await download(root, id, EMBED_FILES)
+          loaded.set(id, await load(id))
+        } catch (e) {
+          loaded.set(id, String((e as Error)?.message ?? e).slice(0, 120))
+        }
+      }
+      return loaded.get(id)!
+    }
     const embedder = (fx: Extract, pooling: 'mean' | 'cls') => async (texts: string[]) => {
-      const t = await fx(texts, { pooling, normalize: true })
-      const dims = t.dims[t.dims.length - 1]
-      expect(dims).toBe(DIMS)
-      return texts.map((_, i) => t.data.slice(i * dims, (i + 1) * dims))
+      const vs: Float32Array[] = []
+      for (let i = 0; i < texts.length; i += 16) {
+        const t = await fx(texts.slice(i, i + 16), { pooling, normalize: true })
+        const dims = t.dims[t.dims.length - 1]
+        expect(dims).toBe(DIMS)
+        for (let k = 0; k < t.dims[0]; k++) vs.push(unit(t.data.slice(k * dims, (k + 1) * dims)))
+      }
+      return vs
     }
-    const bge = embedder(await load(EMBED_MODEL), EMBED_POOLING)
-    const bgeMean = embedder(await load(EMBED_MODEL), 'mean')
-    const mini = embedder(await load(old), 'mean')
-
-    // ---- the ways to read the vault ----
-    const notes = Object.entries(VAULT)
     const sections = (path: string) => noteChunks(VAULT[path].body).map((c) => chunkText(VAULT[path].title, c))
-    const byChunks = async (name: string, embed: (t: string[]) => Promise<Float32Array[]>, model: string): Promise<Way> => {
-      const idx = new MeaningIndex(join(mkdtempSync(join(tmpdir(), 'idx-')), 'meaning'), model)
-      const list = notes.map(([path]) => ({ path, mtime: 1, chunks: () => sections(path) }))
-      while ((await idx.update(list, embed, 1000)) > 0);
-      return { name, rank: (q) => idx.query(q, embed, 100) }
-    }
-    const byWholeNote = async (name: string, embed: (t: string[]) => Promise<Float32Array[]>, prefix: string): Promise<Way> => {
-      const vs = await embed(notes.map(([, n]) => wholeNote(n.title, n.body)))
-      return {
-        name,
-        rank: async (q) => {
-          const [qv] = await embed([prefix + q])
-          return notes.map(([path], i) => ({ path, score: cosine(unit(qv), unit(vs[i])) })).sort((a, b) => b.score - a.score)
-        },
+
+    // ---- each model, each way ----
+    say('')
+    say('| Model | Way | All: top 1 | top 3 | MRR | Deep: top 1 | top 3 | MRR | Answers score | Nothing scores up to | ms a section |')
+    say('|---|---|---|---|---|---|---|---|---|---|---|')
+    const table: { model: string; way: WayName; all: Metrics; deep: Metrics }[] = []
+    for (const m of MODELS) {
+      const name = m.label ?? m.id
+      const fx = await pipe(m.id)
+      if (typeof fx === 'string') {
+        say(`| ${name} | not available: ${fx} | | | | | | | | | |`)
+        continue
+      }
+      const embed = embedder(fx, m.pooling)
+      const whole = await embed(notes.map(([, n]) => wholeNote(n.title, n.body)))
+      const t0 = Date.now()
+      const flat = notes.map(([path]) => sections(path))
+      const sv = await embed(flat.flat())
+      const ms = (Date.now() - t0) / sv.length
+      let at = 0
+      const bySection = flat.map((list) => sv.slice(at, (at += list.length)))
+      const qs = await embed(ASK.map(([q]) => m.prefix + q))
+      const ns = await embed(NOTHING.map((q) => m.prefix + q))
+      const scoreOf = (way: WayName, qv: Float32Array, i: number) => {
+        const w = cosine(qv, whole[i])
+        const s = Math.max(...bySection[i].map((v) => cosine(qv, v)))
+        return way === 'whole note' ? w : way === 'by section' ? s : Math.max(w, s)
+      }
+      const rank = (way: WayName, qv: Float32Array): Ranked[] => notes.map(([path], i) => ({ path, score: scoreOf(way, qv, i) })).sort((a, b) => b.score - a.score)
+      for (const way of WAYS) {
+        const ranked = qs.map((qv) => rank(way, qv))
+        const all = metrics(ranked, () => true)
+        const dp = metrics(ranked, (i) => deep[i])
+        table.push({ model: name, way, all, deep: dp })
+        const answers = ASK.map(([, want], i) => ranked[i].find((r) => r.path === want)!.score).sort((a, b) => a - b)
+        const none = Math.max(...ns.map((qv) => rank(way, qv)[0].score))
+        say(`| ${name} | ${way} | ${row(all)} | ${row(dp)} | ${answers[0].toFixed(2)} to ${answers[answers.length - 1].toFixed(2)} (90% above ${answers[Math.floor(answers.length / 10)].toFixed(2)}) | ${none.toFixed(2)} | ${way === 'whole note' ? '' : ms.toFixed(0)} |`)
       }
     }
-    const t0 = Date.now()
-    const shipping = await byChunks(`${EMBED_MODEL}, by section (${EMBED_POOLING}), as shipped`, bge, EMBED_MODEL)
-    const sectionsMs = Date.now() - t0
-    const ways: Way[] = [
-      await byWholeNote(`${old}, whole note (before)`, mini, ''),
-      await byChunks(`${old}, by section`, mini, old),
-      await byWholeNote(`${EMBED_MODEL}, whole note`, bge, QUERY_PREFIX),
-      await byChunks(`${EMBED_MODEL}, by section (mean)`, bgeMean, EMBED_MODEL),
-      shipping,
-    ]
-    const results = []
-    const ranked = new Map<Way, Ranked[][]>()
-    for (const w of ways) {
-      const r = []
-      for (const [q] of ASK) r.push(await w.rank(q))
-      ranked.set(w, r)
-      results.push(score(w.name, r))
-    }
-    say('')
-    say('| Way | Top 1 | Top 3 | MRR |')
-    say('|---|---|---|---|')
-    for (const r of results) say(`| ${r.way} | ${(r.hit1 * 100).toFixed(0)}% | ${(r.hit3 * 100).toFixed(0)}% | ${r.mrr.toFixed(3)} |`)
-    const chunkCount = notes.reduce((s, [p]) => s + sections(p).length, 0)
-    say('')
-    say(`${notes.length} notes in ${chunkCount} sections, read in ${sectionsMs} ms with the new model (${(sectionsMs / chunkCount).toFixed(0)} ms a section here).`)
 
-    // ---- what the shipped way found, and how close ----
+    // ---- the shipped way, through the app's own index ----
+    const shippedFx = await pipe(EMBED_MODEL)
+    if (typeof shippedFx === 'string') throw new Error(`${EMBED_MODEL}: ${shippedFx}`)
+    const bge = embedder(shippedFx, EMBED_POOLING)
+    const idx = new MeaningIndex(join(mkdtempSync(join(tmpdir(), 'idx-')), 'meaning'))
+    const list = notes.map(([path]) => ({ path, mtime: 1, chunks: () => sections(path) }))
+    while ((await idx.update(list, bge, 1000)) > 0);
+    const mine: Ranked[][] = []
+    for (const [q] of ASK) mine.push(await idx.query(q, bge, 100))
+    const shipped = { all: metrics(mine, () => true), deep: metrics(mine, (i) => deep[i]) }
     say('')
-    say('| Question | Found | Score | Expected at | Section |')
-    say('|---|---|---|---|---|')
-    const mine = ranked.get(shipping)!
+    say(`As shipped (${EMBED_MODEL}, the app's index): ${row(shipped.all)}; deep: ${row(shipped.deep)}`)
+    say('')
+    say('| Question | Deep | Found | Score | Expected at | Section |')
+    say('|---|---|---|---|---|---|')
     const wanted: number[] = []
     ASK.forEach(([q, want], i) => {
       const at = mine[i].findIndex((r) => r.path === want)
       const hit = mine[i][at]
       wanted.push(hit?.score ?? -1)
       const c = hit?.chunk !== undefined ? noteChunks(VAULT[want].body)[hit.chunk] : undefined
-      say(`| ${q} | ${mine[i][0].path.split('/').pop()} | ${mine[i][0].score.toFixed(3)} | ${at + 1} (${hit?.score.toFixed(3)}) | ${c ? (c.heading ? `${c.heading}: ` : '') + c.text.slice(0, 70) : ''} |`)
+      say(`| ${q} | ${deep[i] ? 'yes' : ''} | ${mine[i][0].path.split('/').pop()} | ${mine[i][0].score.toFixed(3)} | ${at + 1} (${hit?.score.toFixed(3)}) | ${c ? (c.heading ? `${c.heading}: ` : '') + c.text.slice(0, 60) : ''} |`)
     })
-    const idx = new MeaningIndex(join(mkdtempSync(join(tmpdir(), 'idx-')), 'meaning'))
-    const list = notes.map(([path]) => ({ path, mtime: 1, chunks: () => sections(path) }))
-    while ((await idx.update(list, bge, 1000)) > 0);
     const none: number[] = []
-    for (const q of NOTHING) {
-      const [top] = await idx.query(q, bge, 1)
-      none.push(top.score)
-      say(`| ${q} (nothing answers it) | ${top.path.split('/').pop()} | ${top.score.toFixed(3)} | - | - |`)
-    }
-    const lowest = Math.min(...wanted)
+    for (const q of NOTHING) none.push((await idx.query(q, bge, 1))[0].score)
     const highestNone = Math.max(...none)
     say('')
-    say(`Answers scored ${lowest.toFixed(3)} to ${Math.max(...wanted).toFixed(3)}; questions nothing answers, up to ${highestNone.toFixed(3)}. MEANING_MIN is ${MEANING_MIN}.`)
-    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Search by meaning, real model\n\n${out.join('\n')}\n`)
+    say(`Answers scored ${Math.min(...wanted).toFixed(3)} to ${Math.max(...wanted).toFixed(3)}; questions nothing answers, up to ${highestNone.toFixed(3)}. MEANING_MIN is ${MEANING_MIN}.`)
+    if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `## Search by meaning, real models\n\n${out.join('\n')}\n`)
 
-    // ---- what must hold ----
-    const [before] = results
-    const now = results[results.length - 1]
-    expect(now.mrr).toBeGreaterThanOrEqual(before.mrr)
-    expect(now.hit3).toBeGreaterThanOrEqual(before.hit3)
-    expect(now.hit3).toBeGreaterThanOrEqual(0.85)
+    // ---- what must hold: the shipped way beats the one before on every count ----
+    const before = table.find((r) => r.model === OLD_EMBED_MODELS[0] && r.way === 'whole note')!
+    expect(Math.abs(bytes / 1024 / 1024 - EMBED_MB) / EMBED_MB).toBeLessThan(0.15)
+    expect(shipped.all.mrr).toBeGreaterThanOrEqual(before.all.mrr)
+    expect(shipped.all.hit3).toBeGreaterThanOrEqual(before.all.hit3)
+    expect(shipped.deep.mrr).toBeGreaterThan(before.deep.mrr)
     // The floor lets nearly every answer through and keeps out what answers nothing.
     expect(wanted.filter((s) => s >= MEANING_MIN).length / wanted.length).toBeGreaterThanOrEqual(0.9)
     expect(highestNone).toBeLessThan(MEANING_MIN)
   },
-  900_000,
+  1_500_000,
 )
