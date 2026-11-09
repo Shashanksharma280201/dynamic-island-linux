@@ -1,4 +1,4 @@
-import { embedText } from '@shared/meaning'
+import { chunkText, noteChunks } from '@shared/meaning'
 import { noteTitle, parseNote, wikilinks } from '@shared/brain'
 import type { VaultFile } from './vault'
 
@@ -162,18 +162,23 @@ export class BrainIndex {
     return top
   }
 
-  /** Every note, for search by meaning: its path, when it changed, and what the model reads. */
-  entries(): { path: string; mtime: number; text: () => string }[] {
+  /** Every note, for search by meaning: its path, when it changed, and what the model reads of each section. */
+  entries(): { path: string; mtime: number; chunks: () => string[] }[] {
     this.refresh()
-    return [...this.docs.values()].map((d) => ({ path: d.path, mtime: d.mtime, text: () => embedText(d.title, this.body(d.path)) }))
+    return [...this.docs.values()].map((d) => ({ path: d.path, mtime: d.mtime, chunks: () => noteChunks(this.body(d.path)).map((c) => chunkText(d.title, c)) }))
   }
 
-  /** One note as a search hit (for one found by meaning), with the start of its body. */
-  describe(path: string): Hit | null {
+  /**
+   * One note as a search hit (for one found by meaning): the section that
+   * matched (`chunk`, as the meaning index counts them), or the start of its body.
+   */
+  describe(path: string, chunk?: number): Hit | null {
     const d = this.docs.get(path)
     if (!d) return null
-    const body = this.body(path).replace(/^#.*\n/, '').replace(/\s+/g, ' ').trim()
-    return { path, title: d.title, score: 0, snippet: body.slice(0, 200) + (body.length > 200 ? '…' : ''), date: str(d.meta.date), type: str(d.meta.type) }
+    const c = chunk === undefined ? undefined : noteChunks(this.body(path))[chunk]
+    const text = c?.text ? (c.heading ? `${c.heading}: ${c.text}` : c.text) : this.body(path).replace(/^#.*\n/, '').replace(/\s+/g, ' ').trim()
+    const max = c?.text ? 280 : 200
+    return { path, title: d.title, score: 0, snippet: text.length > max ? text.slice(0, max - 1) + '…' : text, date: str(d.meta.date), type: str(d.meta.type) }
   }
 
   /** Notes that link to a note name (its file name without .md). */

@@ -101,11 +101,24 @@ one) and need a key, which the island keeps in its own folder.
 
 Brain search finds notes by their words. Turn on **Search by meaning**
 (Settings → Second brain) and it also finds notes that say it in other
-words: a small model (all-MiniLM-L6-v2, 23 MB, downloaded once from Hugging
-Face) reads each note on this computer and keeps a vector for it in
-`_system/index/`. Every search (yours, Claude Code's, the buddy's) then
-fuses the two rankings. New and changed notes are read a few at a time in
-the background; `08-restricted/` never is.
+words: a small model (bge-small-en-v1.5, 34 MB, downloaded once from Hugging
+Face) reads your notes on this computer, **section by section**, and keeps a
+vector for each section in `_system/index/`. A note is as close to a
+question as its closest section, so a fact deep in a long note (a line in a
+project's log, a turn in a session) is found as easily as one at the top,
+and a note found this way shows the section that matched. Every search
+(yours, Claude Code's, the buddy's) then fuses the two rankings. New and
+changed notes are read a few at a time in the background; `08-restricted/`
+never is.
+
+A long section is read in parts of about 900 characters (cut between
+paragraphs), short ones next to each other are read together, and a note
+gives at most 32 parts (the rest is still found by its words). The index
+says which model made it: after a new model, the model downloads on the
+next start and the notes are read again. The model's files are checked by
+the **Search by meaning (real model)** workflow, which downloads them as the
+app does, runs the model as the island does, and compares it with the one
+before on a small test vault.
 
 ## The loop
 

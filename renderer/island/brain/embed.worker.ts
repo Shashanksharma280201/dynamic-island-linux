@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
-// Search by meaning: notes and questions as vectors (all-MiniLM-L6-v2, on
+// Search by meaning: notes and questions as vectors (bge-small-en-v1.5, on
 // this computer), off the UI thread. The model comes from island-model://.
 import { env, pipeline } from '@huggingface/transformers'
-import { EMBED_MODEL } from '@shared/meaning'
+import { EMBED_MODEL, EMBED_POOLING } from '@shared/meaning'
 
 env.allowRemoteModels = false
 env.allowLocalModels = true
@@ -13,7 +13,7 @@ if (env.backends.onnx.wasm) {
   env.backends.onnx.wasm.proxy = false
 }
 
-type Extract = (texts: string[], o: { pooling: 'mean'; normalize: boolean }) => Promise<{ data: Float32Array; dims: number[] }>
+type Extract = (texts: string[], o: { pooling: 'mean' | 'cls'; normalize: boolean }) => Promise<{ data: Float32Array; dims: number[] }>
 let fx: Promise<Extract> | null = null
 
 self.onmessage = async (e: MessageEvent) => {
@@ -24,7 +24,7 @@ self.onmessage = async (e: MessageEvent) => {
       fx.catch(() => (fx = null))
     }
     const f = await fx
-    const out = await f(m.texts, { pooling: 'mean', normalize: true })
+    const out = await f(m.texts, { pooling: EMBED_POOLING, normalize: true })
     const dims = out.dims[out.dims.length - 1]
     const vectors: Float32Array[] = []
     for (let i = 0; i < m.texts.length; i++) vectors.push(out.data.slice(i * dims, (i + 1) * dims))
