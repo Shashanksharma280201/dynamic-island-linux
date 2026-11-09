@@ -38,7 +38,9 @@ jobs:
             # without macOS calling the app damaged. With a Developer ID (the
             # MAC_CERT_P12 secret and the others in docs/mac-signing.md) the
             # app is signed and notarized instead, and the .dmg is all it needs.
-            package: npm run build && npx electron-builder --mac dmg pkg --arm64 --x64 --publish never
+            # One architecture at a time: built together, the two .pkg builds
+            # share a temporary file and one can delete the other's.
+            package: npm run build && npx electron-builder --mac dmg pkg --arm64 --publish never && npx electron-builder --mac dmg pkg --x64 --publish never
           - os: windows-latest
             branch: windows
             package: npm run package
