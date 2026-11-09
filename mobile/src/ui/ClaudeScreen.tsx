@@ -7,6 +7,7 @@ import type { DropLink } from '../link'
 import { LiveDot } from './IslandScreen'
 import { Composer, Empty, ErrorLine, Page, TAB_ROOM, useAction, useCall, useKeyboard } from './kit'
 import { themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 const folderOf = (cwd: string) => cwd.split(/[\\/]/).filter(Boolean).pop() ?? cwd
 
@@ -150,9 +151,12 @@ function Working({ run }: { run: ClaudeRun }) {
       {trail.length > 1 && (
         <View style={{ marginTop: 6, gap: 2 }}>
           {trail.slice(0, -1).map((t, i) => (
-            <Text key={i} style={st.trail} numberOfLines={1}>
-              ✓ {t}
-            </Text>
+            <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Icon name="check" size={12} color={C.green} />
+              <Text style={[st.trail, { flex: 1 }]} numberOfLines={1}>
+                {t}
+              </Text>
+            </View>
           ))}
         </View>
       )}

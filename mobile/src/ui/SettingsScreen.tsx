@@ -3,7 +3,10 @@ import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'rea
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
 import { shareIntake } from '../../modules/share-intake'
-import { DEVICE, type DropLink, type LinkState } from '../link'
+import { DEVICE, type DropLink, type Live, type LinkState } from '../link'
+import { useActivity } from '../activity'
+import { linkMode, linkReadout } from '../linkStatus'
+import { LinkFigure } from '../iso/LinkFigure'
 import type { Prefs } from '../prefs'
 import { routeName } from '../protocol'
 import { Icon, IconTile, type IconName } from './icons'
@@ -17,9 +20,11 @@ const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
 ]
 
 /** The look, the link to your computer, how the app keeps in touch, and the pairing. */
-export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top, onBack }: { link: DropLink; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; onBack?: () => void }) {
+export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, top, onBack }: { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; onBack?: () => void }) {
   const C = useTheme()
   const s = useS()
+  const act = useActivity()
+  const mode = linkMode(state, live, act)
   const [testing, setTesting] = useState(false)
   const [tested, setTested] = useState<string | null>(null)
   const status = state.phase === 'ready' ? 'Connected' : state.phase === 'finding' ? (state.scanning ? 'Searching this Wi-Fi…' : 'Looking for it…') : 'Can’t reach it'
@@ -78,6 +83,15 @@ export function SettingsScreen({ link, state, prefs, setPrefs, onUnpair, top, on
         </View>
       </Section>
 
+      <LinkFigure
+        mode={mode}
+        ms={state.ms}
+        title={state.route ? `Link · ${routeName(state.route)}` : 'Link'}
+        readout={linkReadout(mode, state, live, act)}
+        hint={mode === 'offline' ? 'Tap to try again' : 'Tap to test'}
+        active
+        onTest={() => void link.ping()}
+      />
       <Section title="Connection" note={`This phone shows up on ${link.pairing.name} as “${DEVICE}”. If the computer’s address changes on this Wi-Fi, the app finds it again by itself.`}>
         <Row icon={{ name: 'pulse', color: dot }} title="Status" right={status} />
         <Row icon={{ name: state.route === 'tailscale' ? 'globe' : 'wifi', color: C.blue }} title="Route" right={state.route ? routeName(state.route) : 'None'} />

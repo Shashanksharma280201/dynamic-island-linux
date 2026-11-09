@@ -25,6 +25,7 @@ import type { AgentSession } from './sessions'
 import type { CenterView } from './notifCenter'
 import { parseQuestions } from './questions'
 import { describeTool } from './toolDetail'
+import { CHARACTER_COLOR, DEFAULT_CHARACTER, moodFor, restingMood, type CharacterConfig, type CharacterMood } from './character'
 
 export const PHONE_PROTOCOL = 1
 
@@ -72,6 +73,9 @@ export type PhoneNote = { id: string; at: number; app: string; title: string; bo
 
 export type PhoneTrading = { app: string; text: string; short: string; tone: string; detail: string; color: string }
 
+/** The island's orb as the phone draws it: which one, its name, its colour (yours or its own) and what it's doing. */
+export type PhoneCharacter = { id: string; name: string; color: string; mood: string }
+
 export type PhoneView = {
   protocol: number
   at: number
@@ -83,6 +87,8 @@ export type PhoneView = {
   notes: PhoneNote[]
   trading: PhoneTrading | null
   dnd: boolean
+  /** The orb (left out by islands older than the phone app that draws it). */
+  character?: PhoneCharacter
 }
 
 /** A file the computer is sending to the phone; `dir` is its folder when a folder is sent, `batch` where it is among the files sent together. */
@@ -153,8 +159,26 @@ export function phoneArt(artUrl: string | undefined): string | undefined {
   return undefined
 }
 
+/**
+ * What the orb is doing, as the island shows it: something waiting for you
+ * first, then the island's own Claude at work, then a session in a terminal,
+ * else resting (asleep late at night). Pure.
+ */
+export function phoneMood(activities: Activity[], sessions: AgentSession[], now: number): CharacterMood {
+  if (activities.some((a) => a.kind === 'approval') || sessions.some((s) => s.phase === 'waiting')) return 'attention'
+  const run = activities.find((a): a is Extract<Activity, { kind: 'claude' }> => a.kind === 'claude')?.run
+  if (run && ['starting', 'thinking', 'tool', 'writing'].includes(run.phase)) return moodFor(run.phase, run.tool?.name)
+  if (sessions.some((s) => s.phase === 'working')) return 'working'
+  return restingMood(new Date(now))
+}
+
+/** The orb for the phone, from the character as configured. Pure. */
+export function phoneCharacter(c: CharacterConfig, mood: CharacterMood): PhoneCharacter {
+  return { id: c.id, name: c.name, color: c.color ?? CHARACTER_COLOR[c.id] ?? CHARACTER_COLOR[DEFAULT_CHARACTER], mood }
+}
+
 /** Everything the phone shows, from the island's activities and its notification center. */
-export function phoneView(input: { name: string; activities: Activity[]; sessions: AgentSession[]; center: CenterView | null; now: number }): PhoneView {
+export function phoneView(input: { name: string; activities: Activity[]; sessions: AgentSession[]; center: CenterView | null; now: number; character?: CharacterConfig }): PhoneView {
   const { activities, now } = input
   const approvals: PhoneApproval[] = []
   const sessions: PhoneSession[] = []
@@ -179,7 +203,8 @@ export function phoneView(input: { name: string; activities: Activity[]; session
     sessions.push({ id: s.id, agent: s.agent, project: cap(s.project, 60), phase: s.phase, prompt: cap(s.prompt, 200) || undefined, step: last ? cap(last.label, 160) : undefined, added: s.added, removed: s.removed })
   }
   const notes: PhoneNote[] = (input.center?.entries ?? []).slice(0, 40).map((e) => ({ id: e.id, at: e.at, app: cap(e.app, 60), title: cap(e.title, 200), body: cap(e.body, 600) || undefined, source: e.source, urgency: e.urgency }))
-  return { protocol: PHONE_PROTOCOL, at: now, name: input.name, approvals, media, sessions: sessions.slice(0, 12), notes, trading, dnd: !!input.center?.dnd }
+  const character = input.character ? phoneCharacter(input.character, phoneMood(activities, input.sessions, now)) : undefined
+  return { protocol: PHONE_PROTOCOL, at: now, name: input.name, approvals, media, sessions: sessions.slice(0, 12), notes, trading, dnd: !!input.center?.dnd, ...(character ? { character } : {}) }
 }
 
 // ---- The island's functions on the phone ----

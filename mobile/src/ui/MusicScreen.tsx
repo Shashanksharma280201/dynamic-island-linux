@@ -131,7 +131,15 @@ function TrackRow({ t, onPress, last, busy }: { t: SpTrack; onPress: () => void;
       sub={t.artists}
       last={last}
       onPress={onPress}
-      left={t.image ? <Image source={{ uri: t.image }} style={st.cover} /> : <View style={[st.cover, { backgroundColor: C.card2 }]} />}
+      left={
+        t.image ? (
+          <Image source={{ uri: t.image }} style={st.cover} />
+        ) : (
+          <View style={[st.cover, st.empty]}>
+            <Icon name="music" size={18} color={C.text3} />
+          </View>
+        )
+      }
       right={<Icon name="play" size={18} color={busy ? SPOTIFY : C.text3} />}
     />
   )
@@ -148,7 +156,13 @@ function Shelf({ title, items, play, round }: { title: string; items: SpCollecti
         {items.slice(0, 16).map((c, i) => (
           <Animated.View key={c.uri} entering={FadeInDown.delay(Math.min(i, 8) * 30).springify().damping(18)}>
             <Pressable onPress={() => play({ contextUri: c.uri }, c.uri)} style={({ pressed }) => [{ width: 120 }, pressed && { transform: [{ scale: 0.96 }] }]}>
-              {c.image ? <Image source={{ uri: c.image }} style={[st.tile, round && { borderRadius: 60 }]} /> : <View style={[st.tile, { backgroundColor: C.card2 }, round && { borderRadius: 60 }]} />}
+              {c.image ? (
+                <Image source={{ uri: c.image }} style={[st.tile, round && { borderRadius: 60 }]} />
+              ) : (
+                <View style={[st.tile, st.empty, round && { borderRadius: 60 }]}>
+                  <Icon name={c.kind === 'liked' ? 'sparkle' : 'music'} size={34} color={C.text3} />
+                </View>
+              )}
               <Text style={st.tileTitle} numberOfLines={1}>
                 {c.name}
               </Text>
@@ -168,6 +182,7 @@ const useSt = themed((C) => ({
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   search: { flex: 1, backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
   cover: { width: 42, height: 42, borderRadius: 6 },
+  empty: { backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
   section: { color: C.text3, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },
   tile: { width: 120, height: 120, borderRadius: 12 },
   tileTitle: { color: C.text, fontSize: 13, fontWeight: '700', marginTop: 6 },

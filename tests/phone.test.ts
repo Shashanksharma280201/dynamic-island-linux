@@ -1,4 +1,5 @@
-import { phoneApproval, phoneArt, phoneView } from '@shared/phone'
+import { phoneApproval, phoneArt, phoneCharacter, phoneMood, phoneView } from '@shared/phone'
+import { CHARACTER_COLOR } from '@shared/character'
 import type { Activity, ToolRequest } from '@shared/types'
 
 const req = (r: Partial<ToolRequest>): ToolRequest => ({ id: 'r1', toolName: 'Bash', inputSummary: '', ...r })
@@ -47,4 +48,26 @@ test('the whole view', () => {
   expect(v.sessions.map((s) => s.id)).toEqual(['s2', 's1'])
   expect(v.sessions[0]).toMatchObject({ step: 'Edit app.ts', added: 3 })
   expect(v.notes).toEqual([{ id: 'n', at: 5, app: 'Slack', title: 'Hi', body: undefined, source: 'notification', urgency: undefined }])
+})
+
+test('the orb goes to the phone in its colour, doing what the island shows', () => {
+  const sessions: any[] = [{ id: 's', agent: 'claude-code', cwd: '/b', project: 'b', phase: 'working', steps: [], turnSteps: 0, added: 0, removed: 0 }]
+  const noon = new Date(2026, 10, 9, 12).getTime()
+  const night = new Date(2026, 10, 9, 2).getTime()
+  // Without a character (an island that doesn't send one): none.
+  expect(phoneView({ name: 'l', activities: [], sessions: [], center: null, now: noon }).character).toBeUndefined()
+  // Its own colour, or the one you picked.
+  expect(phoneCharacter({ id: 'bolt', name: 'Bolt' }, 'idle')).toEqual({ id: 'bolt', name: 'Bolt', color: CHARACTER_COLOR.bolt, mood: 'idle' })
+  expect(phoneCharacter({ id: 'orbit', name: 'Sol', color: '#7d7aff' }, 'idle').color).toBe('#7d7aff')
+  // Something waiting for you first, then the island's own Claude, then a terminal session, else resting.
+  const approval: Activity = { id: 'r1', kind: 'approval', priority: 10, request: req({ toolInput: { command: 'ls' } }) }
+  const claude = { id: 'c', kind: 'claude', priority: 5, run: { id: 'r', prompt: 'x', cwd: '/', phase: 'tool', tool: { name: 'Grep', detail: '' }, steps: 1, trail: [], reply: '', startedAt: 0 } } as unknown as Activity
+  expect(phoneMood([approval, claude], sessions, noon)).toBe('attention')
+  expect(phoneMood([claude], sessions, noon)).toBe('searching')
+  expect(phoneMood([], sessions, noon)).toBe('working')
+  expect(phoneMood([], [{ ...sessions[0], phase: 'waiting' }], noon)).toBe('attention')
+  expect(phoneMood([], [], noon)).toBe('idle')
+  expect(phoneMood([], [], night)).toBe('sleeping')
+  const v = phoneView({ name: 'l', activities: [claude], sessions: [], center: null, now: noon, character: { id: 'puff', name: 'Puff', color: null } })
+  expect(v.character).toEqual({ id: 'puff', name: 'Puff', color: CHARACTER_COLOR.puff, mood: 'searching' })
 })

@@ -1,87 +1,54 @@
 import { useEffect } from 'react'
-import { BackHandler, Pressable, StyleSheet, Text, View } from 'react-native'
+import { BackHandler, StyleSheet, View } from 'react-native'
 import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-reanimated'
-import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import type { DropLink, Live, LinkState } from '../link'
 import type { Prefs } from '../prefs'
 import { ControlsScreen } from './ControlsScreen'
 import { CrmScreen } from './CrmScreen'
 import { DocsScreen } from './DocsScreen'
-import { Page } from './kit'
+import { Page, Row, Section } from './kit'
+import type { IconName } from './icons'
 import { MusicScreen } from './MusicScreen'
 import { NotesScreen } from './NotesScreen'
 import { ServicesScreen } from './ServicesScreen'
 import { TodayScreen } from './TodayScreen'
 import { AgentsScreen } from './AgentsScreen'
 import { SettingsScreen } from './SettingsScreen'
-import { themed, useTheme } from './theme'
+import { useTheme } from './theme'
 import { TradingScreen } from './TradingScreen'
 
 export type MoreId = 'today' | 'agents' | 'trading' | 'notes' | 'music' | 'controls' | 'crm' | 'docs' | 'services' | 'settings'
 
-const APPS: { id: MoreId; name: string; color: string; icon: (c: string) => React.ReactNode }[] = [
+/** The rest of the island, grouped as a settings list: your day, work, this computer, the app. */
+const GROUPS: { title: string; items: { id: MoreId; name: string; color: string; icon: IconName; about: string }[] }[] = [
   {
-    id: 'today',
-    name: 'Today',
-    color: '#ff9f0a',
-    icon: (c) => (
-      <>
-        <Rect x={4} y={5} width={16} height={15} rx={3} stroke={c} strokeWidth={2} fill="none" />
-        <Path d="M4 10h16M9 3v4M15 3v4M8 14h3" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" />
-      </>
-    ),
-  },
-  { id: 'agents', name: 'Agents', color: '#5e5ce6', icon: (c) => <Path d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" stroke={c} strokeWidth={1.7} fill="none" strokeLinejoin="round" /> },
-  { id: 'trading', name: 'Trading', color: '#30d158', icon: (c) => <Path d="M4 17l5-5 4 4 7-8M15 8h5v5" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" /> },
-  { id: 'notes', name: 'Notes', color: '#ffd60a', icon: (c) => <Path d="M6 4h9l4 4v12H6zM9 12h7M9 16h5" stroke={c} strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" /> },
-  { id: 'music', name: 'Music', color: '#ff375f', icon: (c) => <Path d="M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 9 18zm10-2a2.5 2.5 0 1 1-2.5-2.5A2.5 2.5 0 0 1 19 16z" stroke={c} strokeWidth={1.9} fill="none" strokeLinejoin="round" /> },
-  {
-    id: 'controls',
-    name: 'Controls',
-    color: '#0a84ff',
-    icon: (c) => (
-      <>
-        <Path d="M5 7h14M5 17h14" stroke={c} strokeWidth={2} strokeLinecap="round" />
-        <Circle cx={9} cy={7} r={2.4} fill="none" stroke={c} strokeWidth={2} />
-        <Circle cx={15} cy={17} r={2.4} fill="none" stroke={c} strokeWidth={2} />
-      </>
-    ),
+    title: 'Your day',
+    items: [
+      { id: 'today', name: 'Today', color: '#ff9f0a', icon: 'calendar', about: 'What’s next and what you did' },
+      { id: 'agents', name: 'Agents', color: '#5e5ce6', icon: 'sparkle', about: 'Watches and research for you' },
+      { id: 'notes', name: 'Notes', color: '#e6b800', icon: 'note', about: 'Your notes on the computer' },
+    ],
   },
   {
-    id: 'crm',
-    name: 'CRM',
-    color: '#bf5af2',
-    icon: (c) => (
-      <>
-        <Circle cx={9} cy={9} r={3} stroke={c} strokeWidth={2} fill="none" />
-        <Path d="M3.5 19a5.5 5.5 0 0 1 11 0M16 6.5a3 3 0 0 1 0 5.6M17.5 14.5A5 5 0 0 1 20.5 19" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" />
-      </>
-    ),
-  },
-  { id: 'docs', name: 'Documents', color: '#ff453a', icon: (c) => <Path d="M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6" stroke={c} strokeWidth={1.9} fill="none" strokeLinejoin="round" strokeLinecap="round" /> },
-  {
-    id: 'services',
-    name: 'Services',
-    color: '#64d2ff',
-    icon: (c) => (
-      <>
-        <Rect x={4} y={4} width={7} height={7} rx={2} stroke={c} strokeWidth={2} fill="none" />
-        <Rect x={13} y={13} width={7} height={7} rx={2} stroke={c} strokeWidth={2} fill="none" />
-        <Path d="M11 7.5h3.5a2 2 0 0 1 2 2V13M13 16.5H9.5a2 2 0 0 1-2-2V11" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" />
-      </>
-    ),
+    title: 'Work',
+    items: [
+      { id: 'trading', name: 'Trading', color: '#30d158', icon: 'trend', about: 'Today’s trades and positions' },
+      { id: 'crm', name: 'CRM', color: '#bf5af2', icon: 'people', about: 'People, deals and follow-ups' },
+      { id: 'docs', name: 'Documents', color: '#ff453a', icon: 'doc', about: 'Merge, convert and print' },
+      { id: 'services', name: 'Services', color: '#32ade6', icon: 'layers', about: 'GitHub, Vercel, Stripe and more' },
+    ],
   },
   {
-    id: 'settings',
-    name: 'Settings',
-    color: '#8e8e93',
-    icon: (c) => (
-      <>
-        <Circle cx={12} cy={12} r={3} stroke={c} strokeWidth={2} fill="none" />
-        <Path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" stroke={c} strokeWidth={2} fill="none" strokeLinecap="round" />
-      </>
-    ),
+    title: 'This computer',
+    items: [
+      { id: 'music', name: 'Music', color: '#ff375f', icon: 'music', about: 'What’s playing, and Spotify' },
+      { id: 'controls', name: 'Controls', color: '#0a84ff', icon: 'sliders', about: 'Volume, brightness, Wi-Fi' },
+    ],
+  },
+  {
+    title: 'Island Drop',
+    items: [{ id: 'settings', name: 'Settings', color: '#8e8e93', icon: 'gear', about: 'Appearance and the connection' }],
   },
 ]
 
@@ -90,7 +57,6 @@ type Props = { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPr
 /** The rest of the island: Today, Agents, trading, notes, music, the Control Center, the CRM, documents, services, and this app's settings. */
 export function MoreScreen(p: Props) {
   const C = useTheme()
-  const st = useSt()
   const { link, live, top, open, setOpen } = p
   useEffect(() => {
     if (!open) return
@@ -100,39 +66,35 @@ export function MoreScreen(p: Props) {
     })
     return () => sub.remove()
   }, [open, setOpen])
-  const detail: Partial<Record<MoreId, string>> = {
-    trading: live.view?.trading?.short ?? live.view?.trading?.text,
-    music: live.view?.media ? `${live.view.media.playing ? 'Playing' : 'Paused'}: ${live.view.media.title}` : undefined,
+  // What's live there now says more than what it's for.
+  const now: Partial<Record<MoreId, string>> = {
+    trading: live.view?.trading ? `${live.view.trading.text} today` : undefined,
+    music: live.view?.media ? `${live.view.media.playing ? 'Playing' : 'Paused'}: ${[live.view.media.title, live.view.media.artist].filter(Boolean).join(' · ')}` : undefined,
   }
   const back = () => setOpen(null)
   return (
     <View style={{ flex: 1 }}>
       <Page title="More" sub={`Everything on ${link.pairing.name}`} top={top}>
-        <View style={st.grid}>
-          {APPS.map((a, i) => (
-            <Animated.View key={a.id} entering={FadeInDown.delay(i * 35).springify().damping(18)} style={st.cell}>
-              <Pressable
-                onPress={() => {
-                  void Haptics.selectionAsync()
-                  setOpen(a.id)
-                }}
-                style={({ pressed }) => [st.tile, pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }]}
-              >
-                <View style={[st.icon, { backgroundColor: `${a.color}22` }]}>
-                  <Svg width={26} height={26} viewBox="0 0 24 24">
-                    {a.icon(a.color)}
-                  </Svg>
-                </View>
-                <Text style={st.name}>{a.name}</Text>
-                {!!detail[a.id] && (
-                  <Text style={st.detail} numberOfLines={1}>
-                    {detail[a.id]}
-                  </Text>
-                )}
-              </Pressable>
-            </Animated.View>
-          ))}
-        </View>
+        {GROUPS.map((g, gi) => (
+          <Animated.View key={g.title} entering={FadeInDown.delay(gi * 40).springify().damping(18)}>
+            <Section title={g.title}>
+              {g.items.map((a, i) => (
+                <Row
+                  key={a.id}
+                  icon={{ name: a.icon, color: a.color }}
+                  title={a.name}
+                  sub={now[a.id] ?? a.about}
+                  chevron
+                  last={i === g.items.length - 1}
+                  onPress={() => {
+                    void Haptics.selectionAsync()
+                    setOpen(a.id)
+                  }}
+                />
+              ))}
+            </Section>
+          </Animated.View>
+        ))}
       </Page>
       {open && (
         <Animated.View key={open} entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
@@ -145,18 +107,9 @@ export function MoreScreen(p: Props) {
           {open === 'crm' && <CrmScreen link={link} top={top} onBack={back} />}
           {open === 'docs' && <DocsScreen link={link} top={top} onBack={back} />}
           {open === 'services' && <ServicesScreen link={link} top={top} onBack={back} />}
-          {open === 'settings' && <SettingsScreen link={link} state={p.state} prefs={p.prefs} setPrefs={p.setPrefs} onUnpair={p.onUnpair} top={top} onBack={back} />}
+          {open === 'settings' && <SettingsScreen link={link} live={live} state={p.state} prefs={p.prefs} setPrefs={p.setPrefs} onUnpair={p.onUnpair} top={top} onBack={back} />}
         </Animated.View>
       )}
     </View>
   )
 }
-
-const useSt = themed((C) => ({
-  grid: { flexDirection: 'row', flexWrap: 'wrap', marginHorizontal: -5 },
-  cell: { width: '50%', padding: 5 },
-  tile: { backgroundColor: C.card, borderRadius: 20, padding: 14, borderWidth: 1, borderColor: C.line, height: 122 },
-  icon: { width: 44, height: 44, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  name: { color: C.text, fontSize: 16, fontWeight: '700', marginTop: 12 },
-  detail: { color: C.text2, fontSize: 12, marginTop: 2 },
-}))

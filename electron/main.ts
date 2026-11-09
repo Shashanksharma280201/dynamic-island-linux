@@ -1871,7 +1871,7 @@ async function main() {
   })
   // The island on your phone: what it shows, and its answers (through the same decide() as a click here).
   const phoneLink = new PhoneLink({
-    view: () => phoneView({ name: hostname(), activities: store.list(), sessions: sessions.list(), center: center.view(), now: Date.now() }),
+    view: () => phoneView({ name: hostname(), activities: store.list(), sessions: sessions.list(), center: center.view(), now: Date.now(), character: config.character }),
     decide: (m) => decide(m),
     media: (c) => void media.command(c),
     art: async () => {

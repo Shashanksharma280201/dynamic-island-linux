@@ -4,15 +4,46 @@ import Animated, { FadeIn, FadeInDown, LinearTransition, useAnimatedStyle, useSh
 import * as Haptics from 'expo-haptics'
 import Svg, { Path } from 'react-native-svg'
 import { useActivity } from '../activity'
-import { linkMode, linkReadout, linkStatus } from '../linkStatus'
-import { LinkFigure, type LinkMode } from '../iso/LinkFigure'
+import { linkMode, linkStatus } from '../linkStatus'
+import type { LinkMode } from '../iso/LinkFigure'
+import { ORB_COLOR, MOOD_COLOR, moodWords } from '../orb'
+import type { PhoneCharacter } from '../islandTypes'
+import { Btn } from './kit'
+import { Orb } from './Orb'
 import type { PhoneMedia, PhoneSession, PhoneTrading } from '../islandTypes'
 import type { DropLink, Live, LinkState } from '../link'
-import { routeName } from '../protocol'
 import { ApprovalCard } from './Approvals'
 import { TalkButton } from './TalkButton'
 import { Icon } from './icons'
 import { themed, useTheme, type Palette } from './theme'
+
+/** The orb, big, with its name and what it's doing: the island itself, on the phone. */
+function OrbCard({ character, offline, line, hint, active }: { character: PhoneCharacter; offline: boolean; line: string; hint: string; active: boolean }) {
+  const s = useS()
+  const mood = offline ? 'sleeping' : character.mood
+  const tint = MOOD_COLOR[mood] ?? null
+  return (
+    <Animated.View entering={FadeIn.duration(350)} style={[s.orbCard, tint && { borderColor: `${tint}55` }]}>
+      <View style={[s.orbWell, offline && { opacity: 0.45 }]}>
+        <Orb id={character.id} color={character.color} mood={mood} size={84} active={active} />
+      </View>
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text style={s.orbName} numberOfLines={1}>
+          {character.name}
+        </Text>
+        <View style={s.orbMoodRow}>
+          {tint && <View style={[s.orbDot, { backgroundColor: tint }]} />}
+          <Text style={[s.orbMood, tint && { color: tint }]} numberOfLines={1}>
+            {line}
+          </Text>
+        </View>
+        <Text style={s.orbHint} numberOfLines={1}>
+          {hint}
+        </Text>
+      </View>
+    </Animated.View>
+  )
+}
 
 /** A dot that breathes while things are live. */
 export function LiveDot({ on, color }: { on: boolean; color: string }) {
@@ -34,6 +65,12 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
   const mode = linkMode(state, live, act)
   const color = mode === 'offline' ? C.red : mode === 'searching' ? C.orange : C.green
   const quiet = v && !v.approvals.length && !v.media && !v.trading && !v.sessions.some((x) => x.phase === 'working' || x.phase === 'waiting')
+  // The orb as the island draws it (an older island doesn't say: the default orb, its mood from what's here).
+  const working = v?.sessions.find((x) => x.phase === 'working')
+  const orb = v?.character ?? { id: 'orbit', name: 'Orbit', color: ORB_COLOR.orbit, mood: v?.approvals.length ? 'attention' : working ? 'working' : 'idle' }
+  const busy = orb.mood === 'working' || orb.mood === 'writing' || orb.mood === 'searching' || orb.mood === 'thinking'
+  const orbLine = mode === 'offline' ? 'Offline' : orb.mood === 'attention' && v?.approvals.length ? `${v.approvals.length} waiting for you` : moodWords(orb.mood)
+  const orbHint = mode === 'offline' ? 'It wakes when the link is back' : busy && working ? working.project : 'Live from your computer'
 
   return (
     <ScrollView
@@ -72,20 +109,15 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
         </View>
       </View>
 
-      <LinkFigure
-        mode={mode}
-        ms={state.ms}
-        title={state.route ? `Link · ${routeName(state.route)}` : 'Link'}
-        readout={linkReadout(mode, state, live, act)}
-        hint={mode === 'offline' ? 'Tap to try again' : 'Tap to test'}
-        active={active}
-        onTest={() => void link.ping()}
-      />
-      {mode !== 'offline' && <TalkButton link={link} />}
-      {mode === 'offline' && !!(state.error || live.error) && (
+      <OrbCard character={orb} offline={mode === 'offline'} line={orbLine} hint={orbHint} active={active} />
+      {mode !== 'offline' && <TalkButton link={link} name={orb.name} />}
+      {mode === 'offline' && (
         <View style={s.problem}>
           <Icon name="info" size={18} color={C.red} />
-          <Text style={s.problemText}>{state.error || live.error}</Text>
+          <View style={{ flex: 1, gap: 10 }}>
+            <Text style={s.problemText}>{state.error || live.error || `Can’t reach ${link.pairing.name} right now.`}</Text>
+            <Btn label="Try again" small icon="refresh" onPress={() => void link.ping()} style={{ alignSelf: 'flex-start' }} />
+          </View>
         </View>
       )}
 
@@ -144,7 +176,13 @@ export function NowPlaying({ media, link }: { media: PhoneMedia; link: DropLink 
   return (
     <Animated.View entering={FadeInDown.springify().damping(16)} layout={LinearTransition} style={s.card}>
       <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-        {art ? <Image source={art} style={s.art} /> : <View style={[s.art, { backgroundColor: C.card2 }]} />}
+        {art ? (
+          <Image source={art} style={s.art} />
+        ) : (
+          <View style={[s.art, s.artEmpty]}>
+            <Icon name="music" size={26} color={C.text3} />
+          </View>
+        )}
         <View style={{ flex: 1 }}>
           <Text style={s.kicker}>Now playing</Text>
           <Text style={s.track} numberOfLines={1}>
@@ -250,11 +288,19 @@ const useS = themed((C) => ({
   status: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   pillText: { fontSize: 13, fontWeight: '600' },
+  orbCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.card, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: C.line, ...C.shadow },
+  orbWell: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: C.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)' },
+  orbName: { color: C.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
+  orbMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
+  orbDot: { width: 7, height: 7, borderRadius: 4 },
+  orbMood: { color: C.text2, fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  orbHint: { color: C.text3, fontSize: 12.5, marginTop: 6 },
   problem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start', backgroundColor: C.dark ? 'rgba(255,69,58,0.1)' : 'rgba(229,52,43,0.07)', borderRadius: 14, padding: 12 },
   problemText: { color: C.text, fontSize: 13.5, lineHeight: 19, flex: 1 },
   section: { color: C.text2, fontSize: 13, fontWeight: '600', marginLeft: 4 },
   card: { backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
   art: { width: 64, height: 64, borderRadius: 12 },
+  artEmpty: { backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
   kicker: { color: C.text3, fontSize: 12, fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
   track: { color: C.text, fontSize: 17, fontWeight: '700', marginTop: 3 },
   artist: { color: C.text2, fontSize: 14, marginTop: 2 },
