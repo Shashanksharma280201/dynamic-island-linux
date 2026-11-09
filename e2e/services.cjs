@@ -24,6 +24,7 @@ const check = (name, ok, extra = '') => {
 }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 const key = (combo) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'key', combo])
+const pointer = (x, y) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), Math.round(x * SCALE), Math.round(y * SCALE)])
 const seen = (page, sel, ms = 6000) => page.waitForSelector(sel, { timeout: ms }).then(() => true, () => false)
 const post = (port, p, body) =>
   new Promise((resolve) => {
@@ -55,6 +56,10 @@ const getJson = (port, p) => new Promise((resolve) => http.get({ host: '127.0.0.
     await page.waitForSelector('.capsule.idle', { timeout: 8000 })
 
     // ---- An empty tab says how to start ----
+    // The pointer off the island first: opened from the keyboard, the panel stays
+    // until the pointer has been on it (with the island at the top centre, the
+    // middle of the screen is inside it, and it closed once Settings opened).
+    pointer(20, 500)
     key('ctrl+i')
     await page.waitForSelector('.hub', { timeout: 3000 })
     await page.click('.rail-btn[aria-label="Services"]')
