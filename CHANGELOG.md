@@ -4,7 +4,9 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
-## Unreleased
+## 0.7.0 (2026-11-09)
+
+**One island**
 
 - **One island, opening in one movement**: clicking the island grows it into
   the panel as a single shape (the separate column of icons beside it is
