@@ -1,6 +1,6 @@
 import type { Activity } from '@shared/intake'
 import { MeaningIndex, type Embedder } from './meaning'
-import type { MeaningView } from '@shared/meaning'
+import { EMBED_MB, type MeaningView } from '@shared/meaning'
 import { Loop } from './loop'
 import { runGit } from './mine'
 import type { MorningCard } from '@shared/loop'
@@ -176,7 +176,10 @@ export class Brain {
     every(30 * 60_000, () => void this.sweep())
     every(10 * 60_000, () => this.writeBrief())
     // The search index lets go of its memory when no one has searched for a while.
-    every(5 * 60_000, () => this.index?.releaseIfIdle(10 * 60_000))
+    every(5 * 60_000, () => {
+      this.index?.releaseIfIdle(10 * 60_000)
+      this.meaningIdx?.releaseIfIdle(10 * 60_000)
+    })
     void this.capture.processQueue().then((f) => f.length && this.changedSoon())
     // The loop: commits, the evening filing, the signals and the morning card.
     this.loop = new Loop({
@@ -192,18 +195,22 @@ export class Brain {
       now: this.d.now,
     })
     this.loop.start()
-    // Search by meaning: read new and changed notes a few at a time.
+    // Search by meaning: read new and changed notes a few at a time (fetching the model first if it's on and the model isn't here, as after a new one).
     this.meaningIdx = new MeaningIndex(vault.abs('_system/index/meaning'))
     every(2 * 60_000, () => void this.readForMeaning())
-    setTimeout(() => void this.readForMeaning(), 15_000).unref?.()
+    setTimeout(() => (this.d.config().meaning && this.d.onMeaning ? this.d.onMeaning() : void this.readForMeaning()), 15_000).unref?.()
     this.d.onChange()
   }
 
-  /** Bring the meaning index up to date (when it's on and the model is ready). */
-  async readForMeaning(max = 64): Promise<number> {
+  /**
+   * Bring the meaning index up to date, about `budget` sections at a time
+   * (when it's on and the model is ready): every two minutes, a few seconds
+   * of one core in the island's worker until it has caught up.
+   */
+  async readForMeaning(budget = 64): Promise<number> {
     const embed = this.d.config().meaning ? this.d.embed?.() : null
     if (!embed || !this.index || !this.meaningIdx) return 0
-    const n = await this.meaningIdx.update(this.index.entries(), embed, max).catch((e) => {
+    const n = await this.meaningIdx.update(this.index.entries(), embed, budget).catch((e) => {
       console.error('[brain] meaning:', (e as Error).message)
       return 0
     })
@@ -425,7 +432,7 @@ export class Brain {
       meaning: {
         on: this.d.config().meaning,
         notes: this.meaningIdx?.size() ?? 0,
-        ...(this.d.meaningModel?.() ?? { ready: false, downloading: false, progress: 0, error: null, sizeMb: 23 }),
+        ...(this.d.meaningModel?.() ?? { ready: false, downloading: false, progress: 0, error: null, sizeMb: EMBED_MB }),
       },
     }
     if (!vault) return view

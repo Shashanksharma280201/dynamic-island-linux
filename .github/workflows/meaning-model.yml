@@ -1,0 +1,33 @@
+name: Search by meaning (real model)
+
+# The brain's search by meaning with the real model, not the test stand-in:
+# its files download from where the app gets them, it runs as the island's
+# worker runs it (WebAssembly), and it finds notes in a small vault at least
+# as well as the model and whole-note reading before it. The numbers are in
+# the run's summary.
+on:
+  push:
+    paths:
+      - shared/meaning.ts
+      - electron/brain/meaning.ts
+      - tests/meaningModel.real.test.ts
+      - .github/workflows/meaning-model.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  model:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vitest run tests/meaningModel.real.test.ts
+        env:
+          DI_REAL_EMBED: '1'
