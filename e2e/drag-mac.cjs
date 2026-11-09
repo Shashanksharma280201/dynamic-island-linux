@@ -4,7 +4,7 @@
 // (DI_DRAG_ASSUME_DOWN), the dragged file goes onto the drag pasteboard as
 // Finder puts it there, and the pointer moves with CGWarpMouseCursorPosition.
 const { _electron } = require('playwright-core')
-const { execFileSync } = require('child_process')
+const { execFileSync, spawn } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
@@ -40,13 +40,36 @@ const glide = async (from, to, steps = 8) => {
     await sleep(40)
   }
 }
-/** What Finder does when a drag starts: the files go onto the drag pasteboard. */
+/**
+ * What Finder does when a drag starts: the files go onto the drag pasteboard,
+ * and Finder stays while the drag lasts. (A writer that quits at once can take
+ * what it wrote with it: the count moves, the files are gone.) Resolves with
+ * the pasteboard's count once they're on it; the writer stays until the
+ * button is let go.
+ */
 const dragOut = (files) =>
-  jxa(`ObjC.import('AppKit')
+  new Promise((resolve) => {
+    const p = spawn('osascript', [
+      '-l',
+      'JavaScript',
+      '-e',
+      `ObjC.import('AppKit')
 const pb = $.NSPasteboard.pasteboardWithName('Apple CFPasteboard drag')
 pb.clearContents
 pb.writeObjects($([${files.map((f) => `$.NSURL.fileURLWithPath(${JSON.stringify(f)})`).join(', ')}]))
-String(pb.changeCount)`)
+$.NSFileHandle.fileHandleWithStandardOutput.writeData($(String(pb.changeCount) + '\\n').dataUsingEncoding($.NSUTF8StringEncoding))
+const fm = $.NSFileManager.defaultManager
+for (let i = 0; i < 600 && fm.fileExistsAtPath(${JSON.stringify(HELD)}); i++) $.NSThread.sleepForTimeInterval(0.05)
+''`,
+    ])
+    let out = ''
+    p.stdout.on('data', (d) => {
+      out += d
+      if (out.includes('\n')) resolve(out.trim())
+    })
+    p.stderr.on('data', (d) => (out += String(d)))
+    p.on('exit', () => resolve(out.trim()))
+  })
 const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)), Math.round(c[1] - r * Math.cos((deg * Math.PI) / 180))]
 
 ;(async () => {
@@ -95,7 +118,7 @@ const at = (c, deg, r) => [Math.round(c[0] + r * Math.sin((deg * Math.PI) / 180)
     // ---- A PDF dragged out of Finder, held still ----
     fs.writeFileSync(HELD, '')
     await sleep(300)
-    const count = dragOut([report])
+    const count = await dragOut([report])
     check('a file goes onto the drag pasteboard', /^\d+$/.test(count), count)
     check('the drag loads the ring', await until(async () => !!ring(), 6000))
     check('holding still opens it with its actions at once', await until(async () => (await state())?.phase === 'open', 5000), JSON.stringify(await state()))
