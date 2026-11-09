@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Image, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native'
-import Animated, { FadeIn, FadeInDown, LinearTransition, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import Svg, { Path } from 'react-native-svg'
 import { useActivity } from '../activity'
@@ -10,6 +10,7 @@ import { ORB_COLOR, MOOD_COLOR, moodWords } from '../orb'
 import type { PhoneCharacter } from '../islandTypes'
 import { Btn } from './kit'
 import { Orb } from './Orb'
+import { PRESSED } from './motion'
 import type { PhoneMedia, PhoneSession, PhoneTrading } from '../islandTypes'
 import type { DropLink, Live, LinkState } from '../link'
 import { ApprovalCard } from './Approvals'
@@ -23,7 +24,7 @@ function OrbCard({ character, offline, line, hint, active }: { character: PhoneC
   const mood = offline ? 'sleeping' : character.mood
   const tint = MOOD_COLOR[mood] ?? null
   return (
-    <Animated.View entering={FadeIn.duration(350)} style={[s.orbCard, tint && { borderColor: `${tint}55` }]}>
+    <View style={s.orbCard}>
       <View style={[s.orbWell, offline && { opacity: 0.45 }]}>
         <Orb id={character.id} color={character.color} mood={mood} size={84} active={active} />
       </View>
@@ -41,18 +42,13 @@ function OrbCard({ character, offline, line, hint, active }: { character: PhoneC
           {hint}
         </Text>
       </View>
-    </Animated.View>
+    </View>
   )
 }
 
-/** A dot that breathes while things are live. */
+/** A status dot: solid while live, hollow when not. */
 export function LiveDot({ on, color }: { on: boolean; color: string }) {
-  const p = useSharedValue(1)
-  useEffect(() => {
-    p.value = on ? withRepeat(withSequence(withTiming(0.35, { duration: 900 }), withTiming(1, { duration: 900 })), -1) : withTiming(1)
-  }, [on]) // eslint-disable-line react-hooks/exhaustive-deps
-  const style = useAnimatedStyle(() => ({ opacity: p.value }))
-  return <Animated.View style={[{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }, style]} />
+  return <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: on ? color : 'transparent', borderWidth: on ? 0 : 1.5, borderColor: color }} />
 }
 
 /** Your computer's island: the link to it, what's waiting for you, what's playing, your trades and sessions. */
@@ -122,7 +118,7 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
       )}
 
       {!!v?.approvals.length && (
-        <Animated.View layout={LinearTransition} style={{ gap: 12 }}>
+        <Animated.View style={{ gap: 12 }}>
           <Text style={s.section}>Waiting for you · {v.approvals.length}</Text>
           {v.approvals.map((a) => (
             <ApprovalCard key={a.id} a={a} link={link} seenAt={live.seenAt ?? Date.now()} />
@@ -136,14 +132,14 @@ export function IslandScreen({ link, live, state, top, active = true, onOpen }: 
         </Pressable>
       )}
       {v?.trading && (
-        <Pressable onPress={() => onOpen?.('trading')} style={({ pressed }) => pressed && { transform: [{ scale: 0.985 }] }}>
+        <Pressable onPress={() => onOpen?.('trading')} style={({ pressed }) => pressed && PRESSED}>
           <Trading t={v.trading} />
         </Pressable>
       )}
       {!!v?.sessions.length && <Sessions list={v.sessions} />}
 
       {quiet && (
-        <Animated.View entering={FadeIn.duration(400)} style={s.quiet}>
+        <Animated.View style={s.quiet}>
           <View style={s.quietIcon}>
             <Icon name="check" size={20} color={C.green} />
           </View>
@@ -174,7 +170,7 @@ export function NowPlaying({ media, link }: { media: PhoneMedia; link: DropLink 
     void link.media(c)
   }
   return (
-    <Animated.View entering={FadeInDown.springify().damping(16)} layout={LinearTransition} style={s.card}>
+    <Animated.View style={s.card}>
       <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
         {art ? (
           <Image source={art} style={s.art} />
@@ -220,7 +216,7 @@ function Trading({ t }: { t: PhoneTrading }) {
   const s = useS()
   const tone = t.tone === 'up' ? C.green : t.tone === 'down' ? C.red : t.tone === 'warn' ? C.orange : C.text
   return (
-    <Animated.View entering={FadeInDown.springify().damping(16)} layout={LinearTransition} style={s.card}>
+    <Animated.View style={s.card}>
       <Text style={s.kicker}>{t.app}</Text>
       <Text style={[s.pnl, { color: tone }]}>{t.text}</Text>
       <Text style={s.artist}>{t.detail}</Text>
@@ -251,7 +247,7 @@ function Sessions({ list }: { list: PhoneSession[] }) {
   const C = useTheme()
   const s = useS()
   return (
-    <Animated.View entering={FadeInDown.springify().damping(16)} layout={LinearTransition} style={s.card}>
+    <Animated.View style={s.card}>
       <Text style={s.kicker}>Claude Code</Text>
       {list.slice(0, 6).map((x) => {
         const [label, color] = phaseOf(C)[x.phase] ?? [x.phase, C.text3]
@@ -288,7 +284,7 @@ const useS = themed((C) => ({
   status: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, flexWrap: 'wrap' },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
   pillText: { fontSize: 13, fontWeight: '600' },
-  orbCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.card, borderRadius: 22, padding: 16, borderWidth: 1, borderColor: C.line, ...C.shadow },
+  orbCard: { flexDirection: 'row', alignItems: 'center', gap: 16, backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
   orbWell: { width: 96, height: 96, borderRadius: 48, alignItems: 'center', justifyContent: 'center', backgroundColor: C.dark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.025)' },
   orbName: { color: C.text, fontSize: 22, fontWeight: '700', letterSpacing: -0.4 },
   orbMoodRow: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
@@ -309,7 +305,7 @@ const useS = themed((C) => ({
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 36, marginTop: 14 },
   ctl: { padding: 6 },
   play: { width: 54, height: 54, borderRadius: 27, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
-  pressed: { transform: [{ scale: 0.92 }], opacity: 0.85 },
+  pressed: PRESSED,
   pnl: { fontSize: 30, fontWeight: '700', marginTop: 4, fontVariant: ['tabular-nums'] },
   session: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 10, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line, marginTop: 6 },
   project: { color: C.text, fontSize: 15, fontWeight: '600' },

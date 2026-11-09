@@ -78,8 +78,8 @@ function Ring({ size, color, kind, active }: { size: number; color: string; kind
   const glow = useSharedValue(1)
   useEffect(() => {
     if (!active) return
-    if (kind === 'busy') spin.value = withRepeat(withTiming(360, { duration: 1400, easing: Easing.linear }), -1)
-    if (kind === 'alert') glow.value = withRepeat(withSequence(withTiming(0.35, { duration: 800 }), withTiming(1, { duration: 800 })), -1)
+    if (kind === 'busy') spin.value = withRepeat(withTiming(360, { duration: 1800, easing: Easing.linear }), -1)
+    if (kind === 'alert') glow.value = withRepeat(withSequence(withTiming(0.5, { duration: 1200 }), withTiming(1, { duration: 1200 })), -1)
     return () => {
       cancelAnimation(spin)
       cancelAnimation(glow)

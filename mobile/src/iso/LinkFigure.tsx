@@ -8,7 +8,6 @@ import Animated, {
   useSharedValue,
   withRepeat,
   withSequence,
-  withSpring,
   withTiming,
 } from 'react-native-reanimated'
 import Svg, { Circle, Defs, G, Path, RadialGradient, Stop } from 'react-native-svg'
@@ -95,7 +94,7 @@ export function LinkFigure({
       angle.value = withRepeat(withSequence(withTiming(needleAngle(240), { duration: 1400, easing: Easing.inOut(Easing.sin) }), withTiming(needleAngle(10), { duration: 1400, easing: Easing.inOut(Easing.sin) })), -1, false)
     } else {
       const target = needleAngle(mode === 'offline' || ms == null ? 0 : ms)
-      angle.value = still ? target : withSpring(target, { damping: 9, stiffness: 120 })
+      angle.value = still ? target : withTiming(target, { duration: 420, easing: Easing.out(Easing.cubic) })
     }
   }, [mode, ms, active, still]) // eslint-disable-line react-hooks/exhaustive-deps
 

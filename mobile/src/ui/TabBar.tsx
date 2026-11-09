@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Animated, { ZoomIn, ZoomOut, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated'
 import Svg, { Circle, Path, Rect } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import { useKeyboard } from './kit'
@@ -41,28 +39,16 @@ function Icon({ id, color }: { id: TabId; color: string }) {
   )
 }
 
-/** The tabs, floating at the bottom, with what's waiting on the Island tab. */
+/** The tabs, floating at the bottom, with what's waiting on the Island tab. The chosen one is lit, nothing slides. */
 export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t: TabId) => void; badges: Partial<Record<TabId, number>>; bottom: number }) {
   const C = useTheme()
   const s = useS()
-  const [w, setW] = useState(0)
-  const i = TABS.indexOf(tab)
-  const x = useSharedValue(0)
-  useEffect(() => {
-    x.value = withSpring((i * w) / TABS.length, { damping: 18, stiffness: 220 })
-  }, [i, w]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
   // Typing: the bar steps aside so what you type sits right above the keyboard.
   const kb = useKeyboard()
-  const away = useSharedValue(0)
-  useEffect(() => {
-    away.value = withSpring(kb ? 1 : 0, { damping: 20, stiffness: 220 })
-  }, [kb]) // eslint-disable-line react-hooks/exhaustive-deps
-  const hide = useAnimatedStyle(() => ({ opacity: 1 - away.value, transform: [{ translateY: away.value * 120 }] }))
+  if (kb) return null
   return (
-    <Animated.View pointerEvents={kb ? 'none' : 'auto'} style={[s.wrap, { bottom: Math.max(12, bottom) }, hide]}>
-      <View style={s.bar} onLayout={(e) => setW(e.nativeEvent.layout.width - 12)}>
-        {w > 0 && <Animated.View style={[s.pill, { width: w / TABS.length }, pill]} />}
+    <View style={[s.wrap, { bottom: Math.max(12, bottom) }]}>
+      <View style={s.bar}>
         {TABS.map((t) => {
           const on = t === tab
           const n = badges[t] ?? 0
@@ -78,27 +64,29 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
                 setTab(t)
               }}
             >
-              <Icon id={t} color={on ? C.accent : C.text3} />
-              <Text style={[s.label, on && { color: C.accent }]}>{LABEL[t]}</Text>
-              {n > 0 && (
-                <Animated.View entering={ZoomIn.springify()} exiting={ZoomOut} style={s.badge}>
-                  <Text style={s.badgeText}>{n > 9 ? '9+' : n}</Text>
-                </Animated.View>
-              )}
+              <View style={[s.ind, on && { backgroundColor: C.accentSoft }]}>
+                <Icon id={t} color={on ? C.accent : C.text2} />
+                {n > 0 && (
+                  <View style={s.badge}>
+                    <Text style={s.badgeText}>{n > 9 ? '9+' : n}</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[s.label, on && { color: C.text, fontWeight: '700' }]}>{LABEL[t]}</Text>
             </Pressable>
           )
         })}
       </View>
-    </Animated.View>
+    </View>
   )
 }
 
 const useS = themed((C) => ({
   wrap: { position: 'absolute', left: 12, right: 12 },
   bar: { flexDirection: 'row', backgroundColor: C.bar, borderRadius: 26, padding: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.lineStrong, elevation: 18, shadowColor: '#000', shadowOpacity: C.dark ? 0.4 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
-  pill: { position: 'absolute', top: 6, bottom: 6, left: 6, borderRadius: 20, backgroundColor: C.accentSoft },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 7, gap: 2 },
-  label: { color: C.text3, fontSize: 11, fontWeight: '600' },
-  badge: { position: 'absolute', top: 2, right: '24%', minWidth: 18, height: 18, borderRadius: 9, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 4, gap: 3 },
+  ind: { width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  label: { color: C.text2, fontSize: 11, fontWeight: '600' },
+  badge: { position: 'absolute', top: -3, right: 6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: C.bar },
   badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
 }))

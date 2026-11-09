@@ -4,7 +4,6 @@ import { StatusBar } from 'expo-status-bar'
 import * as SystemUI from 'expo-system-ui'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context'
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated'
 import { shareIntake, type SharedFile } from './modules/share-intake'
 import { DropLink, findComputer, type Live, type LinkState } from './src/link'
 import { followIsland, setupNotifications } from './src/notify'
@@ -251,12 +250,11 @@ function Paired({ link, shared, clearShared, onUnpair, prefs, setPrefs: savePref
   )
 }
 
-/** A tab's screen: kept alive (so scroll and state stay), faded in when chosen. */
+/** A tab's screen: kept alive (so scroll and state stay), shown at once when chosen, not drawn while another is. */
 function Screen({ on, children }: { on: boolean; children: React.ReactNode }) {
-  const style = useAnimatedStyle(() => ({ opacity: withTiming(on ? 1 : 0, { duration: 180 }), transform: [{ translateY: withTiming(on ? 0 : 8, { duration: 180 }) }] }), [on])
   return (
-    <Animated.View pointerEvents={on ? 'auto' : 'none'} style={[StyleSheet.absoluteFill, style]}>
+    <View pointerEvents={on ? 'auto' : 'none'} style={[StyleSheet.absoluteFill, { display: on ? 'flex' : 'none' }]}>
       {children}
-    </Animated.View>
+    </View>
   )
 }

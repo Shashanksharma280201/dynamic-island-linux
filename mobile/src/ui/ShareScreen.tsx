@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler'
-import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 import * as Haptics from 'expo-haptics'
 import type { SharedFile } from '../../modules/share-intake'
@@ -15,6 +15,7 @@ import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
 import { themed, useTheme } from './theme'
 import { useFlick } from './useFlick'
+import { APPEAR } from './motion'
 
 /**
  * What another app shared to Island Drop, already lifted: drag it toward your
@@ -128,7 +129,7 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
       {items.length > 1 && !flying && !grabbed && <View pointerEvents="none" style={[s.ghost, { width: size, height: size, left: home.x - size / 2 + 14, top: home.y - size / 2 - 10 }]} />}
       {/* At rest it sits in the middle; once grabbed, the flick moves its copy. */}
       <GestureDetector gesture={pan}>
-        <Animated.View entering={ZoomIn.springify().damping(14)} style={{ position: 'absolute', left: home.x - size / 2, top: home.y - size / 2, opacity: flying || grabbed ? 0 : 1 }}>
+        <Animated.View entering={APPEAR} style={{ position: 'absolute', left: home.x - size / 2, top: home.y - size / 2, opacity: flying || grabbed ? 0 : 1 }}>
           {card}
         </Animated.View>
       </GestureDetector>
@@ -136,7 +137,7 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
         {card}
       </Animated.View>
 
-      <Animated.View entering={FadeIn.delay(200)} style={[s.caption, { top: home.y + size / 2 + 26 }]} pointerEvents="none">
+      <Animated.View entering={APPEAR} style={[s.caption, { top: home.y + size / 2 + 26 }]} pointerEvents="none">
         <Text style={s.name} numberOfLines={1}>
           {title}
         </Text>
@@ -148,7 +149,7 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
       {!sending || sending.phase === 'failed' ? (
         <View style={s.buttons}>
           <Pressable
-            style={({ pressed }) => [s.send, pressed && { transform: [{ scale: 0.98 }] }]}
+            style={({ pressed }) => [s.send, pressed && { opacity: 0.8 }]}
             onPress={() => {
               if (busy.current) return
               const side = sideUsed()

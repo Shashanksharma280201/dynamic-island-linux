@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import Animated, { FadeInDown, LinearTransition, SlideOutLeft, SlideOutRight } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { PhoneApproval, PhoneLine } from '../islandTypes'
 import type { DropLink } from '../link'
 import { themed, useTheme, type Palette } from './theme'
 import { Icon, type IconName } from './icons'
+import { LEAVE } from './motion'
 
 const toneColor = (C: Palette, t?: PhoneLine['tone']) => (t === 'up' ? C.green : t === 'down' ? C.red : t === 'warn' ? C.orange : C.text)
 
@@ -55,10 +56,8 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
 
   return (
     <Animated.View
-      entering={FadeInDown.springify().damping(16)}
-      exiting={answered === 'deny' ? SlideOutLeft.duration(260) : SlideOutRight.duration(260)}
-      layout={LinearTransition.springify().damping(18)}
-      style={[s.card, { borderColor: `${a.color}55` }, answered && { opacity: 0.5 }]}
+      exiting={LEAVE}
+      style={[s.card, answered && { opacity: 0.5 }]}
     >
       <View style={[s.stripe, { backgroundColor: a.color }]} />
       <View style={s.head}>
@@ -151,8 +150,8 @@ export function ApprovalCard({ a, link, seenAt }: { a: PhoneApproval; link: Drop
 }
 
 const useS = themed((C) => ({
-  card: { backgroundColor: C.card, borderRadius: 22, padding: 16, paddingLeft: 18, borderWidth: 1, overflow: 'hidden' },
-  stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
+  card: { backgroundColor: C.card, borderRadius: 18, padding: 16, paddingLeft: 18, borderWidth: C.dark ? 1 : 0, borderColor: C.line, overflow: 'hidden', ...C.shadow },
+  stripe: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 3 },
   head: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   glyph: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   app: { color: C.text2, fontSize: 13, fontWeight: '700', flex: 1 },
@@ -180,7 +179,7 @@ const useS = themed((C) => ({
   btn: { flex: 1, borderRadius: 14, paddingVertical: 13, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
   deny: { backgroundColor: C.fill },
   allow: { backgroundColor: C.primary },
-  pressed: { transform: [{ scale: 0.97 }], opacity: 0.9 },
+  pressed: { opacity: 0.75 },
   denyText: { color: C.text, fontSize: 15, fontWeight: '700' },
   allowText: { color: C.onPrimary, fontSize: 15, fontWeight: '700' },
   always: { alignSelf: 'center', paddingTop: 10 },
