@@ -21,7 +21,7 @@ The installers aren't signed yet, so each system asks once:
 (The Mac app isn't signed with an Apple Developer ID yet; that's why macOS
 asks. [mac-signing.md](mac-signing.md) is how to turn that on.) To
 check a download, compare it with
-[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.7.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
+[SHA256SUMS.txt](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/SHA256SUMS.txt): `sha256sum -c SHA256SUMS.txt
 --ignore-missing` (on a Mac, `shasum -a 256 -c SHA256SUMS.txt
 --ignore-missing`). To build it from the code instead, see [below](#build-it-from-the-code).
 
