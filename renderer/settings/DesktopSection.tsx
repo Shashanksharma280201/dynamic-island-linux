@@ -1,4 +1,5 @@
 import type { SettingsState } from '@shared/types'
+import { EXTENSION_SWITCH } from '@shared/desktop'
 import { shortcutLabel } from '@shared/shortcuts'
 import { Toggle, useAction } from './Settings'
 
@@ -42,7 +43,7 @@ export function DesktopSection({ s }: { s: SettingsState }) {
         <div className="hint">They finish the look. Each comes from extensions.gnome.org (the version for your GNOME) and is turned on with the rest; Undo turns it off again.</div>
       </div>
       {d.extensions.map((e) => {
-        const use = e.id === 'blur' ? d.blur : d.hideClock
+        const use = d[EXTENSION_SWITCH[e.id]]
         const status = e.busy
           ? 'Getting it…'
           : e.error
@@ -60,7 +61,7 @@ export function DesktopSection({ s }: { s: SettingsState }) {
               {status && <div className={`hint${e.error ? ' warn' : ''}`}>{status}</div>}
             </div>
             {e.installed || e.justInstalled ? (
-              <input className="switch" type="checkbox" aria-label={`Use ${e.name}`} checked={use} onChange={(ev) => run(() => window.settings.desktop.set(e.id === 'blur' ? { blur: ev.target.checked } : { hideClock: ev.target.checked }))} />
+              <input className="switch" type="checkbox" aria-label={`Use ${e.name}`} checked={use} onChange={(ev) => run(() => window.settings.desktop.set({ [EXTENSION_SWITCH[e.id]]: ev.target.checked }))} />
             ) : (
               <button className="secondary" disabled={busy || e.busy || !d.supported} onClick={() => run(() => window.settings.desktop.getExtension(e.id))}>
                 Get it

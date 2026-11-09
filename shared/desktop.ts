@@ -14,11 +14,13 @@ export type DesktopConfig = {
   blur: boolean
   /** Just Perfection hides the top bar's clock (the island has the top centre). */
   hideClock: boolean
+  /** Hide Top Bar hides the top bar like a Mac's menu bar (the island has the top to itself). */
+  hideBar: boolean
   /** The login screen and boot splash are in the island's look (they needed your password), and what to put back. */
   system: { applied: boolean; gdmPrevious: string; splashPrevious: string }
 }
 
-export const DESKTOP_DEFAULTS: DesktopConfig = { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false, system: { applied: false, gdmPrevious: '', splashPrevious: '' } }
+export const DESKTOP_DEFAULTS: DesktopConfig = { applied: false, dock: true, buttonsLeft: false, original: {}, commandBar: true, blur: true, hideClock: false, hideBar: false, system: { applied: false, gdmPrevious: '', splashPrevious: '' } }
 
 export function parseDesktopConfig(raw: any): DesktopConfig {
   const r = raw && typeof raw === 'object' ? raw : {}
@@ -33,6 +35,7 @@ export function parseDesktopConfig(raw: any): DesktopConfig {
     commandBar: typeof r.commandBar === 'boolean' ? r.commandBar : DESKTOP_DEFAULTS.commandBar,
     blur: typeof r.blur === 'boolean' ? r.blur : DESKTOP_DEFAULTS.blur,
     hideClock: r.hideClock === true,
+    hideBar: r.hideBar === true,
     system: parseSystem(r.system),
   }
 }
@@ -59,11 +62,15 @@ export type DesktopView = {
   extensions: ExtensionView[]
   blur: boolean
   hideClock: boolean
+  hideBar: boolean
   /** The login screen and boot splash: done or not, working on it, what happened. */
   system: { applied: boolean; busy: 'apply' | 'undo' | null; note: string | null; error: string | null }
 }
 
-export type ExtensionId = 'blur' | 'perfection'
+export type ExtensionId = 'hidebar' | 'blur' | 'perfection'
+
+/** Which of DesktopConfig's switches uses each extension. */
+export const EXTENSION_SWITCH: Record<ExtensionId, 'hideBar' | 'blur' | 'hideClock'> = { hidebar: 'hideBar', blur: 'blur', perfection: 'hideClock' }
 
 export type ExtensionView = {
   id: ExtensionId
@@ -79,6 +86,7 @@ export type ExtensionView = {
 
 /** The GNOME extensions the look uses (from extensions.gnome.org). */
 export const EXTENSIONS: { id: ExtensionId; uuid: string; name: string; what: string; schema: string }[] = [
+  { id: 'hidebar', uuid: 'hidetopbar@mathieu.bidon.ca', name: 'Hide Top Bar', what: 'Hides the top bar like a Mac’s menu bar: push the pointer against the top edge (or open the overview) and it slides in. The island moves to the top centre, where the bar was.', schema: 'org.gnome.shell.extensions.hidetopbar' },
   { id: 'blur', uuid: 'blur-my-shell@aunetx', name: 'Blur my Shell', what: 'Blurs the top bar, the overview and the Dock over what’s behind them, like macOS’s glass.', schema: 'org.gnome.shell.extensions.blur-my-shell' },
   { id: 'perfection', uuid: 'just-perfection-desktop@just-perfection', name: 'Just Perfection', what: 'Hides the top bar’s clock, so the island has the top centre to itself.', schema: 'org.gnome.shell.extensions.just-perfection' },
 ]

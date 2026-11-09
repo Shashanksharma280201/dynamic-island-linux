@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DesktopLook, extensionSettings, lookSettings, yaruAccent } from '../electron/desktopLook'
 import { ExtensionInstaller, extensionSchemaDirs, findExtension } from '../electron/gnomeExtensions'
-import { extensionKey, parseStrv, strv } from '../shared/desktop'
+import { EXTENSION_SWITCH, extensionKey, parseDesktopConfig, parseStrv, strv } from '../shared/desktop'
 
 test('the island’s accent in Yaru, and the settings for the look', () => {
   expect(yaruAccent('blue')).toBe('blue')
@@ -65,6 +65,21 @@ describe('GNOME extensions', () => {
     expect(extensionKey('org.gnome.shell enabled-extensions')).toBe(true)
     expect(extensionKey('org.gnome.shell.extensions.just-perfection clock-menu')).toBe(true)
     expect(extensionKey('org.gnome.shell.extensions.dash-to-dock dock-position')).toBe(false)
+  })
+
+  it('hides the top bar like a Mac’s menu bar with Hide Top Bar', () => {
+    const s = extensionSettings({ bar: '/e/htb' })
+    expect(s.find((x) => x.key === 'enabled-extensions')).toMatchObject({ addToList: ['hidetopbar@mathieu.bidon.ca'], what: 'Hide Top Bar on' })
+    const bar = Object.fromEntries(s.filter((x) => x.schema === 'org.gnome.shell.extensions.hidetopbar').map((x) => [x.key, x.value]))
+    // Always hidden (not only when a window is under it); back at the top edge and in the overview.
+    expect(bar).toEqual({ 'mouse-sensitive': 'true', 'enable-intellihide': 'false', 'show-in-overview': 'true', 'mouse-triggers-overview': 'false' })
+    expect(s.filter((x) => x.schema === 'org.gnome.shell.extensions.hidetopbar').every((x) => x.schemadir === '/e/htb/schemas')).toBe(true)
+    expect(extensionSettings({ bar: '/e/htb', blur: '/e/blur', clock: '/e/jp' }).find((x) => x.key === 'enabled-extensions')?.what).toBe('Hide Top Bar and Blur my Shell and Just Perfection on')
+    expect(extensionSettings({ blur: '/e/blur' }).some((x) => x.schema === 'org.gnome.shell.extensions.hidetopbar')).toBe(false)
+    expect(extensionKey('org.gnome.shell.extensions.hidetopbar mouse-sensitive')).toBe(true)
+    expect(EXTENSION_SWITCH.hidebar).toBe('hideBar')
+    expect(parseDesktopConfig({}).hideBar).toBe(false)
+    expect(parseDesktopConfig({ hideBar: true }).hideBar).toBe(true)
   })
 
   it('adds to the list, keeps the original for Undo, and uses the extension’s own schemas', async () => {

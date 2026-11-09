@@ -436,7 +436,7 @@ const settings = {
   setLook: (l: { island?: 'match' | 'dark'; accent?: string }) => ipcRenderer.invoke(SETTINGS.SET_LOOK, l),
   setPaused: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_PAUSED, on),
   desktop: {
-    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
+    set: (patch: { dock?: boolean; buttonsLeft?: boolean; commandBar?: boolean; blur?: boolean; hideClock?: boolean; hideBar?: boolean }) => ipcRenderer.invoke(SETTINGS.DESKTOP_SET, patch),
     getExtension: (id: string) => ipcRenderer.invoke(SETTINGS.DESKTOP_GET_EXT, id),
     /** The login screen and boot splash (Ubuntu asks for your password). */
     system: (what: 'apply' | 'undo') => ipcRenderer.invoke(SETTINGS.DESKTOP_SYSTEM, what),

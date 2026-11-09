@@ -15,14 +15,14 @@ export type Anchor = {
   /** Left and right edges of the head at eye level. */
   sideL: number
   sideR: number
-  /** Glasses frames that show against the face (Bolt's visor is dark). */
+  /** Glasses frames that show against the face. */
   frame: string
 }
 
 export const ANCHORS: Record<CharacterId, Anchor> = {
-  bolt: { top: 24, headW: 60, eyeY: 51.5, eyeL: 40, eyeR: 60, eyeSize: 7.2, chinY: 84, sideL: 15, sideR: 85, frame: '#e5e5ea' },
-  puff: { top: 19, headW: 42, eyeY: 52, eyeL: 38, eyeR: 62, eyeSize: 6, chinY: 86, sideL: 15, sideR: 85, frame: '#2b2b2e' },
-  orbit: { top: 22, headW: 40, eyeY: 50, eyeL: 41, eyeR: 59, eyeSize: 5.6, chinY: 84, sideL: 20, sideR: 80, frame: '#3a1f14' },
+  bolt: { top: 24, headW: 56, eyeY: 52, eyeL: 39, eyeR: 61, eyeSize: 6, chinY: 86, sideL: 18, sideR: 82, frame: '#1c1c1e' },
+  puff: { top: 29, headW: 46, eyeY: 59, eyeL: 39.5, eyeR: 60.5, eyeSize: 4.8, chinY: 86, sideL: 13, sideR: 87, frame: '#1c1c1e' },
+  orbit: { top: 19, headW: 44, eyeY: 49, eyeL: 40.5, eyeR: 59.5, eyeSize: 5.2, chinY: 85, sideL: 17, sideR: 83, frame: '#1c1c1e' },
 }
 
 /** Things worn on the head (a hat hides Bolt's antenna). */

@@ -76,8 +76,8 @@ documents and CRM stay on your computer. See [all features](docs/features.md).
 
 ## Get started
 
-Once installed, the island sits on the right edge of your screen. Drag it
-anywhere along the edges or to the top center, and click it (or press
+Once installed, the island sits at the top center of your screen. Drag it
+anywhere along the left or right edge, or back to the top center, and click it (or press
 **Ctrl+I**) to open the panel. Then connect what you use, from **Settings**:
 
 - [Your second brain](docs/brain.md), so every AI you use knows you and your work

@@ -54,6 +54,9 @@ function hook(input, env = {}) {
   player.stdout.on('data', (d) => (playerLog += d))
   await sleep(800)
 
+  // Docked on the right edge (it starts at the top centre): these checks drag it from there.
+  fs.mkdirSync(USER_DATA, { recursive: true })
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'right', y: 0.3 } }))
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox', ...(SCALE !== 1 ? [`--force-device-scale-factor=${SCALE}`] : [])],

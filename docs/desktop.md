@@ -20,6 +20,13 @@ Settings → Desktop → **Make Ubuntu match the island**, then **Apply**:
   [extensions.gnome.org](https://extensions.gnome.org) (the version for your
   GNOME, installed with GNOME's own `gnome-extensions`; **Get it** in
   Settings → Desktop):
+  - [Hide Top Bar](https://gitlab.gnome.org/tuxor1337/hidetopbar): Ubuntu's
+    top bar hides like a Mac's menu bar. It stays hidden (not only when a
+    window is under it) and slides in while you push the pointer against
+    the top edge, or in the overview (the Super key). The island moves to
+    the top centre, where the bar was, and the work area grows to the top
+    of the screen. **Get it** turns it on; its switch turns it off again,
+    with its own settings put back.
   - [Blur my Shell](https://github.com/aunetx/blur-my-shell): the top bar,
     the overview and the Dock blur what's behind them, like macOS's glass.
     On once it's installed.

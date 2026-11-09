@@ -4,6 +4,24 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+- **The island starts at the top centre**, like a Mac's (it was on the right
+  edge). Drag it to an edge, or pick Left, Top or Right in Settings → General;
+  where you put it is kept.
+- **Ubuntu's top bar hides like a Mac's menu bar** (Settings → Desktop →
+  Hide Top Bar, **Get it**): always hidden, and back while you push the
+  pointer against the top edge or open the overview. The island moves to the
+  top centre where the bar was. Its switch turns it off with its settings put
+  back, and Undo puts back everything.
+- **The characters, redrawn**: Orbit, Bolt and Puff are flat shapes in one
+  colour each, with two dot eyes and a one-line mouth, in light and dark. What
+  they're doing shows as a small badge by the head (thinking dots, a
+  magnifier, a pencil, a check), and Orbit's swirling orb comes out only while
+  it listens or works. Outfits and your body colour still fit.
+- Switching parts of the desktop look on and off quickly no longer loses what
+  Undo puts back (changes to the look now happen one at a time).
+
 ## 0.5.0 (2026-11-08)
 
 **Island OS: your computer as one AI**

@@ -18,8 +18,8 @@ npm install
 npm start
 ```
 
-This builds the app and launches it. The island appears on the right edge of the
-screen (drag it to move it, or pick Left/Right in Settings); play some music or send a notification (`notify-send "Hello" "World"`)
+This builds the app and launches it. The island appears at the top centre of the
+screen (drag it to move it, or pick Left, Top or Right in Settings); play some music or send a notification (`notify-send "Hello" "World"`)
 to see it react.
 
 For development with hot reload, use `npm run dev` instead.

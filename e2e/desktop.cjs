@@ -2,7 +2,8 @@
 // island's look through a stand-in gsettings (with a real key store), follows
 // a new accent, and Undo puts back exactly what was there; the command bar
 // works out sums, opens apps from .desktop files, settings and system changes,
-// and offers to ask. Needs an X server and a session bus.
+// and offers to ask. Hide Top Bar hides Ubuntu's top bar like a Mac's menu bar
+// and the island moves to the top centre. Needs an X server and a session bus.
 const { _electron } = require('playwright-core')
 const path = require('path')
 const http = require('http')
@@ -34,6 +35,11 @@ const BEFORE = {
   'org.gnome.shell disabled-extensions': '@as []',
   'org.gnome.shell disable-user-extensions': 'false',
   'org.gnome.shell.extensions.just-perfection clock-menu': 'true',
+  // Hide Top Bar's own defaults.
+  'org.gnome.shell.extensions.hidetopbar mouse-sensitive': 'false',
+  'org.gnome.shell.extensions.hidetopbar enable-intellihide': 'true',
+  'org.gnome.shell.extensions.hidetopbar show-in-overview': 'true',
+  'org.gnome.shell.extensions.hidetopbar mouse-triggers-overview': 'false',
 }
 fs.writeFileSync(STORE, JSON.stringify(BEFORE))
 const GS = path.join(TMP, 'gsettings')
@@ -92,7 +98,8 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     res.writeHead(200).end('PK')
   })
   await new Promise((r) => ego.listen(0, '127.0.0.1', r))
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ theme: 'light', character: { id: 'bolt', name: 'Sparky' } }))
+  // Docked on the right: hiding the top bar moves it to the top centre.
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ theme: 'light', character: { id: 'bolt', name: 'Sparky' }, dock: { side: 'right', y: 0.3 } }))
   const app = await _electron.launch({
     executablePath: ELECTRON,
     args: [ROOT, '--no-sandbox'],
@@ -131,6 +138,27 @@ const store = () => JSON.parse(fs.readFileSync(STORE, 'utf8'))
     check('then hides the top bar’s clock', !!(await until(() => store()['org.gnome.shell.extensions.just-perfection clock-menu'] === 'false' && enabled().includes('just-perfection-desktop@just-perfection'))))
     await settings.click('#desktop .desktop-ext[data-ext="blur"] input[aria-label="Use Blur my Shell"]')
     check('turning Blur my Shell off turns just it off', !!(await until(() => !enabled().includes('blur-my-shell') && enabled().includes('just-perfection'))), enabled())
+    // Hide Top Bar: getting it is wanting the bar hidden, Mac-style.
+    const hb = (k) => store()[`org.gnome.shell.extensions.hidetopbar ${k}`]
+    const docked = () => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8')).dock?.side
+    check('the island starts on the right here', docked() === 'right', docked())
+    await settings.click('#desktop .desktop-ext[data-ext="hidebar"] button:has-text("Get it")')
+    check('Get it installs Hide Top Bar and turns it on', !!(await until(() => enabled().includes('hidetopbar@mathieu.bidon.ca'))), enabled())
+    check('the top bar hides like a Mac’s menu bar (always, back when the pointer pushes the top edge)', !!(await until(() => hb('mouse-sensitive') === 'true' && hb('enable-intellihide') === 'false' && hb('show-in-overview') === 'true' && hb('mouse-triggers-overview') === 'false')), JSON.stringify([hb('mouse-sensitive'), hb('enable-intellihide')]))
+    check('and the island moves to the top centre, where the bar was', !!(await until(() => docked() === 'top')), docked())
+    const islandWin = await app.evaluate(({ BrowserWindow, screen }) => {
+      const w = BrowserWindow.getAllWindows().find((x) => x.webContents.getURL().includes('index.html'))
+      const b = w.getBounds()
+      const a = screen.getPrimaryDisplay().workArea
+      return { mid: b.x + b.width / 2, center: a.x + a.width / 2, top: b.y - a.y, wide: b.width < a.width }
+    })
+    check('its window is the band at the top centre', Math.abs(islandWin.mid - islandWin.center) <= 1 && islandWin.top === 0 && islandWin.wide, JSON.stringify(islandWin))
+    check('the switch shows it on', await settings.isChecked('#desktop .desktop-ext[data-ext="hidebar"] input[aria-label="Use Hide Top Bar"]').catch(() => false))
+    await settings.click('#desktop .desktop-ext[data-ext="hidebar"] input[aria-label="Use Hide Top Bar"]')
+    check('turning it off shows the bar again (its settings back as they were)', !!(await until(() => !enabled().includes('hidetopbar') && enabled().includes('just-perfection') && hb('mouse-sensitive') === 'false' && hb('enable-intellihide') === 'true')), JSON.stringify([enabled(), hb('mouse-sensitive'), hb('enable-intellihide'), hb('show-in-overview'), hb('mouse-triggers-overview')]))
+    check('the island stays where it is', docked() === 'top', docked())
+    await settings.click('#desktop .desktop-ext[data-ext="hidebar"] input[aria-label="Use Hide Top Bar"]')
+    check('and on again', !!(await until(() => enabled().includes('hidetopbar') && hb('mouse-sensitive') === 'true')), enabled())
     await settings.screenshot({ path: `${OUT}/01-desktop.png` })
     await settings.click('#desktop button:has-text("Undo")')
     check('Undo puts back exactly what was there (extensions too)', !!(await until(() => JSON.stringify(store()) === JSON.stringify(BEFORE))), JSON.stringify(store()).slice(0, 400))
