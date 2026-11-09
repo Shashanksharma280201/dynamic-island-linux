@@ -26,8 +26,20 @@ class IslandWidgetProvider : AppWidgetProvider() {
     render(context, manager, id)
   }
 
-  /** What the app last said to show. */
-  private class Shown(val line: String, val detail: String, val color: Int, val ring: Int?, val dim: Boolean)
+  /** What the app last said to show (both widgets read it). */
+  class Shown(
+    val line: String,
+    val detail: String,
+    val color: Int,
+    val ring: Int?,
+    val dim: Boolean,
+    val name: String,
+    /** A few capitals for the dot widget: "2 WAITING", "RESTING". */
+    val word: String,
+    val computer: String,
+    /** Something needs you (the dot widget's red dot). */
+    val alert: Boolean,
+  )
 
   companion object {
     const val PREFS = "island_widget"
@@ -39,6 +51,7 @@ class IslandWidgetProvider : AppWidgetProvider() {
     fun updateAll(context: Context) {
       val manager = AppWidgetManager.getInstance(context)
       for (id in ids(context)) render(context, manager, id)
+      IslandDotsWidgetProvider.updateAll(context)
     }
 
     private fun color(s: String?, fallback: Int?): Int? =
@@ -48,10 +61,10 @@ class IslandWidgetProvider : AppWidgetProvider() {
         fallback
       }
 
-    private fun shown(context: Context): Shown {
+    fun shown(context: Context): Shown {
       val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getString(KEY, null)
       val coral = Color.parseColor("#ff8a65")
-      if (raw == null) return Shown("Open Island Drop", "Pair it with your computer", coral, null, true)
+      if (raw == null) return Shown("Open Island Drop", "Pair it with your computer", coral, null, true, "Island", "PAIR ME", "", false)
       return try {
         val j = JSONObject(raw)
         Shown(
@@ -60,9 +73,13 @@ class IslandWidgetProvider : AppWidgetProvider() {
           color(j.optString("color"), coral) ?: coral,
           if (j.isNull("ring")) null else color(j.optString("ring"), null),
           j.optBoolean("dim", false),
+          j.optString("name", "Orbit"),
+          j.optString("word", "RESTING"),
+          j.optString("computer", ""),
+          j.optBoolean("alert", false),
         )
       } catch (e: Exception) {
-        Shown("Island", "", coral, null, false)
+        Shown("Island", "", coral, null, false, "Island", "ISLAND", "", false)
       }
     }
 

@@ -59,13 +59,16 @@ test('the day in words', () => {
 
 test('the island in a few words, for the tab, the widget and the lock screen', () => {
   const view: any = { approvals: [{ id: 'a' }, { id: 'b' }], sessions: [{ id: 's', project: 'shop', phase: 'working' }], character: { id: 'bolt', name: 'Bolt', color: '#4da3ff', mood: 'attention' } }
-  expect(islandSummary(view, 'live', 'laptop')).toEqual({ orb: view.character, line: '2 waiting for you', detail: 'laptop · Connected', ring: '#ff9f0a', dim: false, chip: '2' })
+  expect(islandSummary(view, 'live', 'laptop')).toEqual({ orb: view.character, line: '2 waiting for you', detail: 'laptop · Connected', ring: '#ff9f0a', dim: false, chip: '2', word: '2 WAITING', alert: true, computer: 'laptop' })
   // At work: the project it's on.
   const busy = { ...view, approvals: [], character: { ...view.character, mood: 'working' } }
-  expect(islandSummary(busy, 'live', 'laptop')).toMatchObject({ line: 'At work', detail: 'shop · laptop', chip: null })
+  expect(islandSummary(busy, 'live', 'laptop')).toMatchObject({ line: 'At work', detail: 'shop · laptop', chip: null, word: 'AT WORK', alert: false })
   // Offline: said once, faded, no ring.
-  expect(islandSummary(view, 'offline', 'laptop')).toMatchObject({ line: 'Offline', detail: 'laptop · Can’t reach it', ring: null, dim: true, chip: null })
+  expect(islandSummary(view, 'offline', 'laptop')).toMatchObject({ line: 'Offline', detail: 'laptop · Can’t reach it', ring: null, dim: true, chip: null, word: 'OFFLINE', alert: false })
   // An island that doesn't send its orb: the default one, its mood from what's there.
   expect(islandSummary({ ...view, character: undefined }, 'live', 'laptop').orb).toEqual({ id: 'orbit', name: 'Orbit', color: '#ff8a65', mood: 'attention' })
-  expect(islandSummary(undefined, 'searching', 'laptop')).toMatchObject({ line: 'Connecting…', detail: 'laptop · Connecting…' })
+  expect(islandSummary(undefined, 'searching', 'laptop')).toMatchObject({ line: 'Connecting…', detail: 'laptop · Connecting…', word: 'CONNECTING' })
+  // Every word fits the dot font (capitals, digits, space).
+  for (const mood of ['idle', 'sleeping', 'working', 'writing', 'searching', 'thinking', 'listening', 'done', 'attention', 'error', 'dancing', 'juggling'])
+    expect(islandSummary({ approvals: [], sessions: [], character: { id: 'orbit', name: 'Orbit', color: '#ff8a65', mood } } as any, 'live', 'laptop').word).toMatch(/^[A-Z0-9 ]+$/)
 })

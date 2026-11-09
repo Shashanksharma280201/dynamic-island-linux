@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
 import { islandWidget } from '../../modules/island-widget'
@@ -21,6 +21,13 @@ const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
 ]
 
 /** The look, the link to your computer, how the app keeps in touch, and the pairing. */
+/** A Nothing phone (the Glyph lights, the dot widget at home on its lock screen). */
+const NOTHING = Platform.OS === 'android' && /nothing/i.test(String((Platform.constants as { Manufacturer?: string; Brand?: string }).Manufacturer ?? (Platform.constants as { Brand?: string }).Brand ?? ''))
+
+const addWidget = (which: 'wide' | 'dots') => {
+  if (!islandWidget.add(which)) Alert.alert('Add it from the home screen', 'Press and hold an empty spot on your home screen, choose Widgets, then Island Drop.')
+}
+
 export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, top, onBack }: { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; onBack?: () => void }) {
   const C = useTheme()
   const s = useS()
@@ -137,15 +144,31 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
       </Section>
 
       {islandWidget.available && (
-        <Section title="Home screen" note="Press and hold an empty spot on your home screen, then Widgets, to add it yourself. Phones that allow widgets on the lock screen can put it there too.">
+        <Section title="Widgets" note={`Or press and hold an empty spot on your home screen, choose Widgets, then Island Drop.${NOTHING ? ' On Nothing OS 3 and later, Island · Dots fits the lock screen too: press and hold the lock screen, then Customise.' : ''}`}>
           <Row
             icon={{ name: 'layers', color: C.violet }}
-            title="Island widget"
-            sub="The orb, what it’s doing and your computer, on your home screen. Tap it to open the app."
-            onPress={() => {
-              if (!islandWidget.add()) Alert.alert('Add it from the home screen', 'Press and hold an empty spot on your home screen, choose Widgets, then Island Drop.')
-            }}
+            title="Island"
+            sub="The orb, what it’s doing and your computer, wide or small."
+            onPress={() => addWidget('wide')}
             right={<Text style={s.add}>Add</Text>}
+          />
+          <Row
+            icon={{ name: 'sparkle', color: C.dark ? '#ffffff' : '#111114' }}
+            title="Island · Dots"
+            sub="The same in dot matrix, black and white, a red dot when something needs you. Square."
+            onPress={() => addWidget('dots')}
+            right={<Text style={s.add}>Add</Text>}
+            last
+          />
+        </Section>
+      )}
+
+      {NOTHING && (
+        <Section title="Glyph lights" note="Nothing OS keeps the light on until you look. In Settings, Glyph Interface, Notifications you can also pick Island Drop and its own light.">
+          <Row
+            icon={{ name: 'bolt', color: '#d71921' }}
+            title="Light up when something needs you"
+            sub="When an approval arrives, press and hold its notification and turn on Essential Glyph."
             last
           />
         </Section>
