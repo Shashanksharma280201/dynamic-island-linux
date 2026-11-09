@@ -129,8 +129,8 @@ function approval(input) {
     key('ctrl+i')
     await page.waitForSelector('.hub', { state: 'detached', timeout: 3000 })
     await leave()
-    // Its icon rail must go too, or its invisible box keeps the island's clickable area big.
-    check('the icon rail leaves with the panel', await gone(page, '.rail-shell'))
+    // Its row of sections goes with it (it's inside the island), or an invisible box keeps the clickable area big.
+    check('the section bar leaves with the panel', await gone(page, '.tab-bar'))
 
     // ---- It needs you ----
     await term.hook({ hook_event_name: 'PreToolUse', session_id: 's1', tool_name: 'Bash', tool_input: { command: 'npm test' } })

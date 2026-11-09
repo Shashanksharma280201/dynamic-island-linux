@@ -41,9 +41,9 @@ test('limit reset and last-updated wording', async () => {
   expect(agoText(now - 86400_000, now)).toBe('1 day ago')
 })
 
-test('rail badge text', async () => {
+test('tab badge text', async () => {
   ;(globalThis as any).window ??= { addEventListener() {} }
-  const { badgeText } = await import('../renderer/island/hub/Rail')
+  const { badgeText } = await import('../renderer/island/hub/TabBar')
   expect(badgeText(0)).toBe('')
   expect(badgeText(null)).toBe('')
   expect(badgeText(7)).toBe('7')
@@ -51,11 +51,9 @@ test('rail badge text', async () => {
   expect(badgeText(250)).toBe('99+')
 })
 
-test('the Dock’s magnification: biggest under the pointer, normal a couple of icons away', async () => {
+test('every section has its own drawn icon (no emoji, no coloured tiles)', async () => {
   ;(globalThis as any).window ??= { addEventListener() {} }
-  const { magnify } = await import('../renderer/island/hub/Rail')
-  expect(magnify(0)).toBeCloseTo(1.42, 2)
-  expect(magnify(22)).toBeGreaterThan(1.3)
-  expect(magnify(-22)).toBeCloseTo(magnify(22), 6)
-  expect(magnify(140)).toBeLessThan(1.001)
+  const { TAB_ICONS } = await import('../renderer/island/hub/TabBar')
+  const { HUB_TABS } = await import('../renderer/island/hub/Hub')
+  for (const t of [...HUB_TABS, 'settings' as const]) expect(TAB_ICONS[t]).toBeTruthy()
 })
