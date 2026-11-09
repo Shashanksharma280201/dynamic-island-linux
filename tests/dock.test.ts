@@ -1,4 +1,4 @@
-import { parseDock, columnBounds, sideForX, sideForPoint, islandTop, DEFAULT_DOCK, TOP_WIDTH } from '../shared/dock'
+import { parseDock, columnBounds, sideForX, sideForPoint, islandTop, panelTop, PANEL_PLACE_HEIGHT, DEFAULT_DOCK, TOP_WIDTH } from '../shared/dock'
 
 const WA = { x: 0, y: 32, width: 1920, height: 1048 }
 
@@ -41,6 +41,17 @@ test('sideForX splits the work area in half', () => {
   expect(sideForX(959, WA)).toBe('left')
   expect(sideForX(960, WA)).toBe('right')
   expect(sideForX(3000, WA)).toBe('right')
+})
+
+test('panelTop keeps the open panel still whichever section is open', () => {
+  // Sections of different heights all start at the same place on a tall screen.
+  const at = 500 - PANEL_PLACE_HEIGHT / 2
+  for (const h of [260, 380, 480, 560]) expect(panelTop(500, h, 1200)).toBe(at)
+  // A section too tall to fit there moves up only as far as it needs.
+  expect(panelTop(500, 960, 1200)).toBe(1200 - 960 - 10)
+  // Near the top or on a short screen: the margin.
+  expect(panelTop(100, 300, 1200)).toBe(10)
+  expect(panelTop(300, 700, 600)).toBe(10)
 })
 
 test('islandTop centers on the anchor but stays on screen', () => {

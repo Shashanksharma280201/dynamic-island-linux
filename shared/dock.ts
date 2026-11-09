@@ -66,3 +66,18 @@ export function islandTop(anchor: number, height: number, areaHeight: number, ma
   const top = anchor - height / 2
   return Math.round(Math.max(margin, Math.min(top, areaHeight - height - margin)))
 }
+
+/** On a side edge the open panel is placed as if it were this tall, whichever section is open. */
+export const PANEL_PLACE_HEIGHT = 480
+
+/**
+ * Top offset for the open panel on a side edge. Its sections differ in
+ * height, and centring each on the anchor would move the row of sections
+ * across its top (out from under the pointer) at every switch. So it sits
+ * where a PANEL_PLACE_HEIGHT panel would, and moves up only as far as a
+ * taller section needs to stay on screen. Pure.
+ */
+export function panelTop(anchor: number, height: number, areaHeight: number, margin = EDGE_MARGIN): number {
+  const top = islandTop(anchor, PANEL_PLACE_HEIGHT, areaHeight, margin)
+  return Math.round(Math.max(margin, Math.min(top, areaHeight - height - margin)))
+}
