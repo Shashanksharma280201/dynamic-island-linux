@@ -144,7 +144,7 @@ import { Pointer } from './buddy/pointer'
 import { captureScreen } from './buddy/screen'
 import { KOKORO_MB, KokoroFiles, SystemVoice, readingMs, testVoice } from './buddy/speech'
 import { espeakProgram, phonemize } from './buddy/phonemes'
-import { EMBED_FILES, EMBED_MB, EMBED_MODEL, hashEmbed } from '../shared/meaning'
+import { EMBED_FILES, EMBED_MB, EMBED_MODEL, OLD_EMBED_MODELS, hashEmbed } from '../shared/meaning'
 import { ModelFiles } from './modelFiles'
 import { EMBED } from './embedChannels'
 import { EVENING, MORNING } from './morningChannels'
@@ -591,6 +591,8 @@ async function main() {
   const writerDir = join(app.getPath('userData'), 'brain-writer')
   // ---- search by meaning: a small model in the island's page reads the notes ----
   const embedModel = new ModelFiles(join(app.getPath('userData'), 'models'), EMBED_MODEL, EMBED_FILES, EMBED_MB, () => settings?.changed(), process.env.DI_STT_BASE_URL || undefined)
+  // The model it used before reads nothing now: its files go.
+  for (const old of OLD_EMBED_MODELS) rmSync(join(app.getPath('userData'), 'models', old), { recursive: true, force: true })
   const embedWaiting = new Map<number, { resolve: (v: Float32Array[]) => void; reject: (e: Error) => void }>()
   let embedSeq = 0
   ipcMain.on(EMBED.DONE, (e, r) => {

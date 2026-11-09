@@ -165,6 +165,7 @@ function runHook(cmd, input) {
     check('search by meaning reads the notes', await seen(settings, '#brain .toggle-row:has-text("Search by meaning") .hint:has-text("notes read so far")', 10000))
     const vectors = await until(() => JSON.parse(read(path.join(VAULT, '_system/index/meaning.json')) || 'null'), 8000)
     check('their vectors are kept in the index folder, never the private ones', !!vectors && vectors.notes.length > 3 && !vectors.notes.some((n) => n.path.startsWith('08-restricted')), String(vectors?.notes?.length))
+    check('a vector for each section, and the model that made them', typeof vectors?.model === 'string' && vectors.version === 2 && vectors.notes.every((n) => n.n >= 1), JSON.stringify(vectors?.notes?.[0]))
     const found = await rpc(5, 'tools/call', { name: 'search', arguments: { query: 'Humble Ubuntu' } })
     check('search finds by words and meaning together', /uses-ros-2-humble/.test(found.result?.content?.[0]?.text ?? ''), (found.result?.content?.[0]?.text ?? '').slice(0, 120))
 
