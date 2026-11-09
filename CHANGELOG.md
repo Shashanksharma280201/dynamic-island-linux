@@ -4,6 +4,26 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## 0.8.0 (2026-11-09)
+
+**The orb on your phone**
+
+- **The island's orb on the Island Drop app**: the phone's Island tab opens
+  on the same dotted orb as your computer, in its colour (or the one you
+  picked), with the mood's ring, its name and what it's doing ("2 waiting
+  for you", "At work" and the project, "Offline"). "Hold to talk" uses its
+  name. It draws a few times a second at most, and not at all in the
+  background.
+- **A cleaner phone app**: More is a grouped list with a drawn icon and a
+  line for every item; drawn icons replace the last typed marks (ticks,
+  the approval cards' marks); missing album art shows a music icon;
+  Today's date is in words; the link's figure moved to Settings; a
+  permission card's command is readable in the light theme.
+- **Side edges fixed**: docked on the left or right, the island is where
+  it belongs from the moment it starts (it showed at the top for a few
+  seconds first), and the open panel stays still as you switch sections,
+  instead of moving its row of icons out from under the pointer.
+
 ## 0.7.0 (2026-11-09)
 
 **One island**
