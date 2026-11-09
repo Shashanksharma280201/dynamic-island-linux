@@ -4,7 +4,7 @@ import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 're
 import type { Activity, SystemState } from '@shared/types'
 import type { Rect } from '@shared/hitbox'
 import { present } from '@shared/present'
-import { spring, pop, contentIn, contentOut, morphSpring, sizeRank } from '../anim/spring'
+import { spring, pop, contentIn, contentOut, panelIn, morphSpring, sizeRank } from '../anim/spring'
 import { sound } from '../sound'
 import { useHoverIntent } from './useHoverIntent'
 import { Hello, Peek } from './states/Peek'
@@ -18,7 +18,7 @@ import { NotificationCard } from './states/NotificationCard'
 import { Hub, savedTab, rememberTab, type HubTab } from './hub/Hub'
 import { useConnected } from './hub/ConnectedView'
 import { CompactConnected, ConnectedStatusCard } from './states/ConnectedActivity'
-import { Rail } from './hub/Rail'
+import { TabBar } from './hub/TabBar'
 import { offerDraft } from './hub/claudeDraft'
 import { MessageCard } from './states/MessageCard'
 import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
@@ -508,6 +508,26 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const notifCards = activities.filter((a) => a.kind === 'notification' || a.kind === 'message').length
   const onNotifCard = !showPanel && p.mode === 'expanded' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
 
+  // The island's sections, in a row across the top of the open island.
+  const bar = showPanel ? (
+    <TabBar
+      tab={tab}
+      onTab={setTab}
+      usage={claude?.usage}
+      alerts={center.unseen}
+      sessions={sessions.filter((x) => x.phase === 'waiting').length}
+      running={[
+        ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
+        ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
+        ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
+        ...(connected?.manifest ? (['connected'] as const) : []),
+      ]}
+      connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
+      // The Connected tab only once something is connected (Settings → Connected).
+      hidden={[...(pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []), ...(connected?.configured ? [] : (['connected'] as const))]}
+    />
+  ) : null
+
   const onClick = () => {
     if (consumeDragClick()) return
     setHello(null)
@@ -531,7 +551,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   return (
     <div
       ref={outerRef}
-      className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' with-rail' : ''}`}
+      className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' open' : ''}`}
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => {
@@ -566,11 +586,11 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             style={{ transformOrigin: atTop ? 'center top' : side === 'left' ? 'left center' : 'right center' }}
             initial={enter}
             animate={soft ? { opacity: 1, scale: 1, x: 0, y: 0, filter: 'blur(0px)' } : { opacity: 1, scale: 1, x: 0, y: 0 }}
-            transition={reduce ? { duration: 0.16 } : contentIn}
+            transition={reduce ? { duration: 0.16 } : key === 'panel' ? panelIn : contentIn}
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} bar={bar} />
             ) : recapping ? (
               <RecapCard r={recapShow!} onClose={closeRecap} />
             ) : dressing ? (
@@ -871,36 +891,6 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {showPanel && (
-          // Section icons float beside the panel as their own glass pill.
-          <motion.div
-            key="rail"
-            className="island rail-shell"
-            onScroll={unscroll}
-            initial={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            // A short fixed fade out: the rail must be gone promptly, or its
-            // (invisible) box keeps the island's clickable area large.
-            exit={{ opacity: 0, scale: 0.6, x: side === 'left' ? -16 : atTop ? -16 : 16, transition: { duration: 0.16 } }}
-            // Follows the panel a beat later.
-            transition={{ ...pop, delay: 0.04 }}
-          >
-            <Rail tab={tab} onTab={setTab} usage={claude?.usage} alerts={center.unseen} sessions={sessions.filter((x) => x.phase === 'waiting').length}
-              side={side}
-              running={[
-                ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
-                ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
-                ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
-                ...(connected?.manifest ? (['connected'] as const) : []),
-              ]}
-              connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
-              // The Connected tab only once something is connected (Settings → Connected).
-              hidden={[...(pkgTabs ? PACKAGE_TABS.filter((t) => !pkgTabs.includes(t)) : []), ...(connected?.configured ? [] : (['connected'] as const))]}
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AnimatePresence>
         {!showPanel && p.mode === 'minimal' && (

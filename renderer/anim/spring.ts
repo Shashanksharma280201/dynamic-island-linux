@@ -20,6 +20,8 @@ export const spring = islandOpen
  */
 export const contentOut = { duration: 0.11, ease: [0.4, 0, 1, 1] } as const
 export const contentIn = { duration: 0.22, delay: 0.06, ease: [0, 0, 0.2, 1] } as const
+/** The open island's contents: the island grows first, they settle in as it finishes. */
+export const panelIn = { duration: 0.24, delay: 0.13, ease: [0, 0, 0.2, 1] } as const
 
 /**
  * How big a presentation is, to pick the open or close spring. Pure.
