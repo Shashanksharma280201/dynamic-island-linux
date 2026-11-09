@@ -202,6 +202,10 @@ for (const [p, body] of Object.entries(skillFiles)) {
     const toFile = await until(async () => (await os_('status.view')).toFile >= 2 && (await os_('status.view')).toFile)
     check('the island knows how many notes wait to be filed', !!toFile, String(toFile))
     await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].webContents.send('island:toggle-panel'))
+    // The pointer off the island: its last click was on the panel, and a card waiting
+    // to show (research's "done") would stay while the island counts as hovered.
+    await page.mouse.move(5, 300)
+    await page.waitForSelector('.capsule.idle', { timeout: 20000 }).catch(() => {})
     // (An agents change, like a monitor's check, refreshes it at once; otherwise every minute.)
     await os_('agents.check')
     check('a small count sits on the resting island', !!(await until(async () => (await page.$eval('.capsule.idle .file-badge', (e) => e.textContent).catch(() => '')) === String(toFile), 10000)))
