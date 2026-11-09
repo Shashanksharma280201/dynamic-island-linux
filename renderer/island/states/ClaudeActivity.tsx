@@ -2,7 +2,7 @@ import type { MouseEvent } from 'react'
 import type { ClaudeRun } from '@shared/claude'
 import { moodFor } from '@shared/character'
 import { Character } from '../character/Character'
-import { XIcon } from '../icons'
+import { ClaudeMark, XIcon } from '../icons'
 import { AGENT_INK, Orb } from '../../orb/Orb'
 import { orbForRun, orbForTool } from '@shared/orbs'
 
@@ -32,7 +32,7 @@ export function runStatus(r: ClaudeRun): string {
 export function CompactClaude({ run }: { run: ClaudeRun }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
-      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} track />
+      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} />
       {runActive(run) && <Orb state={orbForRun(run.phase, run.tool?.name)} size={20} color={AGENT_INK} className="capsule-orb" title={runStatus(run)} />}
       {run.steps > 0 && <span className="step-count">{run.steps}</span>}
     </div>
@@ -50,7 +50,7 @@ export function ClaudeCard({ id, run, onOpen, title }: { id: string; run: Claude
     <div className={`card claude-card ${run.phase}`}>
       <div className="card-head">
         <span className="claude-mark" aria-hidden>
-          ✳
+          <ClaudeMark />
         </span>
         <span className="app-name ellipsis">{title ?? `Claude Code · ${run.cwd.split('/').filter(Boolean).pop() ?? '~'}`}</span>
         <span className="spacer" />
@@ -61,7 +61,7 @@ export function ClaudeCard({ id, run, onOpen, title }: { id: string; run: Claude
         )}
       </div>
       <div className="claude-card-body">
-        <Character mood={moodFor(run.phase, run.tool?.name)} size={40} track interactive />
+        <Character mood={moodFor(run.phase, run.tool?.name)} size={40} interactive />
         <div className="claude-card-text">
           <div className="claude-prompt ellipsis">{run.prompt}</div>
           {active && run.trail && run.trail.length > 1 ? (

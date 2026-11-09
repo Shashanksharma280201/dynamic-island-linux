@@ -9,7 +9,14 @@ let items: CommandItem[] = []
 let sel = 0
 let seq = 0
 
-const GLYPHS: Record<string, string> = { file: '📄', note: '🧠', calc: '=', setting: '⚙', system: '◐', ask: '✦', app: '▢', agent: '✧' }
+const GLYPHS: Record<string, string> = { calc: '=', system: '◐', ask: '✦', app: '▢', agent: '✧' }
+/** Drawn icons (in the text colour) where a text glyph would be an emoji. */
+const svg = (d: string) => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`
+const ICONS: Record<string, string> = {
+  file: svg('M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5'),
+  note: svg('M5 4h14v16H5zM9 9h6M9 13h6M9 17h3'),
+  setting: svg('M4 7h10M18 7h2M4 17h4M12 17h8M16 5v4M10 15v4'),
+}
 
 function render(): void {
   list.innerHTML = ''
@@ -26,7 +33,8 @@ function render(): void {
       img.alt = ''
       icon.classList.add('has-img')
       icon.append(img)
-    } else icon.textContent = GLYPHS[it.kind] ?? '•'
+    } else if (ICONS[it.kind]) icon.innerHTML = ICONS[it.kind]
+    else icon.textContent = GLYPHS[it.kind] ?? '•'
     const text = document.createElement('div')
     text.className = 'text'
     const title = document.createElement('div')

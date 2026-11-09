@@ -43,38 +43,14 @@ export type CharacterInfo = {
 }
 
 export const CHARACTERS: CharacterInfo[] = [
-  { id: 'orbit', name: 'Orbit', kind: 'The orb, with a face', personality: 'Calm and focused. Keeps the swirling thinking and listening effects.' },
-  { id: 'bolt', name: 'Bolt', kind: 'Little robot', personality: 'Eager and precise. Its antenna light shows what it is doing.' },
-  { id: 'puff', name: 'Puff', kind: 'Soft dumpling', personality: 'Gentle and cheerful. Squishes when it is happy, melts when it is sleepy.' },
+  { id: 'orbit', name: 'Orbit', kind: 'A coral orb', personality: 'Calm and focused.' },
+  { id: 'bolt', name: 'Bolt', kind: 'A blue orb of fine dots', personality: 'Eager and precise.' },
+  { id: 'puff', name: 'Puff', kind: 'A pink orb of soft dots', personality: 'Gentle and cheerful.' },
 ]
 
 export const DEFAULT_CHARACTER: CharacterId = 'orbit'
 
-/** What the character wears ('auto' follows the season). */
-export const OUTFITS = ['none', 'auto', 'beanie', 'cap', 'crown', 'headphones', 'glasses', 'sunglasses', 'bowtie', 'party', 'flower', 'santa', 'witch', 'tophat', 'scarf'] as const
-export type Outfit = (typeof OUTFITS)[number]
-/** Something to wear (not 'auto'). */
-export type Wear = Exclude<Outfit, 'auto'>
-
-export const OUTFIT_LABEL: Record<Outfit, string> = {
-  none: 'Nothing',
-  auto: 'Seasonal',
-  beanie: 'Beanie',
-  cap: 'Cap',
-  crown: 'Crown',
-  headphones: 'Headphones',
-  glasses: 'Glasses',
-  sunglasses: 'Sunglasses',
-  bowtie: 'Bow tie',
-  party: 'Party hat',
-  flower: 'Flower',
-  santa: 'Santa hat',
-  witch: 'Witch hat',
-  tophat: 'Top hat',
-  scarf: 'Scarf',
-}
-
-/** Body colours to pick from (null: the character's own). */
+/** Orb colours to pick from (null: the character's own). */
 export const BODY_COLORS: { id: string; label: string; color: string | null }[] = [
   { id: 'own', label: 'Its own', color: null },
   { id: 'coral', label: 'Coral', color: '#ff6b6b' },
@@ -86,30 +62,8 @@ export const BODY_COLORS: { id: string; label: string; color: string | null }[] 
   { id: 'rose', label: 'Rose', color: '#ff7eb6' },
 ]
 
-/** The character as configured: which one, what you call it, what it wears, its colour. */
-export type CharacterConfig = { id: CharacterId; name: string; outfit?: Outfit; color?: string | null }
-
-/**
- * What 'auto' wears on a day: a witch hat at Halloween, a Santa hat in
- * December, a party hat at New Year, a flower around Valentine's Day, a beanie
- * the rest of the winter, sunglasses in summer, else nothing. Pure.
- */
-export function seasonalOutfit(d: Date): Wear {
-  const m = d.getMonth() + 1
-  const day = d.getDate()
-  if ((m === 12 && day === 31) || (m === 1 && day <= 2)) return 'party'
-  if (m === 10 && day >= 20) return 'witch'
-  if (m === 12 && day <= 26) return 'santa'
-  if (m === 2 && day >= 7 && day <= 14) return 'flower'
-  if (m === 12 || m <= 2) return 'beanie'
-  if ((m === 6 && day >= 21) || m === 7 || m === 8) return 'sunglasses'
-  return 'none'
-}
-
-/** What it wears today. Pure. */
-export function wearing(outfit: Outfit | undefined, now: Date): Wear {
-  return !outfit || outfit === 'auto' ? (outfit === 'auto' ? seasonalOutfit(now) : 'none') : outfit
-}
+/** The character as configured: which orb, what you call it, its colour. */
+export type CharacterConfig = { id: CharacterId; name: string; color?: string | null }
 
 /** Validate a stored character setting. Pure. */
 export function parseCharacter(raw: any): CharacterConfig {
@@ -119,12 +73,11 @@ export function parseCharacter(raw: any): CharacterConfig {
   const info = CHARACTERS.find((c) => c.id === id) ?? CHARACTERS.find((c) => c.id === DEFAULT_CHARACTER)!
   let name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 24) : ''
   if (legacy && name === 'Mochi') name = ''
-  const outfit: Outfit = (OUTFITS as readonly string[]).includes(raw?.outfit) ? raw.outfit : 'auto'
   const color = BODY_COLORS.some((c) => c.color && c.color === raw?.color) ? (raw.color as string) : null
-  return { id: info.id, name: name || info.name, outfit, color }
+  return { id: info.id, name: name || info.name, color }
 }
 
-/** The colour of each mood: the aura ring, the body tint, the card's edge light. */
+/** The colour of each mood: the aura ring and the card's edge light. */
 export const MOOD_COLOR: Record<CharacterMood, string | null> = {
   idle: null,
   listening: '#64d2ff',

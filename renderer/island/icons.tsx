@@ -74,6 +74,12 @@ export const SpeakerIcon = ({ muted }: { muted?: boolean }) => (
     )}
   </Svg>
 )
+/** Claude's mark: an eight-point asterisk, drawn (the text one is an emoji on some systems). */
+export const ClaudeMark = ({ size = 14 }: { size?: number }) => (
+  <Svg size={size}>
+    <path d="M12 3v18M3 12h18M5.6 5.6l12.8 12.8M18.4 5.6L5.6 18.4" strokeWidth={2.6} />
+  </Svg>
+)
 export const SunIcon = () => (
   <Svg size={18}>
     <circle cx="12" cy="12" r="3.6" fill="currentColor" />

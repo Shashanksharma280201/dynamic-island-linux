@@ -14,11 +14,24 @@ or install it with one command (see the [README](https://github.com/shashankshar
   pointer against the top edge or open the overview. The island moves to the
   top centre where the bar was. Its switch turns it off with its settings put
   back, and Undo puts back everything.
-- **The characters, redrawn**: Orbit, Bolt and Puff are flat shapes in one
-  colour each, with two dot eyes and a one-line mouth, in light and dark. What
-  they're doing shows as a small badge by the head (thinking dots, a
-  magnifier, a pencil, a check), and Orbit's swirling orb comes out only while
-  it listens or works. Outfits and your body colour still fit.
+- **Orbs instead of faces**: Orbit, Bolt and Puff are dotted orbs (coral,
+  blue with fine dots, pink with soft dots, or the colour you pick). Resting,
+  each is a globe of dots turning slowly; it moves the way the agent works,
+  with the ring around it in the mood's colour. The faces, hats and outfits
+  are gone; right-click the island to change its colour.
+- **Orbs easier to see**: bolder dots on the small ones, the dots at the back
+  no longer fade into the glass, and on the light island they're drawn in a
+  deeper shade (white dots used to vanish there).
+- **No emoji**: Claude's mark, the morning and evening cards, the command
+  bar, The Agency's agents, WhatsApp's photo and voice labels, Notion pages
+  and the phone app use drawn icons, initials or words.
+- **Lighter at rest**: with the orb always showing, the resting island uses
+  about half the processor it did in 0.5.0 (measured without a graphics
+  card: 6.4% of one core, down from 14.2%). Orbs are drawn on a timer only
+  when a frame is due (they used to wake on every screen refresh), each
+  frame paints its dots in a handful of fills, the resting orb draws 10
+  frames a second and busy ones 24, nothing else moves while it rests, and
+  the pointer is checked four times a second instead of fifteen.
 - Switching parts of the desktop look on and off quickly no longer loses what
   Undo puts back (changes to the look now happen one at a time).
 

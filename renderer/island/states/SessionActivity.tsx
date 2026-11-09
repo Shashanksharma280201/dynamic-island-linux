@@ -3,7 +3,7 @@ import { agentName, baseName, currentStep, diffStat, durationText, sessionStatus
 import { moodFor, type CharacterMood } from '@shared/character'
 import { orbForTool } from '@shared/orbs'
 import { Character } from '../character/Character'
-import { TerminalIcon, XIcon } from '../icons'
+import { ClaudeMark, TerminalIcon, XIcon } from '../icons'
 import { AGENT_INK, Orb } from '../../orb/Orb'
 import { useNow } from '../useSessions'
 
@@ -38,7 +38,7 @@ export function CompactSession({ session, others = 0 }: { session: AgentSession;
   const status = sessionStatus(session, Date.now())
   return (
     <div className="capsule claude-capsule session-capsule" title={`${session.project}: ${status}${others ? ` (+${others} more working)` : ''}`}>
-      <Character mood={sessionMood(session)} size={36} label={status} track />
+      <Character mood={sessionMood(session)} size={36} label={status} />
       <Orb state={step ? orbForTool(step.tool) : 'solving'} size={20} color={AGENT_INK} className="capsule-orb" title={status} />
       {others > 0 ? <span className="step-count sessions-count">{others + 1}</span> : session.turnSteps > 0 && <span className="step-count">{session.turnSteps}</span>}
     </div>
@@ -67,7 +67,7 @@ export function SessionCard({ id, session: s, others = 0, onOpen }: { id: string
     <div className={`card claude-card session-card ${s.phase}`} data-session={s.id}>
       <div className="card-head">
         <span className="claude-mark" aria-hidden>
-          ✳
+          <ClaudeMark />
         </span>
         <span className="app-name ellipsis">
           {agentName(s.agent)} · {s.project || '~'}
@@ -83,7 +83,7 @@ export function SessionCard({ id, session: s, others = 0, onOpen }: { id: string
         )}
       </div>
       <div className="claude-card-body">
-        <Character mood={sessionMood(s)} size={40} track interactive />
+        <Character mood={sessionMood(s)} size={40} interactive />
         <div className="claude-card-text">
           {s.prompt && <div className="claude-prompt ellipsis">{s.prompt}</div>}
           {s.phase === 'waiting' ? (

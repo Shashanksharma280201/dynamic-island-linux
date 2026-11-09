@@ -154,7 +154,6 @@ export const IPC = {
   SYS_CMD: 'island:sys-cmd', // renderer -> main: SysCmd
   PANEL: 'island:panel', // renderer -> main: boolean (Control Center open)
   HOVER: 'island:hover', // main -> renderer: boolean (cursor over the island)
-  CURSOR: 'island:cursor', // main -> renderer: { x, y } pointer in window coords (eyes follow it)
   CALM: 'island:calm', // main -> renderer: boolean (you're away or the screen is locked: the orbs rest)
   GREET: 'island:greet', // main -> renderer: { first } say hello (once a day)
   DISMISS: 'island:dismiss', // renderer -> main: activity id (dismiss a transient card)
@@ -162,7 +161,7 @@ export const IPC = {
   QUESTION_KEY: 'island:question-key', // main -> renderer: { n } pick option n, or { send: true }
   DICTATE: 'island:dictate', // main -> renderer: start / finish dictating
   DICTATE_TYPE: 'island:dictate-type', // invoke(text) -> boolean: typed into the focused app
-  SET_LOOK: 'island:set-look', // renderer -> main: { outfit?, color? } from the island's wardrobe
+  SET_LOOK: 'island:set-look', // renderer -> main: { color? } from the island's colour card
   RECAP: 'island:recap', // main -> renderer: { card, name } show a weekly recap
   RECAP_SAVE: 'island:recap-save', // invoke(png data URL) -> saved path
   RECAP_COPY: 'island:recap-copy', // invoke(png data URL) -> copied?

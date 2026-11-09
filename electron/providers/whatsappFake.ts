@@ -107,7 +107,7 @@ function seed(now: number): Chat[] {
       messages: [
         m(false, 'Is everyone in for the trip this weekend?', 26 * 60 * min, 'Priya'),
         m(true, 'Count me in!', 25 * 60 * min),
-        m(false, 'Booked the cabin 🏡', 50 * min, 'Sam'),
+        m(false, 'Booked the cabin', 50 * min, 'Sam'),
         m(false, 'It has a hot tub', 49 * min, 'Sam'),
         m(false, 'Who is driving?', 40 * min, 'Priya'),
         m(true, 'I can drive', 35 * min),
@@ -131,12 +131,12 @@ function seed(now: number): Chat[] {
     // A realistic long tail, so the list has to scroll.
     ...[
       ['Priya Shah', 'Can you send me the slides from yesterday’s presentation? I want to go through them again tonight', false],
-      ['Family ❤️', 'Dad: Dinner at 8, don’t be late this time!', true],
+      ['Family', 'Dad: Dinner at 8, don’t be late this time!', true],
       ['Rahul (Work)', 'The deploy went fine, closing the ticket now', false],
       ['College Friends 2016–2020 Reunion Planning Committee', 'Neha: Poll: which weekend works for everyone?', true],
       ['Landlord', 'Rent receipt attached', false],
       ['Gym Buddies', 'Aman: 6am tomorrow?', true],
-      ['Ananya', 'Haha that’s hilarious 😂', false], // + a photo, voice note and file (below)
+      ['Ananya', 'Haha that’s hilarious', false], // + a photo, voice note and file (below)
       ['Book Club', 'Next pick is “Project Hail Mary”', true],
       ['Dentist Clinic', 'Reminder: appointment on Monday 10:30', false],
       ['Vikram', 'You: See you there', false],
@@ -215,7 +215,7 @@ export class FakeWhatsAppEngine implements WhatsAppEngine {
     }
     const arrive = (wait: number) => {
       at(wait + 1500, () => incoming('Hey! Are we still on for lunch?'))
-      at(wait + 2500, () => incoming('📷 Photo: the new place'))
+      at(wait + 2500, () => incoming('Photo: the new place'))
     }
     // Recordings can choose the moment: the messages arrive once this file exists.
     const trigger = process.env.DI_FAKE_WA_TRIGGER

@@ -382,7 +382,7 @@ async function pdf(pages, prefix) {
     await tap('.card.message .reply-btn')
     await page.waitForSelector('.reply textarea', { timeout: 3000 })
     mark('whatsapp-reply')
-    await page.keyboard.type('Yes! See you at 1 🙂', { delay: 70 })
+    await page.keyboard.type('Yes! See you at 1', { delay: 70 })
     await sleep(500)
     await page.keyboard.press('Enter')
   })

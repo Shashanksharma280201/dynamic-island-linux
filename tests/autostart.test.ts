@@ -45,7 +45,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     greeted: '',
     claude: { cwd: '', permissionMode: 'default', voiceShortcut: true, sttModel: 'base', binary: '' },
     spotify: { clientId: '' },
-    character: { id: 'orbit', name: 'Orbit', outfit: 'auto', color: null },
+    character: { id: 'orbit', name: 'Orbit', color: null },
     ai: { provider: 'claude-code', models: {}, baseUrls: {}, keys: {} },
     packages: { disabled: [] },
     brain: { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: 47823, since: 0, meaning: false, whatsapp: false, mail: false, phone: false, skipChats: [] },

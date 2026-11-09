@@ -79,7 +79,7 @@ export function parseAgent(text: string, path: string): (AgencyAgent & { body: s
     name: meta.name.slice(0, 80),
     description: meta.description.replace(/\s+/g, ' ').slice(0, 600),
     division: parts[0],
-    emoji: [...(meta.emoji ?? '')].slice(0, 2).join('') || '🤖',
+    emoji: [...(meta.emoji ?? '')].slice(0, 2).join(''),
     color: /^(#[0-9a-f]{3,8}|[a-z]{3,20})$/i.test(meta.color ?? '') ? meta.color : 'gray',
     vibe: (meta.vibe ?? '').replace(/\s+/g, ' ').slice(0, 200),
     body: m[2].trim(),

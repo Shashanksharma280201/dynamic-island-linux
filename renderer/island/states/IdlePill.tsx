@@ -43,7 +43,7 @@ export function IdlePill({ dnd = false, waiting = 0, toFile = 0 }: { dnd?: boole
       className="capsule idle"
       title={dnd ? `${name} · Do Not Disturb${waiting ? ` · ${waiting} waiting in Notifications` : ''}` : `${name}${toFile ? ` · ${toFile} to file` : ''} · click for Control Center, drag to move`}
     >
-      <Character mood={dnd ? 'sleeping' : restingMood(now)} size={38} track={!dnd} />
+      <Character mood={dnd ? 'sleeping' : restingMood(now)} size={38} />
       {dnd && (
         <span className="dnd-badge" aria-label="Do Not Disturb">
           <MoonIcon size={9} />

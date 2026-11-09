@@ -11,7 +11,7 @@ import { useKeyboard } from './useKeyboard'
 import { Character, useCharacter } from '../character/Character'
 import { warmUp, type Voice } from '../voice/useVoice'
 import { runActive, runStatus } from '../states/ClaudeActivity'
-import { ClipIcon, ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
+import { ClaudeMark, ClipIcon, ComposeIcon, FolderIcon, MicIcon, SparkIcon, StopIcon } from '../icons'
 import { attachmentNote } from '@shared/attachment'
 import { useDraft } from './claudeDraft'
 
@@ -98,8 +98,8 @@ function Conversation({ view }: { view: ClaudeView }) {
           <div className="bubble mine">{t.prompt}</div>
           <div className={`claude-answer${t.ok ? '' : ' failed'}`}>
             <span className="claude-mark" aria-hidden>
-              ✳
-            </span>
+          <ClaudeMark />
+        </span>
             <div className="claude-answer-text">{t.reply || '(no reply)'}</div>
           </div>
         </div>
@@ -272,7 +272,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
     return (
       <div className="view claude-panel">
         <div className="voice-stage idle">
-          <Character mood="idle" size={72} track interactive />
+          <Character mood="idle" size={72} interactive />
         </div>
         <Empty
           title={`Set up ${name}’s AI`}
@@ -343,7 +343,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
         <div className={`voice-stage ${voice.phase}`}>
           {/* The orb swells with your voice while it listens. */}
           <OrbHalo state={orbForVoice(voice.phase)} size={132} color={voice.phase === 'listening' ? '#ffb35c' : undefined} level={voice.phase === 'listening' ? () => levelRef.current : undefined}>
-            <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} track interactive />
+            <Character mood={voice.phase === 'listening' ? 'listening' : voice.phase === 'transcribing' ? 'thinking' : 'idle'} size={72} interactive />
           </OrbHalo>
           <div className="caption voice-caption">{voiceCaption(voice, view)}</div>
           {voice.phase === 'preparing' && view.stt.downloading && (
@@ -361,7 +361,7 @@ export function ClaudePanel({ view, voice, onTyping }: { view: ClaudeView | null
         <Conversation view={view} />
       ) : (
         <div className="voice-stage idle">
-          <Character mood="idle" size={72} track interactive />
+          <Character mood="idle" size={72} interactive />
           {code ? (
             <div className="caption voice-caption">
               Tap the mic{view.voiceShortcut ? ` or press ${view.voiceShortcut}` : ''} and tell Claude what to do in{' '}

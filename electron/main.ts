@@ -316,20 +316,17 @@ async function main() {
   // Away from the computer, or its screen locked: the orbs stop drawing.
   const calm = watchCalm((c) => send(win, IPC.CALM, c))
   app.on('before-quit', () => calm.stop())
-  // The character's eyes follow the pointer anywhere on screen: 15 times a
-  // second, and only when it moved.
+  // A moved pointer wakes the orbs at once when you're back (four times a
+  // second is plenty for that, and costs next to nothing).
   let lastCursor = ''
   setInterval(() => {
     if (win.isDestroyed() || !win.isVisible()) return
     const c = screen.getCursorScreenPoint()
-    const b = win.getBounds()
-    const at = { x: c.x - b.x, y: c.y - b.y }
-    const k = `${at.x},${at.y}`
+    const k = `${c.x},${c.y}`
     if (k === lastCursor) return
     lastCursor = k
     calm.poke()
-    send(win, IPC.CURSOR, at)
-  }, 66)
+  }, 250)
   store.onChange(pushState)
   const transient = new TransientCards(store)
   // Everything shown (or kept quiet in Do Not Disturb) stays here until cleared.
@@ -2655,12 +2652,11 @@ async function main() {
     pushAppearance()
     settings?.changed()
   }
-  // The wardrobe on the island (right-click the character).
+  // The orb's colour, picked on the island (right-click the character).
   ipcMain.on(IPC.SET_LOOK, (_e, patch) => {
     if (!patch || typeof patch !== 'object') return
     config.character = parseCharacter({
       ...config.character,
-      ...('outfit' in patch ? { outfit: patch.outfit } : {}),
       ...('color' in patch ? { color: patch.color } : {}),
     })
     saveConfig(config)

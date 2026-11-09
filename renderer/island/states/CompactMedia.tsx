@@ -13,7 +13,7 @@ export function CompactMedia({ media }: { media: MediaState }) {
       )}
       <Waveform playing={media.playing} size={22} />
       {/* Bobs along while something plays. */}
-      <Character mood={media.playing ? 'dancing' : 'idle'} size={28} track />
+      <Character mood={media.playing ? 'dancing' : 'idle'} size={28} />
     </div>
   )
 }

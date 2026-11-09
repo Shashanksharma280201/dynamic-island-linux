@@ -37,7 +37,7 @@ test('model, address and what is missing', () => {
 test('the agent is the character', () => {
   const p = agentSystemPrompt({ id: 'puff', name: 'Momo' })
   expect(p).toContain('You are Momo')
-  expect(p).toContain('soft dumpling')
+  expect(p).toContain('a pink orb of soft dots')
 })
 
 test('agent tools set the character’s mood', () => {

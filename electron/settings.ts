@@ -442,7 +442,6 @@ export class SettingsController {
         id: typeof patch?.id === 'string' ? patch.id : config.character.id,
         // Switching without renaming takes the new character's own name.
         name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
-        outfit: patch && 'outfit' in patch ? patch.outfit : config.character.outfit,
         color: patch && 'color' in patch ? patch.color : config.character.color,
       })
       this.save()

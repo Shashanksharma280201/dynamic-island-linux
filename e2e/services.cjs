@@ -94,7 +94,7 @@ const getJson = (port, p) => new Promise((resolve) => http.get({ host: '127.0.0.
     check('Vercel: the deploy, building', await seen(page, `${card('vercel')} .svc-row:has-text("shop-site") .svc-side:has-text("Building")`))
     check('Stripe: the balance and payments', (await seen(page, `${card('stripe')} .svc-big:has-text("$1,240.50")`)) && (await seen(page, `${card('stripe')} .svc-row:has-text("Starter plan")`)))
     check('Resend: emails', await seen(page, `${card('resend')} .svc-row:has-text("Your receipt")`))
-    check('Notion: recent pages', await seen(page, `${card('notion')} .svc-row:has-text("🗺 Roadmap")`))
+    check('Notion: recent pages', await seen(page, `${card('notion')} .svc-row:has-text("Roadmap")`))
     check('Cal.com: the next call', await seen(page, `${card('calcom')} .svc-row:has-text("Intro call")`))
     check('n8n: executions, by workflow name', await seen(page, `${card('n8n')} .svc-row:has-text("Daily digest")`))
     const hits = await getJson(port, '/__hits')

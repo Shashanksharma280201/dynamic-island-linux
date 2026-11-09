@@ -168,7 +168,7 @@ export class CommandBar {
     }
     for (const a of this.d.agents?.(q).slice(0, 4) ?? []) {
       const s = matchScore(q, a.name)
-      if (s) add({ kind: 'agent', title: `${a.emoji} ${a.name}`, sub: `The Agency · ${a.vibe || 'start it in Claude'}` }, 110 + s, () => this.d.startAgent?.(a.id))
+      if (s) add({ kind: 'agent', title: a.name, sub: `The Agency · ${a.vibe || 'start it in Claude'}` }, 110 + s, () => this.d.startAgent?.(a.id))
     }
     for (const [i, n] of this.d.notes(q).slice(0, 5).entries()) add({ kind: 'note', title: n.title, sub: n.sub || n.path }, 120 - i, () => this.d.openNote(n.path))
     const name = this.d.buddyName()
