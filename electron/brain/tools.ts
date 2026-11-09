@@ -1,4 +1,4 @@
-import { fuse } from '@shared/meaning'
+import { MEANING_MIN, fuse } from '@shared/meaning'
 import { DECISIONS, INBOX, LEDGERS, dateOf, formatNote, parseNote, safeVaultPath, slugify, sourceName, type Frontmatter } from '@shared/brain'
 import { schema, str, strList, type AgentTool } from '../agent/tools'
 import type { BrainIndex } from './search'
@@ -13,7 +13,7 @@ export type BrainToolDeps = {
   source: string
   now?: () => number
   /** Notes close in meaning to the words, when search by meaning is on. */
-  meaning?: (query: string, under?: string) => Promise<{ path: string; score: number }[]>
+  meaning?: (query: string, under?: string) => Promise<{ path: string; score: number; chunk?: number }[]>
 }
 
 const MAX_READ = 30_000
@@ -68,10 +68,12 @@ export function brainTools(d: BrainToolDeps): AgentTool[] {
         // By meaning too: notes that say it in other words. The two lists are fused.
         const near = d.meaning ? await d.meaning(str(i.query), folder || undefined).catch(() => []) : []
         if (near.length) {
+          // A note found by its words shows the lines with them; one found only by meaning, the section that matched.
           const byPath = new Map(hits.map((h) => [h.path, h]))
-          hits = fuse([hits.map((h) => h.path), near.filter((n) => n.score > 0.2).map((n) => n.path)])
+          const chunkOf = new Map(near.map((n) => [n.path, n.chunk]))
+          hits = fuse([hits.map((h) => h.path), near.filter((n) => n.score >= MEANING_MIN).map((n) => n.path)])
             .slice(0, limit)
-            .map((f) => byPath.get(f.path) ?? d.index.describe(f.path))
+            .map((f) => byPath.get(f.path) ?? d.index.describe(f.path, chunkOf.get(f.path)))
             .filter((h): h is NonNullable<typeof h> => !!h)
         } else hits = hits.slice(0, limit)
         if (!hits.length) return 'Nothing in the brain matches that. Try other words, or a broader folder.'
