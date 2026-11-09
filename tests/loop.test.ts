@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, utimesSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { formatNote } from '../shared/brain'
@@ -69,12 +69,14 @@ function vaultWith(): { v: Vault; root: string } {
 }
 
 test('Loop: runs what’s due, says how it went, and files only when you apply', async () => {
-  const { v } = vaultWith()
+  const { v, root } = vaultWith()
   let now = at(8, 20)
   const cards: unknown[] = []
   const asked: string[] = []
   v.write('01-inbox/2026-11-08-asha.md', formatNote({ type: 'person', date: '2026-11-08' }, '# Asha Rao\n\nRuns Globex.\n'), 'test')
   v.write('07-world-model/ledgers/promises.md', '- [ ] Send Asha the deck\n', 'test')
+  // Written on the test's day, not the real one (the daily note reads what changed that day).
+  for (const p of ['01-inbox/2026-11-08-asha.md', '07-world-model/ledgers/promises.md']) utimesSync(join(root, p), now / 1000, now / 1000)
   const loop = new Loop({
     vault: () => v,
     writer: () => ({
