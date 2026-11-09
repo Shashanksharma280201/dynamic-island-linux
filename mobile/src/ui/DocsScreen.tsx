@@ -6,6 +6,7 @@ import type { ConvertTarget, DocAction, DocActionResult, DocEntry, DocKind, Docs
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
 import { kindColor, themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 const TARGETS: ConvertTarget[] = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md']
 /** What a file can become (as the island's Documents tab decides; it checks again). */
@@ -101,7 +102,7 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
           </View>
           {f.kind === 'pdf' && (
             <Pressable hitSlop={10} onPress={onPick} style={[st.pick, picked && { backgroundColor: C.blue, borderColor: C.blue }]}>
-              {picked && <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>✓</Text>}
+              {picked && <Icon name="check" size={13} color="#fff" />}
             </Pressable>
           )}
         </Pressable>

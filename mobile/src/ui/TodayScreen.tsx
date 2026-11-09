@@ -4,7 +4,7 @@ import type { OsAnswer, TodayView } from '../../../shared/os'
 import type { DropLink } from '../link'
 import { Btn, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
 import { themed } from './theme'
-import { answerLine, clock } from '../words'
+import { answerLine, clock, dayTitle } from '../words'
 
 /** What a timeline entry came from, in a word. */
 const FROM: Record<string, string> = { git: 'Git', github: 'GitHub', shell: 'Terminal', calendar: 'Calendar', screen: 'Screen', codex: 'Codex', gemini: 'Gemini', whatsapp: 'WhatsApp', mail: 'Mail', note: 'Note', session: 'Claude' }
@@ -30,7 +30,7 @@ export function TodayScreen({ link, top, onBack }: { link: DropLink; top: number
   const hours = v?.timeline ?? []
   const entries = hours.flatMap((h) => h.entries.slice(0, 6)).reverse()
   return (
-    <Page title="Today" sub={v?.date} top={top} onBack={onBack} onRefresh={reload}>
+    <Page title="Today" sub={v?.date ? dayTitle(v.date) : undefined} top={top} onBack={onBack} onRefresh={reload}>
       <Composer placeholder="What did I do last week?" send="Ask" busy={act.busy === 'ask'} onSend={(q) => void ask(q)} />
       <ErrorLine message={error || act.error} />
       {!!asked && answer && (

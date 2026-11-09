@@ -48,6 +48,9 @@ export type PhoneNote = { id: string; at: number; app: string; title: string; bo
 
 export type PhoneTrading = { app: string; text: string; short: string; tone: string; detail: string; color: string }
 
+/** The island's orb: which one, its name, its colour and what it's doing (a CharacterMood). */
+export type PhoneCharacter = { id: string; name: string; color: string; mood: string }
+
 export type PhoneView = {
   protocol: number
   at: number
@@ -59,6 +62,8 @@ export type PhoneView = {
   notes: PhoneNote[]
   trading: PhoneTrading | null
   dnd: boolean
+  /** The orb (left out by islands older than the phone app that draws it). */
+  character?: PhoneCharacter
 }
 
 /** A file the computer is sending to the phone; `dir` is its folder when a folder is sent, `batch` where it is among the files sent together. */

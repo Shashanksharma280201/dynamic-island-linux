@@ -1,5 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { themed, useTheme } from './theme'
+import { Icon } from './icons'
 
 export type Sending = { key: string; name: string; p: number; phase: 'sending' | 'sent' | 'failed'; message?: string }
 
@@ -11,7 +12,7 @@ export function SendPill({ sending, to, onDismiss }: { sending: Sending; to: str
     <Pressable style={s.bar} onPress={() => sending.phase !== 'sending' && onDismiss()}>
       <View style={s.pill}>
         <View style={[s.mark, { backgroundColor: sending.phase === 'failed' ? C.red : sending.phase === 'sent' ? C.green : C.fill }]}>
-          {sending.phase === 'sending' ? <ActivityIndicator size="small" color={C.text} /> : <Text style={s.markText}>{sending.phase === 'sent' ? '✓' : '!'}</Text>}
+          {sending.phase === 'sending' ? <ActivityIndicator size="small" color={C.text} /> : <Icon name={sending.phase === 'sent' ? 'check' : 'alert'} size={16} color="#fff" />}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.title} numberOfLines={1}>
@@ -36,7 +37,6 @@ const useS = themed((C) => ({
   bar: { position: 'absolute', left: 16, right: 16, bottom: 34 },
   pill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.bar, ...C.shadow, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.line },
   mark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  markText: { color: '#fff', fontSize: 17, fontWeight: '700' },
   title: { color: C.text, fontSize: 14, fontWeight: '700' },
   sub: { color: C.text2, fontSize: 12, marginTop: 2 },
   track: { height: 4, borderRadius: 2, backgroundColor: C.fill, marginTop: 7, overflow: 'hidden' },

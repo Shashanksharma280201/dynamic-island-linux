@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion'
 import { Orb } from '../../orb/Orb'
 import { ORB_FOR_MOOD, orbFps, orbSpeed } from '@shared/orbs'
-import { DEFAULT_CHARACTER, MOOD_COLOR, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
+import { CHARACTER_COLOR, CHARACTER_DOTS, DEFAULT_CHARACTER, MOOD_COLOR, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
 import { sound } from '../../sound'
 
 /** The chosen character (and its name) for everything on the island. */
@@ -15,15 +15,7 @@ export const DIZZY_MS = 2400
 
 // ------------------------------------------------------------------ orbs ----
 
-/** Each orb's own colour (your pick in Settings replaces it). */
-export const CHARACTER_COLOR: Record<CharacterId, string> = { orbit: '#ff8a65', bolt: '#4da3ff', puff: '#ff8cc0' }
-
-/** How each orb's dots are drawn: Orbit as tuned, Bolt finer and denser, Puff fewer and softer. */
-export const CHARACTER_DOTS: Record<CharacterId, { dots: number; dotSize: number }> = {
-  orbit: { dots: 1, dotSize: 1.2 },
-  bolt: { dots: 1.45, dotSize: 0.95 },
-  puff: { dots: 0.72, dotSize: 1.55 },
-}
+export { CHARACTER_COLOR, CHARACTER_DOTS }
 
 const loop = (duration: number, ease: any = 'easeInOut'): Transition => ({ duration, repeat: Infinity, ease })
 

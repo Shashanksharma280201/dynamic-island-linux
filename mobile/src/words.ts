@@ -12,6 +12,17 @@ export function ago(at: number, now = Date.now()): string {
 // The island's own words for times and costs, written out here: the app's
 // bundle holds only its own code (tests/phoneApp.test.ts checks they match).
 
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** "2026-11-09" → "Monday, 9 November" (anything else as it is). */
+export function dayTitle(iso: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!m) return iso
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]))
+  return `${DAYS[d.getDay()]}, ${d.getDate()} ${MONTHS[d.getMonth()]}`
+}
+
 /** "14:05", in this phone's time. */
 export function clock(at: number): string {
   const d = new Date(at)
