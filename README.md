@@ -21,7 +21,7 @@ It has everything on `main`, plus what Windows needs (`electron/platform/win32.t
 
 ## Download
 
-**[Dynamic Island v0.8.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.8.0)**
+**[Dynamic Island v0.9.0](https://github.com/shashanksharma280201/dynamic-island-linux/releases/tag/v0.9.0)**
 ([what's new](CHANGELOG.md)). Install it with one command, and run the same
 command again later to update.
 
@@ -41,10 +41,10 @@ Or download the installer:
 
 | Your computer | Download |
 |---|---|
-| Linux | [.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-linux-0.8.0-amd64.deb) for Ubuntu and Debian, or the [AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-linux-0.8.0-x86_64.AppImage) |
-| Mac with Apple silicon | [.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-mac-MSeries-0.8.0-arm64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-mac-MSeries-0.8.0-arm64.dmg)) |
-| Mac with Intel | [.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-mac-intel-0.8.0-x64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-mac-intel-0.8.0-x64.dmg)) |
-| Windows 10 or 11 | [.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.8.0/dynamic-island-windows-0.8.0-x64.exe) |
+| Linux | [.deb](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-linux-0.9.0-amd64.deb) for Ubuntu and Debian, or the [AppImage](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-linux-0.9.0-x86_64.AppImage) |
+| Mac with Apple silicon | [.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-mac-MSeries-0.9.0-arm64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-mac-MSeries-0.9.0-arm64.dmg)) |
+| Mac with Intel | [.pkg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-mac-intel-0.9.0-x64.pkg) (or the [.dmg](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-mac-intel-0.9.0-x64.dmg)) |
+| Windows 10 or 11 | [.exe](https://github.com/shashanksharma280201/dynamic-island-linux/releases/download/v0.9.0/dynamic-island-windows-0.9.0-x64.exe) |
 
 The installers aren't signed yet, so your system asks once before opening
 them: [here's how](docs/install.md#opening-the-downloaded-installer). To build
