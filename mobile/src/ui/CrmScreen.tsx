@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ActivityKind, ContactPage, ContactSummary, CrmOverview, DealSummary, TaskSummary } from '../../../shared/crm'
 import type { DropLink } from '../link'
 import { Avatar, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, Segmented, ago, useKit, useAction, useCall } from './kit'
 import { themed, useTheme, type Palette } from './theme'
+import { PUSH_IN, PUSH_OUT } from './motion'
 
 type Tab = 'followups' | 'people' | 'deals'
 const STAGE: Record<string, string> = { new: 'New', qualified: 'Qualified', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won', lost: 'Lost' }
@@ -48,7 +49,7 @@ export function CrmScreen({ link, top, onBack }: { link: DropLink; top: number; 
         {tab === 'deals' && <Deals link={link} currency={ov.data?.currency ?? 'USD'} />}
       </Page>
       {person && (
-        <Animated.View entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
+        <Animated.View entering={PUSH_IN} exiting={PUSH_OUT} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
           <Person link={link} id={person} top={top} currency={ov.data?.currency ?? 'USD'} onBack={() => setPerson(null)} />
         </Animated.View>
       )}
@@ -241,7 +242,7 @@ function Person({ link, id, top, currency, onBack }: { link: DropLink; id: strin
         <Card>
           <Kicker>Timeline</Kicker>
           {data.activities.slice(0, 30).map((a, i) => (
-            <Animated.View key={a.id} entering={FadeInDown.delay(Math.min(i, 8) * 25)}>
+            <Animated.View key={a.id}>
               <Row title={a.text} sub={`${KINDS.find(([x]) => x === a.kind)?.[1] ?? a.kind} · ${new Date(a.at).toLocaleString()}`} last={i === Math.min(29, data.activities.length - 1)} />
             </Animated.View>
           ))}

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
-import Animated, { FadeIn, FadeInDown } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { SpCollection, SpDevice, SpHome, SpSearch, SpTrack, SpotifyView } from '../../../shared/spotify'
 import type { DropLink, Live } from '../link'
@@ -106,7 +106,7 @@ function Results({ found, play, busy }: { found: SpSearch; play: (o: { contextUr
   const none = !found.tracks.length && !found.playlists.length && !found.albums.length && !found.artists.length
   if (none) return <Empty title="Nothing found" />
   return (
-    <Animated.View entering={FadeIn} style={{ gap: 12 }}>
+    <Animated.View style={{ gap: 12 }}>
       {!!found.tracks.length && (
         <Card>
           <Kicker>Songs</Kicker>
@@ -154,8 +154,8 @@ function Shelf({ title, items, play, round }: { title: string; items: SpCollecti
       <Text style={st.section}>{title}</Text>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12 }}>
         {items.slice(0, 16).map((c, i) => (
-          <Animated.View key={c.uri} entering={FadeInDown.delay(Math.min(i, 8) * 30).springify().damping(18)}>
-            <Pressable onPress={() => play({ contextUri: c.uri }, c.uri)} style={({ pressed }) => [{ width: 120 }, pressed && { transform: [{ scale: 0.96 }] }]}>
+          <Animated.View key={c.uri}>
+            <Pressable onPress={() => play({ contextUri: c.uri }, c.uri)} style={({ pressed }) => [{ width: 120 }, pressed && { opacity: 0.7 }]}>
               {c.image ? (
                 <Image source={{ uri: c.image }} style={[st.tile, round && { borderRadius: 60 }]} />
               ) : (

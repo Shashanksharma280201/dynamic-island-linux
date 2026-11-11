@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { BackHandler, StyleSheet, View } from 'react-native'
-import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { DropLink, Live, LinkState } from '../link'
 import type { Prefs } from '../prefs'
@@ -17,6 +17,7 @@ import { AgentsScreen } from './AgentsScreen'
 import { SettingsScreen } from './SettingsScreen'
 import { useTheme } from './theme'
 import { TradingScreen } from './TradingScreen'
+import { PUSH_IN, PUSH_OUT } from './motion'
 
 export type MoreId = 'today' | 'agents' | 'trading' | 'notes' | 'music' | 'controls' | 'crm' | 'docs' | 'services' | 'settings'
 
@@ -76,7 +77,7 @@ export function MoreScreen(p: Props) {
     <View style={{ flex: 1 }}>
       <Page title="More" sub={`Everything on ${link.pairing.name}`} top={top}>
         {GROUPS.map((g, gi) => (
-          <Animated.View key={g.title} entering={FadeInDown.delay(gi * 40).springify().damping(18)}>
+          <Animated.View key={g.title}>
             <Section title={g.title}>
               {g.items.map((a, i) => (
                 <Row
@@ -97,7 +98,7 @@ export function MoreScreen(p: Props) {
         ))}
       </Page>
       {open && (
-        <Animated.View key={open} entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
+        <Animated.View key={open} entering={PUSH_IN} exiting={PUSH_OUT} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
           {open === 'today' && <TodayScreen link={link} top={top} onBack={back} />}
           {open === 'agents' && <AgentsScreen link={link} top={top} onBack={back} />}
           {open === 'trading' && <TradingScreen link={link} live={live} top={top} onBack={back} />}

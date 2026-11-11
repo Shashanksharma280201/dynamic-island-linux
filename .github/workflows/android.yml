@@ -63,6 +63,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release }}
         run: |
+          # A tag with no release yet (not a version): a test build to try on a phone, as a pre-release that's never the latest.
+          if ! gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+            gh release create "$TAG" --repo "${{ github.repository }}" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title "Island Drop test build ($TAG)" \
+              --notes "A test build of the phone app from ${GITHUB_SHA::7}, to try on a phone before it goes into a release. Not a release of Dynamic Island."
+          fi
           gh release upload "$TAG" island-drop.apk --clobber --repo "${{ github.repository }}"
           # Its checksum next to the installers' (the line replaced if it's there already).
           gh release download "$TAG" --pattern SHA256SUMS.txt --dir sums --repo "${{ github.repository }}" || mkdir -p sums

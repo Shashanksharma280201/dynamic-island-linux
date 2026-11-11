@@ -2,6 +2,8 @@
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <!-- Android 16: the island as a Live Update (a chip in the status bar). -->
+  <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
   <application>
     <!-- Keeps Island Drop connected to your computer's island while it's in the
          background, so approvals and files arrive within seconds. Started only

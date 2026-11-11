@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Keyboard, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native'
-import Animated, { FadeIn, FadeInDown, LinearTransition, useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated'
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler'
 import { scheduleOnRN } from 'react-native-worklets'
 import * as Haptics from 'expo-haptics'
 import type { PhoneCall, PhoneTopic } from '../../../shared/phone'
 import type { DropLink } from '../link'
 import { Icon, IconTile, type IconName } from './icons'
+import { PRESSED, glide } from './motion'
 import { themed, useTheme, type Palette } from './theme'
 
 // ---- Data from the island ----
@@ -171,13 +172,11 @@ export function Page({ title, sub, onBack, right, top, children, onRefresh, scro
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const s = useKit()
   const body = (
-    <Animated.View entering={FadeInDown.springify().damping(18)} layout={LinearTransition.springify().damping(20)} style={[s.card, style]}>
-      {children}
-    </Animated.View>
+    <View style={[s.card, style]}>{children}</View>
   )
   if (!onPress) return body
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => pressed && { transform: [{ scale: 0.985 }], opacity: 0.92 }}>
+    <Pressable onPress={onPress} style={({ pressed }) => pressed && PRESSED}>
       {body}
     </Pressable>
   )
@@ -253,7 +252,7 @@ export function Segmented<T extends string>({ items, value, onChange, style }: {
   const i = Math.max(0, items.findIndex(([v]) => v === value))
   const x = useSharedValue(0)
   useEffect(() => {
-    x.value = withSpring(i * (w / items.length), { damping: 20, stiffness: 240 })
+    x.value = glide(i * (w / items.length))
   }, [i, w, items.length]) // eslint-disable-line react-hooks/exhaustive-deps
   const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
   return (
@@ -289,7 +288,7 @@ export function Btn({ label, onPress, kind = 'plain', busy, disabled, small, ico
         void Haptics.selectionAsync()
         onPress()
       }}
-      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, (disabled || busy) && { opacity: 0.5 }, pressed && { transform: [{ scale: 0.97 }] }, style]}
+      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, (disabled || busy) && { opacity: 0.5 }, pressed && { opacity: 0.75 }, style]}
     >
       {busy ? (
         <ActivityIndicator color={fg} />
@@ -307,7 +306,7 @@ export function Empty({ title, text, busy, icon }: { title: string; text?: strin
   const s = useKit()
   const C = useTheme()
   return (
-    <Animated.View entering={FadeIn.duration(300)} style={s.empty}>
+    <View style={s.empty}>
       {busy && <ActivityIndicator color={C.text2} style={{ marginBottom: 10 }} />}
       {!busy && icon && (
         <View style={s.emptyIcon}>
@@ -316,7 +315,7 @@ export function Empty({ title, text, busy, icon }: { title: string; text?: strin
       )}
       <Text style={s.emptyTitle}>{title}</Text>
       {!!text && <Text style={s.emptyText}>{text}</Text>}
-    </Animated.View>
+    </View>
   )
 }
 
@@ -357,7 +356,7 @@ export function Composer({ placeholder, onSend, busy, initial = '', send = 'Send
   return (
     <View style={[s.composer, { marginBottom: bottom }]}>
       <TextInput style={s.input} placeholder={placeholder} placeholderTextColor={C.text3} value={text} onChangeText={setText} multiline maxLength={8000} />
-      <Pressable disabled={!text.trim() || busy} onPress={() => void go()} style={({ pressed }) => [s.send, (!text.trim() || busy) && { opacity: 0.4 }, pressed && { transform: [{ scale: 0.94 }] }]}>
+      <Pressable disabled={!text.trim() || busy} onPress={() => void go()} style={({ pressed }) => [s.send, (!text.trim() || busy) && { opacity: 0.4 }, pressed && PRESSED]}>
         {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.sendText}>{send}</Text>}
       </Pressable>
     </View>
