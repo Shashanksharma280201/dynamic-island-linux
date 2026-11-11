@@ -5,6 +5,7 @@ import { IDLE_BUDDY, type BuddyView } from '@shared/buddy'
 import { Recorder } from '../voice/recorder'
 import { NOISE, transcribe, transcribeLong, warmUp } from '../voice/useVoice'
 import { wakeMatch } from '@shared/jarvis'
+import { IdleWorker } from '../idleWorker'
 
 export type BuddyListen = 'idle' | 'preparing' | 'listening' | 'transcribing'
 
@@ -22,39 +23,53 @@ export type Buddy = {
   dismiss: () => void
 }
 
-// Kokoro, in a worker; audio plays here.
-let worker: Worker | null = null
+// Kokoro, in a worker (let go after a few minutes quiet); audio plays here.
 let ctx: AudioContext | null = null
 let playing: AudioBufferSourceNode | null = null
+let hush: ReturnType<typeof setTimeout> | null = null
 const waiting = new Map<number, { resolve: (a: Float32Array) => void; reject: (e: Error) => void }>()
 
-function tts(): Worker {
-  if (worker) return worker
-  worker = new Worker(new URL('./tts.worker.ts', import.meta.url), { type: 'module' })
-  worker.onmessage = (e) => {
+const tts = new IdleWorker(
+  () => new Worker(new URL('./tts.worker.ts', import.meta.url), { type: 'module' }),
+  (e) => {
     const w = waiting.get(e.data.id)
     if (!w) return
     waiting.delete(e.data.id)
+    tts.done()
     if (e.data.type === 'audio') w.resolve(e.data.audio)
     else w.reject(new Error(e.data.error))
-  }
-  worker.onerror = (e) => {
-    for (const w of waiting.values()) w.reject(new Error(e.message || 'The natural voice crashed'))
+  },
+  (message) => {
+    for (const w of waiting.values()) w.reject(new Error(message === 'crashed' ? 'The natural voice crashed' : message))
     waiting.clear()
-    worker = null
-  }
-  return worker
-}
+  },
+)
 
 function synth(id: number, phonemes: string, voice: string, speed: number): Promise<Float32Array> {
   return new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject })
-    tts().postMessage({ type: 'speak', id, phonemes, voice, speed })
+    tts.ask({ type: 'speak', id, phonemes, voice, speed })
   })
 }
 
-function play(audio: Float32Array): Promise<void> {
+/** The audio output, running only while it speaks (a running one keeps the audio thread busy with silence). */
+function output(): AudioContext {
+  if (hush) clearTimeout(hush)
+  hush = null
   ctx ??= new AudioContext()
+  if (ctx.state === 'suspended') void ctx.resume()
+  return ctx
+}
+function quietSoon(): void {
+  if (hush) clearTimeout(hush)
+  hush = setTimeout(() => {
+    hush = null
+    if (!playing && ctx?.state === 'running') void ctx.suspend()
+  }, 3000)
+}
+
+function play(audio: Float32Array): Promise<void> {
+  const ctx = output()
   const buf = ctx.createBuffer(1, audio.length, 24000)
   buf.copyToChannel(new Float32Array(audio), 0)
   const src = ctx.createBufferSource()
@@ -65,6 +80,7 @@ function play(audio: Float32Array): Promise<void> {
   return new Promise((resolve) => {
     src.onended = () => {
       if (playing === src) playing = null
+      if (!playing) quietSoon()
       resolve()
     }
     src.start()

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ClaudeView } from '@shared/claude'
 import { Recorder } from './recorder'
+import { IdleWorker } from '../idleWorker'
 
 export type VoicePhase = 'idle' | 'preparing' | 'listening' | 'transcribing'
 
@@ -17,44 +18,42 @@ export type Voice = {
   clearError: () => void
 }
 
-// One worker for the whole island: the model stays loaded between uses.
-let worker: Worker | null = null
+// One worker for the whole island: the model stays loaded between uses, and
+// is let go after a few minutes unused (it loads again when next needed).
 let seq = 0
 const pending = new Map<number, { resolve: (t: string) => void; reject: (e: Error) => void }>()
+let warmed = ''
 
-function getWorker(): Worker {
-  if (worker) return worker
-  worker = new Worker(new URL('./stt.worker.ts', import.meta.url), { type: 'module' })
-  worker.onmessage = (e) => {
+const stt = new IdleWorker(
+  () => new Worker(new URL('./stt.worker.ts', import.meta.url), { type: 'module' }),
+  (e) => {
     const m = e.data
     const p = pending.get(m.id)
     if (!p) return
     pending.delete(m.id)
+    stt.done()
     if (m.type === 'text') p.resolve(m.text)
     else if (m.type === 'error') p.reject(new Error(m.error))
-  }
-  worker.onerror = (e) => {
-    warmed = ''
-    for (const p of pending.values()) p.reject(new Error(e.message || 'Speech recognition crashed'))
+  },
+  (message) => {
+    for (const p of pending.values()) p.reject(new Error(message === 'crashed' ? 'Speech recognition crashed' : message))
     pending.clear()
-    worker = null
-  }
-  return worker
-}
+  },
+  () => (warmed = ''),
+)
 
-let warmed = ''
 /** Load the model in the background so the first command is quick. */
 export function warmUp(model: string): void {
   if (warmed === model) return
   warmed = model
-  getWorker().postMessage({ type: 'load', id: 0, model })
+  stt.tell({ type: 'load', id: 0, model })
 }
 
 export function transcribe(model: string, audio: Float32Array): Promise<string> {
   const id = ++seq
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject })
-    getWorker().postMessage({ type: 'transcribe', id, model, audio }, [audio.buffer])
+    stt.ask({ type: 'transcribe', id, model, audio }, [audio.buffer])
   })
 }
 
@@ -63,7 +62,7 @@ export function transcribeLong(model: string, audio: Float32Array): Promise<stri
   const id = ++seq
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject })
-    getWorker().postMessage({ type: 'transcribe', id, model, audio, long: true }, [audio.buffer])
+    stt.ask({ type: 'transcribe', id, model, audio, long: true }, [audio.buffer])
   })
 }
 

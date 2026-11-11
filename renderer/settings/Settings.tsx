@@ -614,6 +614,12 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setDictation(v))}
         />
         <Toggle
+          label="A notch at the top"
+          hint="At the top, the island sits flush with the screen’s top edge, like a notch, with the time beside your character. Off: a floating pill below the edge"
+          on={s.notch}
+          onChange={(v) => general.run(() => window.settings.setNotch(v))}
+        />
+        <Toggle
           label="Open the panel when the pointer rests on the island"
           hint="No click needed: rest on the resting island for a moment and it opens"
           on={s.openOnHover}

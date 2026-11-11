@@ -4,11 +4,12 @@ import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 're
 import type { Activity, SystemState } from '@shared/types'
 import type { Rect } from '@shared/hitbox'
 import { present } from '@shared/present'
-import { spring, pop, contentIn, contentOut, panelIn, morphSpring, sizeRank } from '../anim/spring'
+import { spring, pop, contentIn, contentOut, panelIn, morphSpring, sizeRank, tabResize } from '../anim/spring'
 import { sound } from '../sound'
 import { useHoverIntent } from './useHoverIntent'
 import { Hello, Peek } from './states/Peek'
 import { IdlePill, useResting } from './states/IdlePill'
+import { NotchClock } from './states/NotchClock'
 import { MediaCard } from './states/MediaCard'
 import { JobCard } from './states/JobCard'
 import { ApprovalCard } from './states/ApprovalCard'
@@ -87,6 +88,11 @@ const unscroll = (e: { currentTarget: HTMLElement; target: EventTarget }) => {
 /** Close the Control Center this long after the cursor leaves the island. */
 const PANEL_CLOSE_MS = 1500
 
+/** The notch's corners: flat where it meets the top edge, round below. */
+const NOTCH_RADII = { borderTopLeftRadius: 0, borderTopRightRadius: 0, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 }
+/** How far the notch's curves reach out along the top edge. */
+const NOTCH_EAR = 10
+
 export function Island({ activities: real }: { activities: Activity[] }) {
   const character = useCharacter()
   const center = useNotifications()
@@ -121,6 +127,12 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const openNow = useRef(false)
   const { side, anchor, dragging, handlers, consumeDragClick } = useDock(openNow)
   const atTop = side === 'top'
+  // At the top, a notch: flush with the screen's top edge, the time beside the character (Settings → General).
+  const [notchOn, setNotchOn] = useState(true)
+  useEffect(() => window.island.onAppearance((a) => setNotchOn(a.notch !== false)), [])
+  const notch = atTop && notchOn && !dragging
+  // The island's own width, settled (for the notch's curves where it meets the edge).
+  const [islandW, setIslandW] = useState(0)
   /** Left edge of the island in the window: on an edge, or centered at the top. */
   const leftFor = (w: number) =>
     side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
@@ -332,7 +344,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   openNow.current = showPanel
   // On a side edge the island centres on its anchor; the open panel keeps its
   // top still instead, so the row of sections doesn't move as you switch.
-  const top = atTop ? EDGE_MARGIN : showPanel ? panelTop(anchor, size.h, areaH) : islandTop(anchor, size.h, areaH)
+  const top = atTop ? (notch ? 0 : EDGE_MARGIN) : showPanel ? panelTop(anchor, size.h, areaH) : islandTop(anchor, size.h, areaH)
   // What the resting island says: asked again each time it comes to rest.
   const resting = useResting(p.mode === 'idle' && !showPanel)
   const peeking = stage === 'peek' && !showPanel && !dropping && p.mode !== 'expanded'
@@ -416,10 +428,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   useEffect(() => {
     const outer = outerRef.current
     if (!outer) return
-    const measure = () => setSize({ w: outer.offsetWidth, h: outer.offsetHeight })
+    const measure = () => {
+      setSize({ w: outer.offsetWidth, h: outer.offsetHeight })
+      setIslandW(mainRef.current?.offsetWidth ?? 0)
+    }
     const onResize = () => setAreaH(window.innerHeight)
     const ro = new ResizeObserver(measure)
     ro.observe(outer)
+    if (mainRef.current) ro.observe(mainRef.current)
     window.addEventListener('resize', onResize)
     measure()
     return () => {
@@ -480,9 +496,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             ? 'idle'
             : `${p.mode}:${p.primary.kind}:${p.primary.id}`
 
-  // Growing uses the open spring, shrinking the close one (no bounce).
-  const shown = useRef({ key, spring: spring as ReturnType<typeof morphSpring> })
-  if (shown.current.key !== key) shown.current = { key, spring: morphSpring(shown.current.key, key) }
+  // The notch shows the time while the island rests or works on something, not while it's open.
+  const clockShown = notch && (key === 'idle' || key.startsWith('compact:') || key.startsWith('minimal:'))
+
+  // Growing uses the open spring, shrinking the close one (no bounce); the open
+  // panel taking another section's height settles without one.
+  const shown = useRef({ key, tab, spring: spring as ReturnType<typeof morphSpring> | typeof tabResize })
+  if (shown.current.key !== key) shown.current = { key, tab, spring: morphSpring(shown.current.key, key) }
+  else if (key === 'panel' && shown.current.tab !== tab) shown.current = { key, tab, spring: tabResize }
   const shell = shown.current.spring
 
   // The island's little sounds (when turned on), one per change of state.
@@ -556,7 +577,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   return (
     <div
       ref={outerRef}
-      className={`island-outer ${side}${dragging ? ' dragging' : ''}${showPanel ? ' open' : ''}`}
+      className={`island-outer ${side}${notch ? ' notch' : ''}${dragging ? ' dragging' : ''}${showPanel ? ' open' : ''}`}
       style={atTop ? { top, left: leftFor(size.w) } : { top, [side]: EDGE_MARGIN }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => {
@@ -579,14 +600,24 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         className="island"
         layout
         transition={reduce ? { duration: 0.16 } : shell}
-        style={{ borderRadius: 26 }}
+        style={notch ? NOTCH_RADII : { borderRadius: 26 }}
         onScroll={unscroll}
         ref={mainRef}
       >
+        {/* The time, on the notch's leading side, while the island isn't open: it stays put as what's beside it changes. */}
+        <AnimatePresence initial={false}>
+          {clockShown && (
+            <motion.div key="clock" className="notch-lead" layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.08 } }} transition={reduce ? { duration: 0.16 } : contentIn}>
+              <NotchClock />
+            </motion.div>
+          )}
+        </AnimatePresence>
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={key}
-            layout
+            // The open panel's contents only move: as a new section changes its height, the
+            // island's shape grows or shrinks around them (they're never squeezed or stretched).
+            layout={key === 'panel' ? 'position' : true}
             // Content grows out of / sinks back into the docked edge.
             style={{ transformOrigin: atTop ? 'center top' : side === 'left' ? 'left center' : 'right center' }}
             initial={enter}
@@ -619,7 +650,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             ) : hello && p.mode === 'idle' ? (
               <Hello tip={hello.tip} />
             ) : p.mode === 'idle' ? (
-              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} toFile={resting?.toFile ?? 0} />
+              <IdlePill dnd={center.dnd} waiting={center.dnd ? center.unseen : 0} toFile={resting?.toFile ?? 0} notch={notch} />
             ) : p.primary.kind === 'approval' ? (
               <ApprovalCard request={p.primary.request} queued={p.queued} />
             ) : p.primary.kind === 'notification' ? (
@@ -684,6 +715,12 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           </motion.div>
         </AnimatePresence>
       </motion.div>
+      {notch && islandW > 0 && (
+        <>
+          <motion.span className="notch-ear left" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: -NOTCH_EAR }} />
+          <motion.span className="notch-ear right" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: islandW }} />
+        </>
+      )}
 
       <AnimatePresence>
         {notifCards >= 2 && onNotifCard && (

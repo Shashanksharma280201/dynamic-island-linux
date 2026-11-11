@@ -350,7 +350,7 @@ const api = {
     exportCsv: (what: 'contacts' | 'deals' | 'tasks'): Promise<DocEntry> => ipcRenderer.invoke(CRM.EXPORT, what),
     setCurrency: (code: string): Promise<void> => ipcRenderer.invoke(CRM.SET_CURRENCY, code),
   },
-  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; customSounds?: Record<string, string>; look?: IslandLook }) => void) =>
+  onAppearance: (cb: (a: { appearance: 'glass' | 'solid'; blur: boolean; sounds?: boolean; openOnHover?: boolean; notch?: boolean; customSounds?: Record<string, string>; look?: IslandLook }) => void) =>
     on(IPC.APPEARANCE, cb),
   onCharacter: (cb: (c: CharacterConfig) => void) => on(IPC.CHARACTER, cb),
   onPackages: (cb: (tabs: PackageTab[]) => void) => on(IPC.PACKAGES, cb),
@@ -422,6 +422,7 @@ const settings = {
   /** Resolves to an error to show, or null once it's set. */
   setKey: (id: string, accel: string | null): Promise<string | null> => ipcRenderer.invoke(SETTINGS.SET_KEY, id, accel),
   setOpenOnHover: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_OPEN_ON_HOVER, on),
+  setNotch: (on: boolean) => ipcRenderer.invoke(SETTINGS.SET_NOTCH, on),
   setRecording: (on: boolean) => ipcRenderer.invoke(SETTINGS.RECORDING, on),
   tour: () => ipcRenderer.invoke(SETTINGS.TOUR),
   openSounds: () => ipcRenderer.invoke(SETTINGS.OPEN_SOUNDS),
