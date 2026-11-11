@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
+import { islandWidget } from '../../modules/island-widget'
 import { shareIntake } from '../../modules/share-intake'
 import { DEVICE, type DropLink, type Live, type LinkState } from '../link'
 import { useActivity } from '../activity'
@@ -20,6 +21,13 @@ const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
 ]
 
 /** The look, the link to your computer, how the app keeps in touch, and the pairing. */
+/** A Nothing phone (the Glyph lights, the dot widget at home on its lock screen). */
+const NOTHING = Platform.OS === 'android' && /nothing/i.test(String((Platform.constants as { Manufacturer?: string; Brand?: string }).Manufacturer ?? (Platform.constants as { Brand?: string }).Brand ?? ''))
+
+const addWidget = (which: 'wide' | 'dots') => {
+  if (!islandWidget.add(which)) Alert.alert('Add it from the home screen', 'Press and hold an empty spot on your home screen, choose Widgets, then Island Drop.')
+}
+
 export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, top, onBack }: { link: DropLink; live: Live; state: LinkState; prefs: Prefs; setPrefs: (p: Prefs) => void; onUnpair: () => void; top: number; onBack?: () => void }) {
   const C = useTheme()
   const s = useS()
@@ -123,7 +131,7 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
         <Row
           icon={{ name: 'bell', color: C.red }}
           title="Stay connected"
-          sub={liveLink.available ? 'Approvals and files arrive even when the app is closed (a quiet ongoing notification).' : 'Needs the installed app (not Expo Go).'}
+          sub={liveLink.available ? 'Approvals and files arrive even when the app is closed. What the island is doing shows in one quiet line on the lock screen (on Android 16, a chip in the status bar).' : 'Needs the installed app (not Expo Go).'}
           right={<Switch value={prefs.background && liveLink.available} disabled={!liveLink.available} onChange={(background) => setPrefs({ ...prefs, background })} />}
         />
         <Row
@@ -134,6 +142,37 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
           last
         />
       </Section>
+
+      {islandWidget.available && (
+        <Section title="Widgets" note={`Or press and hold an empty spot on your home screen, choose Widgets, then Island Drop.${NOTHING ? ' On Nothing OS 3 and later, Island · Dots fits the lock screen too: press and hold the lock screen, then Customise.' : ''}`}>
+          <Row
+            icon={{ name: 'layers', color: C.violet }}
+            title="Island"
+            sub="The orb, what it’s doing and your computer, wide or small."
+            onPress={() => addWidget('wide')}
+            right={<Text style={s.add}>Add</Text>}
+          />
+          <Row
+            icon={{ name: 'sparkle', color: C.dark ? '#ffffff' : '#111114' }}
+            title="Island · Dots"
+            sub="The same in dot matrix, black and white, a red dot when something needs you. Square."
+            onPress={() => addWidget('dots')}
+            right={<Text style={s.add}>Add</Text>}
+            last
+          />
+        </Section>
+      )}
+
+      {NOTHING && (
+        <Section title="Glyph lights" note="Nothing OS keeps the light on until you look. In Settings, Glyph Interface, Notifications you can also pick Island Drop and its own light.">
+          <Row
+            icon={{ name: 'bolt', color: '#d71921' }}
+            title="Light up when something needs you"
+            sub="When an approval arrives, press and hold its notification and turn on Essential Glyph."
+            last
+          />
+        </Section>
+      )}
 
       <Section title="Good to know">
         <Row icon={{ name: 'shield', color: C.green }} title="Approvals" sub="Answer here, on the notification or on the island: the first answer wins. They stay private on the lock screen." />
@@ -183,6 +222,7 @@ function Preview({ kind }: { kind: ThemePref }) {
 }
 
 const useS = themed((C) => ({
+  add: { color: C.accent, fontSize: 15, fontWeight: '600' },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
   heroName: { color: C.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.2 },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },

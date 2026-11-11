@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import Animated, { FadeInDown, SlideInRight, SlideOutRight } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import type { Note, NoteSummary } from '../../../shared/types'
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
+import { PUSH_IN, PUSH_OUT } from './motion'
 
 /** Your notes on the computer (Markdown files): find, read, write. */
 export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
@@ -39,7 +40,7 @@ export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number
         ))}
       </Page>
       {open && (
-        <Animated.View entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
+        <Animated.View entering={PUSH_IN} exiting={PUSH_OUT} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
           <Editor
             link={link}
             id={open === 'new' ? null : open}
@@ -126,7 +127,7 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
       >
         {id && !note.data && !note.error && <Empty busy title="Opening…" />}
         <ErrorLine message={note.error || act.error} />
-        <Animated.View entering={FadeInDown.springify().damping(20)} style={{ flex: 1, paddingHorizontal: 16 }}>
+        <Animated.View style={{ flex: 1, paddingHorizontal: 16 }}>
           <TextInput style={st.editor} multiline autoFocus={!id} value={body} onChangeText={setBody} placeholder="Write something…" placeholderTextColor={C.text3} textAlignVertical="top" />
         </Animated.View>
         <View style={{ padding: 16, paddingBottom: 100, gap: 10 }}>

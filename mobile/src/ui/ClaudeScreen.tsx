@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native'
-import Animated, { FadeIn, FadeInDown, LinearTransition } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ClaudeRun, ClaudeUsage, ClaudeView } from '../../../shared/claude'
 import type { DropLink } from '../link'
@@ -68,13 +68,13 @@ export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: numbe
             />
           )}
           {turns.map((t, i) => (
-            <Animated.View key={`${t.at}-${i}`} entering={FadeInDown.springify().damping(18)} layout={LinearTransition} style={{ gap: 8 }}>
+            <Animated.View key={`${t.at}-${i}`} style={{ gap: 8 }}>
               <Mine text={t.prompt} />
               <Theirs text={t.reply || (t.ok ? '(no reply)' : 'It didn’t finish.')} failed={!t.ok} />
             </Animated.View>
           ))}
           {run && (
-            <Animated.View entering={FadeIn} layout={LinearTransition} style={{ gap: 8 }}>
+            <Animated.View style={{ gap: 8 }}>
               <Mine text={run.prompt} />
               <Working run={run} />
             </Animated.View>
@@ -89,7 +89,7 @@ export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: numbe
                 void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
                 void act.run('stop', 'claude.stop')
               }}
-              style={({ pressed }) => [st.stop, pressed && { transform: [{ scale: 0.97 }] }]}
+              style={({ pressed }) => [st.stop, pressed && { opacity: 0.75 }]}
             >
               <View style={st.stopSquare} />
               <Text style={st.stopText}>Stop</Text>

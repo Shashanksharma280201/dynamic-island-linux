@@ -4,6 +4,33 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## 0.9.0 (2026-11-11)
+
+**Widgets, and a sharper brain**
+
+- **The island as a widget, on any Android phone**: **Island** (4 by 1)
+  shows the orb in its colour, what it's doing and which computer;
+  **Island · Dots** (2 by 2) shows the same in black and white dot matrix,
+  in the style of Nothing phones, with a red dot when something needs you,
+  and fits a Nothing lock screen. Add them from More → Settings → Widgets.
+- **On the lock screen**: with Stay connected on, the quiet ongoing
+  notification is the island in one line ("Orbit · 2 waiting for you"),
+  with no project names; on Android 16 it's a Live Update with a chip in
+  the status bar. On a Nothing phone, Settings shows how to keep a Glyph
+  light on for approvals.
+- **A calmer phone app**: no more screens sliding in, cards springing or
+  badges zooming. Tabs switch at once, a pushed screen slides in quickly,
+  a press dims, and the tab bar holds still. Motion is left where it says
+  something is happening: the orb, files flying, the link's capsule.
+- **Brain search by meaning, section by section**: each section of a note
+  is read on its own, so a fact deep in a long note (a line in a log, a
+  message in a chat) is found as easily as one at the top, and a note found
+  this way shows the section that matched. The model is now gte-small
+  (34 MB), chosen by comparing small models on a test vault: the right note
+  first for 84% of questions (61% before) and every fact deep in a long
+  note (1 in 7 before). With search by meaning on, it downloads on the next
+  start and your notes are read again in the background.
+
 ## 0.8.0 (2026-11-09)
 
 **The orb on your phone**
