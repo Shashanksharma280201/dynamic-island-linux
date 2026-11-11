@@ -1,9 +1,11 @@
 import * as Notifications from 'expo-notifications'
 import { AppState, Platform } from 'react-native'
 import { liveLink } from '../modules/live-link'
+import { islandWidget } from '../modules/island-widget'
 import type { PhoneApproval, PhoneIncoming } from './islandTypes'
 import type { DropLink, Live } from './link'
 import { sizeText } from './protocol'
+import { islandSummary } from './summary'
 
 /**
  * The phone's notifications for the island:
@@ -95,10 +97,13 @@ export function followIsland(link: DropLink, prefs: NotifyPrefs): () => void {
   const offLive = link.subscribeLive((live: Live) => {
     const v = live.view
     if (prefs.background() && liveLink.available) {
-      const text = live.phase === 'live' ? (v?.approvals.length ? `${v.approvals.length} waiting for you` : 'Connected') : live.phase === 'connecting' ? 'Connecting…' : 'Can’t reach it right now'
-      if (liveLink.isRunning()) liveLink.update(`Island Drop · ${link.pairing.name}`, text)
-      else liveLink.start(`Island Drop · ${link.pairing.name}`, text)
+      const sum = islandSummary(v, live.phase === 'live' ? 'live' : live.phase === 'offline' ? 'offline' : 'searching', link.pairing.name)
+      const title = `${sum.orb.name} · ${sum.line}`
+      if (liveLink.isRunning()) liveLink.update(title, sum.detail, sum.chip, title)
+      else liveLink.start(title, sum.detail, sum.chip, title)
     } else if (liveLink.available && liveLink.isRunning()) liveLink.stop()
+    // The home screen widget says the same.
+    islandWidget.show(islandSummary(v, live.phase === 'live' ? 'live' : live.phase === 'offline' ? 'offline' : 'searching', link.pairing.name))
     if (!v) return
     const ids = new Set(v.approvals.map((a) => a.id))
     for (const a of v.approvals) {

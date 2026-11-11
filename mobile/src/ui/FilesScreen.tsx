@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
 import { FlatList, GestureDetector, usePanGesture, useTapGesture, useExclusiveGestures } from 'react-native-gesture-handler'
-import Animated, { FadeIn, LinearTransition, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 import * as Haptics from 'expo-haptics'
 import { addFiles, addFolder, loadTray, recentMedia, removeFromTray, thumbOf, whenText, type Item } from '../files'
@@ -16,6 +16,7 @@ import { Aurora, EdgeGlow, Wash } from './Glow'
 import { SendPill, type Sending } from './SendPill'
 import { themed, useTheme } from './theme'
 import { useFlick } from './useFlick'
+import { Icon } from './icons'
 
 const GAP = 10
 const PAD = 16
@@ -116,8 +117,12 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
             <Segments tab={tab} setTab={setTab} counts={{ received: received.length }} />
             {tab === 'photos' && media && !media.allowed && (
               <View style={s.notice}>
-                <Text style={s.noticeText}>Island Drop needs to see your photos to list them here.</Text>
-                <Pressable style={s.small} onPress={() => (media.canAsk ? loadMedia() : void Linking.openSettings())}>
+                <View style={s.noticeIcon}>
+                  <Icon name="photo" size={26} color={C.text2} />
+                </View>
+                <Text style={s.noticeTitle}>Your photos, ready to send</Text>
+                <Text style={s.noticeText}>Allow Island Drop to see your photos and they appear here, newest first, to flick to {link.pairing.name}.</Text>
+                <Pressable style={({ pressed }) => [s.small, pressed && { opacity: 0.8 }]} onPress={() => (media.canAsk ? loadMedia() : void Linking.openSettings())}>
                   <Text style={s.smallText}>{media.canAsk ? 'Allow photos' : 'Open settings'}</Text>
                 </Pressable>
               </View>
@@ -167,8 +172,8 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
       <Wash level={flick.wash} />
 
       {sel && !lifted && (
-        <Animated.View entering={FadeIn.duration(160)} style={s.bar}>
-          <Pressable style={({ pressed }) => [s.sendBtn, pressed && { transform: [{ scale: 0.98 }] }]} onPress={() => sendSelected(sel)}>
+        <Animated.View style={s.bar}>
+          <Pressable style={({ pressed }) => [s.sendBtn, pressed && { opacity: 0.8 }]} onPress={() => sendSelected(sel)}>
             <Text style={s.sendText} numberOfLines={1}>
               Send to {link.pairing.name}
             </Text>
@@ -259,7 +264,7 @@ function Tile({
   })
   const gesture = useExclusiveGestures(pan, tap)
   return (
-    <Animated.View layout={LinearTransition.duration(200)} style={{ width: size, opacity: hidden ? 0.2 : 1 }}>
+    <Animated.View style={{ width: size, opacity: hidden ? 0.2 : 1 }}>
       <GestureDetector gesture={gesture}>
         <View>
           <View style={[s.face, selected && s.faceOn]}>
@@ -304,10 +309,12 @@ const useS = themed((C) => ({
   tabPill: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 9, backgroundColor: C.dark ? '#3a3a40' : '#ffffff', ...(C.dark ? {} : { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }) },
   tab: { flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: 'center' },
   tabText: { color: C.text2, fontSize: 13, fontWeight: '700' },
-  notice: { backgroundColor: C.card, borderRadius: 14, padding: 14, marginTop: 6, gap: 10 },
-  noticeText: { color: C.text2, fontSize: 14, lineHeight: 19 },
-  small: { alignSelf: 'flex-start', backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  smallText: { color: C.onPrimary, fontWeight: '600', fontSize: 13 },
+  notice: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 48, gap: 8 },
+  noticeIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
+  noticeTitle: { color: C.text, fontSize: 17, fontWeight: '700' },
+  noticeText: { color: C.text2, fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  small: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, marginTop: 8 },
+  smallText: { color: C.onPrimary, fontWeight: '700', fontSize: 14 },
   face: { borderRadius: 18, overflow: 'hidden', backgroundColor: C.card },
   faceOn: { borderWidth: 2.5, borderColor: C.accent },
   meta: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },

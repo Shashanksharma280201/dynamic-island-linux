@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Alert, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View, type ScrollViewInstance } from 'react-native'
-import Animated, { FadeInDown, FadeOut, LinearTransition, SlideInRight, SlideOutRight } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import type { ChatMessage, ChatSummary, InboxSources, InboxUnread, MailMessageView, MailSummary } from '../../../shared/types'
 import type { PhoneNote } from '../islandTypes'
 import type { DropLink, Live } from '../link'
 import { whenText } from '../files'
 import { Avatar, Badge, Btn, Composer, Empty, ErrorLine, Page, Segmented, TAB_ROOM, ago, useKit, useAction, useCall, useKeyboard } from './kit'
 import { themed, useTheme } from './theme'
+import { PUSH_IN, PUSH_OUT, LEAVE } from './motion'
 
 type Tab = 'chats' | 'mail' | 'alerts'
 type Open = { kind: 'chat'; chat: ChatSummary } | { kind: 'mail'; mail: MailSummary } | null
@@ -49,7 +50,7 @@ export function InboxScreen({ link, live, top, bottom }: { link: DropLink; live:
         {tab === 'alerts' && <Alerts link={link} live={live} />}
       </Page>
       {open && (
-        <Animated.View entering={SlideInRight.springify().damping(22).stiffness(220)} exiting={SlideOutRight.duration(220)} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
+        <Animated.View entering={PUSH_IN} exiting={PUSH_OUT} style={[StyleSheet.absoluteFill, { backgroundColor: C.bg }]}>
           {open.kind === 'chat' ? <Thread link={link} chat={open.chat} top={top} bottom={bottom} onBack={() => setOpen(null)} /> : <MailView link={link} m={open.mail} top={top} bottom={bottom} onBack={() => setOpen(null)} />}
         </Animated.View>
       )}
@@ -72,7 +73,7 @@ function Chats({ link, sources, onOpen }: { link: DropLink; sources: InboxSource
       <ErrorLine message={error} />
       {data && !data.length && <Empty title="No chats yet" />}
       {data?.map((c, i) => (
-        <Animated.View key={c.id} entering={FadeInDown.delay(Math.min(i, 10) * 25).springify().damping(18)}>
+        <Animated.View key={c.id}>
           <RowLink
             onPress={() => onOpen(c)}
             left={<Avatar name={c.name} uri={c.avatar} />}
@@ -109,7 +110,7 @@ function Thread({ link, chat, top, bottom, onBack }: { link: DropLink; chat: Cha
           {!data && !error && <Empty busy title="Opening the chat…" />}
           <ErrorLine message={error} />
           {data?.map((m) => (
-            <Animated.View key={m.id} entering={FadeInDown.springify().damping(20)} layout={LinearTransition} style={[st.bubble, m.fromMe ? st.mine : st.theirs]}>
+            <Animated.View key={m.id} style={[st.bubble, m.fromMe ? st.mine : st.theirs]}>
               {chat.isGroup && !m.fromMe && !!m.author && <Text style={st.author}>{m.author}</Text>}
               {m.media?.thumb && <Image source={{ uri: m.media.thumb }} style={st.thumb} />}
               {m.media && !m.media.thumb && <Text style={st.media}>{m.media.name ?? m.media.kind}</Text>}
@@ -155,7 +156,7 @@ function Mail({ link, sources, onOpen }: { link: DropLink; sources: InboxSources
       <ErrorLine message={error} />
       {data && !data.length && <Empty title="Inbox zero" />}
       {data?.map((m, i) => (
-        <Animated.View key={`${m.accountId}-${m.uid}`} entering={FadeInDown.delay(Math.min(i, 10) * 25).springify().damping(18)}>
+        <Animated.View key={`${m.accountId}-${m.uid}`}>
           <RowLink
             onPress={() => onOpen(m)}
             left={<View style={[st.dot, { backgroundColor: m.unread ? C.blue : 'transparent' }]} />}
@@ -193,7 +194,7 @@ function MailView({ link, m, top, bottom, onBack }: { link: DropLink; m: MailSum
           {!data && !error && <Empty busy title="Opening…" />}
           <ErrorLine message={error} />
           {data && (
-            <Animated.View entering={FadeInDown.springify().damping(18)} style={k.card}>
+            <Animated.View style={k.card}>
               <Text style={k.rowSub}>From {data.from.address}</Text>
               {!!data.to && <Text style={k.rowSub}>To {data.to}</Text>}
               <Text style={st.mailBody} selectable>
@@ -279,7 +280,7 @@ function AlertCard({ n, index, onDismiss }: { n: PhoneNote; index: number; onDis
   const st = useSt()
   const k = useKit()
   return (
-    <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 30).springify().damping(18)} exiting={FadeOut.duration(180)} layout={LinearTransition.springify().damping(20)} style={st.note}>
+    <Animated.View exiting={LEAVE} style={st.note}>
       <View style={[st.appIcon, { backgroundColor: colorFor(n.app) }]}>
         <Text style={st.appIconText}>{n.app.slice(0, 1).toUpperCase()}</Text>
       </View>

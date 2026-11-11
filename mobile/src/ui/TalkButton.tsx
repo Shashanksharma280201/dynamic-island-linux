@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react'
 import { Pressable, Text, View } from 'react-native'
-import Animated, { FadeIn, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync, useAudioRecorder } from 'expo-audio'
 import type { DropLink } from '../link'
 import { Icon } from './icons'
 import { themed, useTheme } from './theme'
+import { APPEAR } from './motion'
 
 type Phase = 'idle' | 'listening' | 'sending'
 
@@ -32,8 +33,6 @@ export function TalkButton({ link, name }: { link: DropLink; name?: string }) {
   // Still holding (you can let go while Android asks for the microphone).
   const holding = useRef(false)
   const limit = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pulse = useSharedValue(1)
-  const ring = useAnimatedStyle(() => ({ transform: [{ scale: pulse.value }] }))
 
   const begin = async () => {
     if (phase !== 'idle') return
@@ -53,7 +52,6 @@ export function TalkButton({ link, name }: { link: DropLink; name?: string }) {
     started.current = Date.now()
     startedAt.current = started.current
     setPhase('listening')
-    pulse.value = withRepeat(withSequence(withTiming(1.08, { duration: 500 }), withTiming(1, { duration: 500 })), -1)
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
     limit.current = setTimeout(() => void end(), MAX_MS)
   }
@@ -61,7 +59,6 @@ export function TalkButton({ link, name }: { link: DropLink; name?: string }) {
   const end = async () => {
     if (limit.current) clearTimeout(limit.current)
     limit.current = null
-    pulse.value = withTiming(1)
     if (!started.current) return
     started.current = 0
     const held = Date.now() - startedAt.current
@@ -97,13 +94,13 @@ export function TalkButton({ link, name }: { link: DropLink; name?: string }) {
           holding.current = false
           if (started.current) void end()
         }} disabled={phase === 'sending'} accessibilityRole="button" accessibilityLabel={`Hold to talk to ${name || 'your buddy'}`}>
-        <Animated.View style={[s.button, { backgroundColor: phase === 'listening' ? C.red : C.primary }, phase === 'sending' && { opacity: 0.6 }, ring]}>
+        <Animated.View style={[s.button, { backgroundColor: phase === 'listening' ? C.red : C.primary }, phase === 'sending' && { opacity: 0.6 }]}>
           <Icon name="mic" size={22} color={C.onPrimary} />
           <Text style={[s.label, { color: C.onPrimary }]}>{label}</Text>
         </Animated.View>
       </Pressable>
       {heard && (
-        <Animated.View entering={FadeIn.duration(250)}>
+        <Animated.View entering={APPEAR}>
           <Text style={s.heard}>
             <Text style={s.heardLabel}>You said: </Text>“{heard}”
           </Text>

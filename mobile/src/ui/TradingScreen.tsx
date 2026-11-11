@@ -1,5 +1,5 @@
 import { Alert, StyleSheet, Text, View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ConnectedSection, ConnectedState } from '../../../shared/connected'
 import type { DropLink, Live } from '../link'
@@ -74,7 +74,7 @@ function Section({ sec, index, onAction, busy }: { sec: ConnectedSection; index:
   const st = useSt()
   if (sec.type === 'stats')
     return (
-      <Animated.View entering={FadeInDown.delay(index * 40).springify().damping(18)}>
+      <Animated.View>
         {!!sec.title && <Text style={st.section}>{sec.title}</Text>}
         <View style={st.grid}>
           {sec.items.map((it, i) => (

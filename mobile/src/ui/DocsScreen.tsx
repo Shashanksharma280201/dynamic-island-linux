@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
-import Animated, { FadeInDown, FadeOut, LinearTransition } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ConvertTarget, DocAction, DocActionResult, DocEntry, DocKind, DocsView } from '../../../shared/docs'
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
 import { kindColor, themed, useTheme } from './theme'
 import { Icon } from './icons'
+import { LEAVE } from './motion'
 
 const TARGETS: ConvertTarget[] = ['pdf', 'docx', 'xlsx', 'csv', 'txt', 'md']
 /** What a file can become (as the island's Documents tab decides; it checks again). */
@@ -50,7 +51,7 @@ export function DocsScreen({ link, top, onBack }: { link: DropLink; top: number;
       {!data && !error && <Empty busy title="Getting your documents…" />}
       <ErrorLine message={error || act.error} />
       {!!note && (
-        <Animated.Text entering={FadeInDown} style={st.note}>
+        <Animated.Text style={st.note}>
           {note}
         </Animated.Text>
       )}
@@ -88,7 +89,7 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
   const k = useKit()
   const color = kindColor(f.name)
   return (
-    <Animated.View entering={FadeInDown.springify().damping(18)} exiting={FadeOut} layout={LinearTransition.springify().damping(20)}>
+    <Animated.View exiting={LEAVE}>
       <Card style={[open && { borderColor: `${color}66` }]}>
         <Pressable onPress={onToggle} onLongPress={onPick} style={st.head}>
           <View style={[st.tile, { backgroundColor: color }]}>
@@ -107,7 +108,7 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
           )}
         </Pressable>
         {open && (
-          <Animated.View entering={FadeInDown.duration(220)} style={{ gap: 10, marginTop: 12 }}>
+          <Animated.View style={{ gap: 10, marginTop: 12 }}>
             <Text style={k.kicker}>Convert to</Text>
             <View style={st.chips}>
               {targets(f.kind, libreOffice).map((to) => (

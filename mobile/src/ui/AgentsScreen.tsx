@@ -5,6 +5,12 @@ import { ago, Btn, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, useActio
 import { themed, useTheme } from './theme'
 import { money } from '../words'
 
+/** "just now", "5m ago", "Tue": when a job last ran. */
+const ranAgo = (at: number) => {
+  const a = ago(at)
+  return a === 'now' ? 'just now' : /^\d+[mh]$/.test(a) ? `${a} ago` : a
+}
+
 /**
  * Agents, on the phone: what's watching for you ("tell me when…"), research
  * over your brain, and the jobs that tend it, with Run now. They all run on
@@ -55,14 +61,9 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
                 <Row
                   key={r.id}
                   title={r.label}
-                  sub={r.note || r.what}
+                  sub={[r.note || r.what, r.ok !== null && r.lastRun ? ranAgo(r.lastRun) : ''].filter(Boolean).join(' · ')}
                   last={i === a.length - 1}
-                  right={
-                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                      {r.ok !== null && !!r.lastRun && <Text style={st.when}>{ago(r.lastRun)}</Text>}
-                      <Btn small label="Run now" busy={act.busy === r.id} onPress={async () => void then(await act.run<AgentsView>(r.id, 'agents.run', r.id))} />
-                    </View>
-                  }
+                  right={<Btn small label="Run now" busy={act.busy === r.id} onPress={async () => void then(await act.run<AgentsView>(r.id, 'agents.run', r.id))} />}
                 />
               ))}
             </Card>
@@ -80,6 +81,5 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
 const useSt = themed((C) => ({
   hint: { color: C.text3, fontSize: 13, lineHeight: 18 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  when: { color: C.text3, fontSize: 11 },
   week: { color: C.text3, fontSize: 12, textAlign: 'center', marginTop: 4 },
 }))
