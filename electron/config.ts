@@ -42,6 +42,8 @@ export type Config = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island (no click needed). */
   openOnHover: boolean
+  /** At the top, the island is a notch: flush with the screen's top edge, with the time. */
+  notch: boolean
   /** Keep a weekly recap of your coding sessions (counts only). */
   recap: boolean
   /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
@@ -146,6 +148,7 @@ const DEFAULTS: Config = {
   shortcut: true,
   keys: parseShortcuts(null),
   openOnHover: false,
+  notch: true,
   companion: { on: false, at: null },
   drag: { ...DRAG_DEFAULTS },
   dictation: true,
@@ -228,6 +231,7 @@ export function mergeConfig(raw: unknown): Config {
   if (typeof r.shortcut === 'boolean') c.shortcut = r.shortcut
   c.keys = parseShortcuts(r.keys)
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
+  if (typeof r.notch === 'boolean') c.notch = r.notch
   if (typeof r.dictation === 'boolean') c.dictation = r.dictation
   c.display = parseDisplayPref(r.display)
   c.services = parseServices(r.services)

@@ -328,6 +328,8 @@ export type SettingsState = {
   keys: Shortcuts
   /** Open the panel when the pointer rests on the resting island. */
   openOnHover: boolean
+  /** At the top, the island is a notch (flush with the top edge, with the time). */
+  notch: boolean
   /** Sounds replaced by your own files. */
   customSounds: string[]
   /** The character also sits on the desktop. */

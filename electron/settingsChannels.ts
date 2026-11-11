@@ -8,6 +8,7 @@ export const SETTINGS = {
   SET_AGENT_HOOK: 'settings:set-agent-hook', // (agent id, on)
   SET_KEY: 'settings:set-key', // (shortcut id, accelerator | null for the default) -> error text | null
   SET_OPEN_ON_HOVER: 'settings:set-open-on-hover', // boolean
+  SET_NOTCH: 'settings:set-notch', // boolean
   TOUR: 'settings:tour', // start the island's tour
   OPEN_SOUNDS: 'settings:open-sounds', // open the folder for your own sounds
   SET_DICTATION: 'settings:set-dictation', // boolean: dictate anywhere
