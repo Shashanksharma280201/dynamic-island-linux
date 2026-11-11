@@ -119,6 +119,29 @@ Notifications for approvals are private on the lock screen: unlock to see
 what's asked and answer. Only your tap answers; the app never decides on its
 own, and an approval that expires or is answered on the computer disappears.
 
+## Widgets and the lock screen
+
+- **Island** (4 by 1): the orb in its colour, with its mood's ring, what it's
+  doing ("2 waiting for you", "At work" and the project) and which computer.
+- **Island · Dots** (2 by 2, any size): the same in black and white dot
+  matrix, in the style of Nothing phones: the orb as a grid of dots lit from
+  the top left, what it's doing in dot letters, and a red dot when something
+  needs you. It looks at home on any phone, and fits a Nothing lock screen.
+- Add them from **More → Settings → Widgets**, or press and hold an empty spot
+  on the home screen, **Widgets**, **Island Drop**. On Nothing OS 3 and later,
+  press and hold the lock screen, **Customise**, to put Island · Dots there.
+  Tapping either opens the app.
+- **On any lock screen**: with **Stay connected** on, the quiet ongoing
+  notification is the island in one line ("Orbit · 2 waiting for you"), with
+  no project names. On Android 16 it's a Live Update, with a chip in the
+  status bar counting what waits.
+- **Glyph lights** (Nothing phones): press and hold an approval's
+  notification and turn on **Essential** to keep a Glyph light on until you
+  answer. Settings shows how on a Nothing phone.
+
+The widgets change when the island does while the app is connected (with
+Stay connected, in the background too); offline, they say so, faded.
+
 ## Build it yourself
 
 Push a change under `mobile/` and GitHub Actions builds the APK. Or with
@@ -148,7 +171,9 @@ locally instead: `npx expo prebuild --platform android` then
 | `src/ui/` | The tabs (Island, Claude, Files, Inbox, More) and their screens, approval cards, the lifted file and its flick (Reanimated, gesture handler), the glow, files arriving |
 | `src/ui/kit.tsx` | What every screen is made of: `useCall` (an island function, kept live by its pushes), the page, cards, rows, the segmented control, the composer, the slider |
 | `modules/share-intake` | A small native module: what other apps share, copied into the app |
-| `modules/live-link` | A small native module: the foreground service that keeps the link open in the background |
+| `modules/live-link` | A small native module: the foreground service that keeps the link open in the background, and its one line on the lock screen |
+| `modules/island-widget` | A small native module: the home and lock screen widgets (Island, Island · Dots), drawn from what the app last saw |
+| `src/summary.ts` | The island in a few words, for the Island tab, the widgets and the lock screen (pure) |
 
 The pure parts are tested from the island's test suite (`tests/dropPhone.test.ts`).
 
@@ -161,4 +186,7 @@ The pure parts are tested from the island's test suite (`tests/dropPhone.test.ts
   again.
 - The camera is only used to scan the pairing QR; photo access only lists
   your photos here.
-- Approval notifications are hidden on the lock screen.
+- Approval notifications are hidden on the lock screen. The ongoing
+  notification shows only what the island is doing there, with no project
+  names; the widgets show the project when it's at work, so leave them off
+  the lock screen if that's private.
