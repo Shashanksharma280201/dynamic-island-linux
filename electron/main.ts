@@ -2521,6 +2521,7 @@ async function main() {
       blur: blurBehind,
       sounds: config.sounds,
       openOnHover: config.openOnHover,
+      notch: config.notch,
       customSounds: customSounds.urls(),
       look: islandLook(config.islandTheme, theme.isDark(), config.accent),
     })

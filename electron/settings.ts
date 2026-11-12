@@ -166,6 +166,7 @@ export class SettingsController {
       shortcut: config.shortcut,
       keys: config.keys,
       openOnHover: config.openOnHover,
+      notch: config.notch,
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
       drag: { ...config.drag, ...this.d.drag() },
@@ -435,6 +436,13 @@ export class SettingsController {
       config.openOnHover = on === true
       this.save()
       this.d.onOpenOnHover()
+    })
+    ipcMain.handle(SETTINGS.SET_NOTCH, (_e, on) => {
+      config.notch = on === true
+      this.save()
+      // The island's look goes out with the rest of its appearance.
+      this.d.onOpenOnHover()
+      this.changed()
     })
     ipcMain.handle(SETTINGS.SET_CHARACTER, (_e, patch) => {
       const switching = typeof patch?.id === 'string' && patch.id !== config.character.id

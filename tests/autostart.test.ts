@@ -33,6 +33,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     shortcut: true,
     keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
+    notch: true,
     companion: { on: false, at: null },
     dictation: true,
     display: 'primary',
