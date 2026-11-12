@@ -132,7 +132,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   useEffect(() => window.island.onAppearance((a) => setNotchOn(a.notch !== false)), [])
   const notch = atTop && notchOn && !dragging
   // The island's own width, settled (for the notch's curves where it meets the edge).
-  const [islandW, setIslandW] = useState(0)
+  // Where the island itself sits in the outer box (the notch's corners hang off its edges).
+  const [islandBox, setIslandBox] = useState({ x: 0, w: 0 })
   /** Left edge of the island in the window: on an edge, or centered at the top. */
   const leftFor = (w: number) =>
     side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
@@ -430,7 +431,9 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     if (!outer) return
     const measure = () => {
       setSize({ w: outer.offsetWidth, h: outer.offsetHeight })
-      setIslandW(mainRef.current?.offsetWidth ?? 0)
+      const x = mainRef.current?.offsetLeft ?? 0
+      const w = mainRef.current?.offsetWidth ?? 0
+      setIslandBox((box) => (box.x === x && box.w === w ? box : { x, w }))
     }
     const onResize = () => setAreaH(window.innerHeight)
     const ro = new ResizeObserver(measure)
@@ -715,10 +718,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           </motion.div>
         </AnimatePresence>
       </motion.div>
-      {notch && islandW > 0 && (
+      {notch && islandBox.w > 0 && (
         <>
-          <motion.span className="notch-ear left" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: -NOTCH_EAR }} />
-          <motion.span className="notch-ear right" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: islandW }} />
+          <motion.span className="notch-ear left" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: islandBox.x - NOTCH_EAR }} />
+          <motion.span className="notch-ear right" aria-hidden layout="position" transition={reduce ? { duration: 0.16 } : shell} style={{ left: islandBox.x + islandBox.w }} />
         </>
       )}
 
