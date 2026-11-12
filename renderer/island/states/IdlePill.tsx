@@ -26,13 +26,28 @@ export function useResting(atRest: boolean): RestingView | null {
   return v
 }
 
+/** How long the resting orb turns before it holds still (each frame repaints the island). */
+export const REST_STILL_MS = 20_000
+
+/** True once the island has been resting for `ms` (it starts over each time it comes to rest). */
+function useSettled(ms: number): boolean {
+  const [settled, setSettled] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSettled(true), ms)
+    return () => clearTimeout(t)
+  }, [ms])
+  return settled
+}
+
 /**
  * Resting state: the character on the screen edge, with a grab bar. In Do
  * Not Disturb a moon sits on it, with how many notifications are waiting;
  * otherwise a small count of notes waiting to be filed.
  */
-export function IdlePill({ dnd = false, waiting = 0, toFile = 0 }: { dnd?: boolean; waiting?: number; toFile?: number }) {
+export function IdlePill({ dnd = false, waiting = 0, toFile = 0, notch = false }: { dnd?: boolean; waiting?: number; toFile?: number; notch?: boolean }) {
   const { name } = useCharacter()
+  // After a little while at rest the orb holds still: the resting island then costs nothing.
+  const settled = useSettled(REST_STILL_MS)
   const [now, setNow] = useState(() => new Date())
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 60_000)
@@ -43,7 +58,7 @@ export function IdlePill({ dnd = false, waiting = 0, toFile = 0 }: { dnd?: boole
       className="capsule idle"
       title={dnd ? `${name} · Do Not Disturb${waiting ? ` · ${waiting} waiting in Notifications` : ''}` : `${name}${toFile ? ` · ${toFile} to file` : ''} · click for Control Center, drag to move`}
     >
-      <Character mood={dnd ? 'sleeping' : restingMood(now)} size={38} />
+      <Character mood={dnd ? 'sleeping' : restingMood(now)} size={notch ? 28 : 38} still={settled} />
       {dnd && (
         <span className="dnd-badge" aria-label="Do Not Disturb">
           <MoonIcon size={9} />
@@ -55,7 +70,7 @@ export function IdlePill({ dnd = false, waiting = 0, toFile = 0 }: { dnd?: boole
           {toFile > 99 ? '99+' : toFile}
         </span>
       )}
-      <span className="grip" />
+      {!notch && <span className="grip" />}
     </div>
   )
 }

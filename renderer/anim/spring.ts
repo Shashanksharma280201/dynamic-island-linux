@@ -6,6 +6,8 @@
 export const islandOpen = { type: 'spring', stiffness: 420, damping: 32, mass: 1 } as const
 /** The island shrinking back: no bounce. */
 export const islandClose = { type: 'spring', stiffness: 520, damping: 48, mass: 1 } as const
+/** The open panel taking a new section's height: settles without a bounce. */
+export const tabResize = { type: 'spring', stiffness: 480, damping: 50, mass: 1 } as const
 /** Small things popping in: chips, badges, the rail. */
 export const pop = { type: 'spring', stiffness: 640, damping: 30, mass: 1 } as const
 /** The character's squash, hops and wobbles. */

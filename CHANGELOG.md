@@ -4,6 +4,26 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+- **A notch at the top, with the time**: at the top of the screen the
+  island now sits flush with the screen's top edge, square at the top and
+  round at the bottom, its edges curving into the edge like a notch. While
+  it rests (or shows a small status) the time is on its left, changing on
+  the minute. Turn it off in **Settings → General → A notch at the top** for
+  the floating pill as before; at the side of the screen, or while you drag
+  it, it's the pill as always.
+- **Smooth tab switches**: switching between the panel's tabs no longer
+  squashes and stretches what's in it as the island changes size; the
+  island's edge glides to the new size and the contents stay crisp.
+- **Lighter at rest**: the resting orb holds still after 20 seconds with
+  nothing going on (it moves again the moment something happens), so a
+  resting island uses almost no processor time (about 6% of a core before,
+  under 1% after, on the test machine). The speech, voice and search
+  models are let go after 3 minutes unused (they load again in a second or
+  two when next needed), and the sound output is paused while nothing is
+  playing.
+
 ## 0.9.0 (2026-11-11)
 
 **Widgets, and a sharper brain**

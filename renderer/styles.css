@@ -6993,3 +6993,87 @@ button:focus-visible,
     transform: translate(-50%, -3px);
   }
 }
+
+/* ===========================================================================
+   The notch (at the top, Settings → General): the island is flush with the
+   screen's top edge, flat on top and round below, its top corners curving
+   out into the edge like a laptop's notch. Solid: a frosted snapshot can't
+   carry on past its edge. While it rests or works, the time is on its
+   leading side and what it's doing on the other.
+   =========================================================================== */
+:root {
+  --notch-bg: #070709;
+}
+:root[data-theme='light'] {
+  --notch-bg: #f6f6f8;
+}
+.island-outer.notch > .island:not(.detached):not(.notif-stack) {
+  display: flex;
+  align-items: center;
+  background: var(--notch-bg);
+  box-shadow:
+    0 16px 36px -14px rgba(0, 0, 0, 0.55),
+    0 6px 16px -10px rgba(0, 0, 0, 0.35);
+}
+:root[data-theme='light'] .island-outer.notch > .island:not(.detached):not(.notif-stack) {
+  box-shadow:
+    0 16px 36px -16px rgba(20, 20, 40, 0.28),
+    0 0 0 0.5px rgba(0, 0, 0, 0.08);
+}
+/* No frosted snapshot, and no bright rim along the edge it hangs from. */
+.island-outer.notch > .island:not(.detached):not(.notif-stack)::before {
+  content: none;
+}
+.island-outer.notch > .island:not(.detached):not(.notif-stack)::after {
+  box-shadow:
+    inset 0 -1px 0 var(--edge-bottom),
+    inset 1px 0 0 rgba(var(--ink), 0.04),
+    inset -1px 0 0 rgba(var(--ink), 0.04);
+}
+/* The curves where it meets the edge: the screen's top edge flows into its sides. */
+.notch-ear {
+  position: absolute;
+  top: 0;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+.notch-ear.left {
+  background: radial-gradient(circle at 0 100%, transparent 9.5px, var(--notch-bg) 10px);
+}
+.notch-ear.right {
+  background: radial-gradient(circle at 100% 100%, transparent 9.5px, var(--notch-bg) 10px);
+}
+/* Resting and working: slim, wide enough to read as a notch, the time on the left. */
+.island-outer.notch .capsule {
+  min-height: 34px;
+  padding: 3px 12px 3px 6px;
+}
+.island-outer.notch .capsule.idle {
+  padding: 3px 12px 3px 6px;
+}
+.notch-lead {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  padding-left: 16px;
+  min-width: 64px;
+}
+.notch-clock {
+  font: 600 14px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--label);
+  white-space: nowrap;
+  cursor: default;
+}
+/* A second activity, as its own small bubble, hangs just below the edge. */
+.island-outer.notch > .island.detached,
+.island-outer.notch > .island.notif-stack {
+  margin-top: 6px;
+}
+/* Resting or working, it's as wide as a notch: the time on one side, the character on the other. */
+.island-outer.notch > .island:has(> .notch-lead) {
+  min-width: 184px;
+  justify-content: space-between;
+}

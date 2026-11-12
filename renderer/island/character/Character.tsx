@@ -134,6 +134,7 @@ export function Character({
   ring = size >= 30,
   color: colorOverride,
   paint: paintOverride,
+  still = false,
 }: {
   mood: CharacterMood
   size?: number
@@ -145,6 +146,8 @@ export function Character({
   color?: string
   /** Its colour, instead of the chosen one (null: its own). */
   paint?: string | null
+  /** Hold the orb still (it has been resting a while): no frames drawn until this changes. */
+  still?: boolean
 }) {
   const chosen = useCharacter()
   const which = id && CHARACTER_COLOR[id] ? id : CHARACTER_COLOR[chosen.id] ? chosen.id : DEFAULT_CHARACTER
@@ -178,7 +181,7 @@ export function Character({
         animate={reduce || !motionFor ? undefined : motionFor.animate}
         transition={motionFor?.transition}
       >
-        <Orb state={ORB_FOR_MOOD[mood]} size={orbSize} color={ink} dots={dots} dotSize={dotSize} fps={fps || 1} paused={fps === 0} speed={orbSpeed(mood) || 1} bright />
+        <Orb state={ORB_FOR_MOOD[mood]} size={orbSize} color={ink} dots={dots} dotSize={dotSize} fps={fps || 1} paused={fps === 0 || still} speed={orbSpeed(mood) || 1} bright />
       </motion.span>
     </span>
   )

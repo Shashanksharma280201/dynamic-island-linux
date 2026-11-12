@@ -27,11 +27,12 @@ export function App() {
   )
   useEffect(
     () =>
-      window.island.onAppearance(({ appearance, blur, sounds, openOnHover, customSounds, look }) => {
+      window.island.onAppearance(({ appearance, blur, sounds, openOnHover, notch, customSounds, look }) => {
         setSoundsOn(!!sounds)
         setCustomSounds(customSounds)
         const root = document.documentElement
         root.dataset.openOnHover = openOnHover ? 'yes' : 'no'
+        root.dataset.notch = notch === false ? 'no' : 'yes'
         root.dataset.appearance = appearance
         root.dataset.blur = blur ? 'yes' : 'no'
         if (look) {
