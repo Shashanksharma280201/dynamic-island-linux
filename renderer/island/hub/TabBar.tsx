@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent as ReactFocusEvent, type MouseEvent as ReactMouseEvent, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, useAnimationControls } from 'framer-motion'
 import { pop } from '../../anim/spring'
@@ -6,6 +6,9 @@ import type { InboxUnread } from '@shared/types'
 import { currentWindow, type ClaudeUsage, type UsageWindow } from '@shared/claude'
 import { resetText } from '@shared/format'
 import type { HubTab } from './Hub'
+
+/** How long the pointer rests on an icon before its name shows (a tooltip's usual wait). */
+export const LABEL_WAIT_MS = 450
 
 /** One weight and size for every section's icon: drawn lines in the label colour, like SF Symbols. */
 const Glyph = ({ children, stroke = 1.8 }: { children: ReactNode; stroke?: number }) => (
@@ -256,17 +259,74 @@ export function TabBar({
     const on = barRef.current?.querySelector<HTMLElement>('.rail-btn[aria-selected="true"]')
     setPill(on ? { x: on.offsetLeft, w: on.offsetWidth } : null)
   }, [tab, hidden.join()])
-  // The name under the icon the pointer is on. Drawn outside the bar (the
-  // island clips) just below the icon.
+  // The name under the icon the pointer rests on. Drawn outside the bar (the
+  // island clips) just below the icon, like a tooltip: it waits for the
+  // pointer to rest a moment (then follows it along the bar at once), and a
+  // click puts it away (it would sit over the section's own title) until the
+  // pointer moves to another icon.
   const [label, setLabel] = useState<{ text: string; x: number; y: number } | null>(null)
-  const showLabel = (el: HTMLElement, text: string) => {
+  const labelRef = useRef<HTMLSpanElement | null>(null)
+  const wait = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const warm = useRef(false)
+  const pressed = useRef<HTMLElement | null>(null)
+  const stopWaiting = () => {
+    if (wait.current) clearTimeout(wait.current)
+    wait.current = null
+  }
+  useEffect(() => stopWaiting, [])
+  const placeLabel = (el: HTMLElement, text: string) => {
     const r = el.getBoundingClientRect()
     setLabel({ text, x: r.left + r.width / 2, y: r.bottom + 6 })
+    warm.current = true
   }
+  const showLabel = (el: HTMLElement, text: string) => {
+    stopWaiting()
+    if (pressed.current === el) return
+    if (warm.current) return placeLabel(el, text)
+    setLabel(null)
+    wait.current = setTimeout(() => placeLabel(el, text), LABEL_WAIT_MS)
+  }
+  const hideLabel = () => {
+    stopWaiting()
+    setLabel(null)
+  }
+  const pointerHandlers = (text: string) => ({
+    onMouseEnter: (e: ReactMouseEvent<HTMLElement>) => showLabel(e.currentTarget, text),
+    onMouseLeave: (e: ReactMouseEvent<HTMLElement>) => {
+      if (pressed.current === e.currentTarget) pressed.current = null
+    },
+    onMouseDown: (e: ReactMouseEvent<HTMLElement>) => {
+      pressed.current = e.currentTarget
+      hideLabel()
+    },
+    // From the keyboard the name shows at once; a click's focus doesn't show it.
+    onFocus: (e: ReactFocusEvent<HTMLElement>) => {
+      if (e.currentTarget.matches(':focus-visible')) placeLabel(e.currentTarget, text)
+    },
+    onBlur: hideLabel,
+  })
+  // Kept inside the window: the first and last icons' names don't run off its edge.
+  useLayoutEffect(() => {
+    const el = labelRef.current
+    if (!el || !label) return
+    const half = el.offsetWidth / 2
+    el.style.left = `${Math.min(Math.max(label.x, half + 6), window.innerWidth - half - 6)}px`
+  }, [label])
   const badge = (id: HubTab) =>
     id === 'chats' ? badgeText(unread?.chats) : id === 'mail' ? badgeText(unread?.mail) : id === 'alerts' && tab !== 'alerts' ? badgeText(alerts) : id === 'sessions' ? badgeText(sessions) : id === 'connected' ? badgeText(connected?.waiting) : ''
   return (
-    <div ref={barRef} className="rail tab-bar" role="tablist" aria-orientation="horizontal" onClick={(e) => e.stopPropagation()} onMouseLeave={() => setLabel(null)}>
+    <div
+      ref={barRef}
+      className="rail tab-bar"
+      role="tablist"
+      aria-orientation="horizontal"
+      onClick={(e) => e.stopPropagation()}
+      onMouseLeave={() => {
+        hideLabel()
+        warm.current = false
+        pressed.current = null
+      }}
+    >
       {pill && <motion.span className="tab-pill" initial={false} animate={{ x: pill.x, width: pill.w }} transition={pop} aria-hidden />}
       {ITEMS.filter((it) => !hidden.includes(it.id)).map((it, i) => {
         const b = badge(it.id)
@@ -282,9 +342,7 @@ export function TabBar({
             className={`rail-btn${tab === it.id ? ' on' : ''}${running.includes(it.id) ? ' running' : ''}`}
             style={{ '--i': i } as CSSProperties}
             onClick={() => onTab(it.id)}
-            onMouseEnter={(e) => showLabel(e.currentTarget, title)}
-            onFocus={(e) => showLabel(e.currentTarget, title)}
-            onBlur={() => setLabel(null)}
+            {...pointerHandlers(title)}
           >
             {it.id === 'claude' && <UsageRing usage={usage} />}
             <Hop count={count ?? 0}>{TAB_ICONS[it.id]}</Hop>
@@ -302,15 +360,13 @@ export function TabBar({
         style={{ '--i': ITEMS.length } as CSSProperties}
         aria-label="Settings"
         onClick={() => window.island.openSettings()}
-        onMouseEnter={(e) => showLabel(e.currentTarget, 'Settings')}
-        onFocus={(e) => showLabel(e.currentTarget, 'Settings')}
-        onBlur={() => setLabel(null)}
+        {...pointerHandlers('Settings')}
       >
         <span className="tab-icon">{TAB_ICONS.settings}</span>
       </button>
       {label &&
         createPortal(
-          <span className="tab-label" style={{ top: label.y, left: label.x }} aria-hidden>
+          <span ref={labelRef} className="tab-label" style={{ top: label.y, left: label.x }} aria-hidden>
             {label.text}
           </span>,
           document.body,
