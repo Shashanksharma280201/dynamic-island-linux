@@ -920,6 +920,10 @@ button.cc-tile:active .circle {
   font-variant-numeric: tabular-nums;
   margin-top: -6px;
 }
+/* At the top it's beside the character, on its centre line. */
+.island-outer.top .step-count {
+  margin-top: 0;
+}
 /* The last few steps on Claude's working card. */
 .claude-steps {
   list-style: none;
@@ -6020,10 +6024,12 @@ button .spinner-orb,
 /* ---------------------------------------------------------------------------
    Today: the one thing, "what did I do?" with sources, the day by hour
    --------------------------------------------------------------------------- */
+/* As tall as the day, up to a height that fits the screen; then the list scrolls. */
 .card.panel.hub.today {
-  height: clamp(420px, calc(100vh - 200px), 620px);
+  max-height: clamp(420px, calc(100vh - 200px), 620px);
 }
-.today {
+/* (The panel is .today too, after its tab: this is the list inside it.) */
+:where(.hub) > .today {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -6223,10 +6229,12 @@ button .spinner-orb,
 /* ---------------------------------------------------------------------------
    Agents: coding agents, research, monitors, the roster, The Agency
    --------------------------------------------------------------------------- */
+/* As tall as what's in it, up to a height that fits the screen; then the list scrolls. */
 .card.panel.hub.agents {
-  height: clamp(440px, calc(100vh - 200px), 640px);
+  max-height: clamp(440px, calc(100vh - 200px), 640px);
 }
-.agents {
+/* (The panel is .agents too, after its tab: this is the list inside it.) */
+:where(.hub) > .agents {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -6432,10 +6440,21 @@ button .spinner-orb,
   background: var(--div, var(--blue));
   color: #fff;
 }
+/* The Agency's agents and the skills: the list scrolls; the search and the divisions above it stay put. */
 .agency-list {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.agency-list > * {
+  flex: none;
+}
+.agents.agency > :not(.agency-list) {
+  flex: none;
 }
 .agency-emoji {
   font-size: 26px;
@@ -6874,8 +6893,11 @@ button:focus-visible,
   display: flex;
   flex-direction: column;
 }
+/* A section keeps its own height under the bar, and never more than fits on the screen below it. */
 .hub-shell > .card.panel {
   width: auto;
+  flex: none;
+  max-height: calc(100vh - 64px);
 }
 .tab-bar {
   position: relative;
@@ -7075,8 +7097,26 @@ button:focus-visible,
   display: flex;
   align-items: center;
   align-self: stretch;
-  /* As far from what's beside it as those are from each other. */
-  padding: 0 8px 0 16px;
+  /* As far from what's beside it as those are from each other (12 px, with the capsule's own 6). */
+  padding: 0 6px 0 16px;
+}
+/* Whatever it shows, the notch keeps one height: every piece is 28 px with 6 above and below. */
+.island-outer.notch .compact-art {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+/* The character keeps its place at the notch's end, resting or working; what it's doing is beside it. */
+.island-outer.notch .claude-capsule {
+  flex-direction: row-reverse;
+}
+/* Do Not Disturb and the notes to file: on the character's lower corner, inside the notch's round one. */
+.island-outer.notch .dnd-badge,
+.island-outer.notch .file-badge {
+  top: auto;
+  left: auto;
+  right: 7px;
+  bottom: 4px;
 }
 .notch-clock {
   font: 600 14px/1 var(--font);
@@ -7093,6 +7133,7 @@ button:focus-visible,
 }
 /* Resting or working, it's as wide as a notch: the time on one side, the character on the other. */
 .island-outer.notch > .island:has(> .notch-lead) {
-  min-width: 184px;
+  /* One width whatever it shows (the time with music beside it comes to 186 at "12:00"). */
+  min-width: 188px;
   justify-content: space-between;
 }
