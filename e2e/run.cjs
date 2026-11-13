@@ -317,12 +317,31 @@ function hook(input, env = {}) {
     await page.waitForSelector('.island-outer .capsule', { timeout: 5000 })
     await sleep(700)
     const t = await page.evaluate(() => {
-      const b = document.querySelector('.island-outer').getBoundingClientRect()
+      // (The island itself: a second activity's bubble hangs beside a notch without moving it.)
+      const b = document.querySelector('.island-outer > .island').getBoundingClientRect()
       const cap = document.querySelector('.island-outer .capsule').getBoundingClientRect()
       return { cx: window.screenX + b.x + b.width / 2, top: b.y, cls: document.querySelector('.island-outer').className, wide: cap.width > cap.height }
     })
     check('it sits centered at the top', Math.abs(t.cx - 960 / SCALE) <= 2 && t.top <= 12 && t.cls.includes('top'), JSON.stringify(t))
     check('as a horizontal pill', t.wide)
+    // The notch (on by default): flush with the top edge, one height whatever it shows, everything in it inside it.
+    const notchBox = () => page.evaluate(() => {
+      const outer = document.querySelector('.island-outer')
+      const i = outer.querySelector(':scope > .island')
+      const ir = i.getBoundingClientRect()
+      const inside = [...i.querySelectorAll('.notch-clock, .capsule > *')].every((e) => {
+        const r = e.getBoundingClientRect()
+        return !r.width || (r.left >= ir.left - 0.5 && r.right <= ir.right + 0.5 && r.top >= ir.top - 0.5 && r.bottom <= ir.bottom + 0.5)
+      })
+      return { notch: outer.classList.contains('notch'), top: outer.offsetTop + i.offsetTop, h: i.offsetHeight, w: i.offsetWidth, off: outer.offsetLeft + i.offsetLeft + i.offsetWidth / 2 - window.innerWidth / 2, clock: !!i.querySelector('.notch-clock'), inside }
+    })
+    const notchOk = (n) => n.notch && n.top === 0 && n.h === 40 && n.w >= 188 && Math.abs(n.off) <= 1 && n.clock && n.inside
+    // (Once it has settled: its pieces move for a moment as it changes shape.)
+    const n = (await waitFor(async () => {
+      const v = await notchBox()
+      return notchOk(v) ? v : null
+    }, 4000)) ?? (await notchBox())
+    check('as a notch: flush with the top edge, 40 px high, at the centre, the time and the rest inside it', notchOk(n), JSON.stringify(n))
     const topCfg = JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8'))
     check('the top position is saved', topCfg.dock?.side === 'top', JSON.stringify(topCfg.dock))
     const tc = await center()

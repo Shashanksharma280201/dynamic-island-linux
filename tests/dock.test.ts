@@ -1,4 +1,17 @@
-import { parseDock, columnBounds, sideForX, sideForPoint, islandTop, panelTop, PANEL_PLACE_HEIGHT, DEFAULT_DOCK, TOP_WIDTH } from '../shared/dock'
+import { parseDock, columnBounds, sideForX, sideForPoint, islandTop, panelTop, topLeft, PANEL_PLACE_HEIGHT, DEFAULT_DOCK, TOP_WIDTH } from '../shared/dock'
+
+test('at the top the box is centred; a notch itself stays centred whatever hangs beside it', () => {
+  // The floating pill: the whole row (the island and a second activity's bubble) is centred.
+  expect(topLeft(820, 184)).toBe(318)
+  expect(topLeft(820, 184 + 8 + 26)).toBe(301)
+  // The notch: the island is at the centre with or without the bubble beside it.
+  expect(topLeft(820, 184, { x: 0, w: 184 })).toBe(318)
+  expect(topLeft(820, 184 + 8 + 26, { x: 0, w: 184 })).toBe(318)
+  // A wider pill under it ("2 more · Clear all") centres the island in the box: still at the centre.
+  expect(topLeft(820, 240, { x: 28, w: 184 }) + 28 + 92).toBe(410)
+  // Not measured yet: the box is centred.
+  expect(topLeft(820, 184, { x: 0, w: 0 })).toBe(318)
+})
 
 const WA = { x: 0, y: 32, width: 1920, height: 1048 }
 

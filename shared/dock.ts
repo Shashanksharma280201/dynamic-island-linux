@@ -45,6 +45,16 @@ export function columnBounds(workArea: Rect, side: Side, width = side === 'top' 
   return { x, y: workArea.y, width: w, height: workArea.height }
 }
 
+/**
+ * Left edge of the island's box in a top window `areaWidth` wide: the box
+ * centred, or, given where the island itself sits in the box (a notch), the
+ * island centred, with what's beside it (a second activity's bubble) hanging
+ * off its side without moving it. Pure.
+ */
+export function topLeft(areaWidth: number, boxWidth: number, island?: { x: number; w: number }): number {
+  return Math.round(island && island.w > 0 ? areaWidth / 2 - (island.x + island.w / 2) : (areaWidth - boxWidth) / 2)
+}
+
 /** Where a dragged island lands: the top center if dropped near it, else
  * the nearer edge. Pure. */
 export function sideForPoint(screenX: number, screenY: number, workArea: Rect): Side {
