@@ -4,6 +4,29 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## 0.10.1 (2026-11-13)
+
+**Everything in its place**
+
+- **Long lists in Agents stay on the screen**: The Agency's list (hundreds
+  of agents) and Agent Skills ran off the bottom of the screen. The panel
+  now stops at a height that fits the screen and the list scrolls inside
+  it, under the search and the divisions, which stay put. Today does the
+  same on a long day.
+- **A steadier notch**: it keeps one size and stays at the centre whatever
+  it shows (it grew when Claude worked, and moved aside when a second
+  activity's bubble appeared). The character keeps its place at its end,
+  with the step and its count beside it. Do Not Disturb's moon and the
+  count of notes to file sit on the character, inside the notch (the moon
+  was cut off at its edge).
+- **Tab names don't cover a section's title**: a tab's name shows once the
+  pointer rests on its icon for a moment, and goes when you click.
+- **"1 more · Clear all" under the card**: at the top, the pill for more
+  notifications sits centred under the card, not beside it, so the card
+  stays under the camera.
+- The closing bar under a card lines up with the card's text, and the time
+  in the notch is evenly spaced from what's beside it.
+
 ## 0.10.0 (2026-11-12)
 
 **A notch at the top**

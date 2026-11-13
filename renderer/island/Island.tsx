@@ -26,7 +26,7 @@ import { ClaudeCard, CompactClaude } from './states/ClaudeActivity'
 import { useVoice } from './voice/useVoice'
 import type { ClaudeView } from '@shared/claude'
 import { useDock } from './useDock'
-import { EDGE_MARGIN, islandTop, panelTop } from '@shared/dock'
+import { EDGE_MARGIN, islandTop, panelTop, topLeft } from '@shared/dock'
 import { Character, useCharacter } from './character/Character'
 import { PACKAGE_TABS, type PackageTab } from '@shared/packages'
 import type { DocsAdded } from '@shared/docs'
@@ -134,9 +134,12 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // The island's own width, settled (for the notch's curves where it meets the edge).
   // Where the island itself sits in the outer box (the notch's corners hang off its edges).
   const [islandBox, setIslandBox] = useState({ x: 0, w: 0 })
-  /** Left edge of the island in the window: on an edge, or centered at the top. */
+  /**
+   * Left edge of the island's box in the window: on an edge, or centered at the top. A notch
+   * itself stays at the centre (a second activity's bubble hangs beside it without moving it).
+   */
   const leftFor = (w: number) =>
-    side === 'left' ? EDGE_MARGIN : atTop ? Math.round((window.innerWidth - w) / 2) : window.innerWidth - EDGE_MARGIN - w
+    side === 'left' ? EDGE_MARGIN : atTop ? topLeft(window.innerWidth, w, notch ? islandBox : undefined) : window.innerWidth - EDGE_MARGIN - w
 
   useEffect(() => window.island.onSysState(setSys), [])
 
@@ -471,7 +474,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       height: size.h,
     }
     window.island.reportRect(lastRect.current)
-  }, [side, top, size.w, size.h, areaH])
+  }, [side, top, size.w, size.h, areaH, notch, islandBox.x, islandBox.w])
   // The page can load before the main process listens: report again when asked.
   useEffect(
     () =>
@@ -683,13 +686,13 @@ export function Island({ activities: real }: { activities: Activity[] }) {
                   title={claude && claude.assistant.provider !== 'claude-code' ? `${character.name} · ${claude.assistant.label}` : undefined}
                 />
               ) : (
-                <CompactClaude run={p.primary.run} />
+                <CompactClaude run={p.primary.run} notch={notch} />
               )
             ) : p.primary.kind === 'session' ? (
               p.mode === 'expanded' ? (
                 <SessionCard id={p.primary.id} session={p.primary.session} others={p.primary.others} onOpen={openSessions} />
               ) : (
-                <CompactSession session={p.primary.session} others={p.primary.others} />
+                <CompactSession session={p.primary.session} others={p.primary.others} notch={notch} />
               )
             ) : p.primary.kind === 'job' ? (
               <JobCard id={p.primary.id} job={p.primary.job} />
