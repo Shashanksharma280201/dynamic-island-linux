@@ -180,7 +180,7 @@ function Shelf({ title, items, play, round }: { title: string; items: SpCollecti
 const useSt = themed((C) => ({
   p: { color: C.text2, fontSize: 14, lineHeight: 20 },
   searchRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  search: { flex: 1, backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
+  search: { flex: 1, minWidth: 0, backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
   cover: { width: 42, height: 42, borderRadius: 6 },
   empty: { backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
   section: { color: C.text3, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8 },

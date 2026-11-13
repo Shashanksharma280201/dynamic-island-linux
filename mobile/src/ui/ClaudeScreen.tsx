@@ -210,7 +210,7 @@ const useSt = themed((C) => ({
   theirsText: { color: C.text, fontSize: 15, lineHeight: 22 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   statusText: { color: C.text2, fontSize: 14, fontWeight: '600', flexShrink: 1 },
-  steps: { color: C.text3, fontSize: 12, fontWeight: '700' },
+  steps: { color: C.text3, fontSize: 12, fontWeight: '700', flexShrink: 0 },
   trail: { color: C.text3, fontSize: 12 },
   stop: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,69,58,0.16)', borderRadius: 22, height: 52 },
   stopSquare: { width: 12, height: 12, borderRadius: 3, backgroundColor: C.red },
