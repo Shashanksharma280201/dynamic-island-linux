@@ -33,12 +33,12 @@ export function DiffStat({ added, removed }: { added: number; removed: number })
 }
 
 /** A session working in a terminal, on the edge capsule: the character, an orb and a count. */
-export function CompactSession({ session, others = 0 }: { session: AgentSession; others?: number }) {
+export function CompactSession({ session, others = 0, notch = false }: { session: AgentSession; others?: number; notch?: boolean }) {
   const step = currentStep(session)
   const status = sessionStatus(session, Date.now())
   return (
     <div className="capsule claude-capsule session-capsule" title={`${session.project}: ${status}${others ? ` (+${others} more working)` : ''}`}>
-      <Character mood={sessionMood(session)} size={36} label={status} />
+      <Character mood={sessionMood(session)} size={notch ? 28 : 36} ring label={status} />
       <Orb state={step ? orbForTool(step.tool) : 'solving'} size={20} color={AGENT_INK} className="capsule-orb" title={status} />
       {others > 0 ? <span className="step-count sessions-count">{others + 1}</span> : session.turnSteps > 0 && <span className="step-count">{session.turnSteps}</span>}
     </div>

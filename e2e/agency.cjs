@@ -150,6 +150,20 @@ for (const [p, body] of Object.entries(skillFiles)) {
     check('then lists its agents', !!(await until(async () => (await page.$$('.agency-row')).length === 3, 10000)))
     check('with its divisions', (await page.$$eval('.agency-divisions button', (e) => e.map((x) => x.textContent))).join(',') === 'All,Design,Engineering,Game Development')
     check('and credits it', await seen(page, '.agency-credit:has-text("The Agency, by AgentLand Contributors (MIT licence)")'))
+    // The real catalog has hundreds: a long list scrolls inside the panel, which stays on the screen
+    // (rows added here for the measurement only, and taken out again).
+    const long = await page.evaluate(() => {
+      const list = document.querySelector('.agency-list')
+      const row = list.querySelector('.agency-row')
+      const extra = Array.from({ length: 200 }, () => list.appendChild(row.cloneNode(true)))
+      const island = document.querySelector('.island-outer > .island')
+      const outer = island.parentElement
+      const search = document.querySelector('.agency-search').getBoundingClientRect()
+      const out = { bottom: outer.offsetTop + island.offsetTop + island.offsetHeight, screen: window.innerHeight, scrolls: list.scrollHeight > list.clientHeight + 1, searchShown: search.height > 0 && search.top >= 0 }
+      extra.forEach((c) => c.remove())
+      return out
+    })
+    check('a long list of agents scrolls inside the panel, which stays on the screen', long.bottom <= long.screen && long.scrolls && long.searchShown, JSON.stringify(long))
     await page.click('.agency-divisions button:has-text("Design")')
     check('a division narrows the list', !!(await until(async () => (await page.$$('.agency-row')).length === 1)))
     await page.click('.agency-divisions button:has-text("All")')

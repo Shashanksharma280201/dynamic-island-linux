@@ -28,11 +28,11 @@ export function runStatus(r: ClaudeRun): string {
   }
 }
 
-/** Claude working, on the edge capsule: just the orb. */
-export function CompactClaude({ run }: { run: ClaudeRun }) {
+/** Claude working, on the edge capsule: just the orb (in the notch, the size it rests at). */
+export function CompactClaude({ run, notch = false }: { run: ClaudeRun; notch?: boolean }) {
   return (
     <div className="capsule claude-capsule" title={`Claude: ${runStatus(run)}`}>
-      <Character mood={moodFor(run.phase, run.tool?.name)} size={36} label={runStatus(run)} />
+      <Character mood={moodFor(run.phase, run.tool?.name)} size={notch ? 28 : 36} ring label={runStatus(run)} />
       {runActive(run) && <Orb state={orbForRun(run.phase, run.tool?.name)} size={20} color={AGENT_INK} className="capsule-orb" title={runStatus(run)} />}
       {run.steps > 0 && <span className="step-count">{run.steps}</span>}
     </div>
