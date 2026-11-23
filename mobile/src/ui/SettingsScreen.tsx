@@ -131,12 +131,14 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
         <Row
           icon={{ name: 'bell', color: C.red }}
           title="Stay connected"
+          full
           sub={liveLink.available ? 'Approvals and files arrive even when the app is closed. What the island is doing shows in one quiet line on the lock screen (on Android 16, a chip in the status bar).' : 'Needs the installed app (not Expo Go).'}
           right={<Switch value={prefs.background && liveLink.available} disabled={!liveLink.available} onChange={(background) => setPrefs({ ...prefs, background })} />}
         />
         <Row
           icon={{ name: 'phone', color: C.blue }}
           title="My computer’s notifications"
+          full
           sub="WhatsApp, mail and your apps’ notifications, on this phone too."
           right={<Switch value={prefs.computerNotes} onChange={(computerNotes) => setPrefs({ ...prefs, computerNotes })} />}
           last
@@ -148,6 +150,7 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
           <Row
             icon={{ name: 'layers', color: C.violet }}
             title="Island"
+            full
             sub="The orb, what it’s doing and your computer, wide or small."
             onPress={() => addWidget('wide')}
             right={<Text style={s.add}>Add</Text>}
@@ -155,6 +158,7 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
           <Row
             icon={{ name: 'sparkle', color: C.dark ? '#ffffff' : '#111114' }}
             title="Island · Dots"
+            full
             sub="The same in dot matrix, black and white, a red dot when something needs you. Square."
             onPress={() => addWidget('dots')}
             right={<Text style={s.add}>Add</Text>}
@@ -168,6 +172,7 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
           <Row
             icon={{ name: 'bolt', color: '#d71921' }}
             title="Light up when something needs you"
+            full
             sub="When an approval arrives, press and hold its notification and turn on Essential Glyph."
             last
           />
@@ -175,9 +180,9 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
       )}
 
       <Section title="Good to know">
-        <Row icon={{ name: 'shield', color: C.green }} title="Approvals" sub="Answer here, on the notification or on the island: the first answer wins. They stay private on the lock screen." />
-        <Row icon={{ name: 'laptop', color: C.text3 }} title="It all runs on your computer" sub="Notes are saved there, messages go from its WhatsApp, Claude works there." />
-        <Row icon={{ name: 'send', color: C.accent }} title="Sharing" sub={shareIntake.available ? 'Share from any app and pick Island Drop to send it to your computer.' : 'Sharing from other apps needs the installed app.'} last />
+        <Row full icon={{ name: 'shield', color: C.green }} title="Approvals" sub="Answer here, on the notification or on the island: the first answer wins. They stay private on the lock screen." />
+        <Row full icon={{ name: 'laptop', color: C.text3 }} title="It all runs on your computer" sub="Notes are saved there, messages go from its WhatsApp, Claude works there." />
+        <Row full icon={{ name: 'send', color: C.accent }} title="Sharing" sub={shareIntake.available ? 'Share from any app and pick Island Drop to send it to your computer.' : 'Sharing from other apps needs the installed app.'} last />
       </Section>
 
       <Section>

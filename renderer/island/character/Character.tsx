@@ -2,11 +2,11 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { motion, useReducedMotion, type TargetAndTransition, type Transition } from 'framer-motion'
 import { Orb } from '../../orb/Orb'
 import { ORB_FOR_MOOD, orbFps, orbSpeed } from '@shared/orbs'
-import { CHARACTER_COLOR, CHARACTER_DOTS, DEFAULT_CHARACTER, MOOD_COLOR, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
+import { ASSISTANT_NAME, CHARACTER_COLOR, CHARACTER_DOTS, DEFAULT_CHARACTER, MOOD_COLOR, ringKind, type CharacterConfig, type CharacterId, type CharacterMood } from '@shared/character'
 import { sound } from '../../sound'
 
 /** The chosen character (and its name) for everything on the island. */
-export const CharacterContext = createContext<CharacterConfig>({ id: DEFAULT_CHARACTER, name: 'Orbit' })
+export const CharacterContext = createContext<CharacterConfig>({ id: DEFAULT_CHARACTER, name: ASSISTANT_NAME })
 export const useCharacter = () => useContext(CharacterContext)
 
 /** Three boops this close together and it gets dizzy. */

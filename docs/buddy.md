@@ -57,6 +57,9 @@ Its name and look are your character's (Settings → Character).
   you'd pressed the key. The phone shows what it heard. Saying “yes” or
   “no” to a permission prompt works from there too.
 - **“Hey <name>”**, off by default: say its name and ask, without the key.
+  It's called **Friday** until you rename it (Settings → Character), so
+  that's “Hey Friday”. A name that's also an everyday word (a day, a
+  month) only counts after “hey”, “hi” or “OK”, or said by itself.
   Speech is turned into text on this computer, it listens only while it's
   idle, and nothing leaves until it hears its name.
 

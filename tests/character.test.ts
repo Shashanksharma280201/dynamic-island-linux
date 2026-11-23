@@ -10,24 +10,29 @@ test('every character has a name, kind and personality', () => {
 })
 
 test('stored character settings are validated', () => {
-  expect(parseCharacter(null)).toEqual({ id: 'orbit', name: 'Orbit', color: null })
-  expect(parseCharacter({ id: 'bolt' })).toEqual({ id: 'bolt', name: 'Bolt', color: null })
+  // The assistant is Friday until you rename it, whichever orb it is.
+  expect(parseCharacter(null)).toEqual({ id: 'orbit', name: 'Friday', color: null })
+  expect(parseCharacter({ id: 'bolt' })).toEqual({ id: 'bolt', name: 'Friday', color: null })
+  // It used to take its orb's name: one saved that way was never chosen, so it becomes Friday too.
+  expect(parseCharacter({ id: 'orbit', name: 'Orbit' }).name).toBe('Friday')
+  expect(parseCharacter({ id: 'puff', name: 'Bolt' }).name).toBe('Friday')
+  expect(parseCharacter({ id: 'bolt', name: 'Jarvis' }).name).toBe('Jarvis')
   expect(parseCharacter({ id: 'puff', name: '  Momo  ' })).toEqual({ id: 'puff', name: 'Momo', color: null })
   // The blob used to be called Mochi: saved settings move over to Puff.
   expect(parseCharacter({ id: 'mochi', name: 'Momo' })).toEqual({ id: 'puff', name: 'Momo', color: null })
-  expect(parseCharacter({ id: 'mochi', name: 'Mochi' })).toEqual({ id: 'puff', name: 'Puff', color: null })
+  expect(parseCharacter({ id: 'mochi', name: 'Mochi' })).toEqual({ id: 'puff', name: 'Friday', color: null })
   expect(parseCharacter({ id: 'dragon', name: 'X' })).toEqual({ id: 'orbit', name: 'X', color: null })
   expect(parseCharacter({ id: 'bolt', name: 'A'.repeat(40) }).name).toHaveLength(24)
-  expect(parseCharacter({ id: 'bolt', name: 42 }).name).toBe('Bolt')
+  expect(parseCharacter({ id: 'bolt', name: 42 }).name).toBe('Friday')
   expect(mergeConfig({ character: { id: 'puff', name: 'Mo' } }).character).toEqual({ id: 'puff', name: 'Mo', color: null })
-  expect(mergeConfig({}).character).toEqual({ id: 'orbit', name: 'Orbit', color: null })
+  expect(mergeConfig({}).character).toEqual({ id: 'orbit', name: 'Friday', color: null })
 })
 
 test('its colour', () => {
   expect(parseCharacter({ id: 'bolt', color: '#5ac8fa' })).toMatchObject({ color: '#5ac8fa' })
   expect(parseCharacter({ color: '#123456' })).toMatchObject({ color: null })
   // Outfits were dropped with the faces: an old setting is just left behind.
-  expect(parseCharacter({ id: 'bolt', outfit: 'crown' })).toEqual({ id: 'bolt', name: 'Bolt', color: null })
+  expect(parseCharacter({ id: 'bolt', outfit: 'crown' })).toEqual({ id: 'bolt', name: 'Friday', color: null })
 })
 
 test('what the agent is doing becomes a mood', () => {

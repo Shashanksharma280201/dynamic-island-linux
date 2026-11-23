@@ -20,6 +20,7 @@ import { parseConnectedConfig, type ConnectedConfig } from '@shared/connected'
 import { DROP_DEFAULTS, parseDropConfig, type DropConfig } from '@shared/drop'
 import { parseBrainConfig, type BrainConfig } from '@shared/brain'
 import { parseWallpaperConfig, type WallpaperConfig } from '@shared/wallpaper'
+import { parseDashboardConfig, type DashboardConfig } from '@shared/dashboard'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -44,6 +45,8 @@ export type Config = {
   openOnHover: boolean
   /** At the top, the island is a notch: flush with the screen's top edge, with the time. */
   notch: boolean
+  /** With three or more things going on, the resting island shows each in turn. */
+  turns: boolean
   /** Keep a weekly recap of your coding sessions (counts only). */
   recap: boolean
   /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
@@ -98,6 +101,8 @@ export type Config = {
   engine: EngineConfig
   /** Island OS's intake: what it reads of what you do (Settings › Sources; each off until you turn it on). */
   sources: SourcesConfig
+  /** The Dashboard: its four tiles, and the focus timer's lengths. */
+  dashboard: DashboardConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -149,6 +154,7 @@ const DEFAULTS: Config = {
   keys: parseShortcuts(null),
   openOnHover: false,
   notch: true,
+  turns: true,
   companion: { on: false, at: null },
   drag: { ...DRAG_DEFAULTS },
   dictation: true,
@@ -176,6 +182,7 @@ const DEFAULTS: Config = {
   desktop: parseDesktopConfig(null),
   engine: parseEngineConfig(null),
   sources: parseSourcesConfig(null),
+  dashboard: parseDashboardConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -222,6 +229,7 @@ export function mergeConfig(raw: unknown): Config {
   c.desktop = parseDesktopConfig(r.desktop)
   c.engine = parseEngineConfig(r.engine)
   c.sources = parseSourcesConfig(r.sources)
+  c.dashboard = parseDashboardConfig(r.dashboard)
   c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }
@@ -232,6 +240,7 @@ export function mergeConfig(raw: unknown): Config {
   c.keys = parseShortcuts(r.keys)
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
   if (typeof r.notch === 'boolean') c.notch = r.notch
+  if (typeof r.turns === 'boolean') c.turns = r.turns
   if (typeof r.dictation === 'boolean') c.dictation = r.dictation
   c.display = parseDisplayPref(r.display)
   c.services = parseServices(r.services)

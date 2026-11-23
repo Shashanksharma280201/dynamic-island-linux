@@ -1,9 +1,11 @@
 import { CallCard, CompactCall } from './states/CallActivity'
+import { CompactTimer, TimerCard } from './states/TimerActivity'
+import { CompactEvent, EventCard } from './states/EventActivity'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
 import type { Rect } from '@shared/hitbox'
-import { present } from '@shared/present'
+import { present, turnTakers, TURN_MS } from '@shared/present'
 import { spring, pop, contentIn, contentOut, panelIn, morphSpring, sizeRank, tabResize } from '../anim/spring'
 import { sound } from '../sound'
 import { useHoverIntent } from './useHoverIntent'
@@ -129,7 +131,16 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const atTop = side === 'top'
   // At the top, a notch: flush with the screen's top edge, the time beside the character (Settings → General).
   const [notchOn, setNotchOn] = useState(true)
-  useEffect(() => window.island.onAppearance((a) => setNotchOn(a.notch !== false)), [])
+  // With three or more quiet things going on, the capsule shows each in turn (Settings → General).
+  const [turnsOn, setTurnsOn] = useState(true)
+  useEffect(
+    () =>
+      window.island.onAppearance((a) => {
+        setNotchOn(a.notch !== false)
+        setTurnsOn(a.turns !== false)
+      }),
+    [],
+  )
   const notch = atTop && notchOn && !dragging
   // The island's own width, settled (for the notch's curves where it meets the edge).
   // Where the island itself sits in the outer box (the notch's corners hang off its edges).
@@ -147,7 +158,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const [pkgTabs, setPkgTabs] = useState<PackageTab[] | null>(null)
   useEffect(() => window.island.onPackages?.(setPkgTabs), [])
   useEffect(() => {
-    if (pkgTabs && tabOff(tab, pkgTabs)) setTab('controls')
+    if (pkgTabs && tabOff(tab, pkgTabs)) setTab('dash')
   }, [pkgTabs, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Drop files on the island to add them to Documents (when it's turned on).
@@ -249,6 +260,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     setTab('sessions')
     setPanel(true)
   }
+  const openDash = () => {
+    setTab('dash')
+    setPanel(true)
+  }
+  const openToday = () => {
+    setTab('today')
+    setPanel(true)
+  }
   // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
   useEffect(
     () =>
@@ -341,7 +360,16 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   // card…): peeking changes the island's height, which slides those cards out from under a
   // still pointer, and the peek would fold and open again and again.
   const stage = useHoverIntent(hover && overIsland && !panel && !dropping && cleared === null)
-  const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded })
+  // Taking turns: every few seconds the next one has the capsule. It waits while the pointer is on the
+  // island (what you're reaching for stays put) and while the island is open.
+  const taking = turnsOn && !tourStep && turnTakers(activities).length > 0
+  const [turn, setTurn] = useState(0)
+  useEffect(() => {
+    if (!taking || hover || panel) return
+    const t = setInterval(() => setTurn((n) => n + 1), TURN_MS)
+    return () => clearInterval(t)
+  }, [taking, hover, panel])
+  const p = present(activities, { expanded: stage === 'full' || !!tourStep?.expanded, turn: taking ? turn : undefined })
   const isApproval = p.mode !== 'idle' && p.primary.kind === 'approval'
   // The Control Center takes over when opened, unless an approval needs you.
   const showPanel = panel && !isApproval
@@ -536,6 +564,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const enter = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, ...toward, ...(soft ? { filter: 'blur(4px)' } : {}) }
   const leave = reduce ? { opacity: 0, transition: { duration: 0.16 } } : { opacity: 0, scale: 0.97, ...(soft ? { filter: 'blur(4px)' } : {}), transition: contentOut }
 
+  // Your voice assistant, for the Dashboard's microphone and tile.
+  const assistant = { name: character.name, listen: buddy.listen, phase: buddy.view.phase, wake: !!buddy.view.wake, ask: buddy.key }
+  // What's playing, for the Dashboard's tile.
+  const media = activities.find((a) => a.kind === 'media')?.media ?? null
   // Notification and message cards waiting on the island.
   const notifCards = activities.filter((a) => a.kind === 'notification' || a.kind === 'message').length
   const onNotifCard = !showPanel && p.mode === 'expanded' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
@@ -552,6 +584,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
         ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
         ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
+        ...(activities.some((a) => a.kind === 'timer') ? (['dash'] as const) : []),
         ...(connected?.manifest ? (['connected'] as const) : []),
       ]}
       connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
@@ -573,6 +606,14 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       if (p.primary.kind === 'session') {
         if (p.mode === 'expanded') return // card has its own buttons
         return openSessions()
+      }
+      if (p.primary.kind === 'timer') {
+        if (p.mode === 'expanded') return // card has its own buttons
+        return openDash()
+      }
+      if (p.primary.kind === 'event') {
+        if (p.mode === 'expanded') return // card has its own button
+        return openToday()
       }
     }
     if (!isApproval) {
@@ -632,7 +673,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} bar={bar} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} media={media} assistant={assistant} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} bar={bar} />
             ) : recapping ? (
               <RecapCard r={recapShow!} onClose={closeRecap} />
             ) : dressing ? (
@@ -698,6 +739,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               <JobCard id={p.primary.id} job={p.primary.job} />
             ) : p.primary.kind === 'call' ? (
               p.mode === 'expanded' ? <CallCard started={p.primary.call.started} /> : <CompactCall started={p.primary.call.started} />
+            ) : p.primary.kind === 'timer' ? (
+              p.mode === 'expanded' ? <TimerCard timer={p.primary.timer} onOpen={openDash} /> : <CompactTimer timer={p.primary.timer} notch={notch} />
+            ) : p.primary.kind === 'event' ? (
+              p.mode === 'expanded' ? <EventCard event={p.primary.event} onOpen={openToday} /> : <CompactEvent event={p.primary.event} notch={notch} />
             ) : p.primary.kind === 'connected' ? (
               p.mode === 'expanded' ? (
                 <ConnectedStatusCard
@@ -951,7 +996,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             exit={{ opacity: 0, scale: 0.3, ...(atTop ? { x: -24 } : { y: -24 }) }}
             transition={spring}
           >
-            <DetachedCircle activity={p.detached} />
+            {/* (Keyed: when the capsule takes turns, the next one fades in here.) */}
+            <span key={p.detached.id} className="detached-in">
+              <DetachedCircle activity={p.detached} />
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
