@@ -157,7 +157,7 @@ import { Skills } from './os/skills'
 import { audioInputs, Calls, fixWavSizes } from './os/calls'
 import { FocusTimer } from './os/timer'
 import { SystemMeter } from './os/stats'
-import { isTimerCmd, parseDashboardConfig, parseTimerPrefs, parseTiles, type DashView, type TimerView } from '@shared/dashboard'
+import { isTimerCmd, parseDashboardConfig, parseTimerPrefs, parseTiles, soonEvent, type DashView, type TimerView } from '@shared/dashboard'
 import { findTool } from './os/tools'
 import { macFrontApp, WinFrontApp } from './os/frontApp'
 import { callLine } from '../shared/calls'
@@ -718,6 +718,7 @@ async function main() {
   const winFront = process.platform === 'win32' ? new WinFrontApp() : null
   if (winFront) app.on('before-quit', () => winFront.stop())
   const frontApp = process.platform === 'darwin' ? macFrontApp : winFront ? () => winFront.read() : process.platform === 'linux' && !!process.env.DISPLAY ? () => frontWindow() : undefined
+  let calendarChanged = (): void => {}
   const intake = new Intake({
     config: () => config.sources,
     file: join(app.getPath('userData'), 'os-intake.json'),
@@ -725,7 +726,10 @@ async function main() {
     frontWindow: frontApp,
     idleSeconds: () => (process.env.DI_IDLE_NEVER ? 0 : powerMonitor.getSystemIdleTime()),
     privateWords: () => config.buddy.private,
-    onChange: () => settings?.changed(),
+    onChange: () => {
+      settings?.changed()
+      calendarChanged()
+    },
   })
   intake.start()
   const todayEvents = () => {
@@ -1093,6 +1097,20 @@ async function main() {
   showTimer(focusTimer.view())
   app.on('before-quit', () => focusTimer.stop())
   powerMonitor.on('resume', () => focusTimer.check())
+  // What's about to start on your calendar (when the calendar source is on) shows on the resting island.
+  let eventShown = ''
+  const showEvent = () => {
+    const e = soonEvent(todayEvents(), Date.now())
+    const now = e ? JSON.stringify(e) : ''
+    if (now === eventShown) return
+    eventShown = now
+    if (e) store.upsert({ kind: 'event', id: 'event', priority: 1.2, event: e })
+    else store.remove('event')
+  }
+  showEvent()
+  calendarChanged = showEvent
+  setInterval(showEvent, 60_000).unref?.()
+  powerMonitor.on('resume', showEvent)
   const meter = new SystemMeter({ fake: process.env.DI_STATS_FAKE || undefined })
   const dashView = (): DashView => ({ tiles: config.dashboard.tiles, timer: focusTimer.view() })
   Object.assign(osRoutes, {
@@ -2561,6 +2579,7 @@ async function main() {
       sounds: config.sounds,
       openOnHover: config.openOnHover,
       notch: config.notch,
+      turns: config.turns,
       customSounds: customSounds.urls(),
       look: islandLook(config.islandTheme, theme.isDark(), config.accent),
     })

@@ -7477,6 +7477,63 @@ button:focus-visible,
   color: var(--orange-text);
 }
 
+/* Your voice assistant: the microphone in the header, and its tile. */
+.dash-mic {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  color: var(--label);
+  cursor: pointer;
+  transition:
+    background 0.16s var(--ease),
+    transform 0.12s ease;
+}
+.dash-mic:hover:not(:disabled) {
+  background: var(--tile-hover);
+}
+.dash-mic:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.dash-mic:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.dash-mic[data-on='yes'] {
+  background: var(--blue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 22%, transparent);
+  color: #fff;
+}
+.dash-assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-height: 0;
+}
+.dash-assistant-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+.dash-assistant-text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-talk {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
 /* Choosing what a tile shows (Edit, or right-click a tile). */
 .dashboard[data-editing='yes'] .dash-tile {
   padding: 6px;
@@ -7486,7 +7543,7 @@ button:focus-visible,
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-content: center;
-  gap: 5px;
+  gap: 4px;
   flex: 1;
 }
 .dash-choose button {
@@ -7494,7 +7551,7 @@ button:focus-visible,
   align-items: center;
   gap: 4px;
   min-width: 0;
-  height: 36px;
+  height: 30px;
   padding: 0 6px;
   border: 0;
   border-radius: 10px;
@@ -7573,4 +7630,80 @@ button:focus-visible,
   align-items: center;
   gap: 6px;
   margin-top: 12px;
+}
+
+/* Taking turns: the next activity fades into the small bubble. */
+.detached-in {
+  display: block;
+  animation: detached-in 0.28s ease both;
+}
+@keyframes detached-in {
+  from {
+    opacity: 0;
+    transform: scale(0.8);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .detached-in {
+    animation: none;
+  }
+}
+
+/* Something on your calendar is about to start: a calendar page, and how far off it is. */
+.event-glyph {
+  display: grid;
+  grid-template-rows: 26% 1fr;
+  flex: none;
+  overflow: hidden;
+  border-radius: 28%;
+  background: #fff;
+  color: #1c1c1e;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+}
+.event-glyph::before {
+  content: '';
+  background: #ff453a;
+}
+.event-glyph > span {
+  display: grid;
+  place-items: center;
+}
+.event-capsule {
+  gap: 8px;
+}
+.event-in {
+  display: none;
+  font: 600 14px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.event-in-short {
+  font-size: 11.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.island-outer.top .event-capsule .event-in {
+  display: block;
+}
+.island-outer.top .event-capsule .event-in-short {
+  display: none;
+}
+.detached-glyph.event-bubble {
+  color: inherit;
+}
+.card.event-card {
+  width: 300px;
+}
+.event-card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0;
+}
+.event-card-text {
+  flex: 1;
+  min-width: 0;
 }

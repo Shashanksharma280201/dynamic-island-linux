@@ -19,6 +19,7 @@ import {
   parseTiles,
   parseTimerPrefs,
   parseTimerState,
+  soonEvent,
   setTile,
   timerDue,
   timerFraction,
@@ -29,6 +30,7 @@ import {
   timerRestored,
   timerRunning,
   timerStep,
+  untilShort,
   untilText,
 } from '../shared/dashboard'
 
@@ -39,6 +41,7 @@ const T0 = new Date(2026, 10, 23, 10, 0, 0).getTime()
 
 test('the four tiles: known kinds once each, gaps filled from the defaults', () => {
   expect(parseTiles(undefined)).toEqual(DEFAULT_TILES)
+  expect(DEFAULT_TILES).toEqual(['media', 'timer', 'assistant', 'system'])
   expect(parseTiles(['claude', 'next'])).toEqual(['claude', 'next', 'media', 'timer'])
   expect(parseTiles(['claude', 'claude', 'nonsense', 7, 'day', 'system', 'next', 'media'])).toEqual(['claude', 'day', 'system', 'next'])
   // Choosing a kind another slot has swaps the two: each shows once.
@@ -143,7 +146,7 @@ test('the computer: processor use between two readings, and memory in use', () =
 
 test('what is saved: the tiles and lengths, and a timer read back after the island was closed', () => {
   expect(parseDashboardConfig(null)).toEqual({ tiles: DEFAULT_TILES, timer: TIMER_DEFAULTS })
-  expect(parseDashboardConfig({ tiles: ['claude'], timer: { focusMin: 50, breakMin: 10 } })).toEqual({ tiles: ['claude', 'media', 'timer', 'day'], timer: { focusMin: 50, breakMin: 10 } })
+  expect(parseDashboardConfig({ tiles: ['claude'], timer: { focusMin: 50, breakMin: 10 } })).toEqual({ tiles: ['claude', 'media', 'timer', 'assistant'], timer: { focusMin: 50, breakMin: 10 } })
   expect(isTimerCmd('start')).toBe(true)
   expect(isTimerCmd('explode')).toBe(false)
   expect(isTimerCmd('skip')).toBe(false)
@@ -258,4 +261,21 @@ describe('the focus timer in the island', () => {
     writeFileSync(file, '{ not json')
     expect(make(file).t.view()).toMatchObject({ phase: 'idle', done: 0 })
   })
+})
+
+test('what is about to start: the next timed event within half an hour, until five minutes in', () => {
+  const ev = (min: number, title: string, more: object = {}) => ({ start: T0 + min * MIN, title, allDay: false, ...more })
+  expect(soonEvent([], T0)).toBe(null)
+  expect(soonEvent([ev(45, 'Later')], T0)).toBe(null)
+  expect(soonEvent([ev(30, 'Standup', { where: ' Room 2 ' })], T0)).toEqual({ title: 'Standup', at: T0 + 30 * MIN, where: 'Room 2' })
+  // The earliest of them; whole-day events aren't "about to start".
+  expect(soonEvent([ev(20, 'Review'), ev(10, 'Standup'), ev(5, 'Holiday', { allDay: true })], T0)?.title).toBe('Standup')
+  // It stays for the first five minutes, then the next one has its turn.
+  expect(soonEvent([ev(-3, 'Standup'), ev(12, 'Review')], T0)?.title).toBe('Standup')
+  expect(soonEvent([ev(-6, 'Standup'), ev(12, 'Review')], T0)?.title).toBe('Review')
+  expect(soonEvent([ev(-6, 'Standup')], T0)).toBe(null)
+  expect(soonEvent([ev(3, '   ')], T0)?.title).toBe('Event')
+  expect(untilShort(T0 + 12 * MIN, T0)).toBe('12m')
+  expect(untilShort(T0 + 90 * MIN, T0)).toBe('2h')
+  expect(untilShort(T0 - MIN, T0)).toBe('now')
 })

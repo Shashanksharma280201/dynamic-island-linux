@@ -15,6 +15,7 @@ import { currentStep, sessionStatus } from '@shared/sessions'
 import { capsulePeek } from '@shared/connected'
 import { elapsed } from '@shared/calls'
 import { clockLeft, timerLeft, timerPaused } from '@shared/dashboard'
+import { eventLine } from './EventActivity'
 
 /** What a peek says about the island's state, in two short lines. Pure. */
 export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number; resting?: RestingView | null }): { title: string; sub: string; mood: CharacterMood } {
@@ -42,6 +43,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
       mood: t.phase === 'break' ? 'idle' : 'thinking',
     }
   }
+  if (a.kind === 'event') return { title: a.event.title, sub: eventLine(a.event, o.now), mood: a.event.at - o.now < 5 * 60_000 ? 'attention' : 'idle' }
   if (a.kind === 'job') return { title: a.job.title, sub: a.job.result?.name ?? a.job.sub, mood: a.job.phase === 'working' ? 'thinking' : a.job.phase === 'done' ? 'done' : 'idle' }
   return { title: a.kind === 'notification' ? a.notification.summary : 'Activity', sub: '', mood: 'idle' }
 }

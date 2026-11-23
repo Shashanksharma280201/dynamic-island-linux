@@ -112,6 +112,9 @@ export function alertWay(o: Parameters<typeof alertDecision>[0]): 'speak' | 'sho
 
 // ------------------------------------------------------------ wake word ----
 
+/** Names that are also words people say all day. */
+const EVERYDAY_WORD = /^(monday|tuesday|wednesday|thursday|friday|saturday|sunday|january|february|march|april|may|june|july|august|september|october|november|december|today|tomorrow)$/
+
 /** "Hey Sparky, what's…" → what follows the name ('' for the name alone), or null. Pure. */
 export function wakeMatch(text: string, name: string): string | null {
   const n = name.toLowerCase().replace(/[^a-z0-9 ]/g, '').trim()
@@ -119,8 +122,11 @@ export function wakeMatch(text: string, name: string): string | null {
   const t = text.toLowerCase().replace(/[^a-z0-9' ]/g, ' ').replace(/\s+/g, ' ').trim()
   const m = new RegExp(`^(?:(?:hey|hi|ok|okay|yo)\\s+)?${n.replace(/\s+/g, '\\s+')}\\b\\s*(.*)$`).exec(t)
   if (!m) return null
+  const greeted = /^(hey|hi|ok|okay|yo)\b/.test(t)
+  // A name that's also an everyday word (a day, a month) is said all the time: it only counts after a greeting, or by itself.
+  if (!greeted && m[1] && EVERYDAY_WORD.test(n)) return null
   // The name alone at the start only counts after a greeting or as a whole call.
-  if (!/^(hey|hi|ok|okay|yo)\b/.test(t) && m[1] && !/^(what|where|how|why|who|when|can|could|would|please|open|show|tell|walk|set|find|is|are|do|does)\b/.test(m[1])) return null
+  if (!greeted && m[1] && !/^(what|where|how|why|who|when|can|could|would|please|open|show|tell|walk|set|find|is|are|do|does)\b/.test(m[1])) return null
   // Keep the original words (with their case) after the name.
   const words = text.trim().split(/\s+/)
   const skip = t.split(' ').length - (m[1] ? m[1].split(' ').length : 0)

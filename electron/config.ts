@@ -45,6 +45,8 @@ export type Config = {
   openOnHover: boolean
   /** At the top, the island is a notch: flush with the screen's top edge, with the time. */
   notch: boolean
+  /** With three or more things going on, the resting island shows each in turn. */
+  turns: boolean
   /** Keep a weekly recap of your coding sessions (counts only). */
   recap: boolean
   /** Services you follow (GitHub, Vercel, Stripe…): on/off, address, encrypted key. */
@@ -152,6 +154,7 @@ const DEFAULTS: Config = {
   keys: parseShortcuts(null),
   openOnHover: false,
   notch: true,
+  turns: true,
   companion: { on: false, at: null },
   drag: { ...DRAG_DEFAULTS },
   dictation: true,
@@ -237,6 +240,7 @@ export function mergeConfig(raw: unknown): Config {
   c.keys = parseShortcuts(r.keys)
   if (typeof r.openOnHover === 'boolean') c.openOnHover = r.openOnHover
   if (typeof r.notch === 'boolean') c.notch = r.notch
+  if (typeof r.turns === 'boolean') c.turns = r.turns
   if (typeof r.dictation === 'boolean') c.dictation = r.dictation
   c.display = parseDisplayPref(r.display)
   c.services = parseServices(r.services)

@@ -1,9 +1,12 @@
 // End-to-end test of the Dashboard and the focus timer: a session that was
 // running when the island closed carries on at the next start, shows on the
 // notch, and says when it's done (then the break starts); the Dashboard
-// opens first, with four tiles (what's playing, the timer, the day, this
-// computer) you can change; the timer starts, pauses and stops from its
-// tile and from the island's card; and nothing in a tile is cut off.
+// opens first, with four tiles (what's playing, the timer, your voice
+// assistant, called Friday, and this computer) you can change; the timer
+// starts, pauses and stops from its tile and from the island's card;
+// nothing in a tile is cut off; and with three things going on (music, the
+// timer, something on the calendar about to start) the notch shows each in
+// turn, unless that's turned off in Settings.
 // Needs an X server and a session bus (see npm run test:e2e).
 const { _electron } = require('playwright-core')
 const { execFileSync, spawn } = require('child_process')
@@ -44,7 +47,8 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 
 ;(async () => {
   // At the top, as a notch. A focus session was running when the island last closed: it ends in a few seconds.
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top', y: 0.3 }, buddy: { digest: false } }))
+  // (The calendar source is on, its file not there yet: it's written when the test gets to it.)
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top', y: 0.3 }, buddy: { digest: false }, sources: { on: { calendar: true }, calendar: '~/soon.ics' } }))
   const ENDS = Date.now() + 14_000
   fs.writeFileSync(path.join(USER_DATA, 'os-timer.json'), JSON.stringify({ phase: 'focus', endsAt: ENDS, left: null, done: 1, day: dayOf(new Date()) }))
   let playerLog = ''
@@ -125,10 +129,13 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
     await togglePanel()
     check('the island opens on the Dashboard', (await seen(page, '.dashboard', 5000)) && (await page.isVisible('.rail-btn[aria-label="Dashboard"][aria-selected="true"]')))
     check('its section has a dot while the timer runs', await page.isVisible('.rail-btn[aria-label="Dashboard"].running'))
-    check('four tiles: what is playing, the timer, the day, this computer', (await kinds()) === 'media,timer,day,system', await kinds())
+    check('four tiles: what is playing, the timer, the assistant, this computer', (await kinds()) === 'media,timer,assistant,system', await kinds())
     const head = await page.$eval('.dash-head', (e) => e.textContent)
     const weekday = new Date().toLocaleDateString(undefined, { weekday: 'long' })
     check('the day and the battery across the top', head.includes(weekday) && head.includes('84%'), head)
+    check('and a microphone for the assistant, which is called Friday', await page.isVisible('.dash-head .dash-mic[aria-label="Ask Friday"]'))
+    const friday = await tileText('assistant')
+    check('Friday has a tile: what to do, how, and Talk', friday.startsWith('Friday') && friday.includes('Ask me anything') && friday.includes('Ctrl+Alt+B') && friday.includes('Talk'), friday)
 
     // The timer's tile: the break, then at rest.
     check('the timer tile shows the break and the sessions done', /Break/.test(await tileText('timer')) && /2 done today/.test(await tileText('timer')), await tileText('timer'))
@@ -160,11 +167,6 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
     // ---- The other tiles ----
     const sys = await tileText('system')
     check('this computer: processor, memory and battery', sys.includes('23%') && sys.includes('9.8 of 16 GB') && sys.includes('84%'), sys)
-    const at = new Date()
-    const pct = Math.round(((at - new Date(at.getFullYear(), at.getMonth(), at.getDate())) / 86_400_000) * 100)
-    const day = await page.$eval('.dash-tile[data-kind="day"] .dash-big', (e) => parseInt(e.textContent, 10))
-    check('the day so far, in percent', Math.abs(day - pct) <= 1, `${day} vs ${pct}`)
-    check('one mark an hour, the ones gone lit', (await page.$$('.dash-hours span')).length === 24 && (await page.$$('.dash-hours span.gone')).length === at.getHours())
     check('what is playing, by name', (await tileText('media')).includes('Weightless') && (await tileText('media')).includes('Marconi Union'), await tileText('media'))
     await page.click('.dash-tile[data-kind="media"] button[aria-label="Pause"]')
     check('its buttons work the player', !!(await until(() => playerLog.includes('STATUS Paused'), 4000)), playerLog.trim().split('\n').pop())
@@ -177,12 +179,24 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 
     // ---- Choosing the tiles ----
     await page.click('.dash-edit')
-    check('Edit offers every kind of tile in each place', (await page.$$('.dash-tile .dash-choose')).length === 4 && (await page.$$('.dash-tile[data-slot="0"] .dash-choose button')).length === 6)
+    check('Edit offers every kind of tile in each place', (await page.$$('.dash-tile .dash-choose')).length === 4 && (await page.$$('.dash-tile[data-slot="0"] .dash-choose button')).length === 7)
+    check('the assistant by its name', await page.isVisible('.dash-tile[data-slot="0"] .dash-choose button:has-text("Friday")'))
     check('with their names in full', (await shortened('.dash-choose button span')).length === 0, (await shortened('.dash-choose button span')).join())
     check('nothing in a tile is cut off while choosing', (await cut()).length === 0, (await cut()).join(' | '))
     await shot('05-edit')
+    await page.click('.dash-tile[data-slot="2"] .dash-choose button:has-text("Day progress")')
+    check('a tile can be changed', !!(await until(async () => (await kinds()) === 'media,timer,day,system', 4000)), await kinds())
+    await page.click('.dash-edit')
+    await gone(page, '.dash-choose', 3000)
+    const at = new Date()
+    const pct = Math.round(((at - new Date(at.getFullYear(), at.getMonth(), at.getDate())) / 86_400_000) * 100)
+    const day = await page.$eval('.dash-tile[data-kind="day"] .dash-big', (e) => parseInt(e.textContent, 10))
+    check('the day so far, in percent', Math.abs(day - pct) <= 1, `${day} vs ${pct}`)
+    check('one mark an hour, the ones gone lit', (await page.$$('.dash-hours span')).length === 24 && (await page.$$('.dash-hours span.gone')).length === at.getHours())
+    check('nothing in the day’s tile is cut off', (await cut()).length === 0, (await cut()).join(' | '))
+    await page.click('.dash-edit')
     await page.click('.dash-tile[data-slot="2"] .dash-choose button:has-text("Next up")')
-    check('a tile can be changed', !!(await until(async () => (await kinds()) === 'media,timer,next,system', 4000)), await kinds())
+    await until(async () => (await kinds()) === 'media,timer,next,system', 4000)
     await page.click('.dash-tile[data-slot="3"] .dash-choose button:has-text("Claude")')
     await until(async () => (await kinds()) === 'media,timer,next,claude', 4000)
     await page.click('.dash-tile[data-slot="0"] .dash-choose button:has-text("Focus timer")')
@@ -225,6 +239,60 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
     check('and stops it: the timer leaves the island', (await gone(page, '.timer-card', 6000)) && !(await page.$('.timer-capsule')))
     check('a session stopped early isn’t counted', (() => { const s = saved(); return s.phase === 'idle' && s.done === 2 })(), JSON.stringify(saved()))
     pointer(5, 700)
+    await page.mouse.move(5, 500)
+
+    // ---- Taking turns: music, the timer, and something about to start ----
+    const showing = () =>
+      page.evaluate(() => {
+        const kind = (e) => (!e ? '' : e.querySelector('.timer-capsule, .timer-bubble') ? 'timer' : e.querySelector('.event-capsule, .event-bubble') ? 'event' : e.querySelector('.compact-art, .detached-art, .detached-glyph') ? 'media' : '?')
+        const main = document.querySelector('.island-outer > .island:not(.detached)')
+        return `${kind(main)}+${kind(document.querySelector('.island-outer > .island.detached'))}`
+      })
+    const watch = async (ms) => {
+      const seen = []
+      for (const end = Date.now() + ms; Date.now() < end; await sleep(300)) {
+        const now = await showing()
+        if (seen[seen.length - 1] !== now) seen.push(now)
+      }
+      return seen
+    }
+    await page.evaluate(() => window.island.os('timer.cmd', 'start'))
+    await until(async () => (await showing()) === 'timer+media', 5000)
+    check('with two things going on, both show and nothing moves', (await watch(8000)).join() === 'timer+media', (await showing()))
+    const ics = (t) => {
+      const d = new Date(t)
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
+    }
+    fs.writeFileSync(path.join(HOME, 'soon.ics'), ['BEGIN:VCALENDAR', 'BEGIN:VEVENT', 'UID:standup', `DTSTART:${ics(Date.now() + 12 * 60_000)}`, `DTEND:${ics(Date.now() + 27 * 60_000)}`, 'SUMMARY:Standup', 'LOCATION:Room 2', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'))
+    await page.evaluate(() => window.island.os('sources.check', 'calendar'))
+    check('something about to start on the calendar joins them', !!(await until(async () => (await showing()).includes('event'), 8000)), await showing())
+    const turns = await watch(16000)
+    check('with three, the notch shows each in turn, the next one beside it', ['timer+event', 'event+media', 'media+timer'].every((t) => turns.includes(t)), turns.join(' > '))
+    const steady = await islandBox()
+    check('and keeps its size and its place as they change', notchOk(steady), JSON.stringify(steady))
+    // The pointer on it: it waits (and says what the one showing is).
+    await until(async () => (await showing()).startsWith('event'), 8000)
+    const eb = await islandBox()
+    pointer(eb.cx, eb.cy)
+    await page.mouse.move(eb.cx, eb.cy)
+    check('resting on the one showing says what it is', await seen(page, '.peek .peek-title:has-text("Standup")', 5000))
+    check('and opens its card: when and where', await seen(page, '.event-card:has-text("Standup"):has-text("Room 2")', 6000), await page.$eval('.island-outer > .island', (e) => e.textContent).catch(() => ''))
+    await sleep(7000)
+    check('it waits while the pointer is on it', await page.isVisible('.event-card'))
+    await shot('08-event-card')
+    pointer(5, 700)
+    await page.mouse.move(5, 500)
+    await gone(page, '.event-card', 5000)
+
+    // Off in Settings: the most important one stays.
+    const [settings] = await Promise.all([app.waitForEvent('window'), page.evaluate(() => window.island.openSettings('general'))])
+    await settings.waitForSelector('#general', { state: 'visible', timeout: 8000 })
+    await settings.click('#general .toggle-row:has-text("Take turns on the island") input.switch')
+    check('Take turns can be turned off in Settings (and is saved)', !!(await until(() => cfg().turns === false, 4000)), String(cfg().turns))
+    await sleep(600)
+    check('then the most important one stays, the next beside it', (await watch(9000)).join() === 'timer+event', await showing())
+    await settings.close().catch(() => {})
+    await page.evaluate(() => window.island.os('timer.cmd', 'reset'))
     check('the page raised no errors', pageErrors.length === 0, pageErrors.join(' | '))
   } catch (e) {
     check('no errors', false, e.stack)

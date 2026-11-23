@@ -1,14 +1,18 @@
 /**
- * The Dashboard: four tiles you choose, a focus timer that also shows on the
- * resting island, and a few numbers about the day and the computer. Pure.
+ * The Dashboard: four tiles you choose (what's playing, a focus timer, your
+ * voice assistant, this computer, the day, what's next, Claude), a timer that
+ * also shows on the resting island, and a few numbers about the day and the
+ * computer. Pure.
  */
 
-export const TILE_KINDS = ['media', 'timer', 'day', 'system', 'next', 'claude'] as const
+export const TILE_KINDS = ['media', 'timer', 'assistant', 'system', 'day', 'next', 'claude'] as const
 export type TileKind = (typeof TILE_KINDS)[number]
 
 export const TILE_NAMES: Record<TileKind, string> = {
   media: 'Now playing',
   timer: 'Focus timer',
+  /** (Shown under the name you gave it: "Friday".) */
+  assistant: 'Assistant',
   day: 'Day progress',
   system: 'Computer',
   next: 'Next up',
@@ -16,7 +20,7 @@ export const TILE_NAMES: Record<TileKind, string> = {
 }
 
 export const TILE_SLOTS = 4
-export const DEFAULT_TILES: TileKind[] = ['media', 'timer', 'day', 'system']
+export const DEFAULT_TILES: TileKind[] = ['media', 'timer', 'assistant', 'system']
 
 const isTile = (v: unknown): v is TileKind => typeof v === 'string' && (TILE_KINDS as readonly string[]).includes(v)
 
@@ -181,6 +185,31 @@ export function untilText(at: number, now: number): string {
   }
   const days = Math.round(min / (24 * 60))
   return days <= 1 ? 'tomorrow' : `in ${days} days`
+}
+
+/** "12m" / "2h" / "now": the same, where there's only room for a word. Pure. */
+export function untilShort(at: number, now: number): string {
+  const min = Math.round((at - now) / MIN)
+  if (min <= 0) return 'now'
+  return min < 60 ? `${min}m` : `${Math.round(min / 60)}h`
+}
+
+// ---- What's about to start ---------------------------------------------------
+
+/** Something on your calendar that's about to start (or just has): the resting island shows it. */
+export type SoonEvent = { title: string; at: number; where?: string }
+/** It shows from this long before it starts… */
+export const EVENT_SOON_MIN = 30
+/** …until this long after. */
+export const EVENT_AFTER_MIN = 5
+
+/** The event to show now: the earliest timed one starting within half an hour, or begun in the last five minutes. Pure. */
+export function soonEvent(events: { start: number; title: string; where?: string; allDay: boolean }[], now: number): SoonEvent | null {
+  const e = events
+    .filter((x) => !x.allDay && x.start > now - EVENT_AFTER_MIN * MIN && x.start <= now + EVENT_SOON_MIN * MIN)
+    .sort((a, b) => a.start - b.start)[0]
+  if (!e) return null
+  return { title: e.title.trim().slice(0, 80) || 'Event', at: e.start, ...(e.where?.trim() ? { where: e.where.trim().slice(0, 60) } : {}) }
 }
 
 // ---- The computer ------------------------------------------------------------

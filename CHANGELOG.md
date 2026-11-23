@@ -6,16 +6,32 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
-**A dashboard, and a focus timer on the notch**
+**A dashboard, Friday, and a focus timer on the notch**
 
-- **Dashboard**: the island now opens on a new first section. The day and
-  the battery across the top, then four tiles: what's playing (with its
-  buttons), a focus timer, how far the day has gone (one mark an hour),
-  and this computer (processor, memory, battery). **Edit**, or a
-  right-click on a tile, changes what each of the four shows; **Next up**
+- **Dashboard**: the island now opens on a new first section. The day, the
+  battery and a microphone for your assistant across the top, then four
+  tiles: what's playing (with its buttons), a focus timer, your voice
+  assistant, and this computer (processor, memory, battery). **Edit**, or
+  a right-click on a tile, changes what each of the four shows; **Day
+  progress** (how far the day has gone, one mark an hour), **Next up**
   (the next thing on your calendar, and notes to file) and **Claude**
   (sessions working or waiting for you, and your plan limits) are the
-  other two. Choosing one that's already showing swaps the two.
+  others. Choosing one that's already showing swaps the two.
+- **Friday**: your voice assistant is now called Friday until you give it
+  another name (Settings → Character); if you never renamed it, it's
+  Friday from now on. Orbit, Bolt and Puff stay as the three looks, and
+  picking another look keeps the name. Ask it out loud from the
+  Dashboard's microphone or its tile (**Talk**), with **Ctrl+Alt+B**
+  anywhere, or by saying **“Hey Friday”** once **Listen for its name** is
+  on in Settings → Buddy. Friday is also a word people say all day, so for
+  a name like that only “Hey Friday…”, “OK Friday…” or the name by itself
+  counts; “Friday is the deadline” doesn't wake it.
+- **Taking turns**: with three or more things going on at once (music, a
+  timer, Claude at work…) the resting island can't show them all, so it
+  shows each for six seconds, with the next one in the small bubble beside
+  it. It waits while the pointer is on it, a call being recorded keeps its
+  place, and with two things nothing moves (both already show). Turn it
+  off in Settings → General → **Take turns on the island**.
 - **Focus timer**: sessions of 15, 25, 45 or 60 minutes, each with its
   break. While it runs, what's left counts down on the resting island
   beside a ring that fills (in the notch, next to the time of day; on a

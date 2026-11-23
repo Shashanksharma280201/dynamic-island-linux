@@ -25,7 +25,10 @@ import {
 } from '@shared/dashboard'
 import { clockText } from '@shared/clock'
 import { partOfDay } from '@shared/format'
-import { PauseIcon, PlayIcon, PrevIcon, NextIcon } from '../icons'
+import { MicIcon, PauseIcon, PlayIcon, PrevIcon, NextIcon } from '../icons'
+import { Character } from '../character/Character'
+import { useShortcutLabel } from '../useShortcuts'
+import type { CharacterMood } from '@shared/character'
 import { useMinute } from '../states/NotchClock'
 import { TimerRing, timerCmd, useSecond } from '../states/TimerActivity'
 import { runActive, runStatus } from '../states/ClaudeActivity'
@@ -76,6 +79,35 @@ const TILE_ICONS: Record<TileKind, ReactNode> = {
       <path d="M12 3.5v17M3.5 12h17M6 6l12 12M18 6 6 18" />
     </Line>
   ),
+  assistant: (
+    <Line>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3" />
+    </Line>
+  ),
+}
+
+/** Your voice assistant, as the Dashboard needs it: its name, what it's doing, and how to talk to it. */
+export type AssistantLink = {
+  name: string
+  /** Hearing you: getting ready, listening, or making out what you said. */
+  listen: 'idle' | 'preparing' | 'listening' | 'transcribing'
+  /** Answering: thinking, speaking, or pointing at something. */
+  phase: 'idle' | 'listening' | 'thinking' | 'speaking' | 'pointing'
+  /** It also listens for "Hey <name>". */
+  wake: boolean
+  /** Start listening; again to send what you said, or to stop it talking. */
+  ask: () => void
+}
+
+/** What the assistant is doing, in a word or two, and the orb's mood for it. Pure. */
+export function assistantStatus(a: Pick<AssistantLink, 'listen' | 'phase'>): { line: string; mood: CharacterMood; button: string; busy: boolean } {
+  if (a.listen === 'preparing') return { line: 'Getting ready…', mood: 'thinking', button: 'Talk', busy: true }
+  if (a.listen === 'listening') return { line: 'Listening…', mood: 'listening', button: 'Done', busy: false }
+  if (a.listen === 'transcribing') return { line: 'One moment…', mood: 'thinking', button: 'Talk', busy: true }
+  if (a.phase === 'thinking') return { line: 'Thinking…', mood: 'thinking', button: 'Talk', busy: true }
+  if (a.phase === 'speaking' || a.phase === 'pointing') return { line: 'Answering…', mood: 'working', button: 'Stop', busy: false }
+  return { line: 'Ask me anything', mood: 'idle', button: 'Talk', busy: false }
 }
 
 /** The battery as the browser sees it, where the island can't read it itself (not Linux). */
@@ -291,6 +323,25 @@ function NextTile({ resting, now }: { resting: RestingView | null; now: number }
   )
 }
 
+function AssistantTile({ a, keys }: { a: AssistantLink; keys: string }) {
+  const s = assistantStatus(a)
+  return (
+    <div className="dash-assistant" data-listening={a.listen === 'listening' ? 'yes' : undefined}>
+      <div className="dash-assistant-row">
+        <Character mood={s.mood} size={46} />
+        <div className="dash-assistant-text">
+          <div className="dash-line">{s.line}</div>
+          <div className="caption">{a.wake ? `Say “Hey ${a.name}”, or press ${keys}` : `About your screen, your day, anything. ${keys}`}</div>
+        </div>
+      </div>
+      <button className="pill primary small dash-talk" disabled={s.busy} onClick={a.ask}>
+        <MicIcon size={13} />
+        {s.button}
+      </button>
+    </div>
+  )
+}
+
 function ClaudeTile({ sessions, claude }: { sessions: AgentSession[]; claude: ClaudeView | null }) {
   const now = Date.now()
   const waiting = sessions.filter((s) => s.phase === 'waiting')
@@ -316,11 +367,14 @@ function ClaudeTile({ sessions, claude }: { sessions: AgentSession[]; claude: Cl
 }
 
 /**
- * The Dashboard: the day at the top, then four tiles you choose (Edit, or
- * right-click one): what's playing, a focus timer, how far the day has gone,
- * this computer, what's next, and Claude.
+ * The Dashboard: the day at the top (and a microphone for your assistant),
+ * then four tiles you choose (Edit, or right-click one): what's playing, a
+ * focus timer, your voice assistant, this computer, how far the day has gone,
+ * what's next, and Claude.
  */
-export function DashboardView({ media, sessions, claude, onTab }: { media: MediaState | null; sessions: AgentSession[]; claude: ClaudeView | null; onTab: (t: HubTab) => void }) {
+export function DashboardView({ media, sessions, claude, assistant, onTab }: { media: MediaState | null; sessions: AgentSession[]; claude: ClaudeView | null; assistant: AssistantLink; onTab: (t: HubTab) => void }) {
+  const askKeys = useShortcutLabel('buddy')
+  const nameOf = (k: TileKind) => (k === 'assistant' ? assistant.name : TILE_NAMES[k])
   const { data: dash } = useLoad<DashView>(
     () => window.island.os<DashView>('dash.view'),
     [],
@@ -356,6 +410,16 @@ export function DashboardView({ media, sessions, claude, onTab }: { media: Media
             {battery.pct}%
           </span>
         )}
+        <button
+          className="dash-mic"
+          data-on={assistant.listen === 'listening' ? 'yes' : undefined}
+          aria-label={`Ask ${assistant.name}`}
+          title={`Ask ${assistant.name} out loud (${askKeys})`}
+          disabled={assistantStatus(assistant).busy}
+          onClick={assistant.ask}
+        >
+          <MicIcon size={15} />
+        </button>
         <button className={`plain dash-edit${edit ? ' on' : ' muted'}`} aria-pressed={edit} onClick={() => setEdit(!edit)}>
           {edit ? 'Done' : 'Edit'}
         </button>
@@ -381,7 +445,7 @@ export function DashboardView({ media, sessions, claude, onTab }: { media: Media
                   {TILE_KINDS.map((k) => (
                     <button key={k} role="radio" aria-checked={k === kind} className={k === kind ? 'on' : ''} onClick={() => pick(slot, k)}>
                       {TILE_ICONS[k]}
-                      <span className="ellipsis">{TILE_NAMES[k]}</span>
+                      <span className="ellipsis">{nameOf(k)}</span>
                     </button>
                   ))}
                 </div>
@@ -389,7 +453,7 @@ export function DashboardView({ media, sessions, claude, onTab }: { media: Media
                 <>
                   <div className="dash-tile-title">
                     {TILE_ICONS[kind]}
-                    {TILE_NAMES[kind]}
+                    {nameOf(kind)}
                   </div>
                   {kind === 'media' && <MediaTile media={media} />}
                   {kind === 'timer' && (dash ? <TimerTile timer={dash.timer} /> : <div className="caption">Loading…</div>)}
@@ -397,6 +461,7 @@ export function DashboardView({ media, sessions, claude, onTab }: { media: Media
                   {kind === 'system' && <SystemTile stats={stats} battery={battery ?? null} />}
                   {kind === 'next' && <NextTile resting={resting} now={at.getTime()} />}
                   {kind === 'claude' && <ClaudeTile sessions={sessions} claude={claude} />}
+                  {kind === 'assistant' && <AssistantTile a={assistant} keys={askKeys} />}
                 </>
               )}
             </div>

@@ -2,7 +2,7 @@ import { useRef, type ReactNode } from 'react'
 import type { InboxSources, MediaState, SystemState } from '@shared/types'
 import { ControlCenter } from '../states/ControlCenter'
 import { ChatsView } from './ChatsView'
-import { DashboardView } from './DashboardView'
+import { DashboardView, type AssistantLink } from './DashboardView'
 import { MailView } from './MailView'
 import { NotesView } from './NotesView'
 import { DocsView, type DocsIncoming } from './DocsView'
@@ -60,11 +60,14 @@ export function Hub({
   onTab,
   sessions,
   media,
+  assistant,
   bar,
 }: {
   sys: SystemState | null
   /** What's playing (the Dashboard's tile). */
   media: MediaState | null
+  /** Your voice assistant (the Dashboard's microphone and tile). */
+  assistant: AssistantLink
   /** The row of sections across the top. */
   bar?: ReactNode
   tab: HubTab
@@ -99,7 +102,7 @@ export function Hub({
     <div className="hub-shell" onClick={(e) => e.stopPropagation()}>
       {bar}
       <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`}>
-      {tab === 'dash' && <DashboardView media={media} sessions={sessions} claude={claude} onTab={onTab} />}
+      {tab === 'dash' && <DashboardView media={media} sessions={sessions} claude={claude} assistant={assistant} onTab={onTab} />}
       {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
       {tab === 'today' && <TodayView onTyping={onTyping} />}
       {tab === 'agents' && <AgentsView sessions={sessions} onTyping={onTyping} />}
