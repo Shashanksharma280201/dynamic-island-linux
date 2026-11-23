@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Svg, { Circle, Path, Rect } from 'react-native-svg'
+import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import { useKeyboard } from './kit'
 import { themed, useTheme } from './theme'
@@ -45,10 +46,27 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
   const s = useS()
   // Typing: the bar steps aside so what you type sits right above the keyboard.
   const kb = useKeyboard()
+  // The bar's own height, for what covers the screen behind it.
+  const [barH, setBarH] = useState(62)
   if (kb) return null
+  const lift = Math.max(12, bottom)
   return (
-    <View style={[s.wrap, { bottom: Math.max(12, bottom) }]}>
-      <View style={s.bar}>
+    <>
+      {/* What scrolls behind the bar fades out from its top edge to its middle, and nothing shows below that. */}
+      <View pointerEvents="none" style={[s.under, { height: lift + barH }]}>
+        <Svg width="100%" height={barH / 2}>
+          <Defs>
+            <LinearGradient id="tab-fade" x1="0" y1="0" x2="0" y2="1">
+              <Stop offset="0" stopColor={C.bg} stopOpacity={0} />
+              <Stop offset="1" stopColor={C.bg} stopOpacity={1} />
+            </LinearGradient>
+          </Defs>
+          <Rect x="0" y="0" width="100%" height="100%" fill="url(#tab-fade)" />
+        </Svg>
+        <View style={{ flex: 1, backgroundColor: C.bg }} />
+      </View>
+      <View style={[s.wrap, { bottom: lift }]}>
+        <View style={s.bar} onLayout={(e) => setBarH(Math.round(e.nativeEvent.layout.height))}>
         {TABS.map((t) => {
           const on = t === tab
           const n = badges[t] ?? 0
@@ -76,12 +94,14 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
             </Pressable>
           )
         })}
+        </View>
       </View>
-    </View>
+    </>
   )
 }
 
 const useS = themed((C) => ({
+  under: { position: 'absolute', left: 0, right: 0, bottom: 0 },
   wrap: { position: 'absolute', left: 12, right: 12 },
   bar: { flexDirection: 'row', backgroundColor: C.bar, borderRadius: 26, padding: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.lineStrong, elevation: 18, shadowColor: '#000', shadowOpacity: C.dark ? 0.4 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
   tab: { flex: 1, alignItems: 'center', paddingVertical: 4, gap: 3 },

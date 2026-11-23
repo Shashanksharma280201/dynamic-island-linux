@@ -37,7 +37,7 @@ export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: num
               <Kicker>{sec.title}</Kicker>
               {!sec.rows.length && <Text style={st.empty}>{sec.empty}</Text>}
               {sec.rows.slice(0, 6).map((r, i, a) => (
-                <Row key={r.id} title={r.title} sub={r.sub} last={i === a.length - 1} left={<View style={[st.dot, { backgroundColor: dotOf(C)[r.tone ?? ''] ?? 'transparent' }]} />} right={r.side ?? (r.at ? ago(r.at) : undefined)} />
+                <Row key={r.id} full title={r.title} sub={r.sub} last={i === a.length - 1} left={<View style={[st.dot, { backgroundColor: dotOf(C)[r.tone ?? ''] ?? 'transparent' }]} />} right={r.side ?? (r.at ? ago(r.at) : undefined)} />
               ))}
             </View>
           ))}

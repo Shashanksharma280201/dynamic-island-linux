@@ -200,18 +200,19 @@ export function Section({ title, children, note }: { title?: string; children: R
 }
 
 /** A line in a list: a dot or picture, what it is, a detail, and something on the right. */
-export function Row({ title, sub, right, left, icon, chevron, onPress, onLongPress, bold, last, danger }: { title: string; sub?: string; right?: ReactNode; left?: ReactNode; icon?: { name: IconName; color: string }; chevron?: boolean; onPress?: () => void; onLongPress?: () => void; bold?: boolean; last?: boolean; danger?: boolean }) {
+/** A row of a list. `full`: it explains something, or carries your own words, so nothing is cut (the title on up to two lines, all of the line under it). */
+export function Row({ title, sub, right, left, icon, chevron, onPress, onLongPress, bold, last, danger, full }: { title: string; sub?: string; right?: ReactNode; left?: ReactNode; icon?: { name: IconName; color: string }; chevron?: boolean; onPress?: () => void; onLongPress?: () => void; bold?: boolean; last?: boolean; danger?: boolean; full?: boolean }) {
   const s = useKit()
   const C = useTheme()
   return (
     <Pressable onPress={onPress} onLongPress={onLongPress} disabled={!onPress && !onLongPress} style={({ pressed }) => [s.row, !last && s.rowLine, pressed && { backgroundColor: C.fillPressed }]}>
       {icon ? <IconTile name={icon.name} color={icon.color} /> : left}
       <View style={{ flex: 1, minWidth: 0 }}>
-        <Text style={[s.rowTitle, bold && { fontWeight: '700' }, danger && { color: C.red }]} numberOfLines={1}>
+        <Text style={[s.rowTitle, bold && { fontWeight: '700' }, danger && { color: C.red }]} numberOfLines={full ? 2 : 1}>
           {title}
         </Text>
         {!!sub && (
-          <Text style={s.rowSub} numberOfLines={2}>
+          <Text style={s.rowSub} numberOfLines={full ? undefined : 2}>
             {sub}
           </Text>
         )}

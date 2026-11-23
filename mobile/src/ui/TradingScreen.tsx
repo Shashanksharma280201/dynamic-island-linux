@@ -31,7 +31,9 @@ export function TradingScreen({ link, live, top, onBack }: { link: DropLink; liv
             <LiveDot on={t?.phase === 'live'} color={t?.phase === 'live' ? C.green : C.orange} />
             <Text style={st.kicker}>Today</Text>
           </View>
-          <Text style={[st.pnl, { color: toneColor(C, v.status.tone) }]}>{v.status.text}</Text>
+          <Text style={[st.pnl, { color: toneColor(C, v.status.tone) }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+            {v.status.text}
+          </Text>
           {!!v.status.detail && <Text style={st.detail}>{v.status.detail}</Text>}
         </Card>
       )}

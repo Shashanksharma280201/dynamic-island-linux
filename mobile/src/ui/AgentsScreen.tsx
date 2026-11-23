@@ -36,6 +36,7 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
             {v.monitors.slice(0, 12).map((m, i, a) => (
               <Row
                 key={m.id}
+                full
                 title={m.text}
                 sub={m.line}
                 last={i === a.length - 1}
@@ -50,7 +51,7 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
             {!v.brain && <Text style={st.hint}>Turn on the second brain on the computer first: research reads it and writes its note there.</Text>}
             {v.brain && <Composer placeholder="What do my notes say about…" send="Research" busy={act.busy === 'research'} onSend={async (t) => then(await act.run<AgentsView>('research', 'agents.research', t))} />}
             {v.research.slice(0, 6).map((j, i, a) => (
-              <Row key={j.id} title={j.question} sub={j.line} last={i === a.length - 1} />
+              <Row key={j.id} full title={j.question} sub={j.line} last={i === a.length - 1} />
             ))}
           </Card>
 
