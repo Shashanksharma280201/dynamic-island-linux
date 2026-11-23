@@ -73,7 +73,7 @@ const seen = (page, sel, ms = 8000) => page.waitForSelector(sel, { timeout: ms }
     await shot('01-capsule')
     await toggle()
     check('the panel opens', await seen(page, '.hub'))
-    for (const tab of ['Controls', 'Today', 'Agents', 'Claude', 'Music', 'Chats', 'Mail', 'Notes', 'Documents', 'CRM']) {
+    for (const tab of ['Controls', 'Today', 'Agents', 'Dashboard', 'Claude', 'Music', 'Chats', 'Mail', 'Notes', 'Documents', 'CRM']) {
       await page.click(`.rail-btn[aria-label="${tab}"]`)
       await sleep(300)
       check(`the ${tab} tab opens`, !!(await page.$('.hub')) && (await page.evaluate(() => document.querySelector('.hub')?.textContent?.length ?? 0)) > 0)
