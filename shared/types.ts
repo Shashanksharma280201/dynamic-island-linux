@@ -13,6 +13,7 @@ import type { ClaudeRun } from './claude'
 import type { DragConfig } from './dragActions'
 import type { ConnectedCapsule, ConnectedCard } from './connected'
 import type { DropStatus } from './drop'
+import type { SoonEvent, TimerView } from './dashboard'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -114,6 +115,10 @@ export type Activity =
   | (Base & { kind: 'connected'; status: ConnectedCapsule })
   /** A call being recorded for its notes (Island OS). */
   | (Base & { kind: 'call'; call: { started: number } })
+  /** The focus timer, running or paused (the Dashboard). */
+  | (Base & { kind: 'timer'; timer: TimerView })
+  /** Something on your calendar that's about to start. */
+  | (Base & { kind: 'event'; event: SoonEvent })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {
@@ -330,6 +335,8 @@ export type SettingsState = {
   openOnHover: boolean
   /** At the top, the island is a notch (flush with the top edge, with the time). */
   notch: boolean
+  /** With three or more things going on, the resting island shows each in turn. */
+  turns: boolean
   /** Sounds replaced by your own files. */
   customSounds: string[]
   /** The character also sits on the desktop. */

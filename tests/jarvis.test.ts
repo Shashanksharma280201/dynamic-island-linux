@@ -58,6 +58,14 @@ test('the wake word', () => {
   expect(wakeMatch('Sparky is a good name for a dog', 'Sparky')).toBe('is a good name for a dog')
   expect(wakeMatch('my sparky toaster broke', 'Sparky')).toBeNull()
   expect(wakeMatch('Sparkles everywhere', 'Sparky')).toBeNull()
+  // A name that's also an everyday word needs the greeting (or to be said by itself).
+  expect(wakeMatch('Hey Friday, what’s on my screen?', 'Friday')).toBe('what’s on my screen?')
+  expect(wakeMatch('Hey, Friday.', 'Friday')).toBe('')
+  expect(wakeMatch('Friday', 'Friday')).toBe('')
+  expect(wakeMatch('OK Friday open the wallpaper settings', 'Friday')).toBe('open the wallpaper settings')
+  expect(wakeMatch('Friday is the deadline for the report', 'Friday')).toBeNull()
+  expect(wakeMatch('Friday can we meet at ten', 'Friday')).toBeNull()
+  expect(wakeMatch('see you on Friday', 'Friday')).toBeNull()
 })
 
 test('routines are checked', () => {

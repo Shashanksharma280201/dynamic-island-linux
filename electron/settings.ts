@@ -167,6 +167,7 @@ export class SettingsController {
       keys: config.keys,
       openOnHover: config.openOnHover,
       notch: config.notch,
+      turns: config.turns,
       customSounds: this.d.customSounds(),
       companion: config.companion.on,
       drag: { ...config.drag, ...this.d.drag() },
@@ -444,12 +445,18 @@ export class SettingsController {
       this.d.onOpenOnHover()
       this.changed()
     })
+    ipcMain.handle(SETTINGS.SET_TURNS, (_e, on) => {
+      config.turns = on === true
+      this.save()
+      // (It goes out with the rest of the island's appearance.)
+      this.d.onOpenOnHover()
+      this.changed()
+    })
     ipcMain.handle(SETTINGS.SET_CHARACTER, (_e, patch) => {
-      const switching = typeof patch?.id === 'string' && patch.id !== config.character.id
       config.character = parseCharacter({
         id: typeof patch?.id === 'string' ? patch.id : config.character.id,
-        // Switching without renaming takes the new character's own name.
-        name: typeof patch?.name === 'string' ? patch.name : switching ? '' : config.character.name,
+        // Another orb is another look: what you call your assistant stays.
+        name: typeof patch?.name === 'string' ? patch.name : config.character.name,
         color: patch && 'color' in patch ? patch.color : config.character.color,
       })
       this.save()

@@ -620,6 +620,12 @@ export function Settings() {
           onChange={(v) => general.run(() => window.settings.setNotch(v))}
         />
         <Toggle
+          label="Take turns on the island"
+          hint="With three or more things going on at once (music, a timer, Claude at work…), the resting island shows each for a few seconds, with the next one beside it. Off: the most important one stays"
+          on={s.turns}
+          onChange={(v) => general.run(() => window.settings.setTurns(v))}
+        />
+        <Toggle
           label="Open the panel when the pointer rests on the island"
           hint="No click needed: rest on the resting island for a moment and it opens"
           on={s.openOnHover}
