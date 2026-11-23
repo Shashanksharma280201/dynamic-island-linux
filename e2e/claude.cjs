@@ -345,7 +345,7 @@ function speechWav(text, file) {
     await settings.click('.side-item[data-section="character"]')
     await settings.click('#character .character-tile:has-text("Bolt")')
     const cfg = () => JSON.parse(fs.readFileSync(path.join(USER_DATA, 'config.json'), 'utf8')).character
-    check('picking a character saves it', await until(() => cfg()?.id === 'bolt' && cfg()?.name === 'Bolt', 4000), JSON.stringify(cfg()))
+    check('picking another look saves it, and keeps the name you gave it', await until(() => cfg()?.id === 'bolt' && cfg()?.name === 'Momo', 4000), JSON.stringify(cfg()))
     check('and every view of the agent uses it', await page.waitForSelector('.character[data-character="bolt"]', { timeout: 5000 }).then(() => true, () => false))
     await settings.fill('#character .character-name', 'Sparky')
     await settings.press('#character .character-name', 'Enter')

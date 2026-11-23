@@ -34,6 +34,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
     notch: true,
+    turns: true,
     companion: { on: false, at: null },
     dictation: true,
     display: 'primary',
@@ -46,7 +47,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     greeted: '',
     claude: { cwd: '', permissionMode: 'default', voiceShortcut: true, sttModel: 'base', binary: '' },
     spotify: { clientId: '' },
-    character: { id: 'orbit', name: 'Orbit', color: null },
+    character: { id: 'orbit', name: 'Friday', color: null },
     ai: { provider: 'claude-code', models: {}, baseUrls: {}, keys: {} },
     packages: { disabled: [] },
     brain: { on: false, vault: '', captureSessions: true, distil: 'ai', skip: [], port: 47823, since: 0, meaning: false, whatsapp: false, mail: false, phone: false, skipChats: [] },
@@ -61,6 +62,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
     engine: { localFirst: true, localUrl: 'http://localhost:11434', dailyModel: '', researchModel: '', cloud: 'ask', jobs: {}, learn: true },
     sources: { on: { github: false, shell: false, calendar: false, screen: false, codex: false, gemini: false }, calendar: '', skip: [] },
+    dashboard: { tiles: ['media', 'timer', 'assistant', 'system'], timer: { focusMin: 25, breakMin: 5 } },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)

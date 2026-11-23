@@ -35,7 +35,7 @@ export type CharacterId = 'orbit' | 'bolt' | 'puff'
 
 export type CharacterInfo = {
   id: CharacterId
-  /** Default name (the user can rename it). */
+  /** The orb's own name (which look it is). What you call your assistant is separate: see ASSISTANT_NAME. */
   name: string
   kind: string
   /** How it behaves; also shapes how the agent talks. */
@@ -49,6 +49,9 @@ export const CHARACTERS: CharacterInfo[] = [
 ]
 
 export const DEFAULT_CHARACTER: CharacterId = 'orbit'
+
+/** What the assistant is called until you rename it (Settings → Character): the name it answers to, out loud too. */
+export const ASSISTANT_NAME = 'Friday'
 
 /** Orb colours to pick from (null: the character's own). */
 export const BODY_COLORS: { id: string; label: string; color: string | null }[] = [
@@ -83,8 +86,10 @@ export function parseCharacter(raw: any): CharacterConfig {
   const info = CHARACTERS.find((c) => c.id === id) ?? CHARACTERS.find((c) => c.id === DEFAULT_CHARACTER)!
   let name = typeof raw?.name === 'string' ? raw.name.trim().slice(0, 24) : ''
   if (legacy && name === 'Mochi') name = ''
+  // It used to take its orb's name until you gave it one: a name that is just an orb's was never chosen.
+  if (CHARACTERS.some((c) => c.name === name)) name = ''
   const color = BODY_COLORS.some((c) => c.color && c.color === raw?.color) ? (raw.color as string) : null
-  return { id: info.id, name: name || info.name, color }
+  return { id: info.id, name: name || ASSISTANT_NAME, color }
 }
 
 /** The colour of each mood: the aura ring and the card's edge light. */

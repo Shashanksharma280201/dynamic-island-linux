@@ -2,6 +2,8 @@ import type { Activity } from '@shared/types'
 import { moodFor } from '@shared/character'
 import { Character } from '../character/Character'
 import { sessionMood } from './SessionActivity'
+import { TimerBubble } from './TimerActivity'
+import { EventBubble } from './EventActivity'
 
 /** The small detached element shown for a 2nd simultaneous activity. */
 export function DetachedCircle({ activity }: { activity: Activity }) {
@@ -16,6 +18,8 @@ export function DetachedCircle({ activity }: { activity: Activity }) {
         {activity.status.tone === 'up' ? '▲' : activity.status.tone === 'down' ? '▼' : '●'}
       </div>
     )
+  if (activity.kind === 'timer') return <TimerBubble timer={activity.timer} />
+  if (activity.kind === 'event') return <EventBubble event={activity.event} />
   if (activity.kind === 'call') return <div className="detached-glyph call" title="Recording a call"><span className="rec-dot" /></div>
   const glyph = activity.kind === 'media' ? '♪' : activity.kind === 'approval' ? '!' : '•'
   return <div className="detached-glyph">{glyph}</div>
