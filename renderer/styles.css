@@ -7137,3 +7137,440 @@ button:focus-visible,
   min-width: 188px;
   justify-content: space-between;
 }
+
+/* ===========================================================================
+   The Dashboard: the day across the top, then four tiles you choose (what's
+   playing, a focus timer, the day so far, this computer, what's next, Claude).
+   The timer also shows on the resting island while it runs.
+   =========================================================================== */
+.dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 4px 0 6px;
+}
+.dash-weekday {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.022em;
+  line-height: 1.2;
+}
+.dash-battery {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--label-2);
+  font-variant-numeric: tabular-nums;
+}
+.dash-battery .level {
+  fill: var(--label);
+}
+.dash-battery .level.charging {
+  fill: var(--green);
+}
+.dash-battery .level.low {
+  fill: var(--red);
+}
+.dash-edit {
+  font-size: 12.5px;
+  padding: 4px 9px;
+  border-radius: 8px;
+}
+.dash-edit:hover,
+.dash-edit.on {
+  background: rgba(var(--ink), 0.07);
+}
+.dash-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-auto-rows: 148px;
+  gap: 10px;
+}
+.dash-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  min-width: 0;
+  overflow: hidden;
+  transition: background 0.16s var(--ease);
+}
+.dash-tile.link {
+  cursor: pointer;
+}
+.dash-tile.link:hover {
+  background: var(--tile-hover);
+}
+.dash-tile-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--label-2);
+}
+.dash-tile-title svg {
+  flex: none;
+  opacity: 0.85;
+}
+.dash-line {
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.dash-big {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dash-big span {
+  margin-left: 2px;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--label-2);
+}
+.dash-big.small {
+  font-size: 22px;
+  letter-spacing: -0.025em;
+}
+
+/* Now playing */
+.dash-media {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.dash-art {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.dash-art.placeholder {
+  background: linear-gradient(135deg, #30d158, #0a84ff);
+}
+.dash-media-text {
+  flex: 1;
+  min-width: 0;
+}
+.dash-transport {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: auto;
+}
+.dash-empty {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: auto 0;
+  color: var(--label-3);
+}
+.dash-empty .dash-line {
+  margin-top: 4px;
+  color: var(--label);
+}
+
+/* The focus timer: a ring that fills, wherever it shows. */
+.timer-ring {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+}
+.timer-ring svg {
+  display: block;
+}
+.timer-ring .track {
+  stroke: rgba(var(--ink), 0.13);
+}
+.timer-ring .fill {
+  stroke: var(--timer-ink, var(--blue));
+}
+.timer-ring-in {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-variant-numeric: tabular-nums;
+}
+[data-phase='break'] {
+  --timer-ink: var(--green);
+}
+[data-phase][data-paused='yes'] {
+  --timer-ink: var(--label-3);
+}
+.dash-timer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+.dash-timer-clock {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.dash-timer-side {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dash-lengths {
+  display: flex;
+  gap: 3px;
+  margin-top: 5px;
+}
+.dash-lengths button {
+  flex: 1;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  color: var(--label-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.dash-lengths button:hover {
+  background: var(--tile-hover);
+  color: var(--label);
+}
+.dash-lengths button.on {
+  background: color-mix(in srgb, var(--blue) 18%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--blue) 45%, transparent);
+  color: var(--blue);
+}
+.dash-start {
+  margin-top: 6px;
+}
+.dash-timer-btns {
+  display: flex;
+  gap: 5px;
+  margin-top: 8px;
+}
+.dash-timer-btns .pill {
+  flex: 1 1 auto;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+/* (On a light tile a plain button would be white on white.) */
+.dash-timer-btns .pill:not(.primary),
+.timer-actions .pill:not(.primary) {
+  background: rgba(var(--ink), 0.07);
+}
+
+/* The day so far: one mark an hour. */
+.dash-day {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+  flex: 1;
+}
+.dash-hours {
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+}
+.dash-hours span {
+  height: 14px;
+  border-radius: 2px;
+  background: rgba(var(--ink), 0.12);
+}
+.dash-hours .gone {
+  background: var(--blue);
+}
+.dash-hours .now {
+  background: color-mix(in srgb, var(--blue) 45%, rgba(var(--ink), 0.12));
+}
+
+/* Numbers with a bar under them: this computer, and Claude's limits. */
+.dash-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 2px;
+}
+.dash-meters.tight {
+  gap: 6px;
+  margin-top: auto;
+}
+.dash-meter-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+  font-size: 11.5px;
+  line-height: 14px;
+}
+.dash-meter-label {
+  color: var(--label-2);
+  white-space: nowrap;
+}
+.dash-meter-text {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.dash-meter-bar {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(var(--ink), 0.1);
+  overflow: hidden;
+}
+.dash-meter-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--blue);
+  transition: width 0.4s var(--ease);
+}
+.dash-meter-bar .high {
+  background: var(--orange);
+}
+.dash-meter-bar .full {
+  background: var(--red);
+}
+
+/* What's next, and Claude */
+.dash-next,
+.dash-claude {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+.dash-next,
+.dash-claude {
+  justify-content: center;
+}
+.dash-next .dash-big {
+  margin-bottom: 3px;
+}
+.dash-file {
+  margin-top: auto;
+}
+.dash-claude[data-waiting='yes'] .dash-line {
+  color: var(--orange-text);
+}
+
+/* Choosing what a tile shows (Edit, or right-click a tile). */
+.dashboard[data-editing='yes'] .dash-tile {
+  padding: 6px;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--blue) 35%, transparent);
+}
+.dash-choose {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-content: center;
+  gap: 5px;
+  flex: 1;
+}
+.dash-choose button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--tile);
+  box-shadow: inset 0 0 0 0.5px var(--tile-border);
+  color: var(--label);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+}
+.dash-choose button svg {
+  flex: none;
+  color: var(--label-2);
+}
+.dash-choose button:hover {
+  background: var(--tile-hover);
+}
+.dash-choose button.on {
+  background: color-mix(in srgb, var(--blue) 18%, transparent);
+  box-shadow: inset 0 0 0 0.5px color-mix(in srgb, var(--blue) 45%, transparent);
+  color: var(--blue);
+}
+.dash-choose button.on svg {
+  color: inherit;
+}
+
+/* The timer on the resting island: what's left beside the ring (on a side edge, the minutes inside it). */
+.timer-capsule {
+  gap: 8px;
+}
+.timer-time {
+  display: none;
+  font: 600 14px/1 var(--font);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.timer-min {
+  font-size: 12px;
+  font-weight: 700;
+}
+.island-outer.top .timer-capsule .timer-time {
+  display: block;
+}
+.island-outer.top .timer-capsule .timer-min {
+  display: none;
+}
+.timer-capsule[data-paused='yes'] .timer-time {
+  color: var(--label-2);
+}
+.detached-glyph.timer-bubble {
+  color: var(--label);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+/* Hovered: the whole clock and its buttons. */
+.card.timer-card {
+  width: 300px;
+}
+.timer-card-body {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 2px 0;
+}
+.timer-big {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.timer-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}

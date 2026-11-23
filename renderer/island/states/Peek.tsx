@@ -14,6 +14,7 @@ import { sessionMood, turnTime } from './SessionActivity'
 import { currentStep, sessionStatus } from '@shared/sessions'
 import { capsulePeek } from '@shared/connected'
 import { elapsed } from '@shared/calls'
+import { clockLeft, timerLeft, timerPaused } from '@shared/dashboard'
 
 /** What a peek says about the island's state, in two short lines. Pure. */
 export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number; resting?: RestingView | null }): { title: string; sub: string; mood: CharacterMood } {
@@ -32,6 +33,15 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
   }
   if (a.kind === 'connected') return { ...capsulePeek(a.status), mood: a.status.tone === 'down' || a.status.tone === 'warn' ? 'attention' : 'idle' }
   if (a.kind === 'call') return { title: 'Recording a call', sub: `${elapsed(o.now - a.call.started)} · made out on this computer`, mood: 'listening' }
+  if (a.kind === 'timer') {
+    const t = a.timer
+    const what = t.phase === 'break' ? 'Break' : 'Focus'
+    return {
+      title: `${what} · ${clockLeft(timerLeft(t, t, o.now))} ${timerPaused(t) ? 'paused' : 'left'}`,
+      sub: `${t.done ? `${t.done} done today` : `${t.focusMin} minute sessions`} · click for the Dashboard`,
+      mood: t.phase === 'break' ? 'idle' : 'thinking',
+    }
+  }
   if (a.kind === 'job') return { title: a.job.title, sub: a.job.result?.name ?? a.job.sub, mood: a.job.phase === 'working' ? 'thinking' : a.job.phase === 'done' ? 'done' : 'idle' }
   return { title: a.kind === 'notification' ? a.notification.summary : 'Activity', sub: '', mood: 'idle' }
 }
@@ -43,7 +53,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
 export function Peek({ activity, canDrop, resting }: { activity: Activity | null; canDrop: boolean; resting?: RestingView | null }) {
   const { name } = useCharacter()
   const [now, setNow] = useState(Date.now)
-  const ticking = activity?.kind === 'claude' || activity?.kind === 'session' || activity?.kind === 'call'
+  const ticking = activity?.kind === 'claude' || activity?.kind === 'session' || activity?.kind === 'call' || activity?.kind === 'timer'
   useEffect(() => {
     if (!ticking) return
     const t = setInterval(() => setNow(Date.now()), 1000)

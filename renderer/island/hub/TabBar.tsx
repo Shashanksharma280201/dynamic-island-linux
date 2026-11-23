@@ -19,6 +19,14 @@ const Glyph = ({ children, stroke = 1.8 }: { children: ReactNode; stroke?: numbe
 
 /** Each section's icon. */
 export const TAB_ICONS: Record<HubTab | 'settings', ReactNode> = {
+  dash: (
+    <Glyph>
+      <rect x="3.5" y="3.5" width="7.2" height="7.2" rx="2.2" />
+      <rect x="13.3" y="3.5" width="7.2" height="7.2" rx="2.2" />
+      <rect x="3.5" y="13.3" width="7.2" height="7.2" rx="2.2" />
+      <rect x="13.3" y="13.3" width="7.2" height="7.2" rx="2.2" />
+    </Glyph>
+  ),
   controls: (
     <Glyph>
       <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
@@ -114,6 +122,7 @@ export const TAB_ICONS: Record<HubTab | 'settings', ReactNode> = {
 }
 
 const ITEMS: { id: HubTab; label: string }[] = [
+  { id: 'dash', label: 'Dashboard' },
   { id: 'controls', label: 'Controls' },
   { id: 'today', label: 'Today' },
   { id: 'agents', label: 'Agents' },

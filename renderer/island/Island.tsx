@@ -1,4 +1,5 @@
 import { CallCard, CompactCall } from './states/CallActivity'
+import { CompactTimer, TimerCard } from './states/TimerActivity'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { useState, useEffect, useLayoutEffect, useRef, type DragEvent } from 'react'
 import type { Activity, SystemState } from '@shared/types'
@@ -147,7 +148,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const [pkgTabs, setPkgTabs] = useState<PackageTab[] | null>(null)
   useEffect(() => window.island.onPackages?.(setPkgTabs), [])
   useEffect(() => {
-    if (pkgTabs && tabOff(tab, pkgTabs)) setTab('controls')
+    if (pkgTabs && tabOff(tab, pkgTabs)) setTab('dash')
   }, [pkgTabs, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Drop files on the island to add them to Documents (when it's turned on).
@@ -247,6 +248,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const connected = useConnected()
   const openSessions = () => {
     setTab('sessions')
+    setPanel(true)
+  }
+  const openDash = () => {
+    setTab('dash')
     setPanel(true)
   }
   // Ctrl+Alt+Space: open Claude and start (or finish) talking, from anywhere.
@@ -536,6 +541,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const enter = reduce ? { opacity: 0 } : { opacity: 0, scale: 0.97, ...toward, ...(soft ? { filter: 'blur(4px)' } : {}) }
   const leave = reduce ? { opacity: 0, transition: { duration: 0.16 } } : { opacity: 0, scale: 0.97, ...(soft ? { filter: 'blur(4px)' } : {}), transition: contentOut }
 
+  // What's playing, for the Dashboard's tile.
+  const media = activities.find((a) => a.kind === 'media')?.media ?? null
   // Notification and message cards waiting on the island.
   const notifCards = activities.filter((a) => a.kind === 'notification' || a.kind === 'message').length
   const onNotifCard = !showPanel && p.mode === 'expanded' && (p.primary.kind === 'notification' || p.primary.kind === 'message')
@@ -552,6 +559,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         ...(activities.some((a) => a.kind === 'media' && a.media.playing) ? (['music'] as const) : []),
         ...(claude?.run && ['starting', 'thinking', 'tool', 'writing'].includes(claude.run.phase) ? (['claude'] as const) : []),
         ...(sessions.some((x) => x.phase === 'working' || x.phase === 'waiting') ? (['sessions'] as const) : []),
+        ...(activities.some((a) => a.kind === 'timer') ? (['dash'] as const) : []),
         ...(connected?.manifest ? (['connected'] as const) : []),
       ]}
       connected={connected?.manifest ? { name: connected.manifest.tabTitle, waiting: connected.view?.asks.length ?? 0 } : undefined}
@@ -573,6 +581,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
       if (p.primary.kind === 'session') {
         if (p.mode === 'expanded') return // card has its own buttons
         return openSessions()
+      }
+      if (p.primary.kind === 'timer') {
+        if (p.mode === 'expanded') return // card has its own buttons
+        return openDash()
       }
     }
     if (!isApproval) {
@@ -632,7 +644,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
             exit={leave}
           >
             {showPanel ? (
-              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} bar={bar} />
+              <Hub sys={sys} tab={tab} onTab={setTab} center={center} sessions={sessions} media={media} onTyping={setTyping} claude={claude} voice={voice} incoming={incoming} dropping={dropping} bar={bar} />
             ) : recapping ? (
               <RecapCard r={recapShow!} onClose={closeRecap} />
             ) : dressing ? (
@@ -698,6 +710,8 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               <JobCard id={p.primary.id} job={p.primary.job} />
             ) : p.primary.kind === 'call' ? (
               p.mode === 'expanded' ? <CallCard started={p.primary.call.started} /> : <CompactCall started={p.primary.call.started} />
+            ) : p.primary.kind === 'timer' ? (
+              p.mode === 'expanded' ? <TimerCard timer={p.primary.timer} onOpen={openDash} /> : <CompactTimer timer={p.primary.timer} notch={notch} />
             ) : p.primary.kind === 'connected' ? (
               p.mode === 'expanded' ? (
                 <ConnectedStatusCard

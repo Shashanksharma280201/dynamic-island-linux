@@ -61,6 +61,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
     engine: { localFirst: true, localUrl: 'http://localhost:11434', dailyModel: '', researchModel: '', cloud: 'ask', jobs: {}, learn: true },
     sources: { on: { github: false, shell: false, calendar: false, screen: false, codex: false, gemini: false }, calendar: '', skip: [] },
+    dashboard: { tiles: ['media', 'timer', 'day', 'system'], timer: { focusMin: 25, breakMin: 5 } },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)

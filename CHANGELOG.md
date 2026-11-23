@@ -4,6 +4,29 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**A dashboard, and a focus timer on the notch**
+
+- **Dashboard**: the island now opens on a new first section. The day and
+  the battery across the top, then four tiles: what's playing (with its
+  buttons), a focus timer, how far the day has gone (one mark an hour),
+  and this computer (processor, memory, battery). **Edit**, or a
+  right-click on a tile, changes what each of the four shows; **Next up**
+  (the next thing on your calendar, and notes to file) and **Claude**
+  (sessions working or waiting for you, and your plan limits) are the
+  other two. Choosing one that's already showing swaps the two.
+- **Focus timer**: sessions of 15, 25, 45 or 60 minutes, each with its
+  break. While it runs, what's left counts down on the resting island
+  beside a ring that fills (in the notch, next to the time of day; on a
+  side edge, the minutes inside the ring; as a second activity, a small
+  ring with the minutes). Rest the pointer on it for the clock with
+  **Pause** and **Stop**. When a session ends the island says so, counts
+  it for the day and starts the break. A session carries on if the island
+  restarts, and one that ran out while it was closed still counts. At
+  rest the timer costs nothing: it wakes once, when the phase ends.
+- Controls is now the second section, Today the third, Agents the fourth.
+
 ## 0.10.1 (2026-11-13)
 
 **Everything in its place**

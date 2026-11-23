@@ -62,6 +62,7 @@ it from the code instead, see [Install](docs/install.md).
 - **Documents and a CRM**: merge, split and convert files, have Word files corrected as tracked changes, and keep a simple CRM.
 - **Notifications**: every app's notifications on the island, a notification center, and Do Not Disturb.
 - **An orb**: Orbit, Bolt or Puff, a dotted orb in its own colour, shows what's going on. Put it on your desktop too, and get a recap of your week every Monday.
+- **Dashboard and focus timer**: four tiles you choose (what's playing, the day so far, this computer, what's next, Claude), and a timer that counts down on the notch.
 - **Control Center**: volume, brightness, Wi-Fi and Bluetooth, one click away.
 
 Everything is optional and works without accounts. Your settings, notes,

@@ -1,7 +1,8 @@
 import { useRef, type ReactNode } from 'react'
-import type { InboxSources, SystemState } from '@shared/types'
+import type { InboxSources, MediaState, SystemState } from '@shared/types'
 import { ControlCenter } from '../states/ControlCenter'
 import { ChatsView } from './ChatsView'
+import { DashboardView } from './DashboardView'
 import { MailView } from './MailView'
 import { NotesView } from './NotesView'
 import { DocsView, type DocsIncoming } from './DocsView'
@@ -21,16 +22,16 @@ import { ConnectedView, useConnected } from './ConnectedView'
 import type { AgentSession } from '@shared/sessions'
 import type { CenterView } from '@shared/notifCenter'
 
-export type HubTab = 'controls' | 'today' | 'agents' | 'alerts' | 'claude' | 'sessions' | 'connected' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
+export type HubTab = 'dash' | 'controls' | 'today' | 'agents' | 'alerts' | 'claude' | 'sessions' | 'connected' | 'services' | 'music' | 'chats' | 'mail' | 'notes' | 'docs' | 'crm'
 
-export const HUB_TABS: HubTab[] = ['controls', 'today', 'agents', 'alerts', 'claude', 'sessions', 'connected', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
+export const HUB_TABS: HubTab[] = ['dash', 'controls', 'today', 'agents', 'alerts', 'claude', 'sessions', 'connected', 'services', 'music', 'chats', 'mail', 'notes', 'docs', 'crm']
 
 export function savedTab(): HubTab {
   try {
     const t = localStorage.getItem('hub-tab') as HubTab | null
-    return t && HUB_TABS.includes(t) ? t : 'controls'
+    return t && HUB_TABS.includes(t) ? t : 'dash'
   } catch {
-    return 'controls'
+    return 'dash'
   }
 }
 
@@ -58,9 +59,12 @@ export function Hub({
   center,
   onTab,
   sessions,
+  media,
   bar,
 }: {
   sys: SystemState | null
+  /** What's playing (the Dashboard's tile). */
+  media: MediaState | null
   /** The row of sections across the top. */
   bar?: ReactNode
   tab: HubTab
@@ -95,6 +99,7 @@ export function Hub({
     <div className="hub-shell" onClick={(e) => e.stopPropagation()}>
       {bar}
       <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`}>
+      {tab === 'dash' && <DashboardView media={media} sessions={sessions} claude={claude} onTab={onTab} />}
       {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
       {tab === 'today' && <TodayView onTyping={onTyping} />}
       {tab === 'agents' && <AgentsView sessions={sessions} onTyping={onTyping} />}

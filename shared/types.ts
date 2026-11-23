@@ -13,6 +13,7 @@ import type { ClaudeRun } from './claude'
 import type { DragConfig } from './dragActions'
 import type { ConnectedCapsule, ConnectedCard } from './connected'
 import type { DropStatus } from './drop'
+import type { TimerView } from './dashboard'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -114,6 +115,8 @@ export type Activity =
   | (Base & { kind: 'connected'; status: ConnectedCapsule })
   /** A call being recorded for its notes (Island OS). */
   | (Base & { kind: 'call'; call: { started: number } })
+  /** The focus timer, running or paused (the Dashboard). */
+  | (Base & { kind: 'timer'; timer: TimerView })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {

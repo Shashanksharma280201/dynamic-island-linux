@@ -106,6 +106,11 @@ export const OS_CALLS = {
   'skills.uninstall': ['s'],
   'skills.start': ['s'],
   'status.view': [],
+  'dash.view': [],
+  'dash.tiles': ['o'],
+  'dash.stats': [],
+  'timer.cmd': ['s'],
+  'timer.set': ['o'],
 } as const satisfies Record<string, readonly string[]>
 
 export type OsCall = keyof typeof OS_CALLS

@@ -56,7 +56,7 @@ export function IdlePill({ dnd = false, waiting = 0, toFile = 0, notch = false }
   return (
     <div
       className="capsule idle"
-      title={dnd ? `${name} · Do Not Disturb${waiting ? ` · ${waiting} waiting in Notifications` : ''}` : `${name}${toFile ? ` · ${toFile} to file` : ''} · click for Control Center, drag to move`}
+      title={dnd ? `${name} · Do Not Disturb${waiting ? ` · ${waiting} waiting in Notifications` : ''}` : `${name}${toFile ? ` · ${toFile} to file` : ''} · click to open, drag to move`}
     >
       <Character mood={dnd ? 'sleeping' : restingMood(now)} size={notch ? 28 : 38} still={settled} />
       {dnd && (
