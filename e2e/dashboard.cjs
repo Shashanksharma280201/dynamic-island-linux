@@ -48,7 +48,7 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 ;(async () => {
   // At the top, as a notch. A focus session was running when the island last closed: it ends in a few seconds.
   // (The calendar source is on, its file not there yet: it's written when the test gets to it.)
-  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top', y: 0.3 }, buddy: { digest: false }, sources: { on: { calendar: true }, calendar: '~/soon.ics' } }))
+  fs.writeFileSync(path.join(USER_DATA, 'config.json'), JSON.stringify({ dock: { side: 'top', y: 0.3 }, buddy: { digest: false }, sources: { on: { calendar: true }, calendar: path.join(TMP, 'soon.ics') } }))
   const ENDS = Date.now() + 14_000
   fs.writeFileSync(path.join(USER_DATA, 'os-timer.json'), JSON.stringify({ phase: 'focus', endsAt: ENDS, left: null, done: 1, day: dayOf(new Date()) }))
   let playerLog = ''
@@ -108,10 +108,19 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
     check('a session that was running when the island closed carries on', await seen(page, '.timer-capsule[data-phase="focus"]', 15000))
     const t0 = await page.$eval('.timer-capsule .timer-time', (e) => e.textContent)
     check('what is left counts down on the notch', /^00:(0\d|1[0-4])$/.test(t0), t0)
-    // (Once it has settled: the music's bubble is still sliding out beside it.)
-    const notchOk = (n) => n.w === 188 && n.h === 40 && Math.abs(n.cx - n.W / 2) <= 1 && n.y === 0
-    await until(async () => notchOk(await islandBox()), 4000)
-    const n = await islandBox()
+    // (Once it has settled: the music's bubble is still sliding out beside it, and a spring passes
+    // through its resting place before it stops there, so it has to hold for a moment.)
+    const notchOk = (n) => n.w === 188 && n.h === 40 && Math.abs(n.cx - n.W / 2) <= 1 && Math.abs(n.y) < 0.5
+    const settledNotch = async (ms = 6000) => {
+      let held = 0
+      let n = await islandBox()
+      for (const end = Date.now() + ms; Date.now() < end && held < 3; await sleep(200)) {
+        n = await islandBox()
+        held = notchOk(n) ? held + 1 : 0
+      }
+      return n
+    }
+    const n = await settledNotch()
     check('the notch keeps its size and its place with the timer in it', notchOk(n), JSON.stringify(n))
     check('the time of day stays beside it', await page.isVisible('.notch-clock'))
     await shot('01-notch-timer')
@@ -224,8 +233,7 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
     await page.mouse.move(5, 500)
     check('closed, the running timer is on the notch', await seen(page, '.timer-capsule[data-phase="focus"]', 5000))
     // (Once it has finished closing: measured while it shrinks, its middle is lower than where it comes to rest.)
-    await until(async () => notchOk(await islandBox()), 4000)
-    const b = await islandBox()
+    const b = await settledNotch()
     check('and the notch is back to its size', notchOk(b), JSON.stringify(b))
     pointer(b.cx, b.cy)
     await page.mouse.move(b.cx, b.cy)
@@ -263,12 +271,12 @@ const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
       const d = new Date(t)
       return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
     }
-    fs.writeFileSync(path.join(HOME, 'soon.ics'), ['BEGIN:VCALENDAR', 'BEGIN:VEVENT', 'UID:standup', `DTSTART:${ics(Date.now() + 12 * 60_000)}`, `DTEND:${ics(Date.now() + 27 * 60_000)}`, 'SUMMARY:Standup', 'LOCATION:Room 2', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'))
+    fs.writeFileSync(path.join(TMP, 'soon.ics'), ['BEGIN:VCALENDAR', 'BEGIN:VEVENT', 'UID:standup', `DTSTART:${ics(Date.now() + 12 * 60_000)}`, `DTEND:${ics(Date.now() + 27 * 60_000)}`, 'SUMMARY:Standup', 'LOCATION:Room 2', 'END:VEVENT', 'END:VCALENDAR'].join('\r\n'))
     await page.evaluate(() => window.island.os('sources.check', 'calendar'))
     check('something about to start on the calendar joins them', !!(await until(async () => (await showing()).includes('event'), 8000)), await showing())
     const turns = await watch(16000)
     check('with three, the notch shows each in turn, the next one beside it', ['timer+event', 'event+media', 'media+timer'].every((t) => turns.includes(t)), turns.join(' > '))
-    const steady = await islandBox()
+    const steady = await settledNotch()
     check('and keeps its size and its place as they change', notchOk(steady), JSON.stringify(steady))
     // The pointer on it: it waits (and says what the one showing is).
     await until(async () => (await showing()).startsWith('event'), 8000)
