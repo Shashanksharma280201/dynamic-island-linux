@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ScrollViewInstance } from 'react-native'
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
+import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ClaudeRun, ClaudeUsage, ClaudeView } from '../../../shared/claude'

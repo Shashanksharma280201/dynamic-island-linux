@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Modal, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { folderFiles } from '../files'
 import { sizeText } from '../protocol'

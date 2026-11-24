@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
 import { islandWidget } from '../../modules/island-widget'

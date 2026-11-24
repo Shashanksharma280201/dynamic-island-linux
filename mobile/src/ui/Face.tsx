@@ -1,4 +1,5 @@
-import { Image, StyleSheet, Text, View } from 'react-native'
+import { Image, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import type { Item } from '../files'
 import { extOf, kindColor, themed, useTheme } from './theme'
 import { Icon } from './icons'

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { Text } from './Text'
 import { FlatList, GestureDetector, usePanGesture, useTapGesture, useExclusiveGestures } from 'react-native-gesture-handler'
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'

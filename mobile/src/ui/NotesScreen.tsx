@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, View } from 'react-native'
+import { Text, TextInput } from './Text'
 import Animated from 'react-native-reanimated'
 import type { Note, NoteSummary } from '../../../shared/types'
 import type { DropLink } from '../link'

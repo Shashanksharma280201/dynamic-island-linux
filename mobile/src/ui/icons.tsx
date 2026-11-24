@@ -91,8 +91,8 @@ const LINES: Record<IconName, (c: string) => React.ReactNode> = {
   ),
   gear: (c) => (
     <>
+      <Path d="M12 2.8l7.6 4.4a.8.8 0 0 1 .4.7v8.2a.8.8 0 0 1-.4.7L12 21.2l-7.6-4.4a.8.8 0 0 1-.4-.7V7.9a.8.8 0 0 1 .4-.7z" stroke={c} />
       <Circle cx={12} cy={12} r={3} stroke={c} />
-      <Path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M5.6 18.4l1.7-1.7M16.7 7.3l1.7-1.7" stroke={c} />
     </>
   ),
   sun: (c) => (
@@ -206,7 +206,7 @@ const LINES: Record<IconName, (c: string) => React.ReactNode> = {
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
   const C = useTheme()
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       {LINES[name](color ?? C.text)}
     </Svg>
   )

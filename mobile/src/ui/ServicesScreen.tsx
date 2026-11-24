@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import type { ServiceState } from '../../../shared/services'
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Kicker, Page, Row, ago, useAction, useCall } from './kit'
