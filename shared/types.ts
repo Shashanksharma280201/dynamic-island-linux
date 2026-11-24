@@ -14,6 +14,7 @@ import type { DragConfig } from './dragActions'
 import type { ConnectedCapsule, ConnectedCard } from './connected'
 import type { DropStatus } from './drop'
 import type { SoonEvent, TimerView } from './dashboard'
+import type { Device, Hud, Translation, Weather } from './extras'
 export type ToolRequest = {
   id: string
   toolName: string
@@ -119,6 +120,16 @@ export type Activity =
   | (Base & { kind: 'timer'; timer: TimerView })
   /** Something on your calendar that's about to start. */
   | (Base & { kind: 'event'; event: SoonEvent })
+  /** The volume or the screen's brightness, while you change it. */
+  | (Base & { kind: 'hud'; hud: Hud })
+  /** A Bluetooth device that just connected. */
+  | (Base & { kind: 'device'; device: Device })
+  /** What you selected, translated. */
+  | (Base & { kind: 'translate'; translation: Translation })
+  /** The weather, when it takes its turn beside what else is going on. */
+  | (Base & { kind: 'weather'; weather: Weather })
+  /** Time to look away from the screen: until `endsAt`. */
+  | (Base & { kind: 'break'; rest: { endsAt: number; seconds: number } })
 
 /** A drag action's progress and result, as the island shows it. */
 export type JobState = {

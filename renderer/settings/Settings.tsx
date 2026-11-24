@@ -20,6 +20,7 @@ import { WallpaperSection } from './WallpaperSection'
 import { SIDE_ICONS } from './SideIcons'
 import { ModelSection } from './ModelSection'
 import { SourcesSection } from './SourcesSection'
+import { ExtrasToggles } from './ExtrasToggles'
 import { shortcutLabel } from '@shared/shortcuts'
 import { SOUND_INFO, SOUND_KINDS } from '@shared/sounds'
 
@@ -625,6 +626,7 @@ export function Settings() {
           on={s.turns}
           onChange={(v) => general.run(() => window.settings.setTurns(v))}
         />
+        <ExtrasToggles />
         <Toggle
           label="Open the panel when the pointer rests on the island"
           hint="No click needed: rest on the resting island for a moment and it opens"

@@ -4,6 +4,10 @@ import { join } from 'node:path'
 import { FocusTimer } from '../electron/os/timer'
 import {
   DEFAULT_TILES,
+  EVENING_TILES,
+  PROFILE_DEFAULTS,
+  TILE_KINDS,
+  TILE_NAMES,
   TIMER_DEFAULTS,
   clockLeft,
   cpuPercent,
@@ -145,8 +149,16 @@ test('the computer: processor use between two readings, and memory in use', () =
 })
 
 test('what is saved: the tiles and lengths, and a timer read back after the island was closed', () => {
-  expect(parseDashboardConfig(null)).toEqual({ tiles: DEFAULT_TILES, timer: TIMER_DEFAULTS })
-  expect(parseDashboardConfig({ tiles: ['claude'], timer: { focusMin: 50, breakMin: 10 } })).toEqual({ tiles: ['claude', 'media', 'timer', 'assistant'], timer: { focusMin: 50, breakMin: 10 } })
+  expect(parseDashboardConfig(null)).toEqual({ tiles: DEFAULT_TILES, timer: TIMER_DEFAULTS, pins: null, profiles: PROFILE_DEFAULTS })
+  expect(parseDashboardConfig({ tiles: ['claude'], timer: { focusMin: 50, breakMin: 10 } })).toEqual({ tiles: ['claude', 'media', 'timer', 'assistant'], timer: { focusMin: 50, breakMin: 10 }, pins: null, profiles: PROFILE_DEFAULTS })
+  // The row of apps: yours once you've changed it (even to none), and the evening's own tiles.
+  expect(parseDashboardConfig({ pins: [] }).pins).toEqual([])
+  expect(parseDashboardConfig({ pins: ['a.desktop', 'a.desktop', 7, 'b.desktop'] }).pins).toEqual(['a.desktop', 'b.desktop'])
+  expect(parseDashboardConfig({ profiles: { on: true, eveningFrom: '9:5', dayFrom: '25:00', evening: ['todo', 'nope'] } }).profiles).toEqual({ on: true, eveningFrom: '18:00', dayFrom: '07:00', evening: ['todo', 'media', 'weather', 'screen'] })
+  expect(parseDashboardConfig({ profiles: { on: true, eveningFrom: '19:30', dayFrom: '6:15' } }).profiles).toEqual({ on: true, eveningFrom: '19:30', dayFrom: '06:15', evening: EVENING_TILES })
+  expect(TILE_KINDS).toHaveLength(13)
+  expect(new Set(TILE_KINDS).size).toBe(13)
+  for (const k of TILE_KINDS) expect(TILE_NAMES[k]).toBeTruthy()
   expect(isTimerCmd('start')).toBe(true)
   expect(isTimerCmd('explode')).toBe(false)
   expect(isTimerCmd('skip')).toBe(false)

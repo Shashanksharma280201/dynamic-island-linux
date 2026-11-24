@@ -102,7 +102,7 @@ export function Hub({
     <div className="hub-shell" onClick={(e) => e.stopPropagation()}>
       {bar}
       <div key={tab} className={`card panel hub ${tab} ${last.current.dir}`}>
-      {tab === 'dash' && <DashboardView media={media} sessions={sessions} claude={claude} assistant={assistant} onTab={onTab} />}
+      {tab === 'dash' && <DashboardView media={media} sessions={sessions} claude={claude} assistant={assistant} onTab={onTab} onTyping={onTyping} />}
       {tab === 'controls' && <ControlCenter sys={sys} dnd={center.dnd} />}
       {tab === 'today' && <TodayView onTyping={onTyping} />}
       {tab === 'agents' && <AgentsView sessions={sessions} onTyping={onTyping} />}

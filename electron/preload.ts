@@ -258,6 +258,10 @@ const api = {
   imageData: (url: string): Promise<string | null> => ipcRenderer.invoke(SPOTIFY.IMAGE, url),
   /** The notification center: history, Clear all, Do Not Disturb. */
   /** Claude Code (and other agent) sessions in your terminals. */
+  /** The shelf: drag one of its files out into another app. */
+  shelf: {
+    drag: (id: string) => ipcRenderer.send('shelf:drag', id),
+  },
   sessions: {
     list: (): Promise<AgentSession[]> => ipcRenderer.invoke(SESSIONS.LIST),
     /** Bring its terminal to the front; false if it couldn't be found. */

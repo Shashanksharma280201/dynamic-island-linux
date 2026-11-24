@@ -10,11 +10,28 @@ import { TerminalIcon } from '../icons'
 import { DiffStat, sessionMood, turnTime } from '../states/SessionActivity'
 import { useNow } from '../useSessions'
 import { BackButton, Empty } from './common'
+import { AgentMark } from '../extras/AgentMark'
+
+/** The list's groups, in the order they matter. */
+const GROUPS: { id: 'waiting' | 'working' | 'done'; title: string }[] = [
+  { id: 'waiting', title: 'Needs you' },
+  { id: 'working', title: 'Working' },
+  { id: 'done', title: 'Done' },
+]
+const groupOf = (s: AgentSession) => (s.phase === 'waiting' ? 'waiting' : s.phase === 'working' ? 'working' : 'done')
+
+/** A word for where a session is. Cursor's are only watched: the island can't answer for it. Pure. */
+export function stateWord(s: AgentSession): string {
+  if (s.phase === 'waiting') return 'Waiting'
+  if (s.phase === 'working') return s.agent === 'cursor' ? 'Watching' : 'Working'
+  return s.phase === 'done' ? 'Done' : 'Idle'
+}
 
 /**
- * Claude Code sessions running in your terminals: each one live (what it's
- * doing, how long, what it changed), and per session its steps, its answer
- * and the diff of every file it touched.
+ * Coding agents at work in your terminals and editors (Claude Code, Cursor,
+ * Codex, Gemini), in one list: the ones that need you first, then the ones
+ * working, then what's done. Each row is live (what it's doing, how long,
+ * what it changed); open one for its steps, its answer and its diffs.
  */
 export function SessionsView({ sessions, claude }: { sessions: AgentSession[]; claude: ClaudeView | null }) {
   const [open, setOpen] = useState<string | null>(null)
@@ -51,32 +68,41 @@ export function SessionsView({ sessions, claude }: { sessions: AgentSession[]; c
           />
         )
       ) : (
-        <ul className="session-list">
+        <ul className="session-list grouped">
           <AnimatePresence initial={false}>
-            {sessions.map((s) => (
-              <motion.li key={s.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -30 }} transition={pop}>
-                <button className={`session-row ${s.phase}`} data-session={s.id} onClick={() => setOpen(s.id)}>
-                  <span className="session-icon">
-                    {s.phase === 'working' ? (
-                      <Orb state={currentStep(s) ? orbForTool(currentStep(s)!.tool) : 'solving'} size={26} color={AGENT_INK} />
-                    ) : (
-                      <Character mood={sessionMood(s)} size={28} />
-                    )}
-                  </span>
-                  <span className="session-text">
-                    <span className="session-title">
-                      <span className="ellipsis">{s.project || '~'}</span>
-                      {s.agent !== 'claude-code' && <span className="agent-tag">{agentName(s.agent)}</span>}
-                    </span>
-                    <span className={`session-status ellipsis ${s.phase}`}>{sessionStatus(s, now)}</span>
-                  </span>
-                  <span className="session-side">
-                    <span className="session-time">{turnTime(s, now)}</span>
-                    <DiffStat added={s.added} removed={s.removed} />
-                  </span>
-                </button>
-              </motion.li>
-            ))}
+            {GROUPS.flatMap((g) => {
+              const rows = sessions.filter((s) => groupOf(s) === g.id)
+              if (!rows.length) return []
+              return [
+                <motion.li key={`sec-${g.id}`} layout className="session-sec" data-group={g.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={pop}>
+                  {g.title}
+                </motion.li>,
+                ...rows.map((s) => (
+                  <motion.li key={s.id} layout initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, x: -30 }} transition={pop}>
+                    <button className={`session-row ${s.phase}`} data-session={s.id} data-agent={s.agent} onClick={() => setOpen(s.id)}>
+                      <AgentMark agent={s.agent} />
+                      <span className="session-text">
+                        <span className="session-title">
+                          <span className="ellipsis">{s.project || '~'}</span>
+                          <span className="agent-tag">{agentName(s.agent)}</span>
+                        </span>
+                        <span className={`session-status ellipsis ${s.phase}`}>{sessionStatus(s, now)}</span>
+                      </span>
+                      <span className="session-side">
+                        <span className={`state-pill ${s.phase}`}>
+                          {s.phase === 'working' && <i className="state-dot" aria-hidden />}
+                          {stateWord(s)}
+                        </span>
+                        <span className="session-meta-line">
+                          <span className="session-time">{turnTime(s, now)}</span>
+                          <DiffStat added={s.added} removed={s.removed} />
+                        </span>
+                      </span>
+                    </button>
+                  </motion.li>
+                )),
+              ]
+            })}
           </AnimatePresence>
         </ul>
       )}

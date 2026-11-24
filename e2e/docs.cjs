@@ -203,12 +203,17 @@ const made = (name) => path.join(MADE, name)
       }, type)
     await drag('dragenter')
     await drag('dragover')
-    check('dragging files over the island invites a drop', await seen(page, '.drop-card:has-text("Drop 1 file to add to Documents")', 3000))
+    check('dragging files over the island offers Documents', await seen(page, '.drop-wells:has-text("Drop 1 file") .well[data-well="docs"]', 3000))
     await sleep(400)
     await shot('07-drop')
     await drag('dragleave')
-    check('and goes back when they leave', await page.waitForSelector('.drop-card', { state: 'detached', timeout: 3000 }).then(() => true, () => false))
+    check('and goes back when they leave', await page.waitForSelector('.drop-wells', { state: 'detached', timeout: 3000 }).then(() => true, () => false))
     await drag('dragenter')
+    await drag('dragover')
+    await page.waitForSelector('.well[data-well="docs"]', { timeout: 3000 })
+    // Over the Documents well, then let go.
+    await page.evaluate(() => document.querySelector('.well[data-well="docs"]').dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: new DataTransfer() })))
+    await page.waitForSelector('.well.hot[data-well="docs"]', { timeout: 3000 })
     await drag('drop')
     check('dropping opens Documents', await seen(page, '.docs-view', 4000))
     // A file made up in the page has no place on disk, so it's turned away.
@@ -238,23 +243,37 @@ const made = (name) => path.join(MADE, name)
     const target = [Math.round((win.x + box.x) * SCALE), Math.round((win.y + box.y) * SCALE)]
     const under = () => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'child', ...target.map(String)]).toString().trim()
     check('the island takes input where the file will be dropped', await until(() => under() === String(islandId), 3000), `${under()} vs ${islandId}`)
-    /** Drag the file onto the island, watching for the drop card on the way. */
+    /**
+     * Drag the file to the island, wait for it to offer its places, carry on to
+     * Documents (wherever that well is: the island may be on any edge) and let go there.
+     */
     const dragOnce = async () => {
-      const xdnd = spawn('node', [path.join(__dirname, 'xtest.cjs'), 'dnd', '150', '460', ...target.map(String)])
-      let finished = false
+      const xt = (...steps) => execFileSync('node', [path.join(__dirname, 'xtest.cjs'), 'gesture', ...steps])
+      const hover = (x, y) => Array.from({ length: 8 }, (_, i) => `move:${x + (i % 2 ? 2 : -2)}:${y}:2`)
+      // (The button stays down between these: one drag, in two parts.)
+      xt('move:150:460', 'wait:300', 'down', 'wait:100', 'move:174:472:6', 'wait:400', `move:${target[0]}:${target[1]}:40`, ...hover(...target))
       let invited = false
-      xdnd.on('exit', () => (finished = true))
-      while (!finished) {
-        if (await page.$('.drop-card')) invited = true
-        await sleep(50)
+      try {
+        await page.waitForSelector('.well[data-well="docs"]', { timeout: 3000 })
+        await sleep(700) // the card has grown to its size
+        const well = await page.evaluate(() => {
+          const r = document.querySelector('.well[data-well="docs"]').getBoundingClientRect()
+          return { x: r.left + r.width / 2, y: r.top + r.height / 2 }
+        })
+        const to = [Math.round((win.x + well.x) * SCALE), Math.round((win.y + well.y) * SCALE)]
+        xt(`move:${to[0]}:${to[1]}:16`, ...hover(...to), 'wait:300')
+        invited = !!(await page.$('.well.hot[data-well="docs"]'))
+      } catch {
+        // not offered: let go where it is
       }
+      xt('up', 'wait:500')
       return invited
     }
     let invited = await dragOnce()
     // A busy machine can miss the start of a drag (no "dragging" yet): once more.
     if (!invited && !said.includes('dragging')) invited = await dragOnce()
     source.kill()
-    check('a file dragged from another app shows the drop card', invited, invited ? '' : `(drag source said: ${said.trim().replace(/\n/g, ' | ')})`)
+    check('a file dragged from another app is offered Documents', invited, invited ? '' : `(drag source said: ${said.trim().replace(/\n/g, ' | ')})`)
     check('and dropping it adds it to Documents', await seen(page, '.doc-row[data-doc="Quarterly Report.pdf"][aria-pressed="true"]', 6000))
     check('with its pages read', ((await page.textContent('.doc-row[data-doc="Quarterly Report.pdf"]', { timeout: 2000 }).catch(() => '')) ?? '').includes('4 pages'))
     await shot('08-dropped')

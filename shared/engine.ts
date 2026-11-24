@@ -54,6 +54,7 @@ export const ENGINE_FEATURES: { id: string; label: string }[] = [
   { id: 'morning', label: 'Morning card' },
   { id: 'triage', label: 'Evening filing' },
   { id: 'calls', label: 'Call notes' },
+  { id: 'translate', label: 'Translate' },
 ]
 
 // ------------------------------------------------------------- cost ----
