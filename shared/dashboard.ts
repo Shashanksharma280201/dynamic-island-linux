@@ -1,11 +1,13 @@
 /**
  * The Dashboard: four tiles you choose (what's playing, a focus timer, your
- * voice assistant, this computer, the day, what's next, Claude), a timer that
- * also shows on the resting island, and a few numbers about the day and the
- * computer. Pure.
+ * voice assistant, this computer, the day, what's next, Claude, the weather,
+ * your devices, screen time, a to-do list, the shelf, a translator), a row of
+ * apps, a timer that also shows on the resting island, and a few numbers
+ * about the day and the computer. Pure.
  */
+import { clockMinutes, parsePins } from './extras'
 
-export const TILE_KINDS = ['media', 'timer', 'assistant', 'system', 'day', 'next', 'claude'] as const
+export const TILE_KINDS = ['media', 'timer', 'assistant', 'system', 'day', 'next', 'claude', 'weather', 'devices', 'screen', 'todo', 'shelf', 'translate'] as const
 export type TileKind = (typeof TILE_KINDS)[number]
 
 export const TILE_NAMES: Record<TileKind, string> = {
@@ -17,6 +19,12 @@ export const TILE_NAMES: Record<TileKind, string> = {
   system: 'Computer',
   next: 'Next up',
   claude: 'Claude',
+  weather: 'Weather',
+  devices: 'Devices',
+  screen: 'Screen time',
+  todo: 'To-do',
+  shelf: 'Shelf',
+  translate: 'Translate',
 }
 
 export const TILE_SLOTS = 4
@@ -25,11 +33,26 @@ export const DEFAULT_TILES: TileKind[] = ['media', 'timer', 'assistant', 'system
 const isTile = (v: unknown): v is TileKind => typeof v === 'string' && (TILE_KINDS as readonly string[]).includes(v)
 
 /** The four tiles from a saved list: known kinds, each once; the gaps filled from the defaults, then the rest. Pure. */
-export function parseTiles(raw: unknown): TileKind[] {
+export function parseTiles(raw: unknown, defaults: TileKind[] = DEFAULT_TILES): TileKind[] {
   const out: TileKind[] = []
   if (Array.isArray(raw)) for (const v of raw) if (isTile(v) && !out.includes(v) && out.length < TILE_SLOTS) out.push(v)
-  for (const k of [...DEFAULT_TILES, ...TILE_KINDS]) if (out.length < TILE_SLOTS && !out.includes(k)) out.push(k)
+  for (const k of [...defaults, ...DEFAULT_TILES, ...TILE_KINDS]) if (out.length < TILE_SLOTS && !out.includes(k)) out.push(k)
   return out
+}
+
+/** The evening's tiles, until you choose your own: wind down. */
+export const EVENING_TILES: TileKind[] = ['media', 'weather', 'todo', 'screen']
+/** A second set of tiles that takes over in the evening (off until you turn it on). */
+export type Profiles = { on: boolean; dayFrom: string; eveningFrom: string; evening: TileKind[] }
+export const PROFILE_DEFAULTS: Profiles = { on: false, dayFrom: '07:00', eveningFrom: '18:00', evening: EVENING_TILES }
+
+export function parseProfiles(raw: unknown): Profiles {
+  const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const time = (v: unknown, d: string) => {
+    const m = clockMinutes(v)
+    return m === null ? d : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`
+  }
+  return { on: r.on === true, dayFrom: time(r.dayFrom, PROFILE_DEFAULTS.dayFrom), eveningFrom: time(r.eveningFrom, PROFILE_DEFAULTS.eveningFrom), evening: parseTiles(r.evening, EVENING_TILES) }
 }
 
 /** Put `kind` in `slot`. If another slot has it, the two swap, so each kind shows once. Pure. */
@@ -271,11 +294,17 @@ export type SystemStats = {
 
 // ---- What's saved, and what the panel shows ------------------------------------
 
-export type DashboardConfig = { tiles: TileKind[]; timer: TimerPrefs }
+export type DashboardConfig = {
+  tiles: TileKind[]
+  timer: TimerPrefs
+  /** The row of apps, by id; null until you change it (then the usual ones that are installed). */
+  pins: string[] | null
+  profiles: Profiles
+}
 
 export function parseDashboardConfig(raw: unknown): DashboardConfig {
   const r = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return { tiles: parseTiles(r.tiles), timer: parseTimerPrefs(r.timer) }
+  return { tiles: parseTiles(r.tiles), timer: parseTimerPrefs(r.timer), pins: Array.isArray(r.pins) ? parsePins(r.pins) : null, profiles: parseProfiles(r.profiles) }
 }
 
 const TIMER_CMDS: readonly TimerCmd[] = ['start', 'pause', 'resume', 'reset']
@@ -310,4 +339,10 @@ export function timerRestored(saved: TimerState | null, now: number): TimerState
   return timerIdle(now, s.phase === 'focus' && saved.day === localDay(now) ? s.done + 1 : s.done)
 }
 
-export type DashView = { tiles: TileKind[]; timer: TimerView }
+export type DashView = {
+  /** The tiles showing now (the evening's, when that set is on and it's the evening). */
+  tiles: TileKind[]
+  timer: TimerView
+  /** Which set that is; absent when there's only the one. */
+  profile?: 'day' | 'evening'
+}

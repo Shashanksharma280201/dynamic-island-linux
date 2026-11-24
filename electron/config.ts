@@ -21,6 +21,7 @@ import { DROP_DEFAULTS, parseDropConfig, type DropConfig } from '@shared/drop'
 import { parseBrainConfig, type BrainConfig } from '@shared/brain'
 import { parseWallpaperConfig, type WallpaperConfig } from '@shared/wallpaper'
 import { parseDashboardConfig, type DashboardConfig } from '@shared/dashboard'
+import { parseExtrasConfig, type ExtrasConfig } from '@shared/extras'
 
 /** A mail account as saved: the password is encrypted (see secrets.ts). */
 export type StoredMailAccount = MailAccount & { secret: string }
@@ -101,8 +102,10 @@ export type Config = {
   engine: EngineConfig
   /** Island OS's intake: what it reads of what you do (Settings › Sources; each off until you turn it on). */
   sources: SourcesConfig
-  /** The Dashboard: its four tiles, and the focus timer's lengths. */
+  /** The Dashboard: its four tiles, the focus timer's lengths, the row of apps and the evening's tiles. */
   dashboard: DashboardConfig
+  /** The notch's extras: volume and brightness, devices, the weather, eye breaks, translating. */
+  extras: ExtrasConfig
 }
 
 export type Appearance = 'glass' | 'solid'
@@ -183,6 +186,7 @@ const DEFAULTS: Config = {
   engine: parseEngineConfig(null),
   sources: parseSourcesConfig(null),
   dashboard: parseDashboardConfig(null),
+  extras: parseExtrasConfig(null),
 }
 
 function server(raw: any): ServerConfig | null {
@@ -230,6 +234,7 @@ export function mergeConfig(raw: unknown): Config {
   c.engine = parseEngineConfig(r.engine)
   c.sources = parseSourcesConfig(r.sources)
   c.dashboard = parseDashboardConfig(r.dashboard)
+  c.extras = parseExtrasConfig(r.extras)
   c.routines = Array.isArray(r.routines) ? r.routines.map(parseRoutine).filter((x: Routine | null): x is Routine => !!x).slice(0, 20) : []
   if (typeof r.spotify?.clientId === 'string' && /^[A-Za-z0-9]{0,64}$/.test(r.spotify.clientId)) {
     c.spotify = { clientId: r.spotify.clientId }

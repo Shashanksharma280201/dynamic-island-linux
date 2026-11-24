@@ -125,6 +125,11 @@ export class Intake {
     this.timers = []
   }
 
+  /** Minutes in front of each app, by the hour (for the Dashboard's Screen time). */
+  screenHours(): Record<string, Record<string, number>> {
+    return this.s.screen
+  }
+
   /** Everything waiting to be filed, with screen time as one entry per app and hour. */
   all(): Activity[] {
     return [...this.s.list, ...screenActivities(this.s.screen)].sort((a, b) => a.at - b.at)

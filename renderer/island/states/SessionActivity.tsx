@@ -1,5 +1,6 @@
 import { useState, type MouseEvent } from 'react'
 import { agentName, baseName, currentStep, diffStat, durationText, sessionStatus, type AgentSession } from '@shared/sessions'
+import { AgentMark } from '../extras/AgentMark'
 import { moodFor, type CharacterMood } from '@shared/character'
 import { orbForTool } from '@shared/orbs'
 import { Character } from '../character/Character'
@@ -39,6 +40,7 @@ export function CompactSession({ session, others = 0, notch = false }: { session
   return (
     <div className="capsule claude-capsule session-capsule" title={`${session.project}: ${status}${others ? ` (+${others} more working)` : ''}`}>
       <Character mood={sessionMood(session)} size={notch ? 28 : 36} ring label={status} />
+      {session.agent !== 'claude-code' && <AgentMark agent={session.agent} size={20} />}
       <Orb state={step ? orbForTool(step.tool) : 'solving'} size={20} color={AGENT_INK} className="capsule-orb" title={status} />
       {others > 0 ? <span className="step-count sessions-count">{others + 1}</span> : session.turnSteps > 0 && <span className="step-count">{session.turnSteps}</span>}
     </div>

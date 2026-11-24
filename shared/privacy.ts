@@ -30,6 +30,8 @@ export const FEATURE_NAMES: Record<string, string> = {
   claude: 'Claude Code',
   notifications: 'Notifications',
   desktop: 'Desktop',
+  weather: 'Weather',
+  translate: 'Translate',
 }
 
 /** "3 min ago", "yesterday 18:04", "12 Nov 09:30". Pure. */

@@ -29,7 +29,12 @@ export function isCard(a: Activity): boolean {
     // A session in a terminal: a card when it's done or stuck, a small orb while it works.
     (a.kind === 'session' && a.session.phase !== 'working') ||
     // A drag action: a pill with its progress, then the result to use.
-    a.kind === 'job'
+    a.kind === 'job' ||
+    // The volume as you change it, a device that connected, a translation, an eye break.
+    a.kind === 'hud' ||
+    a.kind === 'device' ||
+    a.kind === 'translate' ||
+    a.kind === 'break'
   )
 }
 

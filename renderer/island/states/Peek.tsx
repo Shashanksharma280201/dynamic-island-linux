@@ -19,7 +19,7 @@ import { eventLine } from './EventActivity'
 
 /** What a peek says about the island's state, in two short lines. Pure. */
 export function peekLines(a: Activity | null, o: { name: string; canDrop: boolean; now: number; resting?: RestingView | null }): { title: string; sub: string; mood: CharacterMood } {
-  if (!a) return { title: `Ask ${o.name} anything`, sub: restingLine(o.resting, o.now) || (o.canDrop ? 'Click to open · drop files here' : 'Click to open'), mood: 'listening' }
+  if (!a) return { title: `Ask ${o.name} anything`, sub: restingLine(o.resting, o.now) || (o.canDrop ? 'Click to open · drag files here' : 'Click to open'), mood: 'listening' }
   if (a.kind === 'media') return { title: a.media.title || 'Playing', sub: a.media.artist || 'Now playing', mood: a.media.playing ? 'dancing' : 'idle' }
   if (a.kind === 'claude') {
     const r = a.run
@@ -44,6 +44,7 @@ export function peekLines(a: Activity | null, o: { name: string; canDrop: boolea
     }
   }
   if (a.kind === 'event') return { title: a.event.title, sub: eventLine(a.event, o.now), mood: a.event.at - o.now < 5 * 60_000 ? 'attention' : 'idle' }
+  if (a.kind === 'weather') return { title: `${a.weather.temp}° in ${a.weather.place}`, sub: `${a.weather.text} · high ${a.weather.high}°, low ${a.weather.low}°`, mood: 'idle' }
   if (a.kind === 'job') return { title: a.job.title, sub: a.job.result?.name ?? a.job.sub, mood: a.job.phase === 'working' ? 'thinking' : a.job.phase === 'done' ? 'done' : 'idle' }
   return { title: a.kind === 'notification' ? a.notification.summary : 'Activity', sub: '', mood: 'idle' }
 }
