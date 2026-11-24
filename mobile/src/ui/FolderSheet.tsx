@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { folderFiles } from '../files'
 import { sizeText } from '../protocol'
 import { openReceived } from '../received'
-import { kindColor, extOf, themed, useTheme } from './theme'
+import { extOf, themed, useTheme } from './theme'
 
 /** What's in a folder the computer sent: every file in it (in its folders); tap one to open it in another app. */
 export function FolderSheet({ folder, onClose }: { folder: { uri: string; name: string }; onClose: () => void }) {
@@ -34,13 +34,13 @@ export function FolderSheet({ folder, onClose }: { folder: { uri: string; name: 
         <FlatList
           data={files}
           keyExtractor={(f) => f.uri}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 8 }}
+          contentContainerStyle={{ paddingHorizontal: 22, paddingBottom: 12 }}
           ListEmptyComponent={<Text style={s.empty}>Nothing in it.</Text>}
           renderItem={({ item }) => {
             const inner = item.dir.split('/').slice(1).join('/')
             return (
               <Pressable style={({ pressed }) => [s.row, pressed && { opacity: 0.7 }]} onPress={() => void openReceived(item)}>
-                <View style={[s.badge, { backgroundColor: kindColor(item.name) }]}>
+                <View style={s.badge}>
                   <Text style={s.badgeText} numberOfLines={1}>
                     {extOf(item.name)}
                   </Text>
@@ -65,17 +65,17 @@ export function FolderSheet({ folder, onClose }: { folder: { uri: string; name: 
 
 const useS = themed((C) => ({
   scrim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
-  sheet: { maxHeight: '78%', backgroundColor: C.bg, borderTopLeftRadius: 24, borderTopRightRadius: 24, borderWidth: 1, borderColor: C.line },
-  grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.lineStrong, marginTop: 8 },
-  head: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10 },
-  title: { color: C.text, fontSize: 20, fontWeight: '700' },
-  sub: { color: C.text2, fontSize: 13, marginTop: 2 },
-  close: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  closeText: { color: C.onPrimary, fontSize: 14, fontWeight: '600' },
-  empty: { color: C.text3, fontSize: 14, marginTop: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 9, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
-  badge: { width: 42, height: 42, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  name: { color: C.text, fontSize: 15, fontWeight: '600' },
-  meta: { color: C.text3, fontSize: 12, marginTop: 2 },
+  sheet: { maxHeight: '78%', backgroundColor: C.bg, borderTopLeftRadius: 32, borderTopRightRadius: 32 },
+  grab: { alignSelf: 'center', width: 40, height: 5, borderRadius: 3, backgroundColor: C.lineStrong, marginTop: 10 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 22, paddingTop: 14, paddingBottom: 12 },
+  title: { color: C.text, fontSize: 22, fontWeight: '500', letterSpacing: -0.4 },
+  sub: { color: C.text2, fontSize: 13.5, marginTop: 2 },
+  close: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 18, height: 40, justifyContent: 'center' },
+  closeText: { color: C.onPrimary, fontSize: 15, fontWeight: '500' },
+  empty: { color: C.text2, fontSize: 14, marginTop: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
+  badge: { width: 46, height: 46, borderRadius: 16, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 3 },
+  badgeText: { color: C.text, fontSize: 11, fontWeight: '500' },
+  name: { color: C.text, fontSize: 15.5, fontWeight: '500' },
+  meta: { color: C.text2, fontSize: 12.5, marginTop: 2 },
 }))

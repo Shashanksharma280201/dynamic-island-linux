@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, Switch, View } from 'react-native'
+import { View } from 'react-native'
 import { Text } from './Text'
 import type { SystemState } from '../../../shared/types'
 import type { DropLink, Live } from '../link'
 import { NowPlaying } from './IslandScreen'
-import { Card, Empty, ErrorLine, Page, Slider, useKit, useAction, useCall } from './kit'
+import { Card, Empty, ErrorLine, Page, Slider, Switch, useKit, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
 
 /** The island's Control Center from your phone: volume, brightness, mute, Wi-Fi, Bluetooth, Do Not Disturb. */
@@ -25,13 +25,13 @@ export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; li
       {!data && !error && <Empty busy title="Reading the computer’s controls…" />}
       {!!error && !data && <Empty title="Can’t read them" text={error} />}
       {data && (
-        <Card style={{ gap: 18 }}>
+        <Card style={{ gap: 20 }}>
           <Slider label={data.muted ? 'Volume (muted)' : 'Volume'} value={data.volume} color={data.muted ? C.text3 : C.accent} onChange={(v) => cmd({ type: 'volume', value: v }, { volume: v })} />
-          {data.brightness !== null && <Slider label="Brightness" value={data.brightness} color={C.orange} onChange={(v) => cmd({ type: 'brightness', value: v }, { brightness: v })} />}
+          {data.brightness !== null && <Slider label="Brightness" value={data.brightness} onChange={(v) => cmd({ type: 'brightness', value: v }, { brightness: v })} />}
         </Card>
       )}
       {data && (
-        <Card>
+        <Card style={{ paddingVertical: 8 }}>
           <Toggle title="Mute" value={data.muted} onChange={() => cmd({ type: 'mute' }, { muted: !data.muted })} />
           {data.wifi !== null && <Toggle title="Wi-Fi" value={data.wifi} onChange={(on) => cmd({ type: 'wifi', value: on }, { wifi: on })} />}
           {data.bluetooth !== null && <Toggle title="Bluetooth" value={data.bluetooth} onChange={(on) => cmd({ type: 'bluetooth', value: on }, { bluetooth: on })} />}
@@ -39,7 +39,6 @@ export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; li
             title="Do Not Disturb"
             last
             value={dnd}
-            color={C.violet}
             onChange={(on) => {
               setDnd(on)
               void act.run('dnd', 'notifications.setDnd', on)
@@ -52,19 +51,17 @@ export function ControlsScreen({ link, live, top, onBack }: { link: DropLink; li
   )
 }
 
-function Toggle({ title, value, onChange, last, color: tint }: { title: string; value: boolean; onChange: (on: boolean) => void; last?: boolean; color?: string }) {
-  const C = useTheme()
-  const color = tint ?? C.green
+function Toggle({ title, value, onChange, last }: { title: string; value: boolean; onChange: (on: boolean) => void; last?: boolean }) {
   const st = useSt()
   const k = useKit()
   return (
     <View style={[st.toggle, !last && k.rowLine]}>
       <Text style={[k.rowTitle, { flex: 1 }]}>{title}</Text>
-      <Switch value={value} onValueChange={onChange} trackColor={{ true: color, false: C.dark ? '#3a3a3f' : '#d9d9de' }} thumbColor="#fff" />
+      <Switch value={value} onChange={onChange} />
     </View>
   )
 }
 
 const useSt = themed((C) => ({
-  toggle: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10 },
+  toggle: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, minHeight: 54 },
 }))

@@ -4,6 +4,7 @@ import { CORAL, DARK, LIGHT, cleanColor, luminance, mix, paletteFor, seen, withA
 import { FONT, fitSize, fontOf } from '../mobile/src/ui/font'
 import { TABS, TAB_SIZE, tabCenterX } from '../mobile/src/ui/tabs'
 import { DAY_ROWS, dayColumns, dayPeaks } from '../mobile/src/dayChart'
+import { arcOf, arcPath, arcPoint, arcValue } from '../mobile/src/dial'
 import { cleanPrefs } from '../mobile/src/prefsShape'
 import { answerLine, clock, money } from '../mobile/src/words'
 import { metaText, moneyText } from '@shared/engine'
@@ -240,5 +241,39 @@ describe('the day by the hour', () => {
     expect(named.length).toBe(3)
     expect([...named].sort((a, b) => a - b)).toEqual(named)
     expect(dayPeaks(dayColumns([], 12), 2)).toEqual([])
+  })
+})
+
+describe('the volume dial', () => {
+  const arc = arcOf(300, 14, 44, 30)
+  test('a shallow bow across the card: its ends level, its top in the middle', () => {
+    const left = arcPoint(arc, 0)
+    const right = arcPoint(arc, 1)
+    const top = arcPoint(arc, 0.5)
+    expect(left.x).toBeCloseTo(14, 3)
+    expect(right.x).toBeCloseTo(286, 3)
+    expect(left.y).toBeCloseTo(right.y, 6)
+    expect(top.x).toBeCloseTo(150, 6)
+    expect(top.y).toBeCloseTo(30, 6)
+    // It rises as much as it was asked to.
+    expect(left.y - top.y).toBeCloseTo(44, 3)
+    // A tick sits beyond the bow, on the same line out from its middle.
+    const out = arcPoint(arc, 0.5, 10)
+    expect(out.y).toBeCloseTo(20, 6)
+  })
+  test('a finger along it gives the level, held at the ends', () => {
+    for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) expect(arcValue(arc, arcPoint(arc, t).x)).toBeCloseTo(t, 6)
+    expect(arcValue(arc, -50)).toBe(0)
+    expect(arcValue(arc, 900)).toBe(1)
+    // Levels outside 0 to 1 are drawn at the ends.
+    expect(arcPoint(arc, -1)).toEqual(arcPoint(arc, 0))
+    expect(arcPoint(arc, 2)).toEqual(arcPoint(arc, 1))
+  })
+  test('the bow as a path, and a space too small to draw one in', () => {
+    expect(arcPath(arc, 0, 1)).toMatch(/^M14 74A[\d.]+ [\d.]+ 0 0 1 286 74$/)
+    const tiny = arcOf(1, 14, 44, 30)
+    expect(Number.isFinite(tiny.r)).toBe(true)
+    expect(Number.isFinite(arcPoint(tiny, 0.5).y)).toBe(true)
+    expect(Number.isFinite(arcValue(tiny, 0))).toBe(true)
   })
 })

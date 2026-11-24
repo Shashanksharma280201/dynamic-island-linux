@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { ActivityIndicator, Alert, Linking, Pressable, View, useWindowDimensions } from 'react-native'
 import { Text } from './Text'
 import { FlatList, GestureDetector, usePanGesture, useTapGesture, useExclusiveGestures } from 'react-native-gesture-handler'
-import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
+import Animated from 'react-native-reanimated'
 import { scheduleOnRN } from 'react-native-worklets'
 import * as Haptics from 'expo-haptics'
 import { addFiles, addFolder, loadTray, recentMedia, removeFromTray, thumbOf, whenText, type Item } from '../files'
@@ -14,13 +14,14 @@ import { filesOf, sendAll, setSideUsed, sideUsed } from '../send'
 import { Face } from './Face'
 import { FolderSheet } from './FolderSheet'
 import { Aurora, EdgeGlow, Wash } from './Glow'
+import { Segmented } from './kit'
 import { SendPill, type Sending } from './SendPill'
 import { themed, useTheme } from './theme'
 import { useFlick } from './useFlick'
 import { Icon } from './icons'
 
 const GAP = 10
-const PAD = 16
+const PAD = 20
 type Tab = 'photos' | 'files' | 'received'
 
 /**
@@ -115,7 +116,16 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
           <View style={{ marginBottom: 6 }}>
             <Text style={s.h1}>Files</Text>
             <Text style={s.hint}>Hold one, then flick it toward {link.pairing.name}.</Text>
-            <Segments tab={tab} setTab={setTab} counts={{ received: received.length }} />
+            <Segmented
+              items={[
+                ['photos', 'Photos'],
+                ['files', 'Files'],
+                ['received', received.length ? `Received · ${received.length}` : 'Received'],
+              ]}
+              value={tab}
+              onChange={setTab}
+              style={{ marginTop: 16, marginBottom: 10 }}
+            />
             {tab === 'photos' && media && !media.allowed && (
               <View style={s.notice}>
                 <View style={s.noticeIcon}>
@@ -145,7 +155,9 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
                 ])
               }}
             >
-              <Text style={s.addPlus}>+</Text>
+              <View style={s.addRound}>
+                <Icon name="plus" size={20} />
+              </View>
               <Text style={s.addText}>Files or a folder</Text>
             </Pressable>
           ) : (
@@ -188,33 +200,6 @@ export function FilesScreen({ link, received, setReceived, top }: { link: DropLi
 }
 
 const ADD: Item = { key: '__add', uri: '', name: '', size: 0, kind: 'file', when: 0 }
-
-function Segments({ tab, setTab, counts }: { tab: Tab; setTab: (t: Tab) => void; counts: { received: number } }) {
-  const s = useS()
-  const C = useTheme()
-  const tabs: [Tab, string][] = [
-    ['photos', 'Photos'],
-    ['files', 'Files'],
-    ['received', counts.received ? `Received · ${counts.received}` : 'Received'],
-  ]
-  const [w, setW] = useState(0)
-  const i = tabs.findIndex(([t]) => t === tab)
-  const x = useSharedValue(0)
-  useEffect(() => {
-    x.value = withTiming(i * (w / tabs.length), { duration: 220 })
-  }, [i, w]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
-  return (
-    <View style={s.tabs} onLayout={(e) => setW(e.nativeEvent.layout.width - 6)}>
-      {w > 0 && <Animated.View style={[s.tabPill, { width: w / tabs.length }, pill]} />}
-      {tabs.map(([t, label]) => (
-        <Pressable key={t} style={s.tab} onPress={() => setTab(t)}>
-          <Text style={[s.tabText, tab === t && { color: C.text }]}>{label}</Text>
-        </Pressable>
-      ))}
-    </View>
-  )
-}
 
 function Tile({
   item,
@@ -303,45 +288,38 @@ function Tile({
 }
 
 const useS = themed((C) => ({
-  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
-  hint: { color: C.text3, fontSize: 13, marginTop: 4 },
-  empty: { color: C.text3, fontSize: 14, lineHeight: 20, marginTop: 18 },
-  tabs: { flexDirection: 'row', backgroundColor: C.card, borderRadius: 12, padding: 3, marginTop: 14, marginBottom: 8 },
-  tabPill: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 9, backgroundColor: C.dark ? '#3a3a40' : '#ffffff', ...(C.dark ? {} : { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }) },
-  tab: { flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: 'center' },
-  tabText: { color: C.text2, fontSize: 13, fontWeight: '700' },
-  notice: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 48, gap: 8 },
-  noticeIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
-  noticeTitle: { color: C.text, fontSize: 17, fontWeight: '700' },
+  h1: { color: C.text, fontSize: 32, fontWeight: '500', letterSpacing: -1 },
+  hint: { color: C.text2, fontSize: 13.5, marginTop: 3 },
+  empty: { color: C.text2, fontSize: 14, lineHeight: 20, marginTop: 18, textAlign: 'center', paddingHorizontal: 12 },
+  notice: { alignItems: 'center', paddingHorizontal: 24, paddingTop: 44, gap: 8 },
+  noticeIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', marginBottom: 6, ...C.shadow },
+  noticeTitle: { color: C.text, fontSize: 20, fontWeight: '500', letterSpacing: -0.3, textAlign: 'center' },
   noticeText: { color: C.text2, fontSize: 14, lineHeight: 20, textAlign: 'center' },
-  small: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10, marginTop: 8 },
-  smallText: { color: C.onPrimary, fontWeight: '700', fontSize: 14 },
-  face: { borderRadius: 18, overflow: 'hidden', backgroundColor: C.card },
+  small: { backgroundColor: C.primary, borderRadius: 999, paddingHorizontal: 22, height: 46, justifyContent: 'center', marginTop: 10 },
+  smallText: { color: C.onPrimary, fontWeight: '500', fontSize: 15 },
+  face: { borderRadius: 24, overflow: 'hidden', backgroundColor: C.card },
   faceOn: { borderWidth: 2.5, borderColor: C.accent },
-  meta: { paddingHorizontal: 4, paddingTop: 6, paddingBottom: 2 },
-  name: { color: C.text, fontSize: 13, fontWeight: '600' },
-  sub: { color: C.text3, fontSize: 11, marginTop: 1 },
-  add: { borderRadius: 18, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.lineStrong, alignItems: 'center', justifyContent: 'center' },
-  addPlus: { color: C.text, fontSize: 34, fontWeight: '300' },
-  addText: { color: C.text2, fontSize: 13, fontWeight: '600', marginTop: 2 },
-  tileActions: { position: 'absolute', top: 8, right: 8, flexDirection: 'row', gap: 6 },
-  chip: { backgroundColor: 'rgba(0,0,0,0.65)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5 },
-  chipText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  meta: { paddingHorizontal: 6, paddingTop: 8, paddingBottom: 4 },
+  name: { color: C.text, fontSize: 14, fontWeight: '500' },
+  sub: { color: C.text2, fontSize: 12, marginTop: 1 },
+  add: { borderRadius: 24, borderWidth: 1.5, borderStyle: 'dashed', borderColor: C.lineStrong, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  addRound: { width: 46, height: 46, borderRadius: 23, backgroundColor: C.card, alignItems: 'center', justifyContent: 'center', ...C.shadow },
+  addText: { color: C.text2, fontSize: 14 },
+  tileActions: { position: 'absolute', top: 10, right: 10, flexDirection: 'row', gap: 6 },
+  // On a picture: a white pill, whatever the theme.
+  chip: { backgroundColor: '#ffffff', borderRadius: 999, paddingHorizontal: 13, height: 32, justifyContent: 'center', boxShadow: '0 4px 14px rgba(0,0,0,0.22)' },
+  chipText: { color: '#1d1d1d', fontSize: 13, fontWeight: '500' },
   liftedCard: {
     position: 'absolute',
     left: 0,
     top: 0,
-    borderRadius: 20,
+    borderRadius: 24,
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: C.dark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.12)',
-    elevation: 24,
-    shadowColor: '#000',
-    shadowOpacity: 0.5,
-    shadowRadius: 24,
-    shadowOffset: { width: 0, height: 12 },
+    boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
   },
-  bar: { position: 'absolute', left: 16, right: 16, bottom: 100 },
-  sendBtn: { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 16, alignItems: 'center', ...C.shadow },
-  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' },
+  bar: { position: 'absolute', left: PAD, right: PAD, bottom: 96 },
+  sendBtn: { backgroundColor: C.primary, borderRadius: 999, minHeight: 54, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center', ...C.shadow },
+  sendText: { color: C.onPrimary, fontSize: 16, fontWeight: '500' },
 }))

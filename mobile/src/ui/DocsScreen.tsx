@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import { Alert, Pressable, StyleSheet, View } from 'react-native'
+import { Alert, Pressable, View } from 'react-native'
 import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ConvertTarget, DocAction, DocActionResult, DocEntry, DocKind, DocsView } from '../../../shared/docs'
 import type { DropLink } from '../link'
-import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
-import { kindColor, themed, useTheme } from './theme'
+import { Btn, Card, Empty, ErrorLine, Page, StatusDot, ago, useKit, useAction, useCall } from './kit'
+import { themed, useTheme } from './theme'
 import { Icon } from './icons'
 import { LEAVE } from './motion'
 
@@ -27,6 +27,7 @@ const size = (n: number) => (n < 1024 ? `${n} B` : n < 1024 ** 2 ? `${Math.round
 
 /** The island's Documents: the files there, and what it can do with them (no AI needed), right from your phone. */
 export function DocsScreen({ link, top, onBack }: { link: DropLink; top: number; onBack: () => void }) {
+  const C = useTheme()
   const st = useSt()
   const { data, error, reload } = useCall<DocsView>(link, 'docs.view', [], { topic: 'docs' })
   const act = useAction(link)
@@ -52,9 +53,9 @@ export function DocsScreen({ link, top, onBack }: { link: DropLink; top: number;
       {!data && !error && <Empty busy title="Getting your documents…" />}
       <ErrorLine message={error || act.error} />
       {!!note && (
-        <Animated.Text style={st.note}>
-          {note}
-        </Animated.Text>
+        <View style={st.noteRow}>
+          <StatusDot color={C.green} text={note} />
+        </View>
       )}
       {data && !files.length && <Empty title="No documents yet" text="Add files to the island’s Documents tab on your computer (or send them from Files here first), then convert, merge and more from here." />}
       {pdfs.length >= 2 && <Btn kind="primary" label={`Merge ${pdfs.length} PDFs`} busy={act.busy === 'merge'} onPress={() => void run('merge', { op: 'merge', ids: pdfs })} />}
@@ -88,12 +89,11 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
   const C = useTheme()
   const st = useSt()
   const k = useKit()
-  const color = kindColor(f.name)
   return (
     <Animated.View exiting={LEAVE}>
-      <Card style={[open && { borderColor: `${color}66` }]}>
+      <Card>
         <Pressable onPress={onToggle} onLongPress={onPick} style={st.head}>
-          <View style={[st.tile, { backgroundColor: color }]}>
+          <View style={st.tile}>
             <Text style={st.tileText}>{f.kind.toUpperCase()}</Text>
           </View>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -103,14 +103,14 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
             <Text style={k.rowSub}>{[size(f.size), f.pages ? `${f.pages} pages` : '', f.origin === 'made' ? 'made here' : '', ago(f.at)].filter(Boolean).join(' · ')}</Text>
           </View>
           {f.kind === 'pdf' && (
-            <Pressable hitSlop={10} onPress={onPick} style={[st.pick, picked && { backgroundColor: C.blue, borderColor: C.blue }]}>
-              {picked && <Icon name="check" size={13} color="#fff" />}
+            <Pressable hitSlop={10} onPress={onPick} accessibilityRole="checkbox" accessibilityState={{ checked: picked }} accessibilityLabel={`Pick ${f.name} to merge`} style={[st.pick, picked && { backgroundColor: C.accent, borderColor: C.accent }]}>
+              {picked && <Icon name="check" size={14} color={C.onPrimary} />}
             </Pressable>
           )}
         </Pressable>
         {open && (
-          <Animated.View style={{ gap: 10, marginTop: 12 }}>
-            <Text style={k.kicker}>Convert to</Text>
+          <Animated.View style={{ gap: 10, marginTop: 16 }}>
+            <Text style={[k.kicker, { marginBottom: 0 }]}>Convert to</Text>
             <View style={st.chips}>
               {targets(f.kind, libreOffice).map((to) => (
                 <Btn key={to} small label={to.toUpperCase()} busy={busy === `convert${f.id}${to}`} onPress={() => onRun(`convert${f.id}${to}`, { op: 'convert', id: f.id, to })} />
@@ -134,10 +134,10 @@ function FileCard({ f, open, picked, libreOffice, busy, onToggle, onPick, onRun,
 }
 
 const useSt = themed((C) => ({
-  note: { color: C.green, fontSize: 14, fontWeight: '700' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  tile: { width: 44, height: 52, borderRadius: 10, justifyContent: 'flex-end', padding: 6 },
-  tileText: { color: '#fff', fontSize: 10, fontWeight: '800' },
-  pick: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: C.text3, alignItems: 'center', justifyContent: 'center' },
+  noteRow: { paddingHorizontal: 6 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  tile: { width: 48, height: 48, borderRadius: 16, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
+  tileText: { color: C.text, fontSize: 11, fontWeight: '500', letterSpacing: 0.2 },
+  pick: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.6, borderColor: C.text3, alignItems: 'center', justifyContent: 'center' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 }))

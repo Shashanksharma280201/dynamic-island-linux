@@ -212,13 +212,18 @@ export function Icon({ name, size = 22, color }: { name: IconName; size?: number
   )
 }
 
-/** An icon on a small rounded tile of its colour, for list rows (as in Settings). */
-export function IconTile({ name, color, size = 30 }: { name: IconName; color: string; size?: number }) {
+/**
+ * An icon in a quiet circle, for list rows (as in Settings). `color` is
+ * what the row is about on the island; here every row's icon is drawn alike,
+ * in the text's colour, so the one accent keeps its meaning.
+ */
+export function IconTile({ name, size = 38 }: { name: IconName; color?: string; size?: number }) {
+  const C = useTheme()
   return (
-    <Svg width={size} height={size} viewBox="0 0 30 30">
-      <Rect x={0} y={0} width={30} height={30} rx={8} fill={color} />
-      <Svg x={5} y={5} width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-        {LINES[name]('#ffffff')}
+    <Svg width={size} height={size} viewBox="0 0 38 38">
+      <Circle cx={19} cy={19} r={19} fill={C.card2} />
+      <Svg x={9.5} y={9.5} width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {LINES[name](C.text)}
       </Svg>
     </Svg>
   )

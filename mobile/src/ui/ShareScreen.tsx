@@ -115,9 +115,11 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
   return (
     <View style={s.wrap}>
       <View style={s.head}>
-        <Text style={s.h1}>Send to {link.pairing.name}</Text>
+        <Text style={s.h1} numberOfLines={2}>
+          Send to {link.pairing.name}
+        </Text>
         <View style={s.status}>
-          <View style={[s.dot, { backgroundColor: statusColor }]} />
+          <View style={[s.dot, st.phase === 'offline' ? { borderWidth: 1.5, borderColor: statusColor } : { backgroundColor: statusColor }]} />
           <Text style={s.statusText} numberOfLines={2}>
             {st.phase === 'ready' ? 'Ready' : st.phase === 'finding' ? 'Looking for it…' : (st.error ?? 'Can’t reach it')}
           </Text>
@@ -173,21 +175,21 @@ export function ShareScreen({ link, files, onDone }: { link: DropLink; files: Sh
 
 const useS = themed((C) => ({
   wrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: C.bg },
-  head: { paddingTop: 60, paddingHorizontal: 22 },
-  h1: { color: C.text, fontSize: 26, fontWeight: '700' },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  statusText: { color: C.text2, fontSize: 14, fontWeight: '600', flexShrink: 1 },
-  card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)', elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
-  ghost: { position: 'absolute', borderRadius: 22, backgroundColor: C.card2, borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)', transform: [{ rotate: '6deg' }] },
-  count: { position: 'absolute', top: 10, right: 10, minWidth: 30, height: 30, borderRadius: 15, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8 },
-  countText: { color: C.onPrimary, fontWeight: '700', fontSize: 15 },
+  head: { paddingTop: 60, paddingHorizontal: 24 },
+  h1: { color: C.text, fontSize: 28, lineHeight: 33, fontWeight: '500', letterSpacing: -0.8 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 8 },
+  dot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { color: C.text2, fontSize: 14, flexShrink: 1 },
+  card: { borderRadius: 28, overflow: 'hidden', backgroundColor: C.card, boxShadow: C.dark ? '0 16px 40px rgba(0,0,0,0.55)' : '0 16px 40px rgba(30,20,10,0.18)' },
+  ghost: { position: 'absolute', borderRadius: 28, backgroundColor: C.card2, transform: [{ rotate: '6deg' }] },
+  count: { position: 'absolute', top: 12, right: 12, minWidth: 32, height: 32, borderRadius: 16, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9 },
+  countText: { color: C.onPrimary, fontWeight: '500', fontSize: 15 },
   caption: { position: 'absolute', left: 24, right: 24, alignItems: 'center' },
-  name: { color: C.text, fontSize: 16, fontWeight: '700' },
-  sub: { color: C.text3, fontSize: 13, marginTop: 4 },
-  buttons: { position: 'absolute', left: 16, right: 16, bottom: 34, gap: 8 },
-  send: { backgroundColor: C.accent, borderRadius: 16, paddingVertical: 16, alignItems: 'center' },
-  sendText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  cancel: { paddingVertical: 12, alignItems: 'center' },
-  cancelText: { color: C.text2, fontSize: 15, fontWeight: '600' },
+  name: { color: C.text, fontSize: 18, fontWeight: '500', letterSpacing: -0.2 },
+  sub: { color: C.text2, fontSize: 13.5, marginTop: 4 },
+  buttons: { position: 'absolute', left: 20, right: 20, bottom: 34, gap: 6 },
+  send: { backgroundColor: C.primary, borderRadius: 999, minHeight: 54, alignItems: 'center', justifyContent: 'center' },
+  sendText: { color: C.onPrimary, fontSize: 16, fontWeight: '500' },
+  cancel: { minHeight: 46, alignItems: 'center', justifyContent: 'center' },
+  cancelText: { color: C.text2, fontSize: 15 },
 }))

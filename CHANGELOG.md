@@ -6,11 +6,12 @@ or install it with one command (see the [README](https://github.com/shashankshar
 
 ## Unreleased
 
-**The phone app's new look (in progress)**
+**The phone app, redrawn**
 
 - **A calmer Island Drop**: a quiet grey page, plain white cards, one
   typeface (Inter Tight), and one colour, which follows your orb (coral
-  unless you changed it). In light and dark.
+  unless you changed it). In light and dark. File types, list icons and
+  avatars no longer each have a colour of their own.
 - **The Island tab**: one big number for what's waiting for you, the orb and
   your coding sessions as two tiles, each thing to answer as a card with
   Deny and Allow, then how much of Claude's five hours is used (drawn as a
@@ -19,10 +20,17 @@ or install it with one command (see the [README](https://github.com/shashankshar
 - **Today**: how many things happened, your day by the hour drawn in small
   squares with the busiest hours named, asking about your days, what's
   next, and the day as a list.
+- **Music**: what's playing, large, with the cover (or your orb when there
+  is none), and the computer's volume on a dial you drag. Search, your
+  playlists and recent songs under it.
+- **Trading** and the CRM's **Deals** open on their one figure (today's
+  result, the open pipeline), set as large as fits.
 - **The tabs** are a small pill of icons floating at the bottom, the chosen
-  one on a circle of the accent that moves to it.
-- The other screens have the new colours, type and buttons already; their
-  own layouts are next.
+  one on a circle of the accent that moves to it; a dot says something is
+  waiting there.
+- Claude, Files, Inbox, More, Settings, Controls, Notes, Documents,
+  Services, Agents, pairing and sharing are all in the same look: pill
+  buttons and fields, word switches, lists in cards.
 
 ## 0.12.0 (2026-11-24)
 

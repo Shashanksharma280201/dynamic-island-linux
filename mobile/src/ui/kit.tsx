@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Keyboard, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, View, type StyleProp, type ViewStyle } from 'react-native'
+import { ActivityIndicator, Keyboard, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
 import Svg, { Rect } from 'react-native-svg'
 import { Text, TextInput } from './Text'
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
@@ -10,7 +10,7 @@ import type { PhoneCall, PhoneTopic } from '../../../shared/phone'
 import type { DropLink } from '../link'
 import { Icon, IconTile, type IconName } from './icons'
 import { PRESSED, glide } from './motion'
-import { themed, useTheme, type Palette } from './theme'
+import { fitSize, themed, useTheme, type Palette } from './theme'
 
 // ---- Data from the island ----
 
@@ -258,6 +258,22 @@ export function Hero({ value, label, hint, word }: { value: string; label: strin
   )
 }
 
+/**
+ * A figure (an amount, a count with its unit) on one line, as large as
+ * fits up to `size`: a long one is set smaller, never cut.
+ */
+export function Figure({ text, size, style }: { text: string; size: number; style?: StyleProp<TextStyle> }) {
+  const [w, setW] = useState(0)
+  const fit = fitSize(text, w, size)
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ alignSelf: 'stretch' }}>
+      <Text style={[style, { fontSize: fit, lineHeight: Math.round(fit * 1.14), letterSpacing: -fit * 0.035 }]} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  )
+}
+
 /** A small dot and a word or two: how something is. */
 export function StatusDot({ color, text, hollow }: { color: string; text: string; hollow?: boolean }) {
   const s = useKit()
@@ -376,11 +392,10 @@ export function Row({ title, sub, right, left, icon, chevron, onPress, onLongPre
 /** A round picture, or the first letter on a colour. */
 export function Avatar({ name, uri, size = 40, color }: { name: string; uri?: string; size?: number; color?: string }) {
   const C = useTheme()
-  const hue = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7)
   if (uri) return <Animated.Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.card2 }} />
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? (C.dark ? `hsl(${hue},45%,38%)` : `hsl(${hue},55%,50%)`), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: '#fff', fontWeight: '600', fontSize: size * 0.42 }}>{(name.trim()[0] ?? '?').toUpperCase()}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? C.accentPale, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: color ? '#fff' : C.accent, fontWeight: '500', fontSize: size * 0.42 }}>{(name.trim()[0] ?? '?').toUpperCase()}</Text>
     </View>
   )
 }
@@ -399,13 +414,14 @@ export function Badge({ n, color }: { n: number; color?: string }) {
 /** A few choices as plain words side by side, the chosen one on a pill that moves to it. */
 export function Segmented<T extends string>({ items, value, onChange, style }: { items: [T, string][]; value: T; onChange: (v: T) => void; style?: StyleProp<ViewStyle> }) {
   const s = useKit()
-  // Where each word sits, as laid out.
-  const [at, setAt] = useState<Record<number, { x: number; w: number }>>({})
+  // How wide each word is, as laid out; a word starts where the ones before it end.
+  const [wide, setWide] = useState<Record<number, number>>({})
   const i = Math.max(0, items.findIndex(([v]) => v === value))
   const x = useSharedValue(0)
   const w = useSharedValue(0)
   const placed = useRef(false)
-  const here = at[i]
+  const known = items.slice(0, i + 1).every((_, n) => wide[n] !== undefined)
+  const here = known ? { x: items.slice(0, i).reduce((sum, _, n) => sum + wide[n], 0), w: wide[i] } : undefined
   useEffect(() => {
     if (!here) return
     // Put there the first time, moved there after.
@@ -424,8 +440,8 @@ export function Segmented<T extends string>({ items, value, onChange, style }: {
           accessibilityRole="tab"
           accessibilityState={{ selected: v === value }}
           onLayout={(e) => {
-            const l = e.nativeEvent.layout
-            setAt((a) => (a[n]?.x === l.x && a[n]?.w === l.width ? a : { ...a, [n]: { x: l.x, w: l.width } }))
+            const width = e.nativeEvent.layout.width
+            setWide((a) => (a[n] === width ? a : { ...a, [n]: width }))
           }}
           onPress={() => {
             if (v !== value) void Haptics.selectionAsync()
@@ -446,16 +462,19 @@ export function Btn({ label, onPress, kind = 'plain', busy, disabled, small, ico
   const s = useKit()
   const C = useTheme()
   const strong = kind === 'primary' || kind === 'accent'
-  const bg = strong ? C.primary : kind === 'danger' ? (C.dark ? 'rgba(255,107,94,0.16)' : 'rgba(229,72,77,0.1)') : C.fill
-  const fg = strong ? C.onPrimary : kind === 'danger' ? C.red : C.text
+  const off = strong && disabled && !busy
+  const bg = off ? C.fill : strong ? C.primary : kind === 'danger' ? (C.dark ? 'rgba(255,107,94,0.16)' : 'rgba(229,72,77,0.1)') : C.fill
+  const fg = off ? C.text3 : strong ? C.onPrimary : kind === 'danger' ? C.red : C.text
   return (
     <Pressable
       disabled={disabled || busy}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!(disabled || busy), busy: !!busy }}
       onPress={() => {
         void Haptics.selectionAsync()
         onPress()
       }}
-      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, (disabled || busy) && { opacity: 0.5 }, pressed && { opacity: 0.75 }, style]}
+      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, ((disabled && !off) || busy) && { opacity: 0.5 }, pressed && { opacity: 0.75 }, style]}
     >
       {busy ? (
         <ActivityIndicator color={fg} />
@@ -491,6 +510,8 @@ export function ErrorLine({ message }: { message: string }) {
   return message ? <Text style={s.error}>{message}</Text> : null
 }
 
+const WEB_KNOB = Platform.OS === 'web' ? ({ activeThumbColor: '#ffffff' } as object) : null
+
 /** An on/off switch in the theme's colours. */
 export function Switch({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   const C = useTheme()
@@ -505,6 +526,7 @@ export function Switch({ value, onChange, disabled }: { value: boolean; onChange
       trackColor={{ false: C.dark ? '#3b3835' : '#dcdcdc', true: C.accent }}
       thumbColor="#ffffff"
       ios_backgroundColor={C.dark ? '#3b3835' : '#dcdcdc'}
+      {...WEB_KNOB}
     />
   )
 }
