@@ -2,7 +2,7 @@ import { egress } from './privacy'
 import { app, clipboard, dialog, ipcMain, nativeImage, powerMonitor, screen, globalShortcut, shell, type Display } from 'electron'
 import { fileURLToPath } from 'node:url'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { ActivityStore } from './store'
 import { ClaudeServer } from './providers/claude'
@@ -157,7 +157,11 @@ import { Skills } from './os/skills'
 import { audioInputs, Calls, fixWavSizes } from './os/calls'
 import { FocusTimer } from './os/timer'
 import { SystemMeter } from './os/stats'
-import { isTimerCmd, parseDashboardConfig, parseTimerPrefs, parseTiles, soonEvent, type DashView, type TimerView } from '@shared/dashboard'
+import { EVENING_TILES, isTimerCmd, parseDashboardConfig, parseTimerPrefs, parseTiles, soonEvent, type DashView, type TimerView } from '@shared/dashboard'
+import { Devices, EyeBreak, HudWatch, Shelf, Todos, Translator, WeatherService } from './os/extras'
+import { iconUrl } from './icons'
+import type { DesktopApp } from '@shared/command'
+import { activeProfile, isLanguage, parseExtrasConfig, parseHud, runningApps, screenDay, suggestPins, type AppsView, type Device, type ExtrasView, type ScreenView, type ShelfView } from '@shared/extras'
 import { findTool } from './os/tools'
 import { macFrontApp, WinFrontApp } from './os/frontApp'
 import { callLine } from '../shared/calls'
@@ -1123,11 +1127,26 @@ async function main() {
   setInterval(showEvent, 60_000).unref?.()
   powerMonitor.on('resume', showEvent)
   const meter = new SystemMeter({ fake: process.env.DI_STATS_FAKE || undefined })
-  const dashView = (): DashView => ({ tiles: config.dashboard.tiles, timer: focusTimer.view() })
+  // The evening has its own four tiles, when that's turned on.
+  const profileNow = () => activeProfile(config.dashboard.profiles, new Date())
+  const dashView = (): DashView => {
+    const which = profileNow()
+    return { tiles: which === 'evening' ? config.dashboard.profiles.evening : config.dashboard.tiles, timer: focusTimer.view(), ...(config.dashboard.profiles.on ? { profile: which } : {}) }
+  }
+  let profileShown = profileNow()
+  setInterval(() => {
+    const now = profileNow()
+    if (now === profileShown) return
+    profileShown = now
+    osChanged('dash')
+  }, 60_000).unref?.()
   Object.assign(osRoutes, {
     'dash.view': () => dashView(),
     'dash.tiles': (o: { tiles?: unknown }) => {
-      config.dashboard = parseDashboardConfig({ ...config.dashboard, tiles: parseTiles(o.tiles) })
+      // Changing a tile changes the set that's showing.
+      config.dashboard = parseDashboardConfig(
+        profileNow() === 'evening' ? { ...config.dashboard, profiles: { ...config.dashboard.profiles, evening: parseTiles(o.tiles, EVENING_TILES) } } : { ...config.dashboard, tiles: parseTiles(o.tiles) },
+      )
       saveConfig(config)
       osChanged('dash')
       return dashView()
@@ -2211,6 +2230,7 @@ async function main() {
       if (id === 'panel') applyShortcut()
       else if (id === 'dictate') applyDictate()
       else if (id === 'buddy') applyBuddyKey()
+      else if (id === 'translate') applyTranslateKey()
       else if (id === 'command') applyCommandKey()
       else if (id === 'voice') {
         claudeUi?.applyVoiceShortcut()
@@ -2377,6 +2397,259 @@ async function main() {
     }
   }
   if ((config.whatsapp && WA_CDP) || FAKE_WA) void whatsapp.start()
+
+  // ---- The notch's extras: volume and brightness, devices, the weather, apps, to-dos, the shelf, translating, eye breaks ----
+  const saveExtras = (patch: Partial<typeof config.extras>) => {
+    config.extras = parseExtrasConfig({ ...config.extras, ...patch })
+    saveConfig(config)
+    osChanged('extras')
+  }
+  // The level on the notch for a moment; each change keeps it up a little longer. Not while the island is open
+  // (its own sliders are on screen then), and not a sound.
+  const hudWatch = new HudWatch({
+    onHud: (hud) => {
+      if (!config.extras.hud || panelOpen) return
+      transient.show({ kind: 'hud', id: 'hud', priority: 9, hud }, 1600)
+    },
+  })
+  if (config.extras.hud) hudWatch.start()
+  const devices = new Devices({
+    onChange: () => osChanged('devices'),
+    onConnected: (device) => {
+      if (config.extras.deviceNotes && !config.dnd) transient.show({ kind: 'device', id: 'device', priority: 4.5, device }, 4500)
+    },
+  })
+  devices.start()
+  const weather = new WeatherService({
+    config: () => config.extras.weather,
+    save: (w) => saveExtras({ weather: w }),
+    blocked: (host) => egress.blocked(host),
+    note: (to, what) => egress.note('weather', to, what),
+    onChange: () => osChanged('weather'),
+    base: process.env.DI_WEATHER_URL || undefined,
+  })
+  const todos = new Todos({ file: join(app.getPath('userData'), 'os-todos.json'), onChange: () => osChanged('todo') })
+  const shelf = new Shelf({
+    file: join(app.getPath('userData'), 'os-shelf.json'),
+    downloads: () => process.env.DI_SHELF_FOLDER || app.getPath('downloads'),
+    // A small picture of a picture (not of a huge one: reading it would take a while).
+    thumb: (path) => {
+      if (statSync(path).size > 25 * 1024 * 1024) return undefined
+      const img = nativeImage.createFromPath(path)
+      return img.isEmpty() ? undefined : img.resize({ height: 96, quality: 'good' }).toDataURL()
+    },
+    onChange: () => osChanged('shelf'),
+  })
+  // (Tests: a phone that's near, without pairing one.)
+  const phoneNear = () => (process.env.DI_TEST_HOOKS ? ((globalThis as any).__islandPhoneNear as string | undefined) : undefined) ?? phoneLink.connected()[0]?.device ?? null
+  const shelfView = (): ShelfView => ({ items: shelf.list(), bytes: shelf.bytes(), phone: phoneNear() })
+  // Dragging a file off the shelf into another app.
+  ipcMain.on('shelf:drag', (e, item) => {
+    const file = typeof item === 'string' ? shelf.path(item) : null
+    if (e.sender !== win.webContents || !file || !existsSync(file)) return
+    dragRing.ownDrag()
+    e.sender.startDrag({ file, icon: nativeImage.createFromBitmap(Buffer.alloc(16 * 16 * 4, 0xd8), { width: 16, height: 16 }) })
+  })
+  const eyeBreak = new EyeBreak({
+    config: () => config.extras.breaks,
+    idleSeconds: () => (process.env.DI_IDLE_NEVER ? 0 : powerMonitor.getSystemIdleTime()),
+    // A call being recorded, or a question waiting for your answer: not now.
+    busy: () => !!calls.recording() || store.list().some((a) => a.kind === 'approval'),
+    show: (seconds) => transient.show({ kind: 'break', id: 'break', priority: 4.5, rest: { endsAt: Date.now() + seconds * 1000, seconds } }, seconds * 1000 + 400),
+    hide: () => transient.dismiss('break'),
+  })
+  eyeBreak.start()
+  const translator = new Translator({
+    ask: (o) => engine.ask({ feature: 'translate', system: o.system, prompt: o.prompt, purpose: 'the text you asked to translate', interactive: true, consent: o.consent }),
+    show: (t) => (t ? store.upsert({ kind: 'translate', id: 'translate', priority: 6, translation: t }) : store.remove('translate')),
+    to: () => config.extras.translateTo,
+  })
+  // What's selected in the app you're in: X11 keeps it as you select; elsewhere, what you last copied.
+  const selectedText = () => (process.env.DI_SELECTION ?? (clipboard.readText('selection').trim() || clipboard.readText())).trim()
+  let translateKeyOn = ''
+  const applyTranslateKey = () => {
+    if (translateKeyOn) globalShortcut.unregister(translateKeyOn)
+    translateKeyOn = ''
+    const accel = config.keys.translate
+    if (globalShortcut.register(accel, () => void translator.card(selectedText()))) translateKeyOn = accel
+    else console.error(`[island] couldn't register ${accel} for Translate; another app may own it`)
+  }
+  applyTranslateKey()
+  // The island stays out of screen shares and recordings, where the system can do that.
+  const canHide = process.platform === 'darwin' || process.platform === 'win32'
+  const applyHide = () => canHide && win.setContentProtection(config.extras.hideFromCapture)
+  applyHide()
+  app.on('before-quit', () => {
+    hudWatch.stop()
+    devices.stop()
+    eyeBreak.stop()
+  })
+  // The row of apps: yours, or (until you change it) the usual ones that are installed.
+  const allApps = () => commandBar.listApps().filter((a) => a.name && a.exec)
+  const pinIds = () => config.dashboard.pins ?? suggestPins(allApps())
+  const appsView = async (): Promise<AppsView> => {
+    const all = allApps()
+    const pins = pinIds()
+      .map((id) => all.find((a) => a.id === id))
+      .filter((a): a is DesktopApp => !!a)
+    const comms = pins.length ? (await new Promise<string>((ok) => execFile('ps', ['-eo', 'comm='], { timeout: 3000 }, (e, out) => ok(e ? '' : out.toString())))).split('\n') : []
+    const running = runningApps(pins, comms)
+    return { supported: all.length > 0, pins: pins.map((a) => ({ id: a.id, name: a.name, icon: iconUrl(a.icon, homedir()), running: running.includes(a.id) })) }
+  }
+  const extrasView = (): ExtrasView => ({
+    ...config.extras,
+    profiles: { on: config.dashboard.profiles.on, dayFrom: config.dashboard.profiles.dayFrom, eveningFrom: config.dashboard.profiles.eveningFrom },
+    canHide,
+    canHud: hudWatch.supported,
+    weatherError: weather.lastError(),
+  })
+  Object.assign(osRoutes, {
+    'apps.view': () => appsView(),
+    'apps.all': () =>
+      allApps()
+        .map((a) => ({ id: a.id, name: a.name, icon: iconUrl(a.icon, homedir()) }))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    'apps.pin': (id: string, on: boolean) => {
+      const now = pinIds().filter((p) => p !== id)
+      config.dashboard = parseDashboardConfig({ ...config.dashboard, pins: on ? [...now, id] : now })
+      saveConfig(config)
+      osChanged('apps')
+      return appsView()
+    },
+    'apps.launch': (id: string) => {
+      const a = allApps().find((x) => x.id === id)
+      if (!a) throw new Error('That app isn’t installed any more.')
+      commandBar.launchApp(a)
+      return true
+    },
+    'devices.view': () => devices.view(),
+    'weather.view': () => weather.view(),
+    'weather.place': (name: string) => weather.setPlace(name),
+    'weather.set': (o: { on?: unknown; unit?: unknown }) => weather.set(o),
+    'screen.view': (): ScreenView => {
+      const d0 = new Date()
+      d0.setHours(0, 0, 0, 0)
+      return { on: config.sources.on.screen, day: screenDay(intake.screenHours(), d0.getTime(), d0.getTime() + 86_400_000) }
+    },
+    'todo.view': () => todos.view(),
+    'todo.add': (text: string) => todos.add(text),
+    'todo.toggle': (id: string) => todos.toggle(id),
+    'todo.remove': (id: string) => todos.remove(id),
+    'shelf.view': () => shelfView(),
+    'shelf.add': async (o: { paths?: unknown }) => {
+      await shelf.add(o.paths)
+      return shelfView()
+    },
+    'shelf.remove': (id: string) => {
+      shelf.remove(id)
+      return shelfView()
+    },
+    'shelf.clear': () => {
+      shelf.clear()
+      return shelfView()
+    },
+    'shelf.zip': async () => {
+      await shelf.zip()
+      return shelfView()
+    },
+    'shelf.phone': async () => {
+      const paths = shelf.paths()
+      if (!paths.length) throw new Error('The shelf is empty.')
+      await phoneOut.send(paths)
+      return true
+    },
+    'shelf.open': (id: string) => {
+      const file = shelf.path(id)
+      if (!file || !existsSync(file)) throw new Error('That file was moved or deleted.')
+      shell.showItemInFolder(file)
+      return true
+    },
+    'drop.phone': async (o: { paths?: unknown }) => {
+      const paths = Array.isArray(o.paths) ? o.paths.filter((p): p is string => typeof p === 'string' && existsSync(p)) : []
+      if (!paths.length) throw new Error('Those aren’t files on this computer.')
+      await phoneOut.send(paths)
+      return true
+    },
+    'translate.selection': () => {
+      void translator.card(selectedText())
+      return true
+    },
+    'translate.text': (text: string, to?: string, consent?: boolean) => translator.text(text, isLanguage(to) ? to : config.extras.translateTo, consent === true),
+    'translate.to': (to: string) => {
+      if (!isLanguage(to)) throw new Error('That isn’t a language I translate into.')
+      saveExtras({ translateTo: to })
+      translator.retarget(to)
+      return true
+    },
+    'translate.allow': () => {
+      translator.allow()
+      return true
+    },
+    'translate.copy': () => {
+      const t = translator.current()
+      if (!t?.text) throw new Error('There’s no translation yet.')
+      clipboard.writeText(t.text)
+      return true
+    },
+    // Put the translation where the selection is: typed over it in the app you were in.
+    'translate.replace': async () => {
+      const t = translator.current()
+      if (!t?.text) throw new Error('There’s no translation yet.')
+      const ok = process.env.DI_PASTE_LOG ? (appendFileSync(process.env.DI_PASTE_LOG, `${t.text}\n`), true) : await pasteIntoFocusedApp(t.text)
+      if (!ok) throw new Error('I couldn’t type it there. It’s on your clipboard: paste it yourself.')
+      translator.close()
+      return true
+    },
+    'translate.speak': async () => {
+      const t = translator.current()
+      if (!t?.text) throw new Error('There’s no translation yet.')
+      if (!(await buddy.speakLines([t.text]))) throw new Error('It’s talking already; try again in a moment.')
+      return true
+    },
+    'translate.close': () => {
+      translator.close()
+      return true
+    },
+    'break.skip': () => {
+      eyeBreak.skip()
+      return true
+    },
+    'break.later': () => {
+      eyeBreak.later()
+      return true
+    },
+    'break.now': () => {
+      eyeBreak.now()
+      return true
+    },
+    'extras.view': () => extrasView(),
+    'extras.set': (o: Record<string, unknown>) => {
+      const was = config.extras
+      if (o.profiles && typeof o.profiles === 'object') {
+        config.dashboard = parseDashboardConfig({ ...config.dashboard, profiles: { ...config.dashboard.profiles, ...(o.profiles as object) } })
+        osChanged('dash')
+      }
+      const breaks = o.breaks && typeof o.breaks === 'object' ? { ...was.breaks, ...(o.breaks as object) } : was.breaks
+      saveExtras({
+        ...(typeof o.hud === 'boolean' ? { hud: o.hud } : {}),
+        ...(typeof o.deviceNotes === 'boolean' ? { deviceNotes: o.deviceNotes } : {}),
+        ...(typeof o.hideFromCapture === 'boolean' ? { hideFromCapture: o.hideFromCapture } : {}),
+        breaks,
+      })
+      if (config.extras.hud !== was.hud) config.extras.hud ? hudWatch.start() : hudWatch.stop()
+      if (config.extras.breaks.on !== was.breaks.on || config.extras.breaks.everyMin !== was.breaks.everyMin) eyeBreak.changed()
+      applyHide()
+      return extrasView()
+    },
+  } satisfies Partial<OsRoutes>)
+  if (process.env.DI_TEST_HOOKS) {
+    ;(globalThis as any).__islandHud = (hud: unknown) => {
+      const h = parseHud(hud)
+      if (h && !panelOpen) transient.show({ kind: 'hud', id: 'hud', priority: 9, hud: h }, 1600)
+    }
+    ;(globalThis as any).__islandEgress = () => egress.view().recent
+    ;(globalThis as any).__islandDevice = (device: Device) => transient.show({ kind: 'device', id: 'device', priority: 4.5, device }, 4500)
+  }
 
   // ---- system controls: polled only while the Control Center is open ----
   const system = platform.system()

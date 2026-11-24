@@ -1,6 +1,6 @@
 /** The island's global keyboard shortcuts, which you can change in Settings. */
 
-export type ShortcutId = 'panel' | 'voice' | 'buddy' | 'command' | 'dictate' | 'allow' | 'deny' | 'always'
+export type ShortcutId = 'panel' | 'voice' | 'buddy' | 'command' | 'dictate' | 'translate' | 'allow' | 'deny' | 'always'
 export type Shortcuts = Record<ShortcutId, string>
 
 export const DEFAULT_SHORTCUTS: Shortcuts = {
@@ -9,6 +9,8 @@ export const DEFAULT_SHORTCUTS: Shortcuts = {
   buddy: 'Control+Alt+B',
   command: 'Control+Alt+K',
   dictate: 'Control+Alt+D',
+  // (Not T: Ctrl+Alt+T opens a terminal on Ubuntu and KDE.)
+  translate: 'Control+Alt+G',
   allow: 'Control+Alt+Y',
   deny: 'Control+Alt+N',
   always: 'Control+Alt+A',
@@ -21,6 +23,7 @@ export const SHORTCUT_INFO: Record<ShortcutId, { label: string; hint: string }> 
   buddy: { label: 'Ask the buddy', hint: 'About anything on your screen; press again to stop it talking' },
   command: { label: 'Command bar', hint: 'Open apps, files, notes and settings, work things out, or ask' },
   dictate: { label: 'Dictate anywhere', hint: 'Speak, and it’s typed into the app you’re in' },
+  translate: { label: 'Translate what you selected', hint: 'Select text in any app first; the translation opens on the island' },
   allow: { label: 'Allow', hint: 'While Claude Code asks for permission' },
   deny: { label: 'Don’t Allow', hint: 'While Claude Code asks for permission' },
   always: { label: 'Always Allow', hint: 'While Claude Code asks for permission' },

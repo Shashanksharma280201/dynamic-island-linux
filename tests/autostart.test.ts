@@ -31,7 +31,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'top', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
-    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
+    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', translate: 'Control+Alt+G', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
     notch: true,
     turns: true,
@@ -62,7 +62,20 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     drag: { on: true, when: 'either', dwellMs: 420, saveTo: 'next' },
     engine: { localFirst: true, localUrl: 'http://localhost:11434', dailyModel: '', researchModel: '', cloud: 'ask', jobs: {}, learn: true },
     sources: { on: { github: false, shell: false, calendar: false, screen: false, codex: false, gemini: false }, calendar: '', skip: [] },
-    dashboard: { tiles: ['media', 'timer', 'assistant', 'system'], timer: { focusMin: 25, breakMin: 5 } },
+    dashboard: {
+      tiles: ['media', 'timer', 'assistant', 'system'],
+      timer: { focusMin: 25, breakMin: 5 },
+      pins: null,
+      profiles: { on: false, dayFrom: '07:00', eveningFrom: '18:00', evening: ['media', 'weather', 'todo', 'screen'] },
+    },
+    extras: {
+      hud: true,
+      deviceNotes: true,
+      weather: { on: false, place: '', lat: null, lon: null, unit: 'c' },
+      breaks: { on: false, everyMin: 20 },
+      hideFromCapture: false,
+      translateTo: 'English',
+    },
   }
   expect(mergeConfig(null)).toEqual(d)
   expect(mergeConfig({ notifications: 'no', x: 1 })).toEqual(d)
