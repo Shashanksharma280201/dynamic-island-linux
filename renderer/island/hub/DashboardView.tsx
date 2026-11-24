@@ -93,11 +93,14 @@ function useBrowserBattery(on: boolean): Battery | null {
   return b
 }
 
-/** This computer's numbers, read every few seconds while they're on screen. */
-function useStats(on: boolean): SystemStats | null {
+/**
+ * This computer's numbers, while the Dashboard is open: every few seconds
+ * when the Computer tile shows them, now and then otherwise (the battery in
+ * the header is always there).
+ */
+function useStats(everyMs: number): SystemStats | null {
   const [s, setS] = useState<SystemStats | null>(null)
   useEffect(() => {
-    if (!on) return
     let live = true
     const load = () =>
       window.island
@@ -105,12 +108,12 @@ function useStats(on: boolean): SystemStats | null {
         .then((v) => live && setS(v))
         .catch(() => {})
     void load()
-    const t = setInterval(load, 3000)
+    const t = setInterval(load, everyMs)
     return () => {
       live = false
       clearInterval(t)
     }
-  }, [on])
+  }, [everyMs])
   return s
 }
 
@@ -344,7 +347,7 @@ export function DashboardView({
   const tiles = dash?.tiles ?? DEFAULT_TILES
   const has = (k: TileKind) => tiles.includes(k)
   const at = useMinute()
-  const stats = useStats(has('system') && !edit)
+  const stats = useStats(has('system') && !edit ? 3000 : 30_000)
   const browserBattery = useBrowserBattery(!!stats && stats.battery === undefined)
   const battery = stats?.battery ?? browserBattery
   const { data: resting } = useLoad<RestingView>(() => window.island.os<RestingView>('status.view'), [at.getHours(), Math.floor(at.getMinutes() / 5)], undefined, 'dash-resting')
