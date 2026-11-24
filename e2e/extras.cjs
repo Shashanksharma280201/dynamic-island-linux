@@ -111,10 +111,11 @@ const icon = (name, bg1, bg2, glyph) => {
 }
 const LAUNCHED = path.join(STATE, 'launched')
 fs.writeFileSync(path.join(BIN, 'fake-launch'), `#!/bin/sh\necho "$1" >> "${LAUNCHED}"\n`, { mode: 0o755 })
-// One of them is "running": a process by its program's name.
-fs.symlinkSync('/bin/sleep', path.join(BIN, 'fakefiles'))
+// One of them is "running": a process by its program's name. (A script of its own, not a renamed
+// `sleep`: where the system's tools are one program under many names, that one wouldn't stay up.)
+fs.writeFileSync(path.join(BIN, 'fakefiles'), '#!/bin/sh\ntrap "kill \\$! 2>/dev/null; exit 0" TERM INT\nsleep 600 &\nwait\n', { mode: 0o755 })
 const APP_LIST = [
-  ['zz-files', 'Files', 'fakefiles 600', icon('files', '#64d2ff', '#0a84ff', '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.200h7a2 2 0 0 1 2 2v7.800a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>')],
+  ['zz-files', 'Files', 'fakefiles', icon('files', '#64d2ff', '#0a84ff', '<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.200h7a2 2 0 0 1 2 2v7.800a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>')],
   ['zz-terminal', 'Terminal', 'fake-launch terminal', icon('terminal', '#3a3a3c', '#1c1c1e', '<path d="m6 8.500 4 3.500-4 3.500M12.500 16h5.500"/>')],
   ['zz-browser', 'Web', 'fake-launch web', icon('web', '#ffffff', '#e5e5ea', '<g stroke="#0a84ff"><circle cx="12" cy="12" r="8.500"/><path d="m15.500 8.500-2 5-5 2 2-5z"/></g>')],
   ['zz-code', 'Code', 'fake-launch code', icon('code', '#0a84ff', '#0040dd', '<path d="m8.500 7.500-5 4.500 5 4.500M15.500 7.500l5 4.500-5 4.500"/>')],
@@ -242,7 +243,7 @@ const FRENCH = 'La réunion a été déplacée à jeudi à dix heures. Peux-tu a
       extras: { weather: { on: true, place: 'Lisbon', lat: 38.7167, lon: -9.1333, unit: 'c' } },
     }),
   )
-  const running = spawn(path.join(BIN, 'fakefiles'), ['600'], { stdio: 'ignore' })
+  const running = spawn(path.join(BIN, 'fakefiles'), [], { stdio: 'ignore' })
   const env = {
     ...process.env,
     PATH: `${BIN}:${process.env.PATH}`,
