@@ -6,7 +6,7 @@ import * as Haptics from 'expo-haptics'
 import type { ClaudeRun, ClaudeUsage, ClaudeView } from '../../../shared/claude'
 import type { DropLink } from '../link'
 import { LiveDot } from './IslandScreen'
-import { Composer, Empty, ErrorLine, Page, TAB_ROOM, useAction, useCall, useKeyboard } from './kit'
+import { Composer, Empty, ErrorLine, Page, SIDE, StatusDot, TAB_ROOM, useAction, useCall, useKeyboard } from './kit'
 import { themed, useTheme } from './theme'
 import { Icon } from './icons'
 
@@ -59,7 +59,7 @@ export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: numbe
         }
       >
         {v?.usage && <Usage u={v.usage} />}
-        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingTop: 4, gap: 10 }} keyboardShouldPersistTaps="handled">
+        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: SIDE, paddingTop: 4, gap: 10 }} keyboardShouldPersistTaps="handled">
           {!v && !error && <Empty busy title="Reaching Claude on your computer…" />}
           {!!error && !v && <Empty title="Claude isn’t reachable" text={error} />}
           {v && !turns.length && !run && (
@@ -82,7 +82,7 @@ export function ClaudeScreen({ link, top, bottom }: { link: DropLink; top: numbe
           )}
           {v?.run && v.run.phase === 'error' && !!v.run.error && <ErrorLine message={v.run.error} />}
         </ScrollView>
-        <View style={{ paddingHorizontal: 12, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
+        <View style={{ paddingHorizontal: SIDE - 4, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
           <ErrorLine message={act.error} />
           {run ? (
             <Pressable
@@ -123,9 +123,15 @@ function Mine({ text }: { text: string }) {
 }
 
 function Theirs({ text, failed }: { text: string; failed?: boolean }) {
+  const C = useTheme()
   const st = useSt()
   return (
-    <View style={[st.theirs, failed && { borderColor: 'rgba(255,69,58,0.35)' }]}>
+    <View style={st.theirs}>
+      {failed && (
+        <View style={{ marginBottom: 6 }}>
+          <StatusDot color={C.red} text="It stopped before the end" />
+        </View>
+      )}
       <Text style={st.theirsText} selectable>
         {text}
       </Text>
@@ -143,7 +149,7 @@ function Working({ run }: { run: ClaudeRun }) {
   return (
     <View style={st.theirs}>
       <View style={st.status}>
-        <LiveDot on color={C.orange} />
+        <LiveDot on color={C.green} />
         <Text style={st.statusText} numberOfLines={1}>
           {run.tool?.detail ?? PHASE[run.phase] ?? 'Working…'}
         </Text>
@@ -153,7 +159,7 @@ function Working({ run }: { run: ClaudeRun }) {
         <View style={{ marginTop: 6, gap: 2 }}>
           {trail.slice(0, -1).map((t, i) => (
             <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Icon name="check" size={12} color={C.green} />
+              <Icon name="check" size={12} color={C.text3} />
               <Text style={[st.trail, { flex: 1 }]} numberOfLines={1}>
                 {t}
               </Text>
@@ -184,12 +190,13 @@ function Usage({ u }: { u: ClaudeUsage }) {
     <View style={st.usage}>
       {shown.map(([label, pct, at]) => {
         const p = Math.min(100, Math.max(0, pct ?? 0))
-        const color = p >= 90 ? C.red : p >= 70 ? C.orange : C.green
+        // The accent while there's plenty; orange, then red, as it runs out.
+        const color = p >= 90 ? C.red : p >= 70 ? C.orange : C.accent
         return (
           <View key={label} style={{ flex: 1 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
               <Text style={st.usageLabel}>{label}</Text>
-              <Text style={[st.usageLabel, { color }]}>{Math.round(p)}%</Text>
+              <Text style={st.usageValue}>{Math.round(p)}%</Text>
             </View>
             <View style={st.usageTrack}>
               <View style={[st.usageFill, { width: `${p}%`, backgroundColor: color }]} />
@@ -203,22 +210,23 @@ function Usage({ u }: { u: ClaudeUsage }) {
 }
 
 const useSt = themed((C) => ({
-  newBtn: { backgroundColor: C.fill, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 7 },
-  newText: { color: C.text, fontWeight: '600', fontSize: 13 },
-  mine: { alignSelf: 'flex-end', maxWidth: '86%', backgroundColor: '#d97757', borderRadius: 18, borderBottomRightRadius: 6, paddingHorizontal: 14, paddingVertical: 10 },
-  mineText: { color: '#fff', fontSize: 15, lineHeight: 21 },
-  theirs: { alignSelf: 'flex-start', maxWidth: '94%', backgroundColor: C.card, borderRadius: 18, borderBottomLeftRadius: 6, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: C.line },
-  theirsText: { color: C.text, fontSize: 15, lineHeight: 22 },
+  newBtn: { backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 18, height: 40, justifyContent: 'center', ...C.shadow },
+  newText: { color: C.text, fontSize: 15 },
+  mine: { alignSelf: 'flex-end', maxWidth: '86%', backgroundColor: C.primary, borderRadius: 22, borderBottomRightRadius: 8, paddingHorizontal: 16, paddingVertical: 11 },
+  mineText: { color: C.onPrimary, fontSize: 15.5, lineHeight: 22 },
+  theirs: { alignSelf: 'flex-start', maxWidth: '94%', backgroundColor: C.card, borderRadius: 22, borderBottomLeftRadius: 8, paddingHorizontal: 16, paddingVertical: 12, ...C.shadow },
+  theirsText: { color: C.text, fontSize: 15.5, lineHeight: 23 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusText: { color: C.text2, fontSize: 14, fontWeight: '600', flexShrink: 1 },
-  steps: { color: C.text3, fontSize: 12, fontWeight: '700', flexShrink: 0 },
-  trail: { color: C.text3, fontSize: 12 },
-  stop: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,69,58,0.16)', borderRadius: 22, height: 52 },
+  statusText: { color: C.text, fontSize: 14.5, fontWeight: '500', flexShrink: 1 },
+  steps: { color: C.text2, fontSize: 12.5, flexShrink: 0 },
+  trail: { color: C.text2, fontSize: 12.5 },
+  stop: { flexDirection: 'row', gap: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: C.dark ? 'rgba(255,107,94,0.16)' : 'rgba(229,72,77,0.1)', borderRadius: 999, height: 54 },
   stopSquare: { width: 12, height: 12, borderRadius: 3, backgroundColor: C.red },
-  stopText: { color: C.red, fontSize: 16, fontWeight: '700' },
-  usage: { flexDirection: 'row', gap: 16, marginHorizontal: 16, marginBottom: 8, padding: 12, backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.line },
-  usageLabel: { color: C.text2, fontSize: 12, fontWeight: '700' },
-  usageTrack: { height: 5, borderRadius: 3, backgroundColor: C.fill, marginTop: 6, overflow: 'hidden' },
-  usageFill: { height: 5, borderRadius: 3 },
-  usageReset: { color: C.text3, fontSize: 11, marginTop: 4 },
+  stopText: { color: C.red, fontSize: 16, fontWeight: '500' },
+  usage: { flexDirection: 'row', gap: 22, marginHorizontal: SIDE, marginBottom: 10, paddingHorizontal: 20, paddingVertical: 16, backgroundColor: C.card, borderRadius: 24, ...C.shadow },
+  usageLabel: { color: C.text2, fontSize: 13.5 },
+  usageValue: { color: C.text, fontSize: 15, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  usageTrack: { height: 6, borderRadius: 3, backgroundColor: C.accentPale, marginTop: 8, overflow: 'hidden' },
+  usageFill: { height: 6, borderRadius: 3 },
+  usageReset: { color: C.text3, fontSize: 12, marginTop: 6 },
 }))
