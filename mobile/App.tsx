@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, AppState, BackHandler, Linking, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { useFonts } from 'expo-font'
+import { InterTight_400Regular } from '@expo-google-fonts/inter-tight/400Regular'
+import { InterTight_500Medium } from '@expo-google-fonts/inter-tight/500Medium'
+import { InterTight_600SemiBold } from '@expo-google-fonts/inter-tight/600SemiBold'
 import { StatusBar } from 'expo-status-bar'
 import * as SystemUI from 'expo-system-ui'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -21,8 +25,8 @@ import { useCall } from './src/ui/kit'
 import { MoreScreen, type MoreId } from './src/ui/MoreScreen'
 import { PairScreen } from './src/ui/PairScreen'
 import { ShareScreen } from './src/ui/ShareScreen'
-import { TABS, TabBar, type TabId } from './src/ui/TabBar'
-import { ThemeProvider, useTheme, type ThemePref } from './src/ui/theme'
+import { TabBar, tabCenterX, type TabId } from './src/ui/TabBar'
+import { ThemeProvider, cleanColor, useTheme } from './src/ui/theme'
 
 export default function App() {
   const [prefs, setPrefsState] = useState<Prefs>(() => loadPrefs())
@@ -30,11 +34,11 @@ export default function App() {
     savePrefs(p)
     setPrefsState(p)
   }
+  // The app's typeface (Inter Tight). Nothing is drawn in another face first; if it can't be read, the phone's own is used.
+  const [fonts, fontError] = useFonts({ InterTight_400Regular, InterTight_500Medium, InterTight_600SemiBold })
   return (
-    <ThemeProvider pref={prefs.theme}>
-      <Themed>
-        <Root prefs={prefs} setPrefs={setPrefs} />
-      </Themed>
+    <ThemeProvider pref={prefs.theme} accent={prefs.accent}>
+      <Themed>{(fonts || fontError) && <Root prefs={prefs} setPrefs={setPrefs} />}</Themed>
     </ThemeProvider>
   )
 }
@@ -164,6 +168,11 @@ function Paired({ link, shared, clearShared, onUnpair, prefs, setPrefs: savePref
 
   useEffect(() => link.subscribeLive(setLive), [link])
   useEffect(() => link.subscribe(setState), [link])
+  // The app takes the orb's colour as its accent, and keeps it for the next time it opens.
+  const orbColor = cleanColor(live.view?.character?.color)
+  useEffect(() => {
+    if (orbColor && orbColor !== prefsRef.current.accent) savePrefsUp({ ...prefsRef.current, accent: orbColor })
+  }, [orbColor]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     let stop = () => {}
     void link.find().then(() => link.startLive())
@@ -205,7 +214,7 @@ function Paired({ link, shared, clearShared, onUnpair, prefs, setPrefs: savePref
   }
 
   const top = insets.top + 12
-  const filesTabX = 12 + ((W - 24) / TABS.length) * (TABS.indexOf('files') + 0.5)
+  const filesTabX = tabCenterX(W, 'files')
   const inboxBadge = (unread.data?.chats ?? 0) + (unread.data?.mail ?? 0)
 
   return (
@@ -221,6 +230,7 @@ function Paired({ link, shared, clearShared, onUnpair, prefs, setPrefs: savePref
             setMore(id)
             setTab('more')
           }}
+          onTab={setTab}
         />
       </Screen>
       {seen.has('claude') && (

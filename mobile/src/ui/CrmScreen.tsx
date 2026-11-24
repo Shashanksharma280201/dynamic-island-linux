@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { BackHandler, Pressable, StyleSheet, View } from 'react-native'
+import { Text, TextInput } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ActivityKind, ContactPage, ContactSummary, CrmOverview, DealSummary, TaskSummary } from '../../../shared/crm'

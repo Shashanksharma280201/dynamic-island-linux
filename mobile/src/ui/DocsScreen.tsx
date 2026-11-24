@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ConvertTarget, DocAction, DocActionResult, DocEntry, DocKind, DocsView } from '../../../shared/docs'

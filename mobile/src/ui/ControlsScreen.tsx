@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { StyleSheet, Switch, Text, View } from 'react-native'
+import { StyleSheet, Switch, View } from 'react-native'
+import { Text } from './Text'
 import type { SystemState } from '../../../shared/types'
 import type { DropLink, Live } from '../link'
 import { NowPlaying } from './IslandScreen'

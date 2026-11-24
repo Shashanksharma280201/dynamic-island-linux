@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View, type ScrollViewInstance } from 'react-native'
+import { Alert, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, View, type ScrollViewInstance } from 'react-native'
+import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import type { ChatMessage, ChatSummary, InboxSources, InboxUnread, MailMessageView, MailSummary } from '../../../shared/types'
 import type { PhoneNote } from '../islandTypes'

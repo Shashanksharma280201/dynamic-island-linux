@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from '../ui/Text'
 import Animated, {
   Easing,
   cancelAnimation,

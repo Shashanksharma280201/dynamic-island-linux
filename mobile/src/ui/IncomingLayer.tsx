@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { AppState, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { AppState, Image, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { Text } from './Text'
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { EDGES, computerSide, exitPoint } from '../gesture'

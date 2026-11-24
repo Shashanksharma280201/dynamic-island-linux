@@ -1,4 +1,5 @@
-import { Alert, StyleSheet, Text, View } from 'react-native'
+import { Alert, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ConnectedSection, ConnectedState } from '../../../shared/connected'

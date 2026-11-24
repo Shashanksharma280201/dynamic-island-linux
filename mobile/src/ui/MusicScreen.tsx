@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native'
+import { Text, TextInput } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { SpCollection, SpDevice, SpHome, SpSearch, SpTrack, SpotifyView } from '../../../shared/spotify'

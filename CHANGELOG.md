@@ -4,6 +4,26 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**The phone app's new look (in progress)**
+
+- **A calmer Island Drop**: a quiet grey page, plain white cards, one
+  typeface (Inter Tight), and one colour, which follows your orb (coral
+  unless you changed it). In light and dark.
+- **The Island tab**: one big number for what's waiting for you, the orb and
+  your coding sessions as two tiles, each thing to answer as a card with
+  Deny and Allow, then how much of Claude's five hours is used (drawn as a
+  gauge of small squares), your trading, what's playing and your sessions.
+  A Now and Today switch at the top shows your day without leaving the tab.
+- **Today**: how many things happened, your day by the hour drawn in small
+  squares with the busiest hours named, asking about your days, what's
+  next, and the day as a list.
+- **The tabs** are a small pill of icons floating at the bottom, the chosen
+  one on a circle of the accent that moves to it.
+- The other screens have the new colours, type and buttons already; their
+  own layouts are next.
+
 ## 0.12.0 (2026-11-24)
 
 **More on the notch: volume, weather, your apps, a shelf, and translating**
