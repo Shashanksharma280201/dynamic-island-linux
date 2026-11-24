@@ -1325,3 +1325,28 @@ input.switch::after {
   flex: none;
   white-space: nowrap;
 }
+
+/* General: the notch's extras (the weather's place, eye breaks, the evening's hours). */
+.extras-weather input,
+.extras-evening input {
+  flex: none;
+  background: var(--field);
+  border: 0.5px solid var(--separator);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+}
+.extras-weather input {
+  width: 200px;
+}
+.extras-weather-on,
+.extras-every,
+.extras-evening {
+  gap: 10px;
+}
+.extras-weather-on > div:first-child,
+.extras-every > div:first-child,
+.extras-evening > div:first-child {
+  flex: 1;
+}

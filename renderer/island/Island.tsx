@@ -50,6 +50,9 @@ import { EveningCard, useEvening } from './states/EveningCard'
 import { useEmbedder } from './brain/useEmbedder'
 import { RecapCard, useRecap } from './recap/RecapCard'
 import { useShortcutLabel } from './useShortcuts'
+import { BreakCard, CompactWeather, DeviceNote, DropWells, HudBar, TranslateCard, WeatherCard, ownDrag, type Well } from './extras/NotchExtras'
+import { isCard } from '@shared/present'
+import type { ShelfView, WeatherView } from '@shared/extras'
 
 /** A tab whose package is turned off. */
 const tabOff = (t: HubTab, on: PackageTab[]) => (PACKAGE_TABS as string[]).includes(t) && !on.includes(t as PackageTab)
@@ -61,13 +64,13 @@ const hasFiles = (e: DragEvent) => Array.from(e.dataTransfer?.types ?? []).inclu
  * What the island turns into while files are dragged over it: a pocket the
  * character leans into. Once dropped, it swallows them while they're added.
  */
-function DropCard({ count, adding }: { count: number; adding: boolean }) {
+function DropCard({ count, adding, to = 'Documents' }: { count: number; adding: boolean; to?: string }) {
   const files = count > 1 ? `${count} files` : count === 1 ? '1 file' : 'files'
   return (
     <div className={`card drop-card${adding ? ' adding' : ''}`}>
       <div className="drop-text">
-        <div className="title">{adding ? `Adding ${files}…` : `Drop ${files} to add to Documents`}</div>
-        <div className="caption">PDFs, Word, Excel, slides or text</div>
+        <div className="title">{adding ? (to === 'Documents' ? `Adding ${files}…` : `${files[0].toUpperCase()}${files.slice(1)} to ${to}…`) : `Drop ${files} to add to Documents`}</div>
+        <div className="caption">{to === 'Documents' ? 'PDFs, Word, Excel, slides or text' : to === 'the shelf' ? 'They stay where they are; the shelf remembers them' : 'On their way'}</div>
       </div>
       <Character mood={adding ? 'working' : 'listening'} size={46} color="#30d158" />
     </div>
@@ -161,16 +164,56 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     if (pkgTabs && tabOff(tab, pkgTabs)) setTab('dash')
   }, [pkgTabs, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Drop files on the island to add them to Documents (when it's turned on).
+  // Drag files to the island: it opens the places they can go (the shelf, Documents when it's on, your phone when it's near).
   const docsOn = !!window.island.docs && (!pkgTabs || pkgTabs.includes('docs'))
   const [dropping, setDropping] = useState(false)
   const [dragCount, setDragCount] = useState(0)
+  // The place the files would go if let go now: the shelf, until the pointer is over another.
+  const [well, setWell] = useState<Well>('shelf')
+  const [phoneNear, setPhoneNear] = useState(false)
+  const wells: Well[] = ['shelf', ...(docsOn ? (['docs'] as const) : []), ...(phoneNear ? (['phone'] as const) : [])]
+  useEffect(() => {
+    if (!dropping) return setWell('shelf')
+    let live = true
+    void window.island
+      .os<ShelfView>('shelf.view')
+      .then((v) => live && setPhoneNear(!!v.phone))
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [dropping])
+  // A file dragged off the shelf is the island's own: once the button is up again, drags count as before.
+  useEffect(() => {
+    const move = (e: MouseEvent) => {
+      if (e.buttons === 0) ownDrag.on = false
+    }
+    document.addEventListener('mousemove', move, true)
+    return () => document.removeEventListener('mousemove', move, true)
+  }, [])
   // Dropped files being added: the character swallows them meanwhile.
   const [adding, setAdding] = useState(0)
+  const [addingTo, setAddingTo] = useState('Documents')
   const [incoming, setIncoming] = useState<DocsIncoming | null>(null)
   const lastOver = useRef(0)
+  // Onto the shelf, or to the phone: the files themselves stay where they are.
+  const dropElsewhere = async (files: File[], to: 'shelf' | 'phone') => {
+    const paths = files.map((f) => window.island.docs.pathFor(f)).filter(Boolean)
+    setAddingTo(to === 'shelf' ? 'the shelf' : 'your phone')
+    setAdding(files.length)
+    sound('gulp')
+    const shown = new Promise((ok) => setTimeout(ok, 450))
+    await (paths.length ? window.island.os(to === 'shelf' ? 'shelf.add' : 'drop.phone', { paths }) : Promise.resolve()).catch(() => {})
+    await shown
+    setAdding(0)
+    if (to !== 'shelf') return
+    setTab('dash')
+    pinned.current = true // the pointer was busy dragging: stay open until it visits
+    setPanel(true)
+  }
   const dropFiles = async (files: File[]) => {
     const paths = files.map((f) => window.island.docs.pathFor(f)).filter(Boolean)
+    setAddingTo('Documents')
     setAdding(files.length)
     sound('gulp')
     const shown = new Promise((ok) => setTimeout(ok, 450)) // long enough to see the gulp
@@ -187,16 +230,16 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     pinned.current = true // the pointer was busy dragging: stay open until it visits
     setPanel(true)
   }
-  const dropHandlers = docsOn
+  const dropHandlers = window.island.docs
     ? {
         onDragEnter: (e: DragEvent) => {
-          if (!hasFiles(e)) return
+          if (!hasFiles(e) || ownDrag.on) return
           e.preventDefault()
           lastOver.current = performance.now()
           setDropping(true)
         },
         onDragOver: (e: DragEvent) => {
-          if (!hasFiles(e)) return
+          if (!hasFiles(e) || ownDrag.on) return
           e.preventDefault()
           e.dataTransfer.dropEffect = 'copy'
           lastOver.current = performance.now()
@@ -210,10 +253,13 @@ export function Island({ activities: real }: { activities: Activity[] }) {
           setTimeout(() => lastOver.current < at && setDropping(false), 80)
         },
         onDrop: (e: DragEvent) => {
-          if (!hasFiles(e)) return
+          if (!hasFiles(e) || ownDrag.on) return
           e.preventDefault()
           setDropping(false)
-          void dropFiles(Array.from(e.dataTransfer.files))
+          const files = Array.from(e.dataTransfer.files)
+          // Let go over a well, or anywhere else on the island: where the light is.
+          const to = wells.includes(well) ? well : 'shelf'
+          void (to === 'docs' ? dropFiles(files) : dropElsewhere(files, to))
         },
       }
     : {}
@@ -302,6 +348,7 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   const [wardrobe, setWardrobe] = useState(false)
   // "Show me around": example cards, one step at a time (nothing real is touched).
   const panelKey = useShortcutLabel('panel')
+  const translateKey = useShortcutLabel('translate')
   const steps = tourSteps(character.name, panelKey)
   const [tour, setTour] = useState<number | null>(null)
   const [tourOffer, setTourOffer] = useState(false)
@@ -319,7 +366,26 @@ export function Island({ activities: real }: { activities: Activity[] }) {
   useEffect(() => {
     if (urgent) setTour(null)
   }, [urgent])
-  const activities = tourStep ? tourStep.activities(tourNow.current) : real
+  const [wx, setWx] = useState<WeatherView | null>(null)
+  useEffect(() => {
+    let live = true
+    const load = () =>
+      window.island
+        .os<WeatherView>('weather.view')
+        .then((v) => live && setWx(v))
+        .catch(() => {})
+    void load()
+    const off = window.island.onOs((topic) => (topic === 'weather' || topic === 'extras') && void load())
+    // (Asking is what makes the island read it again when it has gone stale.)
+    const t = setInterval(load, 10 * 60_000)
+    return () => {
+      live = false
+      off()
+      clearInterval(t)
+    }
+  }, [])
+  const withWeather = wx?.weather && real.length > 0 && real.every((a) => !isCard(a)) ? [...real, { kind: 'weather' as const, id: 'weather', priority: 0.5, weather: wx.weather }] : real
+  const activities = tourStep ? tourStep.activities(tourNow.current) : withWeather
   // Hello, once a day: a short introduction that hover or a click ends.
   const [hello, setHello] = useState<{ first: boolean; tip: boolean } | null>(null)
   useEffect(
@@ -550,6 +616,9 @@ export function Island({ activities: real }: { activities: Activity[] }) {
     if (key === 'expanded:claude:claude-done' && p.mode === 'expanded' && p.primary.kind === 'claude') return sound(p.primary.run.phase === 'error' ? 'error' : 'done')
     if (key.startsWith('expanded:session:session-done-')) return sound('done')
     if (key.startsWith('expanded:session:session-wait-')) return sound('ask')
+    // The volume as you change it, a device that connected: seen, not heard.
+    if ([key, was].some((k) => k.startsWith('expanded:hud:') || k.startsWith('expanded:device:'))) return
+    if (key.startsWith('expanded:break:')) return sound('ask')
     if (key.startsWith('peek:')) return sound('peek')
     if (sizeRank(key) > sizeRank(was)) sound('open')
     else if (sizeRank(key) < sizeRank(was) && !was.startsWith('peek:')) sound('close')
@@ -615,6 +684,9 @@ export function Island({ activities: real }: { activities: Activity[] }) {
         if (p.mode === 'expanded') return // card has its own button
         return openToday()
       }
+      if (p.primary.kind === 'weather') return openDash()
+      // These have their own buttons, or are only there to be read.
+      if (p.primary.kind === 'translate' || p.primary.kind === 'break' || p.primary.kind === 'hud' || p.primary.kind === 'device') return
     }
     if (!isApproval) {
       setPanel((v) => !v)
@@ -690,8 +762,10 @@ export function Island({ activities: real }: { activities: Activity[] }) {
                 </div>
                 <ColourPicker id={character.id} color={character.color ?? null} onColor={(color) => window.island.setLook({ color })} />
               </div>
-            ) : dropping || adding ? (
-              <DropCard count={adding || dragCount} adding={adding > 0} />
+            ) : adding ? (
+              <DropCard count={adding} adding to={addingTo} />
+            ) : dropping ? (
+              <DropWells count={dragCount} wells={wells} hot={wells.includes(well) ? well : 'shelf'} onHot={setWell} />
             ) : peeking ? (
               <Peek activity={p.mode === 'idle' ? null : p.primary} canDrop={docsOn} resting={resting} />
             ) : hello && p.mode === 'idle' ? (
@@ -743,6 +817,16 @@ export function Island({ activities: real }: { activities: Activity[] }) {
               p.mode === 'expanded' ? <TimerCard timer={p.primary.timer} onOpen={openDash} /> : <CompactTimer timer={p.primary.timer} notch={notch} />
             ) : p.primary.kind === 'event' ? (
               p.mode === 'expanded' ? <EventCard event={p.primary.event} onOpen={openToday} /> : <CompactEvent event={p.primary.event} notch={notch} />
+            ) : p.primary.kind === 'hud' ? (
+              <HudBar hud={p.primary.hud} />
+            ) : p.primary.kind === 'device' ? (
+              <DeviceNote device={p.primary.device} />
+            ) : p.primary.kind === 'translate' ? (
+              <TranslateCard t={p.primary.translation} keys={translateKey} />
+            ) : p.primary.kind === 'break' ? (
+              <BreakCard rest={p.primary.rest} />
+            ) : p.primary.kind === 'weather' ? (
+              p.mode === 'expanded' ? <WeatherCard weather={p.primary.weather} onOpen={openDash} /> : <CompactWeather weather={p.primary.weather} />
             ) : p.primary.kind === 'connected' ? (
               p.mode === 'expanded' ? (
                 <ConnectedStatusCard
