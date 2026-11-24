@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, View } from 'react-native'
+import { Text } from './Text'
 import * as Haptics from 'expo-haptics'
 import { liveLink } from '../../modules/live-link'
 import { islandWidget } from '../../modules/island-widget'
@@ -11,8 +12,8 @@ import { LinkFigure } from '../iso/LinkFigure'
 import type { Prefs } from '../prefs'
 import { routeName } from '../protocol'
 import { Icon, IconTile, type IconName } from './icons'
-import { Page, Row, Section, Switch, ago } from './kit'
-import { themed, useTheme, type ThemePref } from './theme'
+import { Page, Row, Section, StatusDot, Switch, ago } from './kit'
+import { DARK, LIGHT, themed, useTheme, type ThemePref } from './theme'
 
 const THEMES: { id: ThemePref; label: string; icon: IconName }[] = [
   { id: 'system', label: 'System', icon: 'auto' },
@@ -50,18 +51,12 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
   return (
     <Page title="Settings" top={top} onBack={onBack}>
       <View style={s.hero}>
-        <IconTile name="laptop" color={C.accent} size={48} />
-        <View style={{ flex: 1 }}>
+        <IconTile name="laptop" size={52} />
+        <View style={{ flex: 1, minWidth: 0 }}>
+          <StatusDot color={dot} hollow={state.phase === 'offline'} text={`${status}${state.phase === 'ready' && state.route ? ` · ${routeName(state.route)}` : ''}`} />
           <Text style={s.heroName} numberOfLines={1}>
             {link.pairing.name}
           </Text>
-          <View style={s.heroStatus}>
-            <View style={[s.dot, { backgroundColor: dot }]} />
-            <Text style={s.heroSub} numberOfLines={1}>
-              {status}
-              {state.phase === 'ready' && state.route ? ` · ${routeName(state.route)}` : ''}
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -78,12 +73,14 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
                   void Haptics.selectionAsync()
                   setPrefs({ ...prefs, theme: t.id })
                 }}
-                style={({ pressed }) => [s.theme, on && { borderColor: C.accent }, pressed && { opacity: 0.85 }]}
+                style={({ pressed }) => [s.theme, pressed && { opacity: 0.85 }]}
               >
-                <Preview kind={t.id} />
-                <View style={s.themeLabel}>
-                  <Icon name={t.icon} size={15} color={on ? C.accent : C.text2} />
-                  <Text style={[s.themeText, on && { color: C.accent }]}>{t.label}</Text>
+                <View style={[s.previewRing, on && { borderColor: C.accent }]}>
+                  <Preview kind={t.id} />
+                </View>
+                <View style={[s.themeLabel, on && s.themeLabelOn]}>
+                  <Icon name={t.icon} size={14} color={on ? C.text : C.text2} />
+                  <Text style={[s.themeText, on && { color: C.text }]}>{t.label}</Text>
                 </View>
               </Pressable>
             )
@@ -206,10 +203,10 @@ export function SettingsScreen({ link, live, state, prefs, setPrefs, onUnpair, t
 function Preview({ kind }: { kind: ThemePref }) {
   const s = useS()
   const half = (dark: boolean) => (
-    <View style={[s.previewHalf, { backgroundColor: dark ? '#0a0a0d' : '#f4f5f8' }]}>
-      <View style={[s.previewBar, { backgroundColor: dark ? '#f4f4f6' : '#111114' }]} />
-      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d23' : '#ffffff' }]} />
-      <View style={[s.previewCard, { backgroundColor: dark ? '#1c1d23' : '#ffffff', width: '60%' }]} />
+    <View style={[s.previewHalf, { backgroundColor: dark ? DARK.bg : LIGHT.bg }]}>
+      <View style={[s.previewBar, { backgroundColor: dark ? DARK.text : LIGHT.text }]} />
+      <View style={[s.previewCard, { backgroundColor: dark ? DARK.card2 : LIGHT.card }]} />
+      <View style={[s.previewCard, { backgroundColor: dark ? DARK.card2 : LIGHT.card, width: '60%' }]} />
     </View>
   )
   return (
@@ -227,18 +224,17 @@ function Preview({ kind }: { kind: ThemePref }) {
 }
 
 const useS = themed((C) => ({
-  add: { color: C.accent, fontSize: 15, fontWeight: '600' },
-  hero: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
-  heroName: { color: C.text, fontSize: 19, fontWeight: '700', letterSpacing: -0.2 },
-  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: 7, marginTop: 4 },
-  heroSub: { color: C.text2, fontSize: 13.5, flexShrink: 1 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
+  add: { color: C.accent, fontSize: 15, fontWeight: '500' },
+  hero: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: C.card, borderRadius: 24, padding: 20, ...C.shadow },
+  heroName: { color: C.text, fontSize: 21, fontWeight: '500', letterSpacing: -0.4, marginTop: 2 },
   themes: { flexDirection: 'row', gap: 10, paddingVertical: 14 },
-  theme: { flex: 1, borderRadius: 14, borderWidth: 2, borderColor: 'transparent', padding: 6, alignItems: 'center', gap: 8 },
-  themeLabel: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingBottom: 2 },
-  themeText: { color: C.text2, fontSize: 13, fontWeight: '600' },
-  preview: { width: '100%', aspectRatio: 0.82, borderRadius: 10, overflow: 'hidden', flexDirection: 'row', borderWidth: StyleSheet.hairlineWidth, borderColor: C.lineStrong },
-  previewHalf: { flex: 1, padding: 7, gap: 5 },
+  theme: { flex: 1, alignItems: 'center', gap: 10 },
+  previewRing: { width: '100%', borderRadius: 18, borderWidth: 2, borderColor: 'transparent', padding: 3 },
+  themeLabel: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 32, paddingHorizontal: 12, borderRadius: 16 },
+  themeLabelOn: { backgroundColor: C.card2 },
+  themeText: { color: C.text2, fontSize: 14 },
+  preview: { width: '100%', aspectRatio: 0.82, borderRadius: 13, overflow: 'hidden', flexDirection: 'row' },
+  previewHalf: { flex: 1, padding: 8, gap: 5 },
   previewBar: { height: 5, width: '55%', borderRadius: 3, opacity: 0.85, marginBottom: 3 },
-  previewCard: { height: 14, borderRadius: 4 },
+  previewCard: { height: 14, borderRadius: 5 },
 }))

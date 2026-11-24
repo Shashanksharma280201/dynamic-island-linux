@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native'
+import { View } from 'react-native'
+import { Text } from './Text'
 import type { ServiceState } from '../../../shared/services'
 import type { DropLink } from '../link'
 import { Btn, Card, Empty, ErrorLine, Kicker, Page, Row, ago, useAction, useCall } from './kit'
@@ -21,19 +22,22 @@ export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: num
       {data && !on.length && <Empty title="No services yet" text="Turn on GitHub, Vercel, Stripe and others in the island’s Settings → Services, and what they say shows here." />}
       {on.map((x) => (
         <Card key={x.id} style={{ gap: 6 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <Text style={st.name}>{NAME[x.id] ?? x.id}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={st.name} numberOfLines={1}>
+              {NAME[x.id] ?? x.id}
+            </Text>
             {!!x.checkedAt && <Text style={st.when}>{ago(x.checkedAt)}</Text>}
             <Btn small label="Refresh" busy={act.busy === x.id} onPress={() => void act.run(x.id, 'services.refresh', x.id)} />
           </View>
           {!!x.error && <ErrorLine message={x.error} />}
           {x.snapshot?.big && (
-            <Text style={st.big}>
-              {x.snapshot.big.value} <Text style={st.bigLabel}>{x.snapshot.big.label}</Text>
-            </Text>
+            <View style={st.bigRow}>
+              <Text style={st.big}>{x.snapshot.big.value}</Text>
+              <Text style={st.bigLabel}>{x.snapshot.big.label}</Text>
+            </View>
           )}
           {x.snapshot?.sections.map((sec) => (
-            <View key={sec.title} style={{ marginTop: 6 }}>
+            <View key={sec.title} style={{ marginTop: 10 }}>
               <Kicker>{sec.title}</Kicker>
               {!sec.rows.length && <Text style={st.empty}>{sec.empty}</Text>}
               {sec.rows.slice(0, 6).map((r, i, a) => (
@@ -48,10 +52,11 @@ export function ServicesScreen({ link, top, onBack }: { link: DropLink; top: num
 }
 
 const useSt = themed((C) => ({
-  name: { color: C.text, fontSize: 17, fontWeight: '700', flex: 1 },
-  when: { color: C.text3, fontSize: 12 },
-  big: { color: C.text, fontSize: 24, fontWeight: '700' },
-  bigLabel: { color: C.text2, fontSize: 14, fontWeight: '600' },
-  empty: { color: C.text3, fontSize: 13 },
+  name: { color: C.text, fontSize: 17, fontWeight: '500', letterSpacing: -0.2, flex: 1 },
+  when: { color: C.text2, fontSize: 12.5 },
+  bigRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', columnGap: 8, marginTop: 4 },
+  big: { color: C.text, fontSize: 56, lineHeight: 60, fontWeight: '500', letterSpacing: -2.4, fontVariant: ['tabular-nums'] },
+  bigLabel: { color: C.text2, fontSize: 15, flexShrink: 1 },
+  empty: { color: C.text2, fontSize: 13.5 },
   dot: { width: 8, height: 8, borderRadius: 4 },
 }))

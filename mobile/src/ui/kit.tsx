@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Keyboard, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, Text, TextInput, View, type StyleProp, type ViewStyle } from 'react-native'
+import { ActivityIndicator, Keyboard, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Switch as RNSwitch, View, type StyleProp, type TextStyle, type ViewStyle } from 'react-native'
+import Svg, { Rect } from 'react-native-svg'
+import { Text, TextInput } from './Text'
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated'
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler'
 import { scheduleOnRN } from 'react-native-worklets'
@@ -8,7 +10,7 @@ import type { PhoneCall, PhoneTopic } from '../../../shared/phone'
 import type { DropLink } from '../link'
 import { Icon, IconTile, type IconName } from './icons'
 import { PRESSED, glide } from './motion'
-import { themed, useTheme, type Palette } from './theme'
+import { fitSize, themed, useTheme, type Palette } from './theme'
 
 // ---- Data from the island ----
 
@@ -100,6 +102,10 @@ export function useKeyboard(): boolean {
 /** Room the floating tab bar takes at the bottom (above the safe area). */
 export const TAB_ROOM = 78
 
+/** The page's side margin and the space between its cards. */
+export const SIDE = 20
+export const GAP = 10
+
 // ---- Words ----
 
 export { ago } from '../words'
@@ -108,24 +114,38 @@ export const toneColor = (C: Palette, t?: string) => (t === 'up' ? C.green : t =
 
 // ---- Pieces ----
 
-/** A screen: title (with a way back), then its content, scrolled. */
+/**
+ * A screen: its title, then its content, scrolled. One you opened from
+ * another has a round button back and its title in the middle; a tab's own
+ * has its title large on the left.
+ */
 export function Page({ title, sub, onBack, right, top, children, onRefresh, scroll = true, pad = true }: { title: string; sub?: string; onBack?: () => void; right?: ReactNode; top: number; children: ReactNode; onRefresh?: () => Promise<unknown>; scroll?: boolean; pad?: boolean }) {
   const s = useKit()
   const C = useTheme()
   const [refreshing, setRefreshing] = useState(false)
-  const head = (
-    <View style={[s.head, { paddingTop: top + 4 }]}>
-      {onBack && (
-        <Pressable hitSlop={12} onPress={onBack} style={({ pressed }) => [s.back, pressed && { opacity: 0.6 }]} accessibilityRole="button" accessibilityLabel="Back">
-          <Icon name="back" size={21} />
-        </Pressable>
-      )}
-      <View style={{ flex: 1 }}>
-        <Text style={onBack ? s.h2 : s.h1} numberOfLines={1}>
+  const head = onBack ? (
+    <View style={[s.head, { paddingTop: top }]}>
+      <RoundBtn icon="back" label="Back" onPress={onBack} />
+      <View style={s.headMid}>
+        <Text style={s.h2} numberOfLines={1}>
           {title}
         </Text>
         {!!sub && (
           <Text style={s.headSub} numberOfLines={1}>
+            {sub}
+          </Text>
+        )}
+      </View>
+      {right ?? <View style={{ width: 46 }} />}
+    </View>
+  ) : (
+    <View style={[s.head, { paddingTop: top + 4 }]}>
+      <View style={{ flex: 1 }}>
+        <Text style={s.h1} numberOfLines={1}>
+          {title}
+        </Text>
+        {!!sub && (
+          <Text style={[s.headSub, { marginTop: 3 }]} numberOfLines={1}>
             {sub}
           </Text>
         )}
@@ -145,7 +165,7 @@ export function Page({ title, sub, onBack, right, top, children, onRefresh, scro
       {head}
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={[pad && { padding: 16, paddingTop: 6, gap: 12 }, { paddingBottom: 130 }]}
+        contentContainerStyle={[pad && { padding: SIDE, paddingTop: 6, gap: GAP }, { paddingBottom: 130 }]}
         keyboardShouldPersistTaps="handled"
         refreshControl={
           onRefresh ? (
@@ -169,6 +189,25 @@ export function Page({ title, sub, onBack, right, top, children, onRefresh, scro
   )
 }
 
+/** A round button with one line icon: white on the page, or quiet inside a card. */
+export function RoundBtn({ icon, label, onPress, size = 46, quiet }: { icon: IconName; label: string; onPress: () => void; size?: number; quiet?: boolean }) {
+  const s = useKit()
+  return (
+    <Pressable
+      hitSlop={8}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={() => {
+        void Haptics.selectionAsync()
+        onPress()
+      }}
+      style={({ pressed }) => [s.round, { width: size, height: size, borderRadius: size / 2 }, quiet ? s.roundQuiet : s.roundLift, pressed && PRESSED]}
+    >
+      <Icon name={icon} size={Math.round(size * 0.44)} />
+    </Pressable>
+  )
+}
+
 export function Card({ children, style, onPress }: { children: ReactNode; style?: StyleProp<ViewStyle>; onPress?: () => void }) {
   const s = useKit()
   const body = (
@@ -182,9 +221,136 @@ export function Card({ children, style, onPress }: { children: ReactNode; style?
   )
 }
 
+/** What a card is about, in a quiet word at its top. */
 export function Kicker({ children }: { children: ReactNode }) {
   const s = useKit()
   return <Text style={s.kicker}>{children}</Text>
+}
+
+/** A part of a screen, named in plain words on the page. */
+export function Heading({ children, right }: { children: ReactNode; right?: ReactNode }) {
+  const s = useKit()
+  return (
+    <View style={s.headingRow}>
+      <Text style={s.heading} numberOfLines={1}>
+        {children}
+      </Text>
+      {right}
+    </View>
+  )
+}
+
+/**
+ * The one big number of a screen, with a plain word under it (and, when it
+ * helps, a line of explanation). `word`: it's a word, not a number, a size
+ * smaller.
+ */
+export function Hero({ value, label, hint, word }: { value: string; label: string; hint?: string; word?: boolean }) {
+  const s = useKit()
+  return (
+    <View style={s.hero} accessible accessibilityLabel={`${value}, ${label}`}>
+      <Text style={word ? s.heroWord : s.heroValue} numberOfLines={1} adjustsFontSizeToFit>
+        {value}
+      </Text>
+      <Text style={s.heroLabel}>{label}</Text>
+      {!!hint && <Text style={s.heroHint}>{hint}</Text>}
+    </View>
+  )
+}
+
+/**
+ * A figure (an amount, a count with its unit) on one line, as large as
+ * fits up to `size`: a long one is set smaller, never cut.
+ */
+export function Figure({ text, size, style }: { text: string; size: number; style?: StyleProp<TextStyle> }) {
+  const [w, setW] = useState(0)
+  const fit = fitSize(text, w, size)
+  return (
+    <View onLayout={(e) => setW(e.nativeEvent.layout.width)} style={{ alignSelf: 'stretch' }}>
+      <Text style={[style, { fontSize: fit, lineHeight: Math.round(fit * 1.14), letterSpacing: -fit * 0.035 }]} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  )
+}
+
+/** A small dot and a word or two: how something is. */
+export function StatusDot({ color, text, hollow }: { color: string; text: string; hollow?: boolean }) {
+  const s = useKit()
+  return (
+    <View style={s.statusRow}>
+      <View style={[s.statusDot, hollow ? { borderWidth: 1.5, borderColor: color } : { backgroundColor: color }]} />
+      <Text style={s.statusText} numberOfLines={1}>
+        {text}
+      </Text>
+    </View>
+  )
+}
+
+/** A small square card: a picture, what it is, and how it is. */
+export function Tile({ top, label, value, onPress }: { top: ReactNode; label: string; value: string; onPress?: () => void }) {
+  const s = useKit()
+  const body = (
+    <>
+      <View style={s.tileTop}>{top}</View>
+      <Text style={s.tileLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={s.tileValue} numberOfLines={1}>
+        {value}
+      </Text>
+    </>
+  )
+  if (!onPress) return <View style={s.tile}>{body}</View>
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}, ${value}`}
+      onPress={() => {
+        void Haptics.selectionAsync()
+        onPress()
+      }}
+      style={({ pressed }) => [s.tile, pressed && PRESSED]}
+    >
+      {body}
+    </Pressable>
+  )
+}
+
+/**
+ * A level from 0 to 100, drawn as columns of small squares filling from the
+ * left: a full column for each tenth, the one it's part way through in the
+ * lighter step, the rest pale. As wide as it's given: with room for it,
+ * twice the columns, a twentieth each.
+ */
+export function DotGauge({ pct, rows = 4 }: { pct: number; rows?: number }) {
+  const C = useTheme()
+  const [w, setW] = useState(0)
+  const gap = 4
+  const cols = w > 240 ? 20 : 10
+  const cell = w ? Math.max(4, Math.min(14, Math.floor((w - (cols - 1) * gap) / cols))) : 0
+  const level = (Math.min(100, Math.max(0, pct)) / 100) * cols
+  const full = Math.floor(level)
+  const part = Math.round((level - full) * rows)
+  const cells: { x: number; y: number; fill: string }[] = []
+  for (let c = 0; c < cols; c++)
+    for (let r = 0; r < rows; r++) {
+      // Rows count from the bottom.
+      const lit = c < full ? C.accent : c === full && r < part ? C.accentMid : C.accentPale
+      cells.push({ x: c * (cell + gap), y: (rows - 1 - r) * (cell + gap), fill: lit })
+    }
+  const h = rows * cell + (rows - 1) * gap
+  return (
+    <View onLayout={(e) => setW(Math.floor(e.nativeEvent.layout.width))} style={{ height: cell ? h : rows * 10 + (rows - 1) * gap }} accessibilityRole="image" accessibilityLabel={`${Math.round(pct)} percent`}>
+      {cell > 0 && (
+        <Svg width={cols * cell + (cols - 1) * gap} height={h}>
+          {cells.map((d, i) => (
+            <Rect key={i} x={d.x} y={d.y} width={cell} height={cell} rx={cell * 0.28} fill={d.fill} />
+          ))}
+        </Svg>
+      )}
+    </View>
+  )
 }
 
 /** A section's name above its card, as in a settings list. */
@@ -205,7 +371,7 @@ export function Row({ title, sub, right, left, icon, chevron, onPress, onLongPre
   const s = useKit()
   const C = useTheme()
   return (
-    <Pressable onPress={onPress} onLongPress={onLongPress} disabled={!onPress && !onLongPress} style={({ pressed }) => [s.row, !last && s.rowLine, pressed && { backgroundColor: C.fillPressed }]}>
+    <Pressable onPress={onPress} onLongPress={onLongPress} disabled={!onPress && !onLongPress} style={({ pressed }) => [s.row, !last && s.rowLine, pressed && { opacity: 0.6 }]}>
       {icon ? <IconTile name={icon.name} color={icon.color} /> : left}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[s.rowTitle, bold && { fontWeight: '700' }, danger && { color: C.red }]} numberOfLines={full ? 2 : 1}>
@@ -226,11 +392,10 @@ export function Row({ title, sub, right, left, icon, chevron, onPress, onLongPre
 /** A round picture, or the first letter on a colour. */
 export function Avatar({ name, uri, size = 40, color }: { name: string; uri?: string; size?: number; color?: string }) {
   const C = useTheme()
-  const hue = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7)
   if (uri) return <Animated.Image source={{ uri }} style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: C.card2 }} />
   return (
-    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? (C.dark ? `hsl(${hue},45%,38%)` : `hsl(${hue},55%,50%)`), alignItems: 'center', justifyContent: 'center' }}>
-      <Text style={{ color: '#fff', fontWeight: '700', fontSize: size * 0.42 }}>{(name.trim()[0] ?? '?').toUpperCase()}</Text>
+    <View style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: color ?? C.accentPale, alignItems: 'center', justifyContent: 'center' }}>
+      <Text style={{ color: color ? '#fff' : C.accent, fontWeight: '500', fontSize: size * 0.42 }}>{(name.trim()[0] ?? '?').toUpperCase()}</Text>
     </View>
   )
 }
@@ -240,29 +405,44 @@ export function Badge({ n, color }: { n: number; color?: string }) {
   const C = useTheme()
   if (!n) return null
   return (
-    <View style={[s.badge, { backgroundColor: color ?? C.red }]}>
-      <Text style={s.badgeText}>{n > 99 ? '99+' : n}</Text>
+    <View style={[s.badge, { backgroundColor: color ?? C.accent }]}>
+      <Text style={[s.badgeText, !color && { color: C.onPrimary }]}>{n > 99 ? '99+' : n}</Text>
     </View>
   )
 }
 
-/** A few choices side by side, the chosen one on a sliding pill. */
+/** A few choices as plain words side by side, the chosen one on a pill that moves to it. */
 export function Segmented<T extends string>({ items, value, onChange, style }: { items: [T, string][]; value: T; onChange: (v: T) => void; style?: StyleProp<ViewStyle> }) {
   const s = useKit()
-  const [w, setW] = useState(0)
+  // How wide each word is, as laid out; a word starts where the ones before it end.
+  const [wide, setWide] = useState<Record<number, number>>({})
   const i = Math.max(0, items.findIndex(([v]) => v === value))
   const x = useSharedValue(0)
+  const w = useSharedValue(0)
+  const placed = useRef(false)
+  const known = items.slice(0, i + 1).every((_, n) => wide[n] !== undefined)
+  const here = known ? { x: items.slice(0, i).reduce((sum, _, n) => sum + wide[n], 0), w: wide[i] } : undefined
   useEffect(() => {
-    x.value = glide(i * (w / items.length))
-  }, [i, w, items.length]) // eslint-disable-line react-hooks/exhaustive-deps
-  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
+    if (!here) return
+    // Put there the first time, moved there after.
+    x.value = placed.current ? glide(here.x) : here.x
+    w.value = placed.current ? glide(here.w) : here.w
+    placed.current = true
+  }, [here?.x, here?.w]) // eslint-disable-line react-hooks/exhaustive-deps
+  const pill = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }], width: w.value }))
   return (
-    <View style={[s.seg, style]} onLayout={(e) => setW(e.nativeEvent.layout.width - 6)}>
-      {w > 0 && <Animated.View style={[s.segPill, { width: w / items.length }, pill]} />}
-      {items.map(([v, label]) => (
+    <View style={[s.seg, style]} accessibilityRole="tablist">
+      {!!here && <Animated.View style={[s.segPill, pill]} />}
+      {items.map(([v, label], n) => (
         <Pressable
           key={v}
           style={s.segItem}
+          accessibilityRole="tab"
+          accessibilityState={{ selected: v === value }}
+          onLayout={(e) => {
+            const width = e.nativeEvent.layout.width
+            setWide((a) => (a[n] === width ? a : { ...a, [n]: width }))
+          }}
           onPress={() => {
             if (v !== value) void Haptics.selectionAsync()
             onChange(v)
@@ -277,26 +457,31 @@ export function Segmented<T extends string>({ items, value, onChange, style }: {
   )
 }
 
+/** A button: a pill. The one thing to do is in the accent (`primary`); the rest are quiet. */
 export function Btn({ label, onPress, kind = 'plain', busy, disabled, small, icon, style }: { label: string; onPress: () => void; kind?: 'primary' | 'plain' | 'danger' | 'accent'; busy?: boolean; disabled?: boolean; small?: boolean; icon?: IconName; style?: StyleProp<ViewStyle> }) {
   const s = useKit()
   const C = useTheme()
-  const bg = kind === 'primary' ? C.primary : kind === 'danger' ? (C.dark ? 'rgba(255,69,58,0.16)' : 'rgba(229,52,43,0.1)') : kind === 'accent' ? C.accent : C.fill
-  const fg = kind === 'primary' ? C.onPrimary : kind === 'danger' ? C.red : kind === 'accent' ? '#fff' : C.text
+  const strong = kind === 'primary' || kind === 'accent'
+  const off = strong && disabled && !busy
+  const bg = off ? C.fill : strong ? C.primary : kind === 'danger' ? (C.dark ? 'rgba(255,107,94,0.16)' : 'rgba(229,72,77,0.1)') : C.fill
+  const fg = off ? C.text3 : strong ? C.onPrimary : kind === 'danger' ? C.red : C.text
   return (
     <Pressable
       disabled={disabled || busy}
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!(disabled || busy), busy: !!busy }}
       onPress={() => {
         void Haptics.selectionAsync()
         onPress()
       }}
-      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, (disabled || busy) && { opacity: 0.5 }, pressed && { opacity: 0.75 }, style]}
+      style={({ pressed }) => [s.btn, small && s.btnSmall, { backgroundColor: bg }, ((disabled && !off) || busy) && { opacity: 0.5 }, pressed && { opacity: 0.75 }, style]}
     >
       {busy ? (
         <ActivityIndicator color={fg} />
       ) : (
         <View style={s.btnInner}>
           {icon && <Icon name={icon} size={small ? 15 : 18} color={fg} />}
-          <Text style={[s.btnText, small && { fontSize: 13 }, { color: fg }]}>{label}</Text>
+          <Text style={[s.btnText, small && { fontSize: 13.5 }, { color: fg }]}>{label}</Text>
         </View>
       )}
     </Pressable>
@@ -311,7 +496,7 @@ export function Empty({ title, text, busy, icon }: { title: string; text?: strin
       {busy && <ActivityIndicator color={C.text2} style={{ marginBottom: 10 }} />}
       {!busy && icon && (
         <View style={s.emptyIcon}>
-          <Icon name={icon} size={26} color={C.text2} />
+          <Icon name={icon} size={24} color={C.text2} />
         </View>
       )}
       <Text style={s.emptyTitle}>{title}</Text>
@@ -325,6 +510,8 @@ export function ErrorLine({ message }: { message: string }) {
   return message ? <Text style={s.error}>{message}</Text> : null
 }
 
+const WEB_KNOB = Platform.OS === 'web' ? ({ activeThumbColor: '#ffffff' } as object) : null
+
 /** An on/off switch in the theme's colours. */
 export function Switch({ value, onChange, disabled }: { value: boolean; onChange: (v: boolean) => void; disabled?: boolean }) {
   const C = useTheme()
@@ -336,12 +523,16 @@ export function Switch({ value, onChange, disabled }: { value: boolean; onChange
         void Haptics.selectionAsync()
         onChange(v)
       }}
-      trackColor={{ false: C.dark ? '#3a3a3f' : '#d9d9de', true: C.green }}
+      trackColor={{ false: C.dark ? '#3b3835' : '#dcdcdc', true: C.accent }}
       thumbColor="#ffffff"
-      ios_backgroundColor={C.dark ? '#3a3a3f' : '#d9d9de'}
+      ios_backgroundColor={C.dark ? '#3b3835' : '#dcdcdc'}
+      {...WEB_KNOB}
     />
   )
 }
+
+/** On the web a box of several lines starts two lines tall; on the phone it starts at one. */
+const ONE_LINE = Platform.OS === 'web' ? { rows: 1 } : null
 
 /** Write something and send it: a reply, a message, a prompt. */
 export function Composer({ placeholder, onSend, busy, initial = '', send = 'Send', bottom = 0 }: { placeholder: string; onSend: (text: string) => Promise<boolean | void> | void; busy?: boolean; initial?: string; send?: string; bottom?: number }) {
@@ -356,9 +547,9 @@ export function Composer({ placeholder, onSend, busy, initial = '', send = 'Send
   }
   return (
     <View style={[s.composer, { marginBottom: bottom }]}>
-      <TextInput style={s.input} placeholder={placeholder} placeholderTextColor={C.text3} value={text} onChangeText={setText} multiline maxLength={8000} />
-      <Pressable disabled={!text.trim() || busy} onPress={() => void go()} style={({ pressed }) => [s.send, (!text.trim() || busy) && { opacity: 0.4 }, pressed && PRESSED]}>
-        {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.sendText}>{send}</Text>}
+      <TextInput style={s.input} placeholder={placeholder} placeholderTextColor={C.text3} value={text} onChangeText={setText} multiline maxLength={8000} {...ONE_LINE} />
+      <Pressable disabled={!text.trim() || busy} onPress={() => void go()} style={({ pressed }) => [s.send, !text.trim() && !busy && s.sendOff, busy && { opacity: 0.6 }, pressed && PRESSED]}>
+        {busy ? <ActivityIndicator color={C.onPrimary} /> : <Text style={[s.sendText, !text.trim() && { color: C.text3 }]}>{send}</Text>}
       </Pressable>
     </View>
   )
@@ -423,42 +614,60 @@ export function Slider({ value, onChange, label, color }: { value: number; onCha
 
 /** The shared pieces' styles (screens use some of them too: `const k = useKit()`). */
 export const useKit = themed((C) => ({
-  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 20, paddingBottom: 12 },
-  back: { width: 36, height: 36, borderRadius: 18, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center' },
-  h1: { color: C.text, fontSize: 30, fontWeight: '700', letterSpacing: -0.6 },
-  h2: { color: C.text, fontSize: 21, fontWeight: '700', letterSpacing: -0.3 },
-  headSub: { color: C.text2, fontSize: 13.5, marginTop: 2 },
-  card: { backgroundColor: C.card, borderRadius: 18, padding: 16, borderWidth: C.dark ? 1 : 0, borderColor: C.line, ...C.shadow },
-  kicker: { color: C.text3, fontSize: 12, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase', marginBottom: 8 },
-  section: { color: C.text2, fontSize: 13, fontWeight: '600', marginLeft: 16, marginBottom: 7, marginTop: 6 },
-  sectionNote: { color: C.text3, fontSize: 12.5, lineHeight: 17, marginHorizontal: 16, marginTop: 7 },
-  group: { backgroundColor: C.card, borderRadius: 16, paddingHorizontal: 14, borderWidth: C.dark ? 1 : 0, borderColor: C.line, overflow: 'hidden', ...C.shadow },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, minHeight: 50 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: SIDE, paddingBottom: 12 },
+  headMid: { flex: 1, alignItems: 'center', minWidth: 0 },
+  h1: { color: C.text, fontSize: 32, fontWeight: '500', letterSpacing: -1 },
+  h2: { color: C.text, fontSize: 19, fontWeight: '500', letterSpacing: -0.3 },
+  headSub: { color: C.text2, fontSize: 13.5, marginTop: 1 },
+  round: { alignItems: 'center', justifyContent: 'center' },
+  roundLift: { backgroundColor: C.card, ...C.shadow },
+  roundQuiet: { backgroundColor: C.fill },
+  card: { backgroundColor: C.card, borderRadius: 24, padding: 20, ...C.shadow },
+  kicker: { color: C.text2, fontSize: 14, marginBottom: 8 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 14, marginBottom: 2, paddingHorizontal: 4 },
+  heading: { color: C.text, fontSize: 20, fontWeight: '500', letterSpacing: -0.3, flexShrink: 1 },
+  hero: { alignItems: 'center', paddingTop: 2, paddingBottom: 8 },
+  heroValue: { color: C.text, fontSize: 96, lineHeight: 100, fontWeight: '500', letterSpacing: -4.3, textAlign: 'center' },
+  heroWord: { color: C.text, fontSize: 46, lineHeight: 56, fontWeight: '500', letterSpacing: -1.6, textAlign: 'center', marginTop: 18, marginBottom: 6 },
+  heroLabel: { color: C.text, fontSize: 20, letterSpacing: -0.2, textAlign: 'center' },
+  heroHint: { color: C.text2, fontSize: 14, lineHeight: 20, textAlign: 'center', marginTop: 8, maxWidth: 310 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 0 },
+  statusDot: { width: 7, height: 7, borderRadius: 4 },
+  statusText: { color: C.text2, fontSize: 12.5, flexShrink: 1 },
+  tile: { flex: 1, minWidth: 0, height: 132, backgroundColor: C.card, borderRadius: 24, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12, ...C.shadow },
+  tileTop: { height: 46, alignItems: 'center', justifyContent: 'center' },
+  tileLabel: { color: C.text2, fontSize: 15, marginTop: 6 },
+  tileValue: { color: C.text, fontSize: 18, fontWeight: '500', letterSpacing: -0.3, marginTop: 2 },
+  section: { color: C.text2, fontSize: 14, marginLeft: 6, marginBottom: 8, marginTop: 8 },
+  sectionNote: { color: C.text3, fontSize: 12.5, lineHeight: 17, marginHorizontal: 6, marginTop: 8 },
+  group: { backgroundColor: C.card, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 4, overflow: 'hidden', ...C.shadow },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, minHeight: 52 },
   rowLine: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   rowTitle: { color: C.text, fontSize: 15.5, fontWeight: '500' },
   rowSub: { color: C.text2, fontSize: 13, marginTop: 2, lineHeight: 18 },
   rowRight: { color: C.text2, fontSize: 14, fontVariant: ['tabular-nums'] },
   badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  seg: { flexDirection: 'row', backgroundColor: C.fill, borderRadius: 11, padding: 3 },
-  segPill: { position: 'absolute', top: 3, bottom: 3, left: 3, borderRadius: 8, backgroundColor: C.dark ? '#3a3a40' : '#ffffff', ...(C.dark ? {} : { shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 4, shadowOffset: { width: 0, height: 1 }, elevation: 1 }) },
-  segItem: { flex: 1, paddingVertical: 7, borderRadius: 8, alignItems: 'center' },
-  segText: { color: C.text2, fontSize: 13, fontWeight: '600' },
+  badgeText: { color: '#fff', fontSize: 11, fontWeight: '600' },
+  seg: { flexDirection: 'row', alignSelf: 'center', justifyContent: 'center', maxWidth: '100%' },
+  segPill: { position: 'absolute', left: 0, top: 0, bottom: 0, borderRadius: 20, backgroundColor: C.card, ...C.shadow },
+  segItem: { height: 40, paddingHorizontal: 17, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexShrink: 1 },
+  segText: { color: C.text2, fontSize: 16 },
   segOn: { color: C.text },
-  btn: { borderRadius: 13, paddingVertical: 12, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
-  btnSmall: { paddingVertical: 7, paddingHorizontal: 13, minHeight: 34, borderRadius: 999 },
+  btn: { borderRadius: 999, paddingVertical: 12, paddingHorizontal: 22, alignItems: 'center', justifyContent: 'center', minHeight: 48 },
+  btnSmall: { paddingVertical: 7, paddingHorizontal: 15, minHeight: 36 },
   btnInner: { flexDirection: 'row', alignItems: 'center', gap: 7 },
-  btnText: { fontSize: 15.5, fontWeight: '600' },
+  btnText: { fontSize: 15.5, fontWeight: '500' },
   empty: { alignItems: 'center', paddingVertical: 40, paddingHorizontal: 24 },
   emptyIcon: { width: 56, height: 56, borderRadius: 28, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center', marginBottom: 14 },
-  emptyTitle: { color: C.text, fontSize: 17, fontWeight: '600', textAlign: 'center' },
+  emptyTitle: { color: C.text, fontSize: 18, fontWeight: '500', letterSpacing: -0.2, textAlign: 'center' },
   emptyText: { color: C.text2, fontSize: 14, lineHeight: 20, marginTop: 6, textAlign: 'center' },
   error: { color: C.red, fontSize: 13, lineHeight: 18 },
-  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 6, backgroundColor: C.card, borderRadius: 22, borderWidth: 1, borderColor: C.line, ...C.shadow },
-  input: { flex: 1, color: C.text, fontSize: 15.5, maxHeight: 140, paddingHorizontal: 12, paddingVertical: 9 },
-  send: { backgroundColor: C.accent, borderRadius: 17, paddingHorizontal: 15, height: 36, alignItems: 'center', justifyContent: 'center' },
-  sendText: { color: '#fff', fontWeight: '600', fontSize: 14.5 },
+  composer: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, padding: 6, backgroundColor: C.card, borderRadius: 27, ...C.shadow },
+  input: { flex: 1, color: C.text, fontSize: 15.5, maxHeight: 140, paddingHorizontal: 14, paddingVertical: 10 },
+  send: { backgroundColor: C.primary, borderRadius: 21, paddingHorizontal: 18, height: 42, alignItems: 'center', justifyContent: 'center' },
+  sendOff: { backgroundColor: C.fill },
+  sendText: { color: C.onPrimary, fontWeight: '500', fontSize: 15 },
   sliderHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  track: { height: 34, borderRadius: 11, backgroundColor: C.fill, overflow: 'hidden' },
+  track: { height: 34, borderRadius: 17, backgroundColor: C.fill, overflow: 'hidden' },
   fill: { height: 34 },
 }))

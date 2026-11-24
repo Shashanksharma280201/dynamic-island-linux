@@ -1,22 +1,24 @@
-import { useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useEffect } from 'react'
+import { Pressable, View } from 'react-native'
+import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated'
 import Svg, { Circle, Defs, LinearGradient, Path, Rect, Stop } from 'react-native-svg'
 import * as Haptics from 'expo-haptics'
 import { useKeyboard } from './kit'
+import { glide } from './motion'
+import { TABS, TAB_SIZE, type TabId } from './tabs'
 import { themed, useTheme } from './theme'
 
-export type TabId = 'island' | 'claude' | 'files' | 'inbox' | 'more'
-export const TABS: TabId[] = ['island', 'claude', 'files', 'inbox', 'more']
+export { TABS, TAB_SIZE, tabCenterX, type TabId } from './tabs'
 const LABEL: Record<TabId, string> = { island: 'Island', claude: 'Claude', files: 'Files', inbox: 'Inbox', more: 'More' }
 
 function Icon({ id, color }: { id: TabId; color: string }) {
-  const p = { stroke: color, strokeWidth: 1.9, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
+  const p = { stroke: color, strokeWidth: 1.6, fill: 'none', strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const }
   return (
-    <Svg width={24} height={24} viewBox="0 0 24 24">
+    <Svg width={22} height={22} viewBox="0 0 24 24">
       {id === 'island' && (
         <>
           <Rect x={3.5} y={8} width={17} height={8} rx={4} {...p} />
-          <Circle cx={8} cy={12} r={1.6} fill={color} />
+          <Circle cx={15.5} cy={12} r={1.5} fill={color} />
         </>
       )}
       {id === 'files' && (
@@ -31,30 +33,38 @@ function Icon({ id, color }: { id: TabId; color: string }) {
       {id === 'inbox' && <Path d="M4 13l2.5-7.5h11L20 13v5.5H4zM4 13h4.5l1.2 2.5h4.6l1.2-2.5H20" {...p} />}
       {id === 'more' && (
         <>
-          <Circle cx={6} cy={12} r={1.7} fill={color} />
-          <Circle cx={12} cy={12} r={1.7} fill={color} />
-          <Circle cx={18} cy={12} r={1.7} fill={color} />
+          <Circle cx={6} cy={12} r={1.5} fill={color} />
+          <Circle cx={12} cy={12} r={1.5} fill={color} />
+          <Circle cx={18} cy={12} r={1.5} fill={color} />
         </>
       )}
     </Svg>
   )
 }
 
-/** The tabs, floating at the bottom, with what's waiting on the Island tab. The chosen one is lit, nothing slides. */
+/**
+ * The tabs: a small pill of icons floating at the bottom, the chosen one on
+ * a circle of the accent that moves to it. A dot on a tab says something is
+ * waiting there. What scrolls behind fades out under it.
+ */
 export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t: TabId) => void; badges: Partial<Record<TabId, number>>; bottom: number }) {
   const C = useTheme()
   const s = useS()
   // Typing: the bar steps aside so what you type sits right above the keyboard.
   const kb = useKeyboard()
-  // The bar's own height, for what covers the screen behind it.
-  const [barH, setBarH] = useState(62)
+  const i = Math.max(0, TABS.indexOf(tab))
+  const x = useSharedValue(i * TAB_SIZE)
+  useEffect(() => {
+    x.value = glide(i * TAB_SIZE)
+  }, [i]) // eslint-disable-line react-hooks/exhaustive-deps
+  const chosen = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }] }))
   if (kb) return null
-  const lift = Math.max(12, bottom)
+  const lift = Math.max(14, bottom)
   return (
     <>
-      {/* What scrolls behind the bar fades out from its top edge to its middle, and nothing shows below that. */}
-      <View pointerEvents="none" style={[s.under, { height: lift + barH }]}>
-        <Svg width="100%" height={barH / 2}>
+      {/* What scrolls behind the bar fades out from above it to its middle, and nothing shows below that. */}
+      <View pointerEvents="none" style={[s.under, { height: lift + TAB_SIZE + 22 }]}>
+        <Svg width="100%" height={22 + TAB_SIZE / 2}>
           <Defs>
             <LinearGradient id="tab-fade" x1="0" y1="0" x2="0" y2="1">
               <Stop offset="0" stopColor={C.bg} stopOpacity={0} />
@@ -65,35 +75,29 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
         </Svg>
         <View style={{ flex: 1, backgroundColor: C.bg }} />
       </View>
-      <View style={[s.wrap, { bottom: lift }]}>
-        <View style={s.bar} onLayout={(e) => setBarH(Math.round(e.nativeEvent.layout.height))}>
-        {TABS.map((t) => {
-          const on = t === tab
-          const n = badges[t] ?? 0
-          return (
-            <Pressable
-              key={t}
-              style={s.tab}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: on }}
-              accessibilityLabel={n > 0 ? `${LABEL[t]}, ${n} new` : LABEL[t]}
-              onPress={() => {
-                if (!on) void Haptics.selectionAsync()
-                setTab(t)
-              }}
-            >
-              <View style={[s.ind, on && { backgroundColor: C.accentSoft }]}>
-                <Icon id={t} color={on ? C.accent : C.text2} />
-                {n > 0 && (
-                  <View style={s.badge}>
-                    <Text style={s.badgeText}>{n > 9 ? '9+' : n}</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={[s.label, on && { color: C.text, fontWeight: '700' }]}>{LABEL[t]}</Text>
-            </Pressable>
-          )
-        })}
+      <View pointerEvents="box-none" style={[s.wrap, { bottom: lift }]}>
+        <View style={s.bar} accessibilityRole="tablist">
+          <Animated.View style={[s.chosen, chosen]} />
+          {TABS.map((t) => {
+            const on = t === tab
+            const n = badges[t] ?? 0
+            return (
+              <Pressable
+                key={t}
+                style={s.tab}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: on }}
+                accessibilityLabel={n > 0 ? `${LABEL[t]}, ${n} new` : LABEL[t]}
+                onPress={() => {
+                  if (!on) void Haptics.selectionAsync()
+                  setTab(t)
+                }}
+              >
+                <Icon id={t} color={on ? C.onPrimary : C.text} />
+                {n > 0 && !on && <View style={s.dot} />}
+              </Pressable>
+            )
+          })}
         </View>
       </View>
     </>
@@ -102,11 +106,9 @@ export function TabBar({ tab, setTab, badges, bottom }: { tab: TabId; setTab: (t
 
 const useS = themed((C) => ({
   under: { position: 'absolute', left: 0, right: 0, bottom: 0 },
-  wrap: { position: 'absolute', left: 12, right: 12 },
-  bar: { flexDirection: 'row', backgroundColor: C.bar, borderRadius: 26, padding: 6, borderWidth: StyleSheet.hairlineWidth, borderColor: C.lineStrong, elevation: 18, shadowColor: '#000', shadowOpacity: C.dark ? 0.4 : 0.12, shadowRadius: 20, shadowOffset: { width: 0, height: 8 } },
-  tab: { flex: 1, alignItems: 'center', paddingVertical: 4, gap: 3 },
-  ind: { width: 56, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  label: { color: C.text2, fontSize: 11, fontWeight: '600' },
-  badge: { position: 'absolute', top: -3, right: 6, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 2, borderColor: C.bar },
-  badgeText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  wrap: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
+  bar: { flexDirection: 'row', height: TAB_SIZE, borderRadius: TAB_SIZE / 2, backgroundColor: C.bar, boxShadow: C.dark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(30,20,10,0.12), 0 1px 2px rgba(30,20,10,0.05)' },
+  chosen: { position: 'absolute', left: 0, top: 0, width: TAB_SIZE, height: TAB_SIZE, borderRadius: TAB_SIZE / 2, backgroundColor: C.accent },
+  tab: { width: TAB_SIZE, height: TAB_SIZE, alignItems: 'center', justifyContent: 'center' },
+  dot: { position: 'absolute', top: 13, right: 12, width: 9, height: 9, borderRadius: 5, backgroundColor: C.accent, borderWidth: 1.5, borderColor: C.bar },
 }))

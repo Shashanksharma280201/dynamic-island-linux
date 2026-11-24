@@ -1,6 +1,10 @@
 import { helloUrls, mergeUrls, neighbours, routeName, routeOf } from '../mobile/src/protocol'
 import { linkMode, linkReadout, linkStatus } from '../mobile/src/linkStatus'
-import { DARK, LIGHT, paletteFor } from '../mobile/src/ui/palette'
+import { CORAL, DARK, LIGHT, cleanColor, luminance, mix, paletteFor, seen, withAccent } from '../mobile/src/ui/palette'
+import { FONT, fitSize, fontOf } from '../mobile/src/ui/font'
+import { TABS, TAB_SIZE, tabCenterX } from '../mobile/src/ui/tabs'
+import { DAY_ROWS, dayColumns, dayPeaks } from '../mobile/src/dayChart'
+import { arcOf, arcPath, arcPoint, arcValue } from '../mobile/src/dial'
 import { cleanPrefs } from '../mobile/src/prefsShape'
 import { answerLine, clock, money } from '../mobile/src/words'
 import { metaText, moneyText } from '@shared/engine'
@@ -102,9 +106,13 @@ describe('light and dark', () => {
     expect(Object.keys(LIGHT.iso).sort()).toEqual(Object.keys(DARK.iso).sort())
   })
   test('a saved choice is kept, anything odd goes back to System', () => {
-    expect(cleanPrefs({ background: false, computerNotes: true, theme: 'light' })).toEqual({ background: false, computerNotes: true, theme: 'light' })
+    expect(cleanPrefs({ background: false, computerNotes: true, theme: 'light' })).toEqual({ background: false, computerNotes: true, theme: 'light', accent: null })
     expect(cleanPrefs({ theme: 'purple' }).theme).toBe('system')
-    expect(cleanPrefs(null)).toEqual({ background: true, computerNotes: false, theme: 'system' })
+    expect(cleanPrefs(null)).toEqual({ background: true, computerNotes: false, theme: 'system', accent: null })
+    // The orb's colour as last seen: kept when it's a colour, dropped when it isn't.
+    expect(cleanPrefs({ accent: '#4DA3FF' }).accent).toBe('#4da3ff')
+    expect(cleanPrefs({ accent: 'blue' }).accent).toBeNull()
+    expect(cleanPrefs({ accent: '#fff' }).accent).toBeNull()
   })
 })
 
@@ -116,5 +124,156 @@ describe('the app says times and costs as the island does', () => {
     expect(answerLine(meta)).toBe(metaText(meta))
     const cloud = { ...meta, where: 'cloud' as const, label: 'Claude', ms: 300, cost: 0.004 }
     expect(answerLine(cloud)).toBe(metaText(cloud))
+  })
+})
+
+describe('the look: one accent, one typeface', () => {
+  test('the accent is coral until the orb has another colour, then that colour and its lighter steps', () => {
+    // Nothing known yet, Orbit's own colour, or coral itself: the palette as it is.
+    expect(withAccent(LIGHT, null)).toBe(LIGHT)
+    expect(withAccent(LIGHT, '#ff8a65')).toBe(LIGHT)
+    expect(withAccent(DARK, CORAL)).toBe(DARK)
+    expect(withAccent(LIGHT, 'not a colour')).toBe(LIGHT)
+    expect(LIGHT.accent).toBe(CORAL)
+    expect(DARK.primary).toBe(CORAL)
+    // Bolt's blue: the accent, the strongest button, and two steps toward the page.
+    const blue = withAccent(LIGHT, '#4da3ff')
+    expect(blue.accent).toBe('#4da3ff')
+    expect(blue.primary).toBe('#4da3ff')
+    expect(blue.onPrimary).toBe('#ffffff')
+    expect(luminance(blue.accentMid)).toBeGreaterThan(luminance(blue.accent))
+    expect(luminance(blue.accentPale)).toBeGreaterThan(luminance(blue.accentMid))
+    expect(blue.bg).toBe(LIGHT.bg)
+    // On a dark page the steps go down toward it, not up.
+    const night = withAccent(DARK, '#4da3ff')
+    expect(luminance(night.accentPale)).toBeLessThan(luminance(night.accentMid))
+    expect(luminance(night.accentMid)).toBeLessThan(luminance(night.accent))
+    // The same colour gives the same palette object (styles are made once for it).
+    expect(withAccent(LIGHT, '#4DA3FF')).toBe(blue)
+    expect(withAccent(DARK, '#4da3ff')).not.toBe(blue)
+  })
+  test('a colour too pale or too dark to see is brought back, and written on in what shows', () => {
+    // White on a light page, black on a dark one: still an accent you can see.
+    expect(luminance(withAccent(LIGHT, '#ffffff').accent)).toBeLessThan(0.63)
+    expect(luminance(withAccent(DARK, '#000000').accent)).toBeGreaterThan(0.15)
+    // A colour that's fine is left alone.
+    expect(seen('#fa7455', false)).toBe('#fa7455')
+    expect(seen('#fa7455', true)).toBe('#fa7455')
+    // A light accent takes dark words, a deep one white.
+    expect(withAccent(LIGHT, '#ffd60a').onPrimary).toBe('#1d1d1d')
+    expect(withAccent(LIGHT, '#5e5ce6').onPrimary).toBe('#ffffff')
+  })
+  test('mixing and cleaning colours', () => {
+    expect(mix('#000000', '#ffffff', 0)).toBe('#000000')
+    expect(mix('#000000', '#ffffff', 1)).toBe('#ffffff')
+    expect(mix('#000000', '#ffffff', 0.5)).toBe('#808080')
+    expect(cleanColor('#ABCDEF')).toBe('#abcdef')
+    expect(cleanColor('#abc')).toBeNull()
+    expect(cleanColor(12)).toBeNull()
+    expect(luminance('#ffffff')).toBeCloseTo(1, 5)
+    expect(luminance('#000000')).toBe(0)
+  })
+  test('a weight becomes a family, a step lighter than written', () => {
+    expect(fontOf(undefined)).toBe(FONT.regular)
+    expect(fontOf('400')).toBe(FONT.regular)
+    expect(fontOf('normal')).toBe(FONT.regular)
+    expect(fontOf('500')).toBe(FONT.medium)
+    expect(fontOf('600')).toBe(FONT.medium)
+    expect(fontOf(700)).toBe(FONT.semibold)
+    expect(fontOf('bold')).toBe(FONT.semibold)
+    expect(fontOf('800')).toBe(FONT.semibold)
+    expect(fontOf('odd')).toBe(FONT.regular)
+  })
+  test('a long figure is set smaller, never below the least', () => {
+    expect(fitSize('+₹1,240', 135, 30)).toBe(30)
+    expect(fitSize('+₹12,41,240.50', 135, 30)).toBeLessThan(20)
+    expect(fitSize('+₹12,41,240.50', 135, 30)).toBeGreaterThanOrEqual(14)
+    expect(fitSize('1'.repeat(60), 135, 30)).toBe(14)
+    // Not measured yet: the size it would like.
+    expect(fitSize('+₹1,240', 0, 30)).toBe(30)
+  })
+  test('the tabs sit side by side in the middle of the screen', () => {
+    expect(TABS).toEqual(['island', 'claude', 'files', 'inbox', 'more'])
+    expect(tabCenterX(400, 'files')).toBe(200)
+    expect(tabCenterX(400, 'island')).toBe(200 - 2 * TAB_SIZE)
+    expect(tabCenterX(400, 'more')).toBe(200 + 2 * TAB_SIZE)
+    expect(tabCenterX(360, 'inbox') - tabCenterX(360, 'files')).toBe(TAB_SIZE)
+  })
+})
+
+describe('the day by the hour', () => {
+  test('a column for each hour of the working day, taller for busier hours', () => {
+    const cols = dayColumns([{ hour: 10, count: 2 }, { hour: 14, count: 5 }], 15)
+    expect(cols[0].hour).toBe(9)
+    expect(cols[cols.length - 1].hour).toBe(18)
+    expect(cols.find((c) => c.hour === 10)).toEqual({ hour: 10, count: 2, cells: 2 })
+    expect(cols.find((c) => c.hour === 14)).toEqual({ hour: 14, count: 5, cells: 5 })
+    expect(cols.find((c) => c.hour === 11)).toEqual({ hour: 11, count: 0, cells: 0 })
+  })
+  test('an early start or a late night widens it, and it never stops short of now', () => {
+    const cols = dayColumns([{ hour: 6, count: 1 }, { hour: 22, count: 1 }], 12)
+    expect(cols[0].hour).toBe(6)
+    expect(cols[cols.length - 1].hour).toBe(22)
+    expect(dayColumns([], 23).at(-1)!.hour).toBe(23)
+    expect(dayColumns([], 3)[0].hour).toBe(3)
+    // Hours that can't be are left out; the same hour twice is added up.
+    const odd = dayColumns([{ hour: 30, count: 4 }, { hour: -1, count: 4 }, { hour: 10, count: 1 }, { hour: 10, count: 2 }], 12)
+    expect(odd.reduce((n, c) => n + c.count, 0)).toBe(3)
+  })
+  test('on a full day each square stands for a few things, and no column is taller than the chart', () => {
+    const cols = dayColumns([{ hour: 10, count: 23 }, { hour: 11, count: 2 }, { hour: 12, count: 1 }], 15)
+    expect(Math.max(...cols.map((c) => c.cells))).toBeLessThanOrEqual(DAY_ROWS)
+    // Something happened: at least one square, however small beside the busiest hour.
+    expect(cols.find((c) => c.hour === 12)!.cells).toBe(1)
+    expect(cols.find((c) => c.hour === 10)!.count).toBe(23)
+  })
+  test('the busiest hours are named: clear of taller neighbours, and of each other', () => {
+    const cols = dayColumns(
+      [9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour, i) => ({ hour, count: [2, 1, 3, 5, 4, 2, 5, 6, 3][i] })),
+      17,
+    )
+    const peaks = dayPeaks(cols, 2)
+    expect(peaks.map((i) => cols[i].hour)).toEqual([12, 16])
+    for (const i of peaks) for (const o of cols.slice(Math.max(0, i - 2), i + 3)) expect(o.cells).toBeLessThanOrEqual(cols[i].cells)
+    // Never more than three, never an empty hour, in the day's order.
+    const many = dayColumns(Array.from({ length: 24 }, (_, hour) => ({ hour, count: hour % 4 === 0 ? 5 : 1 })), 23)
+    const named = dayPeaks(many, 1)
+    expect(named.length).toBe(3)
+    expect([...named].sort((a, b) => a - b)).toEqual(named)
+    expect(dayPeaks(dayColumns([], 12), 2)).toEqual([])
+  })
+})
+
+describe('the volume dial', () => {
+  const arc = arcOf(300, 14, 44, 30)
+  test('a shallow bow across the card: its ends level, its top in the middle', () => {
+    const left = arcPoint(arc, 0)
+    const right = arcPoint(arc, 1)
+    const top = arcPoint(arc, 0.5)
+    expect(left.x).toBeCloseTo(14, 3)
+    expect(right.x).toBeCloseTo(286, 3)
+    expect(left.y).toBeCloseTo(right.y, 6)
+    expect(top.x).toBeCloseTo(150, 6)
+    expect(top.y).toBeCloseTo(30, 6)
+    // It rises as much as it was asked to.
+    expect(left.y - top.y).toBeCloseTo(44, 3)
+    // A tick sits beyond the bow, on the same line out from its middle.
+    const out = arcPoint(arc, 0.5, 10)
+    expect(out.y).toBeCloseTo(20, 6)
+  })
+  test('a finger along it gives the level, held at the ends', () => {
+    for (const t of [0, 0.1, 0.37, 0.5, 0.8, 1]) expect(arcValue(arc, arcPoint(arc, t).x)).toBeCloseTo(t, 6)
+    expect(arcValue(arc, -50)).toBe(0)
+    expect(arcValue(arc, 900)).toBe(1)
+    // Levels outside 0 to 1 are drawn at the ends.
+    expect(arcPoint(arc, -1)).toEqual(arcPoint(arc, 0))
+    expect(arcPoint(arc, 2)).toEqual(arcPoint(arc, 1))
+  })
+  test('the bow as a path, and a space too small to draw one in', () => {
+    expect(arcPath(arc, 0, 1)).toMatch(/^M14 74A[\d.]+ [\d.]+ 0 0 1 286 74$/)
+    const tiny = arcOf(1, 14, 44, 30)
+    expect(Number.isFinite(tiny.r)).toBe(true)
+    expect(Number.isFinite(arcPoint(tiny, 0.5).y)).toBe(true)
+    expect(Number.isFinite(arcValue(tiny, 0))).toBe(true)
   })
 })

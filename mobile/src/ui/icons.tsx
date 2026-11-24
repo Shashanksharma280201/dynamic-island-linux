@@ -91,8 +91,8 @@ const LINES: Record<IconName, (c: string) => React.ReactNode> = {
   ),
   gear: (c) => (
     <>
+      <Path d="M12 2.8l7.6 4.4a.8.8 0 0 1 .4.7v8.2a.8.8 0 0 1-.4.7L12 21.2l-7.6-4.4a.8.8 0 0 1-.4-.7V7.9a.8.8 0 0 1 .4-.7z" stroke={c} />
       <Circle cx={12} cy={12} r={3} stroke={c} />
-      <Path d="M12 3v2.4M12 18.6V21M3 12h2.4M18.6 12H21M5.6 5.6l1.7 1.7M16.7 16.7l1.7 1.7M5.6 18.4l1.7-1.7M16.7 7.3l1.7-1.7" stroke={c} />
     </>
   ),
   sun: (c) => (
@@ -206,19 +206,24 @@ const LINES: Record<IconName, (c: string) => React.ReactNode> = {
 export function Icon({ name, size = 22, color }: { name: IconName; size?: number; color?: string }) {
   const C = useTheme()
   return (
-    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round">
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
       {LINES[name](color ?? C.text)}
     </Svg>
   )
 }
 
-/** An icon on a small rounded tile of its colour, for list rows (as in Settings). */
-export function IconTile({ name, color, size = 30 }: { name: IconName; color: string; size?: number }) {
+/**
+ * An icon in a quiet circle, for list rows (as in Settings). `color` is
+ * what the row is about on the island; here every row's icon is drawn alike,
+ * in the text's colour, so the one accent keeps its meaning.
+ */
+export function IconTile({ name, size = 38 }: { name: IconName; color?: string; size?: number }) {
+  const C = useTheme()
   return (
-    <Svg width={size} height={size} viewBox="0 0 30 30">
-      <Rect x={0} y={0} width={30} height={30} rx={8} fill={color} />
-      <Svg x={5} y={5} width={20} height={20} viewBox="0 0 24 24" fill="none" strokeWidth={2.1} strokeLinecap="round" strokeLinejoin="round">
-        {LINES[name]('#ffffff')}
+    <Svg width={size} height={size} viewBox="0 0 38 38">
+      <Circle cx={19} cy={19} r={19} fill={C.card2} />
+      <Svg x={9.5} y={9.5} width={19} height={19} viewBox="0 0 24 24" fill="none" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round">
+        {LINES[name](C.text)}
       </Svg>
     </Svg>
   )

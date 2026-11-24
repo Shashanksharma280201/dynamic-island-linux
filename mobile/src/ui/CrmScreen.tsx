@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react'
-import { BackHandler, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { BackHandler, Pressable, StyleSheet, View } from 'react-native'
+import { Text, TextInput } from './Text'
 import Animated from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import type { ActivityKind, ContactPage, ContactSummary, CrmOverview, DealSummary, TaskSummary } from '../../../shared/crm'
 import type { DropLink } from '../link'
-import { Avatar, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, Segmented, ago, useKit, useAction, useCall } from './kit'
+import { Avatar, Card, Composer, Empty, ErrorLine, Figure, Heading, Page, Row, Segmented, ago, useKit, useAction, useCall } from './kit'
 import { themed, useTheme, type Palette } from './theme'
 import { PUSH_IN, PUSH_OUT } from './motion'
 
 type Tab = 'followups' | 'people' | 'deals'
 const STAGE: Record<string, string> = { new: 'New', qualified: 'Qualified', proposal: 'Proposal', negotiation: 'Negotiation', won: 'Won', lost: 'Lost' }
-const stageColor = (C: Palette, stage: string): string | undefined => ({ won: C.green, lost: C.red, negotiation: C.orange, proposal: C.blue })[stage]
+// Only how a deal ended has a colour; where it stands on the way is said in words.
+const stageColor = (C: Palette, stage: string): string | undefined => ({ won: C.green, lost: C.red })[stage]
 
 /** "Today", "Overdue · 3 Oct", "Fri 10 Oct". */
 function due(d?: string): string {
@@ -38,6 +40,7 @@ export function CrmScreen({ link, top, onBack }: { link: DropLink; top: number; 
         <Segmented
           value={tab}
           onChange={setTab}
+          style={{ marginBottom: 4 }}
           items={[
             ['followups', c?.openTasks ? `Follow-ups · ${c.openTasks}` : 'Follow-ups'],
             ['people', 'People'],
@@ -64,7 +67,7 @@ function FollowUps({ link, onPerson }: { link: DropLink; onPerson: (id: string) 
   const act = useAction(link)
   if (!data && !error) return <Empty busy title="Getting follow-ups…" />
   return (
-    <Card>
+    <Card style={st.list}>
       <ErrorLine message={error || act.error} />
       {data && !data.length && <Empty title="Nothing to follow up" text="Follow-ups you add on the computer (or ask the assistant for) show up here." />}
       {data?.map((t, i) => {
@@ -108,7 +111,7 @@ function People({ link, onPerson }: { link: DropLink; onPerson: (id: string) => 
     <View style={{ gap: 10 }}>
       <TextInput style={st.search} placeholder="Search people and companies" placeholderTextColor={C.text3} value={q} onChangeText={setQ} />
       <ErrorLine message={error} />
-      <Card>
+      <Card style={st.list}>
         {!data && !error && <Empty busy title="Looking…" />}
         {data && !data.length && <Empty title={query ? 'No one matches' : 'No people yet'} />}
         {data?.map((p, i) => (
@@ -116,7 +119,7 @@ function People({ link, onPerson }: { link: DropLink; onPerson: (id: string) => 
             key={p.id}
             title={p.name}
             sub={[p.title, p.company, p.lastTouch ? `last ${ago(p.lastTouch)}` : ''].filter(Boolean).join(' · ')}
-            left={<Avatar name={p.name} size={36} />}
+            left={<Avatar name={p.name} size={40} />}
             right={p.status ? <Text style={[k.rowRight, { textTransform: 'capitalize' }]}>{p.status}</Text> : undefined}
             last={i === data.length - 1}
             onPress={() => onPerson(p.id)}
@@ -138,13 +141,15 @@ function Deals({ link, currency }: { link: DropLink; currency: string }) {
     <View style={{ gap: 10 }}>
       <ErrorLine message={error} />
       {data && (
-        <Card>
-          <Kicker>Open pipeline</Kicker>
-          <Text style={st.big}>{money(total, currency)}</Text>
-          <Text style={k.rowSub}>{open.length} open deals</Text>
-        </Card>
+        <View style={st.top}>
+          <Figure text={money(total, currency)} size={64} style={st.big} />
+          <Text style={st.bigLabel}>Open pipeline</Text>
+          <Text style={[k.rowSub, { marginTop: 4 }]}>
+            {open.length} open {open.length === 1 ? 'deal' : 'deals'}
+          </Text>
+        </View>
       )}
-      <Card>
+      <Card style={st.list}>
         {!data && !error && <Empty busy title="Getting deals…" />}
         {data && !data.length && <Empty title="No deals yet" />}
         {data?.map((d, i) => (
@@ -203,9 +208,9 @@ function Person({ link, id, top, currency, onBack }: { link: DropLink; id: strin
           {!c.emails.length && !c.phones.length && !c.about && <Text style={k.rowSub}>No details yet.</Text>}
         </Card>
       )}
+      {c && <Heading>Log</Heading>}
       {c && (
-        <Card style={{ gap: 10 }}>
-          <Kicker>Log</Kicker>
+        <View style={{ gap: 10 }}>
           <Segmented items={KINDS} value={kind} onChange={setKind} />
           <Composer
             placeholder={kind === 'call' ? 'What was the call about?' : kind === 'meeting' ? 'How did the meeting go?' : 'Write it down…'}
@@ -218,45 +223,54 @@ function Person({ link, id, top, currency, onBack }: { link: DropLink; id: strin
             }}
           />
           <ErrorLine message={act.error} />
-        </Card>
+        </View>
       )}
       {!!data?.tasks.filter((t) => !t.done).length && (
-        <Card>
-          <Kicker>Follow-ups</Kicker>
-          {data.tasks
-            .filter((t) => !t.done)
-            .map((t, i, a) => (
-              <Row key={t.id} title={t.title} sub={due(t.due)} last={i === a.length - 1} />
-            ))}
-        </Card>
+        <>
+          <Heading>Follow-ups</Heading>
+          <Card style={st.list}>
+            {data.tasks
+              .filter((t) => !t.done)
+              .map((t, i, a) => (
+                <Row key={t.id} title={t.title} sub={due(t.due)} last={i === a.length - 1} />
+              ))}
+          </Card>
+        </>
       )}
       {!!data?.deals.length && (
-        <Card>
-          <Kicker>Deals</Kicker>
-          {data.deals.map((d, i) => (
-            <Row key={d.id} title={d.title} sub={STAGE[d.stage]} right={money(d.value, d.currency ?? currency)} last={i === data.deals.length - 1} />
-          ))}
-        </Card>
+        <>
+          <Heading>Deals</Heading>
+          <Card style={st.list}>
+            {data.deals.map((d, i) => (
+              <Row key={d.id} title={d.title} sub={STAGE[d.stage]} right={money(d.value, d.currency ?? currency)} last={i === data.deals.length - 1} />
+            ))}
+          </Card>
+        </>
       )}
       {!!data?.activities.length && (
-        <Card>
-          <Kicker>Timeline</Kicker>
-          {data.activities.slice(0, 30).map((a, i) => (
-            <Animated.View key={a.id}>
-              <Row title={a.text} sub={`${KINDS.find(([x]) => x === a.kind)?.[1] ?? a.kind} · ${new Date(a.at).toLocaleString()}`} last={i === Math.min(29, data.activities.length - 1)} />
-            </Animated.View>
-          ))}
-        </Card>
+        <>
+          <Heading>Timeline</Heading>
+          <Card style={st.list}>
+            {data.activities.slice(0, 30).map((a, i) => (
+              <Animated.View key={a.id}>
+                <Row full title={a.text} sub={`${KINDS.find(([x]) => x === a.kind)?.[1] ?? a.kind} · ${new Date(a.at).toLocaleString()}`} last={i === Math.min(29, data.activities.length - 1)} />
+              </Animated.View>
+            ))}
+          </Card>
+        </>
       )}
     </Page>
   )
 }
 
 const useSt = themed((C) => ({
-  check: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: C.text3 },
-  search: { backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
-  big: { color: C.text, fontSize: 30, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  value: { color: C.text, fontSize: 14, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  stage: { fontSize: 11, fontWeight: '700' },
-  contact: { color: C.cyan, fontSize: 15, paddingVertical: 2 },
+  list: { paddingVertical: 6, paddingHorizontal: 18 },
+  check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.6, borderColor: C.text3 },
+  search: { backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 20, height: 50, color: C.text, fontSize: 15.5, ...C.shadow },
+  top: { alignItems: 'center', paddingTop: 4, paddingBottom: 8 },
+  big: { color: C.text, fontWeight: '500', textAlign: 'center', fontVariant: ['tabular-nums'] },
+  bigLabel: { color: C.text, fontSize: 20, letterSpacing: -0.2 },
+  value: { color: C.text, fontSize: 14.5, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  stage: { fontSize: 12.5 },
+  contact: { color: C.accent, fontSize: 15.5, paddingVertical: 3 },
 }))

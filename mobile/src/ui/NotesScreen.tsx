@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { Alert, BackHandler, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native'
+import { Text, TextInput } from './Text'
 import Animated from 'react-native-reanimated'
 import type { Note, NoteSummary } from '../../../shared/types'
 import type { DropLink } from '../link'
-import { Btn, Card, Empty, ErrorLine, Page, ago, useKit, useAction, useCall } from './kit'
+import { Btn, Card, Empty, ErrorLine, Page, SIDE, ago, useKit, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
 import { PUSH_IN, PUSH_OUT } from './motion'
 
@@ -24,9 +25,9 @@ export function NotesScreen({ link, top, onBack }: { link: DropLink; top: number
         <ErrorLine message={error} />
         {data && !shown.length && <Empty title={q ? 'Nothing matches' : 'No notes yet'} text={q ? undefined : 'Tap New to write one. It’s saved on your computer.'} />}
         {shown.map((n, i) => (
-          <Card key={n.id} onPress={() => setOpen(n.id)} style={{ gap: 4 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Text style={[k.rowTitle, { flex: 1, fontWeight: '700' }]} numberOfLines={1}>
+          <Card key={n.id} onPress={() => setOpen(n.id)} style={{ gap: 5 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
+              <Text style={st.title} numberOfLines={1}>
                 {n.title || 'Untitled'}
               </Text>
               <Text style={k.rowRight}>{ago(n.updated)}</Text>
@@ -105,8 +106,10 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
         scroll={false}
         right={
           noteId ? (
-            <Pressable
-              hitSlop={10}
+            <Btn
+              small
+              kind="danger"
+              label="Delete"
               onPress={() =>
                 Alert.alert('Delete this note?', 'From your computer too.', [
                   { text: 'Cancel', style: 'cancel' },
@@ -119,18 +122,16 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
                   },
                 ])
               }
-            >
-              <Text style={{ color: C.red, fontWeight: '700' }}>Delete</Text>
-            </Pressable>
+            />
           ) : undefined
         }
       >
         {id && !note.data && !note.error && <Empty busy title="Opening…" />}
         <ErrorLine message={note.error || act.error} />
-        <Animated.View style={{ flex: 1, paddingHorizontal: 16 }}>
+        <Animated.View style={{ flex: 1, paddingHorizontal: SIDE }}>
           <TextInput style={st.editor} multiline autoFocus={!id} value={body} onChangeText={setBody} placeholder="Write something…" placeholderTextColor={C.text3} textAlignVertical="top" />
         </Animated.View>
-        <View style={{ padding: 16, paddingBottom: 100, gap: 10 }}>
+        <View style={{ padding: SIDE, paddingBottom: 100, gap: 10 }}>
           <Btn kind="primary" label="Save" busy={act.busy === 'save'} disabled={body === saved.current} onPress={() => void save()} />
           <Btn
             label={toBrain === body && body ? 'In your brain’s inbox' : 'To my brain'}
@@ -147,6 +148,7 @@ function Editor({ link, id, top, onClose }: { link: DropLink; id: string | null;
 }
 
 const useSt = themed((C) => ({
-  search: { backgroundColor: C.card, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, color: C.text, fontSize: 15, borderWidth: 1, borderColor: C.line },
-  editor: { flex: 1, color: C.text, fontSize: 16, lineHeight: 24, backgroundColor: C.card, borderRadius: 16, padding: 14, borderWidth: 1, borderColor: C.line },
+  search: { backgroundColor: C.card, borderRadius: 999, paddingHorizontal: 20, height: 50, color: C.text, fontSize: 15.5, ...C.shadow },
+  title: { color: C.text, fontSize: 17, fontWeight: '500', letterSpacing: -0.2, flex: 1 },
+  editor: { flex: 1, color: C.text, fontSize: 16, lineHeight: 24, backgroundColor: C.card, borderRadius: 24, padding: 20, ...C.shadow },
 }))

@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View, type ScrollViewInstance } from 'react-native'
+import { Alert, BackHandler, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View, type ScrollViewInstance } from 'react-native'
+import { Text } from './Text'
 import Animated from 'react-native-reanimated'
 import type { ChatMessage, ChatSummary, InboxSources, InboxUnread, MailMessageView, MailSummary } from '../../../shared/types'
 import type { PhoneNote } from '../islandTypes'
 import type { DropLink, Live } from '../link'
 import { whenText } from '../files'
-import { Avatar, Badge, Btn, Composer, Empty, ErrorLine, Page, Segmented, TAB_ROOM, ago, useKit, useAction, useCall, useKeyboard } from './kit'
+import { Avatar, Badge, Btn, Composer, Empty, ErrorLine, Page, SIDE, Segmented, Switch, TAB_ROOM, ago, useKit, useAction, useCall, useKeyboard } from './kit'
 import { themed, useTheme } from './theme'
+import { Icon } from './icons'
 import { PUSH_IN, PUSH_OUT, LEAVE } from './motion'
 
 type Tab = 'chats' | 'mail' | 'alerts'
@@ -36,7 +38,7 @@ export function InboxScreen({ link, live, top, bottom }: { link: DropLink; live:
     <View style={{ flex: 1 }}>
       <Page title="Inbox" sub={`On ${link.pairing.name}`} top={top} scroll={false}>
         <Segmented
-          style={{ marginHorizontal: 16, marginBottom: 8 }}
+          style={{ marginHorizontal: SIDE, marginBottom: 12 }}
           value={tab}
           onChange={setTab}
           items={[
@@ -62,33 +64,39 @@ export function InboxScreen({ link, live, top, bottom }: { link: DropLink; live:
 
 function Chats({ link, sources, onOpen }: { link: DropLink; sources: InboxSources | null; onOpen: (c: ChatSummary) => void }) {
   const C = useTheme()
+  const st = useSt()
   const k = useKit()
   const ready = sources?.whatsapp === 'ready'
   const { data, error, loading } = useCall<ChatSummary[]>(link, 'inbox.chats', [], { topic: 'inbox', when: ready })
   if (sources && !ready)
     return <Empty title={sources.whatsapp === 'linking' ? 'WhatsApp is linking…' : 'WhatsApp isn’t on'} text="Link WhatsApp in the island’s Settings on your computer, and your chats show up here to read and answer." />
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: SIDE, paddingBottom: 130 }}>
       {loading && !data && <Empty busy title="Getting your chats…" />}
       <ErrorLine message={error} />
       {data && !data.length && <Empty title="No chats yet" />}
-      {data?.map((c, i) => (
-        <Animated.View key={c.id}>
-          <RowLink
-            onPress={() => onOpen(c)}
-            left={<Avatar name={c.name} uri={c.avatar} />}
-            title={c.name}
-            sub={`${c.lastFromMe ? 'You: ' : ''}${c.last}`}
-            right={
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Text style={[k.rowRight, c.unread > 0 && { color: C.green }]}>{ago(c.time)}</Text>
-                <Badge n={c.unread} color={C.green} />
-              </View>
-            }
-            bold={c.unread > 0}
-          />
-        </Animated.View>
-      ))}
+      {!!data?.length && (
+        <View style={st.list}>
+          {data.map((c, i) => (
+            <Animated.View key={c.id}>
+              <RowLink
+                first={i === 0}
+                onPress={() => onOpen(c)}
+                left={<Avatar name={c.name} uri={c.avatar} size={44} />}
+                title={c.name}
+                sub={`${c.lastFromMe ? 'You: ' : ''}${c.last}`}
+                right={
+                  <View style={{ alignItems: 'flex-end', gap: 5 }}>
+                    <Text style={[k.rowRight, c.unread > 0 && { color: C.accent }]}>{ago(c.time)}</Text>
+                    <Badge n={c.unread} />
+                  </View>
+                }
+                bold={c.unread > 0}
+              />
+            </Animated.View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -106,7 +114,7 @@ function Thread({ link, chat, top, bottom, onBack }: { link: DropLink; chat: Cha
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Page title={chat.name} sub={chat.isGroup ? 'Group' : 'WhatsApp'} top={top} onBack={onBack} scroll={false}>
-        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: 14, gap: 6 }}>
+        <ScrollView ref={scroll} style={{ flex: 1 }} contentContainerStyle={{ padding: SIDE, paddingTop: 6, gap: 8 }}>
           {!data && !error && <Empty busy title="Opening the chat…" />}
           <ErrorLine message={error} />
           {data?.map((m) => (
@@ -115,15 +123,15 @@ function Thread({ link, chat, top, bottom, onBack }: { link: DropLink; chat: Cha
               {m.media?.thumb && <Image source={{ uri: m.media.thumb }} style={st.thumb} />}
               {m.media && !m.media.thumb && <Text style={st.media}>{m.media.name ?? m.media.kind}</Text>}
               {!!m.text && (
-                <Text style={st.bubbleText} selectable>
+                <Text style={[st.bubbleText, m.fromMe && st.onMine]} selectable>
                   {m.text}
                 </Text>
               )}
-              <Text style={st.time}>{new Date(m.time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</Text>
+              <Text style={[st.time, m.fromMe && st.onMine, m.fromMe && { opacity: 0.75 }]}>{new Date(m.time).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</Text>
             </Animated.View>
           ))}
         </ScrollView>
-        <View style={{ paddingHorizontal: 12, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
+        <View style={{ paddingHorizontal: SIDE - 4, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
           <ErrorLine message={act.error} />
           <Composer
             placeholder="Message"
@@ -151,27 +159,32 @@ function Mail({ link, sources, onOpen }: { link: DropLink; sources: InboxSources
   if (sources && !has) return <Empty title="No mail accounts" text="Add a mail account in the island’s Settings on your computer, and your inbox shows up here." />
   const label = (id: string) => sources?.mail.find((a) => a.id === id)?.label
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: SIDE, paddingBottom: 130 }}>
       {loading && !data && <Empty busy title="Getting your mail…" />}
       <ErrorLine message={error} />
       {data && !data.length && <Empty title="Inbox zero" />}
-      {data?.map((m, i) => (
-        <Animated.View key={`${m.accountId}-${m.uid}`}>
-          <RowLink
-            onPress={() => onOpen(m)}
-            left={<View style={[st.dot, { backgroundColor: m.unread ? C.blue : 'transparent' }]} />}
-            title={m.from.name || m.from.address}
-            sub={`${m.subject}${m.snippet ? `\n${m.snippet}` : ''}`}
-            right={
-              <View style={{ alignItems: 'flex-end', gap: 4 }}>
-                <Text style={k.rowRight}>{ago(m.date)}</Text>
-                {(sources?.mail.length ?? 0) > 1 && <Text style={[k.rowRight, { fontSize: 10 }]}>{label(m.accountId)}</Text>}
-              </View>
-            }
-            bold={m.unread}
-          />
-        </Animated.View>
-      ))}
+      {!!data?.length && (
+        <View style={st.list}>
+          {data.map((m, i) => (
+            <Animated.View key={`${m.accountId}-${m.uid}`}>
+              <RowLink
+                first={i === 0}
+                onPress={() => onOpen(m)}
+                left={<View style={[st.dot, { backgroundColor: m.unread ? C.accent : 'transparent' }]} />}
+                title={m.from.name || m.from.address}
+                sub={`${m.subject}${m.snippet ? `\n${m.snippet}` : ''}`}
+                right={
+                  <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                    <Text style={[k.rowRight, m.unread && { color: C.accent }]}>{ago(m.date)}</Text>
+                    {(sources?.mail.length ?? 0) > 1 && <Text style={[k.rowRight, { fontSize: 11 }]}>{label(m.accountId)}</Text>}
+                  </View>
+                }
+                bold={m.unread}
+              />
+            </Animated.View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   )
 }
@@ -190,7 +203,7 @@ function MailView({ link, m, top, bottom, onBack }: { link: DropLink; m: MailSum
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Page title={m.subject || '(no subject)'} sub={`${m.from.name || m.from.address} · ${new Date(m.date).toLocaleString()}`} top={top} onBack={onBack} scroll={false}>
-        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, gap: 10 }}>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: SIDE, paddingTop: 6, gap: 10 }}>
           {!data && !error && <Empty busy title="Opening…" />}
           <ErrorLine message={error} />
           {data && (
@@ -202,9 +215,9 @@ function MailView({ link, m, top, bottom, onBack }: { link: DropLink; m: MailSum
               </Text>
             </Animated.View>
           )}
-          {sent && <Text style={{ color: C.green, fontWeight: '700' }}>Reply sent.</Text>}
+          {sent && <Text style={{ color: C.green, fontWeight: '500', fontSize: 14, paddingHorizontal: 6 }}>Reply sent.</Text>}
         </ScrollView>
-        <View style={{ paddingHorizontal: 12, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
+        <View style={{ paddingHorizontal: SIDE - 4, paddingBottom: kb ? 8 : bottom + TAB_ROOM, gap: 6 }}>
           <ErrorLine message={act.error} />
           <Composer
             placeholder={`Reply to ${m.from.name || m.from.address}`}
@@ -223,9 +236,6 @@ function MailView({ link, m, top, bottom, onBack }: { link: DropLink; m: MailSum
 
 // ---- Notifications ----
 
-const PALETTE = ['#0a84ff', '#30d158', '#ff9f0a', '#bf5af2', '#ff375f', '#64d2ff', '#ffd60a', '#ac8e68']
-const colorFor = (app: string) => PALETTE[[...app].reduce((n, c) => (n * 31 + c.charCodeAt(0)) >>> 0, 7) % PALETTE.length]
-
 /** The computer's notification center: clear one or all, Do Not Disturb. */
 function Alerts({ link, live }: { link: DropLink; live: Live }) {
   const C = useTheme()
@@ -236,7 +246,7 @@ function Alerts({ link, live }: { link: DropLink; live: Live }) {
   const [dnd, setDnd] = useState(!!live.view?.dnd)
   useEffect(() => setDnd(!!live.view?.dnd), [live.view?.dnd])
   return (
-    <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 130, gap: 8 }}>
+    <ScrollView contentContainerStyle={{ paddingHorizontal: SIDE, paddingBottom: 130, gap: 10 }}>
       <View style={[k.card, st.dndRow]}>
         <View style={{ flex: 1 }}>
           <Text style={k.rowTitle}>Do Not Disturb</Text>
@@ -244,12 +254,10 @@ function Alerts({ link, live }: { link: DropLink; live: Live }) {
         </View>
         <Switch
           value={dnd}
-          onValueChange={(on) => {
+          onChange={(on) => {
             setDnd(on)
             void act.run('dnd', 'notifications.setDnd', on)
           }}
-          trackColor={{ true: C.violet, false: C.dark ? '#3a3a3f' : '#d9d9de' }}
-          thumbColor="#fff"
         />
       </View>
       <ErrorLine message={act.error} />
@@ -277,11 +285,12 @@ function Alerts({ link, live }: { link: DropLink; live: Live }) {
 }
 
 function AlertCard({ n, index, onDismiss }: { n: PhoneNote; index: number; onDismiss: () => void }) {
+  const C = useTheme()
   const st = useSt()
   const k = useKit()
   return (
     <Animated.View exiting={LEAVE} style={st.note}>
-      <View style={[st.appIcon, { backgroundColor: colorFor(n.app) }]}>
+      <View style={st.appIcon}>
         <Text style={st.appIconText}>{n.app.slice(0, 1).toUpperCase()}</Text>
       </View>
       <View style={{ flex: 1 }}>
@@ -300,19 +309,19 @@ function AlertCard({ n, index, onDismiss }: { n: PhoneNote; index: number; onDis
           </Text>
         )}
       </View>
-      <Pressable hitSlop={10} onPress={onDismiss} style={({ pressed }) => [st.x, pressed && { opacity: 0.5 }]}>
-        <Text style={st.xText}>×</Text>
+      <Pressable hitSlop={10} onPress={onDismiss} accessibilityRole="button" accessibilityLabel="Clear" style={({ pressed }) => [st.x, pressed && { opacity: 0.5 }]}>
+        <Icon name="close" size={13} color={C.text2} />
       </Pressable>
     </Animated.View>
   )
 }
 
-function RowLink(p: { title: string; sub?: string; left?: React.ReactNode; right?: React.ReactNode; onPress: () => void; bold?: boolean }) {
+function RowLink(p: { title: string; sub?: string; left?: React.ReactNode; right?: React.ReactNode; onPress: () => void; bold?: boolean; first?: boolean }) {
   const C = useTheme()
   const st = useSt()
   const k = useKit()
   return (
-    <Pressable onPress={p.onPress} style={({ pressed }) => [st.link, pressed && { backgroundColor: C.fillPressed }]}>
+    <Pressable onPress={p.onPress} style={({ pressed }) => [st.link, !p.first && st.linkLine, pressed && { opacity: 0.6 }]}>
       {p.left}
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text style={[k.rowTitle, p.bold && { fontWeight: '700' }]} numberOfLines={1}>
@@ -330,23 +339,25 @@ function RowLink(p: { title: string; sub?: string; left?: React.ReactNode; right
 }
 
 const useSt = themed((C) => ({
-  link: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, paddingHorizontal: 6, borderRadius: 14 },
-  dot: { width: 9, height: 9, borderRadius: 5 },
-  bubble: { maxWidth: '82%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 8 },
-  mine: { alignSelf: 'flex-end', backgroundColor: C.dark ? '#005c4b' : '#d9fdd3', borderBottomRightRadius: 5 },
-  theirs: { alignSelf: 'flex-start', backgroundColor: C.card2, borderBottomLeftRadius: 5 },
-  author: { color: C.cyan, fontSize: 12, fontWeight: '700', marginBottom: 2 },
-  bubbleText: { color: C.text, fontSize: 15, lineHeight: 21 },
-  thumb: { width: 200, height: 150, borderRadius: 10, marginBottom: 4, backgroundColor: '#000' },
+  list: { backgroundColor: C.card, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 4, ...C.shadow },
+  link: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 13 },
+  linkLine: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  bubble: { maxWidth: '82%', borderRadius: 22, paddingHorizontal: 15, paddingVertical: 10 },
+  mine: { alignSelf: 'flex-end', backgroundColor: C.primary, borderBottomRightRadius: 8 },
+  theirs: { alignSelf: 'flex-start', backgroundColor: C.card, borderBottomLeftRadius: 8, ...C.shadow },
+  onMine: { color: C.onPrimary },
+  author: { color: C.accent, fontSize: 12.5, fontWeight: '500', marginBottom: 2 },
+  bubbleText: { color: C.text, fontSize: 15.5, lineHeight: 22 },
+  thumb: { width: 200, height: 150, borderRadius: 14, marginBottom: 4, backgroundColor: '#000' },
   media: { color: C.text2, fontSize: 13, fontStyle: 'italic' },
-  time: { color: C.text3, fontSize: 10, alignSelf: 'flex-end', marginTop: 2 },
-  mailBody: { color: C.text, fontSize: 15, lineHeight: 22, marginTop: 10 },
+  time: { color: C.text3, fontSize: 11, alignSelf: 'flex-end', marginTop: 2 },
+  mailBody: { color: C.text, fontSize: 15.5, lineHeight: 23, marginTop: 12 },
   dndRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  note: { flexDirection: 'row', gap: 12, backgroundColor: C.card, borderRadius: 18, padding: 14, borderWidth: 1, borderColor: C.line },
-  appIcon: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
-  appIconText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  app: { color: C.text2, fontSize: 12, fontWeight: '700', flex: 1 },
-  noteTitle: { color: C.text, fontSize: 15, fontWeight: '700', marginTop: 2 },
-  x: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.fill, alignItems: 'center', justifyContent: 'center' },
-  xText: { color: C.text2, fontSize: 17, lineHeight: 19, fontWeight: '600' },
+  note: { flexDirection: 'row', gap: 12, backgroundColor: C.card, borderRadius: 24, padding: 18, ...C.shadow },
+  appIcon: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
+  appIconText: { color: C.text, fontSize: 16, fontWeight: '500' },
+  app: { color: C.text2, fontSize: 13, flex: 1 },
+  noteTitle: { color: C.text, fontSize: 15.5, fontWeight: '500', marginTop: 2 },
+  x: { width: 30, height: 30, borderRadius: 15, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
 }))
