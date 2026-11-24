@@ -109,7 +109,7 @@ export function TranslateCard({ t, keys }: { t: Translation; keys: string }) {
           {t.text}
         </div>
       ) : t.phase === 'consent' ? (
-        <div className="tr-ask">There’s no model on this computer for this. Send the text to {t.cloud}?</div>
+        <div className="tr-ask">This would be translated by {t.cloud}, not on this computer. Send the text?</div>
       ) : (
         <div className="tr-ask">{t.error ?? `Select some text in any app, then press ${keys}.`}</div>
       )}

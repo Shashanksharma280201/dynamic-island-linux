@@ -442,7 +442,8 @@ const FRENCH = 'La réunion a été déplacée à jeudi à dix heures. Peux-tu a
 
     // ---- The shelf across the top of the Dashboard ----
     check('the shelf shows across the top while there’s something on it', (await page.$$('.shelf-strip .thumb')).length === 3 && /3 files/.test(await page.$eval('.shelf-strip', (e) => e.innerText)))
-    check('a picture shows as itself, other files by their kind', (await page.$$('.shelf-strip .thumb.pic img')).length === 1 && (await page.$$eval('.shelf-strip .thumb em', (e) => e.map((x) => x.textContent).join())) === 'XLSPDF')
+    const thumbs = await page.$$eval('.shelf-strip .thumb', (e) => e.map((x) => (x.querySelector('img') ? 'picture' : (x.querySelector('em')?.textContent ?? '?'))).join())
+    check('a picture shows as itself, other files by their kind', thumbs === 'XLS,picture,PDF', thumbs)
     await osCall('dash.tiles', { tiles: ['media', 'timer', 'weather', 'devices'] })
     await until(async () => (await kinds()) === 'media,timer,weather,devices', 4000)
     await sleep(500)

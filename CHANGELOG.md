@@ -4,6 +4,67 @@ What changed in each release of Dynamic Island. Download a release from
 [Releases](https://github.com/shashanksharma280201/dynamic-island-linux/releases),
 or install it with one command (see the [README](https://github.com/shashanksharma280201/dynamic-island-linux#download)).
 
+## Unreleased
+
+**More on the notch: volume, weather, your apps, a shelf, and translating**
+
+- **Volume and brightness on the notch**: change the volume or the
+  screen's brightness (the keys, a slider, anything) and the notch widens
+  for a moment to show the level; muted says **Muted**. Not while the
+  island is open (its own sliders are on screen then), and it makes no
+  sound. Linux, with PulseAudio or PipeWire and GNOME's power service;
+  Ubuntu's own pop-up may still show beside it. Off in **Settings →
+  General**.
+- **A device connected**: headphones, a mouse or a keyboard that connects
+  over Bluetooth says so on the island for a few seconds, with its
+  battery when the device reports one. Not in Do Not Disturb.
+- **Weather**: name your town in the Weather tile (or Settings → General)
+  and the Dashboard shows it in its header; the **Weather** tile has the
+  day's range and the next five hours. With something else on the island
+  (music, a timer) the weather takes its turn beside it. Off until you
+  name a place; that place's position goes to Open-Meteo, a free weather
+  service, and nothing else does (it's in the Privacy log, and pauses
+  with the rest).
+- **Your apps under the tiles**: a row of up to eight apps, one click to
+  open, a dot under the ones that are open. The plus adds any installed
+  app (search by name); **Edit** takes one out. It starts with the usual
+  ones (files, a terminal, a browser, an editor, settings). Linux.
+- **A menu of thirteen tiles**: **Edit**, then a tile (or right-click
+  one), opens a menu over the four instead of the old grid inside each
+  tile. Six are new: **Weather**, **Devices** (what's paired, what's
+  connected, batteries), **Screen time** (the day so far and the three
+  apps it went to, when Screen time is on under Sources), **To-do** (a
+  short list; what you tick stays crossed off until tomorrow), **Shelf**
+  and **Translate** (type something, get it in your language).
+- **Drag files to the island**: it now opens the places they can go and
+  lights the one you're over. **Shelf** keeps them at hand (nothing is
+  copied; it remembers where they are), **Documents** adds them as
+  before, **Phone** sends them when a phone is connected. Letting go
+  anywhere else on the island puts them on the shelf.
+- **The shelf**: while there's something on it, it shows across the top
+  of the Dashboard. Drag a file out into any app, click one to see it in
+  its folder, **Zip** them into one file in Downloads (the zip takes
+  their place), **To phone**, or **Clear**.
+- **Translate what you selected**: select text in any app and press
+  **Ctrl+Alt+T**. A card opens with the translation, the language it was
+  in, and where it was made; **Speak**, **Copy**, or **Replace** to type
+  it over the selection. It uses the model on this computer when there
+  is one, and asks before sending anything to the cloud. On Mac and
+  Windows, copy the text first.
+- **Eye breaks**: every 20 minutes at the screen (you choose how often),
+  a card asks you to look at something far off and counts 20 seconds
+  down. **Skip**, or **In 5 minutes**. Minutes away from the computer
+  don't count. Off until you turn it on.
+- **Sessions**: every coding agent in one list (Claude Code, Cursor,
+  Codex, Gemini), the ones that need you first, then working, then done,
+  each with its agent's mark and a word for where it is. Cursor's are
+  watched only. Another agent's mark also shows beside the orb on the
+  notch.
+- **Different tiles in the evening**: turn it on in Settings → General
+  and the Dashboard keeps a second set of four for the evening.
+- **Hide the island from screen sharing** (Mac and Windows): it stays
+  out of screen shares and recordings. Linux has no way to do this yet.
+
 ## 0.11.0 (2026-11-23)
 
 **A dashboard, Friday, and a focus timer on the notch**
