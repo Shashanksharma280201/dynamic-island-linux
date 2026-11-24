@@ -1,4 +1,5 @@
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from './Text'
 import { themed, useTheme } from './theme'
 import { Icon } from './icons'
 
@@ -11,8 +12,8 @@ export function SendPill({ sending, to, onDismiss }: { sending: Sending; to: str
   return (
     <Pressable style={s.bar} onPress={() => sending.phase !== 'sending' && onDismiss()}>
       <View style={s.pill}>
-        <View style={[s.mark, { backgroundColor: sending.phase === 'failed' ? C.red : sending.phase === 'sent' ? C.green : C.fill }]}>
-          {sending.phase === 'sending' ? <ActivityIndicator size="small" color={C.text} /> : <Icon name={sending.phase === 'sent' ? 'check' : 'alert'} size={16} color="#fff" />}
+        <View style={[s.mark, { backgroundColor: sending.phase === 'failed' ? C.red : sending.phase === 'sent' ? C.accent : C.card2 }]}>
+          {sending.phase === 'sending' ? <ActivityIndicator size="small" color={C.text} /> : <Icon name={sending.phase === 'sent' ? 'check' : 'alert'} size={16} color={sending.phase === 'sent' ? C.onPrimary : '#fff'} />}
         </View>
         <View style={{ flex: 1 }}>
           <Text style={s.title} numberOfLines={1}>
@@ -34,11 +35,12 @@ export function SendPill({ sending, to, onDismiss }: { sending: Sending; to: str
 }
 
 const useS = themed((C) => ({
-  bar: { position: 'absolute', left: 16, right: 16, bottom: 34 },
-  pill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.bar, ...C.shadow, borderRadius: 18, padding: 12, borderWidth: 1, borderColor: C.line },
-  mark: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  title: { color: C.text, fontSize: 14, fontWeight: '700' },
-  sub: { color: C.text2, fontSize: 12, marginTop: 2 },
-  track: { height: 4, borderRadius: 2, backgroundColor: C.fill, marginTop: 7, overflow: 'hidden' },
+  // Above the tab bar.
+  bar: { position: 'absolute', left: 20, right: 20, bottom: 88 },
+  pill: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: C.bar, borderRadius: 30, paddingVertical: 10, paddingLeft: 10, paddingRight: 20, boxShadow: C.dark ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(30,20,10,0.14)' },
+  mark: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  title: { color: C.text, fontSize: 15, fontWeight: '500' },
+  sub: { color: C.text2, fontSize: 13, marginTop: 1 },
+  track: { height: 4, borderRadius: 2, backgroundColor: C.accentPale, marginTop: 7, overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2, backgroundColor: C.accent },
 }))

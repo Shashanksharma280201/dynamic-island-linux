@@ -1,7 +1,8 @@
-import { Text, View } from 'react-native'
+import { View } from 'react-native'
+import { Text } from './Text'
 import type { AgentsView } from '../../../shared/os'
 import type { DropLink } from '../link'
-import { ago, Btn, Card, Composer, Empty, ErrorLine, Kicker, Page, Row, useAction, useCall } from './kit'
+import { ago, Btn, Card, Composer, Empty, ErrorLine, Heading, Hero, Page, Row, useAction, useCall } from './kit'
 import { themed, useTheme } from './theme'
 import { money } from '../words'
 
@@ -24,50 +25,58 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
   const then = (r: AgentsView | null) => (r ? (setData(r), true) : false)
   const watching = v?.monitors.filter((m) => m.state === 'watching').length ?? 0
   return (
-    <Page title="Agents" sub={v ? `${watching} watching` : undefined} top={top} onBack={onBack} onRefresh={reload}>
+    <Page title="Agents" top={top} onBack={onBack} onRefresh={reload}>
       <ErrorLine message={error || act.error} />
       {!v && !error && <Empty busy title="Asking the computer…" />}
       {v && (
         <>
-          <Card style={{ gap: 8 }}>
-            <Kicker>Tell me when…</Kicker>
-            <Composer placeholder="PR #43 is reviewed · anyone mentions Acme" send="Watch" busy={act.busy === 'watch'} onSend={async (t) => then(await act.run<AgentsView>('watch', 'agents.monitor', t))} />
-            {!v.monitors.length && <Text style={st.hint}>It looks every five minutes and tells you once, on the island and here.</Text>}
-            {v.monitors.slice(0, 12).map((m, i, a) => (
-              <Row
-                key={m.id}
-                full
-                title={m.text}
-                sub={m.line}
-                last={i === a.length - 1}
-                left={<View style={[st.dot, { backgroundColor: m.state === 'watching' ? C.green : m.state === 'failed' ? C.red : C.text3 }]} />}
-                right={<Btn small label={m.state === 'watching' ? 'Stop' : 'Clear'} busy={act.busy === m.id} onPress={async () => void then(await act.run<AgentsView>(m.id, 'agents.unmonitor', m.id))} />}
-              />
-            ))}
-          </Card>
+          <Hero value={String(watching)} label={watching === 1 ? 'Thing watched for you' : 'Things watched for you'} />
 
-          <Card style={{ gap: 8 }}>
-            <Kicker>Research</Kicker>
-            {!v.brain && <Text style={st.hint}>Turn on the second brain on the computer first: research reads it and writes its note there.</Text>}
-            {v.brain && <Composer placeholder="What do my notes say about…" send="Research" busy={act.busy === 'research'} onSend={async (t) => then(await act.run<AgentsView>('research', 'agents.research', t))} />}
-            {v.research.slice(0, 6).map((j, i, a) => (
-              <Row key={j.id} full title={j.question} sub={j.line} last={i === a.length - 1} />
-            ))}
-          </Card>
-
-          {!!v.roster.length && (
-            <Card>
-              <Kicker>Tending the brain</Kicker>
-              {v.roster.map((r, i, a) => (
+          <Heading>Tell me when…</Heading>
+          <Composer placeholder="PR #43 is reviewed" send="Watch" busy={act.busy === 'watch'} onSend={async (t) => then(await act.run<AgentsView>('watch', 'agents.monitor', t))} />
+          {!v.monitors.length && <Text style={st.hint}>It looks every five minutes and tells you once, on the island and here.</Text>}
+          {!!v.monitors.length && (
+            <Card style={st.list}>
+              {v.monitors.slice(0, 12).map((m, i, a) => (
                 <Row
-                  key={r.id}
-                  title={r.label}
-                  sub={[r.note || r.what, r.ok !== null && r.lastRun ? ranAgo(r.lastRun) : ''].filter(Boolean).join(' · ')}
+                  key={m.id}
+                  full
+                  title={m.text}
+                  sub={m.line}
                   last={i === a.length - 1}
-                  right={<Btn small label="Run now" busy={act.busy === r.id} onPress={async () => void then(await act.run<AgentsView>(r.id, 'agents.run', r.id))} />}
+                  left={<View style={[st.dot, m.state === 'watching' ? { backgroundColor: C.green } : m.state === 'failed' ? { backgroundColor: C.red } : { borderWidth: 1.5, borderColor: C.text3 }]} />}
+                  right={<Btn small label={m.state === 'watching' ? 'Stop' : 'Clear'} busy={act.busy === m.id} onPress={async () => void then(await act.run<AgentsView>(m.id, 'agents.unmonitor', m.id))} />}
                 />
               ))}
             </Card>
+          )}
+
+          <Heading>Research</Heading>
+          {!v.brain && <Text style={st.hint}>Turn on the second brain on the computer first: research reads it and writes its note there.</Text>}
+          {v.brain && <Composer placeholder="What do my notes say about…" send="Research" busy={act.busy === 'research'} onSend={async (t) => then(await act.run<AgentsView>('research', 'agents.research', t))} />}
+          {!!v.research.length && (
+            <Card style={st.list}>
+              {v.research.slice(0, 6).map((j, i, a) => (
+                <Row key={j.id} full title={j.question} sub={j.line} last={i === a.length - 1} />
+              ))}
+            </Card>
+          )}
+
+          {!!v.roster.length && (
+            <>
+              <Heading>Tending the brain</Heading>
+              <Card style={st.list}>
+                {v.roster.map((r, i, a) => (
+                  <Row
+                    key={r.id}
+                    title={r.label}
+                    sub={[r.note || r.what, r.ok !== null && r.lastRun ? ranAgo(r.lastRun) : ''].filter(Boolean).join(' · ')}
+                    last={i === a.length - 1}
+                    right={<Btn small label="Run now" busy={act.busy === r.id} onPress={async () => void then(await act.run<AgentsView>(r.id, 'agents.run', r.id))} />}
+                  />
+                ))}
+              </Card>
+            </>
           )}
 
           <Text style={st.week}>
@@ -80,7 +89,8 @@ export function AgentsScreen({ link, top, onBack }: { link: DropLink; top: numbe
 }
 
 const useSt = themed((C) => ({
-  hint: { color: C.text3, fontSize: 13, lineHeight: 18 },
+  hint: { color: C.text2, fontSize: 13.5, lineHeight: 19, paddingHorizontal: 6 },
+  list: { paddingVertical: 6, paddingHorizontal: 18 },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  week: { color: C.text3, fontSize: 12, textAlign: 'center', marginTop: 4 },
+  week: { color: C.text2, fontSize: 12.5, textAlign: 'center', marginTop: 10 },
 }))

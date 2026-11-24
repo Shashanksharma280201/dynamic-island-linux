@@ -1,18 +1,19 @@
 import { createContext, createElement, useContext, type ReactNode } from 'react'
 import { StyleSheet, useColorScheme } from 'react-native'
-import { DARK, paletteFor, type Palette, type ThemePref } from './palette'
+import { DARK, paletteFor, withAccent, type Palette, type ThemePref } from './palette'
 
-export { DARK, LIGHT, paletteFor, type IsoPalette, type Palette, type ThemePref } from './palette'
+export { CORAL, DARK, LIGHT, cleanColor, paletteFor, withAccent, type IsoPalette, type Palette, type ThemePref } from './palette'
+export { FONT, fitSize, fontOf } from './font'
 
 const ThemeContext = createContext<Palette>(DARK)
 
 /** The colours in use now. */
 export const useTheme = (): Palette => useContext(ThemeContext)
 
-/** Light, dark or the phone's own, for everything inside. */
-export function ThemeProvider({ pref, children }: { pref: ThemePref; children: ReactNode }) {
+/** Light, dark or the phone's own, in the orb's colour, for everything inside. */
+export function ThemeProvider({ pref, accent, children }: { pref: ThemePref; accent?: string | null; children: ReactNode }) {
   const system = useColorScheme()
-  return createElement(ThemeContext.Provider, { value: paletteFor(pref, system) }, children)
+  return createElement(ThemeContext.Provider, { value: withAccent(paletteFor(pref, system), accent) }, children)
 }
 
 /**
@@ -29,20 +30,6 @@ export function themed<S extends Parameters<typeof StyleSheet.create>[0]>(make: 
     made.set(C, styles)
     return styles
   }
-}
-
-/** A file type's colour on its tile (as on the island). */
-export function kindColor(name: string): string {
-  const ext = name.split('.').pop()?.toLowerCase() ?? ''
-  if (['jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'].includes(ext)) return '#bf5af2'
-  if (['mp4', 'mov', 'mkv', 'webm', '3gp'].includes(ext)) return '#ff375f'
-  if (['mp3', 'm4a', 'aac', 'wav', 'ogg', 'opus', 'flac'].includes(ext)) return '#ff9f0a'
-  if (ext === 'pdf') return '#ff453a'
-  if (['doc', 'docx', 'odt', 'rtf'].includes(ext)) return '#0a84ff'
-  if (['xls', 'xlsx', 'ods', 'csv'].includes(ext)) return '#30d158'
-  if (['ppt', 'pptx', 'odp', 'key'].includes(ext)) return '#ff9f0a'
-  if (['zip', 'rar', '7z', 'tar', 'gz', 'apk'].includes(ext)) return '#a2845e'
-  return '#8e8e93'
 }
 
 export const extOf = (name: string) => {

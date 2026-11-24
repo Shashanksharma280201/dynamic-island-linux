@@ -1,4 +1,10 @@
-/** The app's two palettes and how one is chosen (no React here, so it can be tested on its own). */
+/**
+ * The app's two palettes and how one is chosen (no React here, so it can be
+ * tested on its own). The look: a calm grey page, plain white cards with a
+ * soft shadow, near-black words and one grey, and a single accent (the orb's
+ * colour, coral unless you changed it) for what's chosen, what to do and the
+ * numbers drawn.
+ */
 
 /** Light, dark, or as the phone is set. */
 export type ThemePref = 'system' | 'light' | 'dark'
@@ -24,12 +30,15 @@ export type Palette = {
   /** A quiet button or chip, and a row being pressed. */
   fill: string
   fillPressed: string
-  /** The strongest button (white on dark, ink on light) and its label. */
+  /** The strongest button (the accent) and its label. */
   primary: string
   onPrimary: string
-  /** Links, switches, the chosen thing. */
+  /** The one colour: the chosen tab, what to do, the numbers drawn. Follows the orb. */
   accent: string
   accentSoft: string
+  /** Two lighter steps of it, for charts. */
+  accentMid: string
+  accentPale: string
   green: string
   red: string
   orange: string
@@ -43,8 +52,8 @@ export type Palette = {
   scrim: string
   /** The status bar's icons. */
   statusBar: 'light' | 'dark'
-  /** Cards lift a little off a light page; on dark the hairline does it. */
-  shadow: { shadowColor: string; shadowOpacity: number; shadowRadius: number; shadowOffset: { width: number; height: number }; elevation: number }
+  /** Cards lift a little off the page: a wide, faint shadow. */
+  shadow: { boxShadow: string }
   /** The isometric figures (Anatomy's four-tone shading). */
   iso: IsoPalette
 }
@@ -73,34 +82,36 @@ export type IsoPalette = {
 
 export const DARK: Palette = {
   dark: true,
-  bg: '#0a0a0d',
-  card: '#14151a',
-  card2: '#1c1d23',
-  line: 'rgba(255,255,255,0.075)',
-  lineStrong: 'rgba(255,255,255,0.14)',
-  text: '#f4f4f6',
-  text2: 'rgba(235,235,245,0.64)',
-  text3: 'rgba(235,235,245,0.38)',
-  fill: 'rgba(255,255,255,0.08)',
-  fillPressed: 'rgba(255,255,255,0.05)',
-  primary: '#ffffff',
-  onPrimary: '#0a0a0c',
-  accent: '#0a84ff',
-  accentSoft: 'rgba(10,132,255,0.18)',
-  green: '#30d158',
-  red: '#ff453a',
-  orange: '#ff9f0a',
+  bg: '#131211',
+  card: '#1e1d1b',
+  card2: '#282623',
+  line: 'rgba(255,245,235,0.075)',
+  lineStrong: 'rgba(255,245,235,0.14)',
+  text: '#f4f1ee',
+  text2: '#a39d97',
+  text3: '#736d68',
+  fill: 'rgba(255,245,235,0.075)',
+  fillPressed: 'rgba(255,245,235,0.045)',
+  primary: '#fa7455',
+  onPrimary: '#ffffff',
+  accent: '#fa7455',
+  accentSoft: 'rgba(250,116,85,0.2)',
+  accentMid: '#b9573f',
+  accentPale: '#4a2a22',
+  green: '#5fd058',
+  red: '#ff6b5e',
+  orange: '#ffa23a',
   yellow: '#ffd60a',
-  blue: '#0a84ff',
-  violet: '#bf5af2',
+  blue: '#5aa9ff',
+  violet: '#c58af9',
   cyan: '#64d2ff',
-  pink: '#ff375f',
-  bar: 'rgba(22,23,28,0.97)',
+  pink: '#ff6b8e',
+  bar: '#2a2825',
   scrim: 'rgba(0,0,0,0.55)',
   statusBar: 'light',
-  shadow: { shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 3 },
+  shadow: { boxShadow: '0 10px 30px rgba(0,0,0,0.35)' },
   iso: {
-    paper: '#14151a',
+    paper: '#1e1d1b',
     face: '#1b1b1d',
     top: '#1e1e21',
     shades: ['#0f0f11', '#131315', '#17171a', '#1a1a1d'],
@@ -123,32 +134,34 @@ export const DARK: Palette = {
 
 export const LIGHT: Palette = {
   dark: false,
-  bg: '#f4f5f8',
+  bg: '#f1f1f1',
   card: '#ffffff',
-  card2: '#eceef2',
-  line: 'rgba(15,15,25,0.08)',
-  lineStrong: 'rgba(15,15,25,0.14)',
-  text: '#111114',
-  text2: 'rgba(60,60,67,0.74)',
-  text3: 'rgba(60,60,67,0.46)',
-  fill: 'rgba(118,118,128,0.12)',
-  fillPressed: 'rgba(118,118,128,0.08)',
-  primary: '#111114',
+  card2: '#f4f4f4',
+  line: 'rgba(29,29,29,0.075)',
+  lineStrong: 'rgba(29,29,29,0.14)',
+  text: '#1d1d1d',
+  text2: '#7f7f7f',
+  text3: '#a8a8a8',
+  fill: 'rgba(29,29,29,0.055)',
+  fillPressed: 'rgba(29,29,29,0.035)',
+  primary: '#fa7455',
   onPrimary: '#ffffff',
-  accent: '#007aff',
-  accentSoft: 'rgba(0,122,255,0.12)',
-  green: '#28a745',
-  red: '#e5342b',
-  orange: '#f08c00',
-  yellow: '#e0a800',
-  blue: '#007aff',
+  accent: '#fa7455',
+  accentSoft: 'rgba(250,116,85,0.14)',
+  accentMid: '#fb9479',
+  accentPale: '#f6d9d1',
+  green: '#3fb44a',
+  red: '#e5484d',
+  orange: '#e8890c',
+  yellow: '#d9a400',
+  blue: '#2f7de1',
   violet: '#9b4dca',
   cyan: '#1a9bd7',
   pink: '#e8325a',
-  bar: 'rgba(255,255,255,0.97)',
+  bar: '#ffffff',
   scrim: 'rgba(0,0,0,0.32)',
   statusBar: 'dark',
-  shadow: { shadowColor: '#14142a', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 2 },
+  shadow: { boxShadow: '0 10px 30px rgba(30,20,10,0.06), 0 1px 2px rgba(30,20,10,0.04)' },
   iso: {
     paper: '#ffffff',
     face: '#ffffff',
@@ -176,4 +189,83 @@ export function paletteFor(pref: ThemePref, system: 'light' | 'dark' | null | un
   if (pref === 'light') return LIGHT
   if (pref === 'dark') return DARK
   return system === 'light' ? LIGHT : DARK
+}
+
+// ---- The accent ----
+
+/** The accent when the orb is its own colour. */
+export const CORAL = '#fa7455'
+/** Orbit's own colour on the island: the same coral, a shade lighter (as it's drawn, not as it's written on). */
+const ORBIT = '#ff8a65'
+
+const HEX = /^#[0-9a-f]{6}$/i
+
+/** A colour as the island sends it ("#rrggbb"), or null. Pure. */
+export function cleanColor(c: unknown): string | null {
+  return typeof c === 'string' && HEX.test(c) ? c.toLowerCase() : null
+}
+
+const rgbOf = (hex: string): [number, number, number] => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) as [number, number, number]
+const hexOf = (rgb: number[]) => `#${rgb.map((v) => Math.round(Math.min(255, Math.max(0, v))).toString(16).padStart(2, '0')).join('')}`
+
+/** One colour mixed into another: 0 is all `a`, 1 is all `b`. Pure. */
+export function mix(a: string, b: string, t: number): string {
+  const x = rgbOf(a)
+  const y = rgbOf(b)
+  return hexOf(x.map((v, i) => v + (y[i] - v) * t))
+}
+
+/** How light a colour is to the eye, 0 (black) to 1 (white). Pure. */
+export function luminance(hex: string): number {
+  const [r, g, b] = rgbOf(hex).map((v) => {
+    const c = v / 255
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4)
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/**
+ * A colour kept where it can be seen on the theme's cards and written on:
+ * one too pale for a light page is deepened, one too dark for a dark page
+ * is lifted. Pure.
+ */
+export function seen(hex: string, dark: boolean): string {
+  let c = hex
+  for (let i = 0; i < 8; i++) {
+    const l = luminance(c)
+    if (dark && l < 0.16) c = mix(c, '#ffffff', 0.18)
+    else if (!dark && l > 0.62) c = mix(c, '#000000', 0.12)
+    else break
+  }
+  return c
+}
+
+const tinted = new Map<string, Palette>()
+
+/**
+ * A palette in the orb's colour: the accent, its two lighter steps, and the
+ * strongest button. Coral for Orbit's own colour (and when nothing is known
+ * yet). The same palette object for the same colour, so styles are made once.
+ * Pure.
+ */
+export function withAccent(base: Palette, color: string | null | undefined): Palette {
+  const c = cleanColor(color)
+  if (!c || c === ORBIT || c === CORAL) return base
+  const key = `${base.dark ? 'd' : 'l'}${c}`
+  const known = tinted.get(key)
+  if (known) return known
+  const accent = seen(c, base.dark)
+  const [r, g, b] = rgbOf(accent)
+  const ground = base.dark ? base.bg : '#ffffff'
+  const made: Palette = {
+    ...base,
+    accent,
+    primary: accent,
+    onPrimary: luminance(accent) > 0.4 ? '#1d1d1d' : '#ffffff',
+    accentSoft: `rgba(${r},${g},${b},${base.dark ? 0.2 : 0.14})`,
+    accentMid: mix(accent, ground, 0.27),
+    accentPale: mix(accent, ground, 0.76),
+  }
+  tinted.set(key, made)
+  return made
 }

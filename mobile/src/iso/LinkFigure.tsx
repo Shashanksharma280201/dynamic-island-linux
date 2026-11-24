@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AccessibilityInfo, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { AccessibilityInfo, Platform, Pressable, StyleSheet, View } from 'react-native'
+import { Text } from '../ui/Text'
 import Animated, {
   Easing,
   cancelAnimation,
@@ -137,7 +138,7 @@ export function LinkFigure({
       accessibilityRole="button"
       accessibilityLabel={`${title}: ${readout}`}
       accessibilityHint="Tests the connection to your computer"
-      style={({ pressed }) => [s.plate, { backgroundColor: t.paper, borderColor: C.line }, C.shadow, pressed && { opacity: 0.94 }]}
+      style={({ pressed }) => [s.plate, { backgroundColor: t.paper }, C.shadow, pressed && { opacity: 0.94 }]}
     >
       <View style={s.corners}>
         <Text style={[s.corner, { color: C.text2, fontFamily: MONO }]}>Fig. 1</Text>
@@ -206,7 +207,7 @@ export function LinkFigure({
 }
 
 const s = StyleSheet.create({
-  plate: { borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, paddingHorizontal: 14, paddingVertical: 12, overflow: 'hidden' },
+  plate: { borderRadius: 24, paddingHorizontal: 16, paddingVertical: 14, overflow: 'hidden' },
   corners: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 },
   corner: { fontSize: 10.5, letterSpacing: 0.4 },
   caps: { textTransform: 'uppercase', letterSpacing: 1.1, flexShrink: 1 },

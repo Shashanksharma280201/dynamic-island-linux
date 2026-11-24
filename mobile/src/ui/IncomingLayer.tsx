@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { AppState, Image, StyleSheet, Text, View, useWindowDimensions } from 'react-native'
+import { AppState, Image, StyleSheet, View, useWindowDimensions } from 'react-native'
+import { Text } from './Text'
 import Animated, { Easing, useAnimatedStyle, useSharedValue, withDelay, withSequence, withSpring, withTiming } from 'react-native-reanimated'
 import * as Haptics from 'expo-haptics'
 import { EDGES, computerSide, exitPoint } from '../gesture'
@@ -9,7 +10,7 @@ import { setActivity } from '../activity'
 import { notifyBatch, notifyReceived } from '../notify'
 import { sizeText } from '../protocol'
 import { Aurora, EdgeGlow, Wash } from './Glow'
-import { extOf, kindColor, themed, useTheme } from './theme'
+import { extOf, themed, useTheme } from './theme'
 import { Icon } from './icons'
 
 const SPRING = { damping: 16, stiffness: 150, mass: 1 }
@@ -22,6 +23,7 @@ const SPRING = { damping: 16, stiffness: 150, mass: 1 }
  * in the background they're saved quietly and a notification says so.
  */
 export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink; onReceived: (uri: string, f: PhoneIncoming, folder?: { uri: string; name: string }) => void; filesTabX: number }) {
+  const C = useTheme()
   const s = useS()
   const { width: W, height: H } = useWindowDimensions()
   const [queue, setQueue] = useState<PhoneIncoming[]>([])
@@ -168,24 +170,32 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
           {isPhoto ? (
             <Image source={{ uri: current.thumb }} style={{ width: size, height: size }} />
           ) : folder ? (
-            <View style={[s.tile, { backgroundColor: '#0a84ff' }]}>
-              <View style={s.folderTab} />
+            <View style={s.tile}>
+              <View style={s.mark}>
+                <Icon name="folder" size={20} color={C.text2} />
+              </View>
               <Text style={s.tileText}>{together!.n}</Text>
               <Text style={s.tileSub}>files</Text>
             </View>
           ) : together ? (
-            <View style={[s.tile, { backgroundColor: kindColor(current.name) }]}>
+            <View style={s.tile}>
+              <View style={s.mark}>
+                <Icon name="file" size={20} color={C.text2} />
+              </View>
               <Text style={s.tileSub}>{together.i + 1} of {together.n}</Text>
               <Text style={s.tileText}>{extOf(current.name)}</Text>
             </View>
           ) : (
-            <View style={[s.tile, { backgroundColor: kindColor(current.name) }]}>
+            <View style={s.tile}>
+              <View style={s.mark}>
+                <Icon name="file" size={20} color={C.text2} />
+              </View>
               <Text style={s.tileText}>{extOf(current.name)}</Text>
             </View>
           )}
           {done === 'ok' && (
             <View style={s.check}>
-              <Icon name="check" size={16} color="#fff" />
+              <Icon name="check" size={16} color={C.onPrimary} />
             </View>
           )}
         </View>
@@ -213,15 +223,15 @@ export function IncomingLayer({ link, onReceived, filesTabX }: { link: DropLink;
 }
 
 const useS = themed((C) => ({
-  card: { borderRadius: 22, overflow: 'hidden', borderWidth: 1, borderColor: C.dark ? 'rgba(255,255,255,0.45)' : C.lineStrong, backgroundColor: C.card, elevation: 24, shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24, shadowOffset: { width: 0, height: 12 } },
-  tile: { flex: 1, justifyContent: 'flex-end', padding: 16 },
-  tileText: { color: '#fff', fontSize: 26, fontWeight: '700' },
-  tileSub: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '700' },
-  folderTab: { position: 'absolute', top: 16, left: 16, width: 42, height: 11, borderRadius: 5, backgroundColor: 'rgba(255,255,255,0.45)' },
-  check: { position: 'absolute', right: 10, top: 10, width: 34, height: 34, borderRadius: 17, backgroundColor: C.green, alignItems: 'center', justifyContent: 'center' },
-  caption: { alignItems: 'center', marginTop: 12 },
-  name: { color: C.text, fontSize: 15, fontWeight: '700' },
-  sub: { color: C.text2, fontSize: 13, marginTop: 3 },
-  track: { width: 140, height: 4, borderRadius: 2, backgroundColor: C.fill, marginTop: 8, overflow: 'hidden' },
+  card: { borderRadius: 28, overflow: 'hidden', backgroundColor: C.card, boxShadow: C.dark ? '0 16px 40px rgba(0,0,0,0.55)' : '0 16px 40px rgba(30,20,10,0.18)' },
+  tile: { flex: 1, justifyContent: 'flex-end', padding: 18, backgroundColor: C.card },
+  tileText: { color: C.text, fontSize: 28, fontWeight: '500', letterSpacing: -0.8 },
+  tileSub: { color: C.text2, fontSize: 14 },
+  mark: { position: 'absolute', top: 16, left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: C.card2, alignItems: 'center', justifyContent: 'center' },
+  check: { position: 'absolute', right: 12, top: 12, width: 36, height: 36, borderRadius: 18, backgroundColor: C.primary, alignItems: 'center', justifyContent: 'center' },
+  caption: { alignItems: 'center', marginTop: 14 },
+  name: { color: C.text, fontSize: 16, fontWeight: '500' },
+  sub: { color: C.text2, fontSize: 13.5, marginTop: 3 },
+  track: { width: 140, height: 4, borderRadius: 2, backgroundColor: C.accentPale, marginTop: 10, overflow: 'hidden' },
   fill: { height: 4, borderRadius: 2, backgroundColor: C.accent },
 }))
