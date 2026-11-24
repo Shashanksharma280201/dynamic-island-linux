@@ -235,7 +235,7 @@ test('the weather: codes in words and pictures, where to ask, and what comes bac
   expect(parseWeatherConfig({ on: true, place: 'Lisbon' })).toEqual(WEATHER_DEFAULTS)
   expect(parseWeatherConfig({ on: true, place: ' Lisbon ', lat: 38.7, lon: -9.1, unit: 'f' })).toEqual({ on: true, place: 'Lisbon', lat: 38.7, lon: -9.1, unit: 'f' })
   expect(parseWeatherConfig({ on: true, place: 'X', lat: 99, lon: 0 })).toEqual(WEATHER_DEFAULTS)
-  expect(hourText(new Date(2026, 0, 1, 17), 'en-US')).toBe('5 PM')
+  expect(hourText(new Date(2026, 0, 1, 17), 'en-US').replace(/\s/g, ' ')).toBe('5 PM')
   expect(hourText(new Date(2026, 0, 1, 17), 'en-GB', false)).toBe('17')
 })
 
