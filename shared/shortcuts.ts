@@ -9,7 +9,8 @@ export const DEFAULT_SHORTCUTS: Shortcuts = {
   buddy: 'Control+Alt+B',
   command: 'Control+Alt+K',
   dictate: 'Control+Alt+D',
-  translate: 'Control+Alt+T',
+  // (Not T: Ctrl+Alt+T opens a terminal on Ubuntu and KDE.)
+  translate: 'Control+Alt+G',
   allow: 'Control+Alt+Y',
   deny: 'Control+Alt+N',
   always: 'Control+Alt+A',

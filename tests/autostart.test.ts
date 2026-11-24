@@ -31,7 +31,7 @@ test('mergeConfig ignores unknown and mistyped keys', () => {
     dock: { side: 'top', y: 0.3 },
     appearance: 'glass',
     shortcut: true,
-    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', translate: 'Control+Alt+T', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
+    keys: { panel: 'CommandOrControl+I', voice: 'Control+Alt+Space', buddy: 'Control+Alt+B', command: 'Control+Alt+K', dictate: 'Control+Alt+D', translate: 'Control+Alt+G', allow: 'Control+Alt+Y', deny: 'Control+Alt+N', always: 'Control+Alt+A' },
     openOnHover: false,
     notch: true,
     turns: true,

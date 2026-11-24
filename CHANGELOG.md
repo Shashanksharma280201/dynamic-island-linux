@@ -46,7 +46,7 @@ or install it with one command (see the [README](https://github.com/shashankshar
   its folder, **Zip** them into one file in Downloads (the zip takes
   their place), **To phone**, or **Clear**.
 - **Translate what you selected**: select text in any app and press
-  **Ctrl+Alt+T**. A card opens with the translation, the language it was
+  **Ctrl+Alt+G**. A card opens with the translation, the language it was
   in, and where it was made; **Speak**, **Copy**, or **Replace** to type
   it over the selection. It uses the model on this computer when there
   is one, and asks before sending anything to the cloud. On Mac and
